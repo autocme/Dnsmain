@@ -14,6 +14,7 @@ class Domain(models.Model):
 
     name = fields.Char(string='Domain Name', required=True, index=True)
     description = fields.Text(string='Description')
+    region = fields.Char(string='Region', help='Geographic region where the domain is primarily used')
     active = fields.Boolean(default=True)
     subdomain_ids = fields.One2many('dns.subdomain', 'domain_id', string='Subdomains')
     subdomain_count = fields.Integer(compute='_compute_subdomain_count', string='Subdomain Count')
