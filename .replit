@@ -1,0 +1,52 @@
+modules = ["python-3.11"]
+
+[nix]
+channel = "stable-24_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Odoo Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "odoo_server"
+
+[[workflows.workflow]]
+name = "Odoo Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pip install -q validator-collection && python -m odoo --addons-path=. -d testdb -i dns_base --no-http --stop-after-init && python -m odoo --addons-path=. -d testdb --dev=all"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "odoo_server"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pip install -q validator-collection && python -m pip install -q odoo && python -m odoo -d test_db -i dns_base --stop-after-init && python -m odoo -d test_db"
+
+[deployment]
+run = ["sh", "-c", "pip install -q validator-collection && python -m odoo --addons-path=. -d testdb -i dns_base --no-http --stop-after-init && python -m odoo --addons-path=. -d testdb --dev=all"]

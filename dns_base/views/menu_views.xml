@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- DNS Base Main Menu -->
+    <menuitem id="menu_dns_base" 
+              name="DNS Management" 
+              sequence="100" 
+              web_icon="dns_base,static/description/icon.png"/>
+    
+    <!-- Domains Menu -->
+    <menuitem id="menu_domains"
+              name="Domains"
+              parent="menu_dns_base"
+              action="action_domains"
+              sequence="10"/>
+    
+    <!-- Subdomains Menu -->
+    <menuitem id="menu_subdomains"
+              name="Subdomains"
+              parent="menu_dns_base"
+              action="action_subdomains"
+              sequence="20"/>
+</odoo>
