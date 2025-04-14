@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Domain Tree View -->
+    <record id="view_domain_tree" model="ir.ui.view">
+        <field name="name">dns.domain.tree</field>
+        <field name="model">dns.domain</field>
+        <field name="arch" type="xml">
+            <tree string="Domains">
+                <field name="name"/>
+                <field name="subdomain_count"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Domain Form View -->
+    <record id="view_domain_form" model="ir.ui.view">
+        <field name="name">dns.domain.form</field>
+        <field name="model">dns.domain</field>
+        <field name="arch" type="xml">
+            <form string="Domain">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_subdomains" type="object" class="oe_stat_button" icon="fa-sitemap">
+                            <field name="subdomain_count" widget="statinfo" string="Subdomains"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only"/>
+                        <h1><field name="name" placeholder="e.g. example.com"/></h1>
+                    </div>
+                    <group>
+                        <field name="active"/>
+                        <field name="description"/>
+                    </group>
+                    <notebook>
+                        <page string="Subdomains">
+                            <field name="subdomain_ids">
+                                <tree string="Subdomains" editable="bottom">
+                                    <field name="name"/>
+                                    <field name="conversion_method"/>
+                                    <field name="value"/>
+                                    <field name="full_domain"/>
+                                    <field name="active"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Domain Search View -->
+    <record id="view_domain_search" model="ir.ui.view">
+        <field name="name">dns.domain.search</field>
+        <field name="model">dns.domain</field>
+        <field name="arch" type="xml">
+            <search string="Domains">
+                <field name="name"/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Active" name="active" context="{'group_by': 'active'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Domain Action -->
+    <record id="action_domains" model="ir.actions.act_window">
+        <field name="name">Domains</field>
+        <field name="res_model">dns.domain</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_domain_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first domain!
+            </p>
+            <p>
+                Manage your DNS domains and their subdomains.
+            </p>
+        </field>
+    </record>
+</odoo>
