@@ -26,7 +26,7 @@ Features:
         'security/ir.model.access.csv',
         'views/route53_config_views.xml',
         'views/domain_views.xml',
-        'views/menu_views.xml',
+        'views/aws_menus.xml',
     ],
     'installable': True,
     'application': False,
