@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Add AWS configuration submenu under DNS Management menu -->
+    <menuitem id="menu_aws_config"
+              name="AWS Route 53 Configurations"
+              parent="dns_base.menu_dns_configuration"
+              action="action_route53_configs"
+              sequence="20"/>
+</odoo>

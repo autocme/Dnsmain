@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Route53 Config Tree View -->
+    <record id="view_route53_config_tree" model="ir.ui.view">
+        <field name="name">dns.route53.config.tree</field>
+        <field name="model">dns.route53.config</field>
+        <field name="arch" type="xml">
+            <tree string="AWS Route 53 Configurations">
+                <field name="name"/>
+                <field name="aws_region"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Route53 Config Form View -->
+    <record id="view_route53_config_form" model="ir.ui.view">
+        <field name="name">dns.route53.config.form</field>
+        <field name="model">dns.route53.config</field>
+        <field name="arch" type="xml">
+            <form string="AWS Route 53 Configuration">
+                <header>
+                    <button name="test_connection" string="Test Connection" type="object" class="oe_highlight"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only"/>
+                        <h1><field name="name" placeholder="e.g. Production AWS"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="active"/>
+                            <field name="aws_region"/>
+                        </group>
+                        <group>
+                            <field name="aws_access_key_id" password="True"/>
+                            <field name="aws_secret_access_key" password="True"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Route53 Config Search View -->
+    <record id="view_route53_config_search" model="ir.ui.view">
+        <field name="name">dns.route53.config.search</field>
+        <field name="model">dns.route53.config</field>
+        <field name="arch" type="xml">
+            <search string="AWS Route 53 Configurations">
+                <field name="name"/>
+                <field name="aws_region"/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Route53 Config Action -->
+    <record id="action_route53_configs" model="ir.actions.act_window">
+        <field name="name">AWS Route 53 Configurations</field>
+        <field name="res_model">dns.route53.config</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_route53_config_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first AWS Route 53 configuration!
+            </p>
+            <p>
+                Define AWS credentials to connect with Route 53 API.
+            </p>
+        </field>
+    </record>
+</odoo>
