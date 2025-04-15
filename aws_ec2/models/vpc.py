@@ -46,24 +46,24 @@ class EC2VPC(models.Model):
     
     # Network Components
     subnet_ids = fields.One2many('aws.ec2.subnet', 'vpc_id', string='Subnets')
-    subnet_count = fields.Integer(string='Subnet Count', compute='_compute_counts',
+    subnet_count = fields.Integer(string='Subnet Count', compute='_compute_counts', store=True,
                                  help='Number of subnets in this VPC.')
     
     security_group_ids = fields.One2many('aws.ec2.security.group', 'vpc_id', string='Security Groups',
-                                        compute='_compute_counts')
-    security_group_count = fields.Integer(string='Security Group Count', compute='_compute_counts',
+                                        compute='_compute_counts', store=True)
+    security_group_count = fields.Integer(string='Security Group Count', compute='_compute_counts', store=True,
                                          help='Number of security groups in this VPC.')
     
-    route_table_count = fields.Integer(string='Route Table Count', compute='_compute_counts',
+    route_table_count = fields.Integer(string='Route Table Count', compute='_compute_counts', store=True,
                                       help='Number of route tables in this VPC.')
     
-    network_acl_count = fields.Integer(string='Network ACL Count', compute='_compute_counts',
+    network_acl_count = fields.Integer(string='Network ACL Count', compute='_compute_counts', store=True,
                                       help='Number of network ACLs in this VPC.')
     
     # Instance Information
     instance_ids = fields.One2many('aws.ec2.instance', 'vpc_id', string='Instances',
-                                  compute='_compute_counts')
-    instance_count = fields.Integer(string='Instance Count', compute='_compute_counts',
+                                  compute='_compute_counts', store=True)
+    instance_count = fields.Integer(string='Instance Count', compute='_compute_counts', store=True,
                                    help='Number of instances in this VPC.')
     
     # Tags and Metadata
@@ -81,15 +81,14 @@ class EC2VPC(models.Model):
     last_sync = fields.Datetime(string='Last Sync')
     sync_message = fields.Text(string='Sync Message')
 
+    @api.depends('vpc_id', 'subnet_ids')
     def _compute_counts(self):
         """
         Compute the counts of related resources.
         """
         for vpc in self:
-            # Count subnets
-            vpc.subnet_count = self.env['aws.ec2.subnet'].search_count([
-                ('vpc_id', '=', vpc.id)
-            ])
+            # Count subnets - use subnet_ids One2many field for counting
+            vpc.subnet_count = len(vpc.subnet_ids)
             
             # Count instances
             instances = self.env['aws.ec2.instance'].search([

@@ -101,7 +101,7 @@
                 <field name="vpc_id"/>
                 <filter string="Default for AZ" name="default_for_az" domain="[('default_for_az', '=', True)]"/>
                 <filter string="Public IP Mapping" name="map_public_ip" domain="[('map_public_ip', '=', True)]"/>
-                <filter string="With Instances" name="with_instances" domain="[('instance_count', '>', 0)]"/>
+                <filter string="With Instances" name="with_instances" domain="[('instance_ids', '!=', False)]"/>
                 <filter string="Available" name="available" domain="[('state', '=', 'available')]"/>
                 <filter string="Pending" name="pending" domain="[('state', '=', 'pending')]"/>
                 <filter string="Synced" name="synced" domain="[('sync_status', '=', 'synced')]"/>
