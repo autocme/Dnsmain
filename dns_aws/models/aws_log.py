@@ -10,6 +10,13 @@ from odoo import models, fields, api, _
 
 _logger = logging.getLogger(__name__)
 
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom JSON encoder that can handle datetime objects"""
+    def default(self, o):
+        if isinstance(o, datetime):
+            return o.isoformat()
+        return super(DateTimeEncoder, self).default(o)
+
 class AWSOperationLog(models.Model):
     _name = 'dns.aws.operation.log'
     _description = 'AWS Operation Log'
@@ -52,11 +59,11 @@ class AWSOperationLog(models.Model):
         Returns:
             The created log record
         """
-        # Convert dict to JSON string for storage
+        # Convert dict to JSON string for storage with custom encoding for datetime objects
         if request_data and isinstance(request_data, dict):
-            request_data = json.dumps(request_data, indent=2)
+            request_data = json.dumps(request_data, indent=2, cls=DateTimeEncoder)
         if response_data and isinstance(response_data, dict):
-            response_data = json.dumps(response_data, indent=2)
+            response_data = json.dumps(response_data, indent=2, cls=DateTimeEncoder)
             
         vals = {
             'name': name,
