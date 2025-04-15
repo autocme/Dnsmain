@@ -125,7 +125,7 @@ class EC2Image(models.Model):
         """
         return super(EC2Image, self).create(vals)
 
-    def _refresh_image_data(self):
+    def refresh_image_data(self):
         """
         Refresh image data from AWS.
         """
@@ -571,7 +571,7 @@ class EC2Image(models.Model):
         images = self.search([('active', '=', True), ('image_id', '!=', False)])
         for image in images:
             try:
-                image._refresh_image_data()
+                image.refresh_image_data()
             except Exception as e:
                 _logger.error(f"Failed to refresh AMI {image.image_id}: {str(e)}")
         
