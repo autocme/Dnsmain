@@ -128,13 +128,13 @@
         <field name="name">aws.operation.log.dashboard</field>
         <field name="model">aws.operation.log</field>
         <field name="arch" type="xml">
-            <dashboard sample="1">
+            <dashboard>
                 <view type="graph" ref="view_aws_operation_log_graph"/>
                 <group>
-                    <aggregate name="status_success" string="Success" field="status" domain="[('status', '=', 'success')]" group_operator="count" help="Number of successful operations"/>
-                    <aggregate name="status_error" string="Errors" field="status" domain="[('status', '=', 'error')]" group_operator="count" help="Number of failed operations"/>
-                    <aggregate name="status_warning" string="Warnings" field="status" domain="[('status', '=', 'warning')]" group_operator="count" help="Number of operations with warnings"/>
-                    <aggregate name="avg_duration" string="Avg Duration" field="duration_ms" group_operator="avg" value_label="ms" help="Average operation duration"/>
+                    <aggregate name="status_success_count" string="Success" field="status" domain="[('status', '=', 'success')]" group_operator="count"/>
+                    <aggregate name="status_error_count" string="Errors" field="status" domain="[('status', '=', 'error')]" group_operator="count"/>
+                    <aggregate name="status_warning_count" string="Warnings" field="status" domain="[('status', '=', 'warning')]" group_operator="count"/>
+                    <aggregate name="avg_duration" string="Avg Duration" field="duration_ms" group_operator="avg"/>
                 </group>
                 <view type="pivot" ref="view_aws_operation_log_pivot"/>
             </dashboard>
