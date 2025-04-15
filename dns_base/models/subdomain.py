@@ -17,7 +17,21 @@ class Subdomain(models.Model):
     domain_id = fields.Many2one('dns.domain', string='Domain', required=True, ondelete='cascade')
     conversion_method = fields.Selection([
         ('a', 'A Record'),
+        ('aaaa', 'AAAA Record'),
+        ('caa', 'CAA Record'),
         ('cname', 'CNAME Record'),
+        ('ds', 'DS Record'),
+        ('https', 'HTTPS Record'),
+        ('mx', 'MX Record'),
+        ('naptr', 'NAPTR Record'),
+        ('ns', 'NS Record'),
+        ('ptr', 'PTR Record'),
+        ('soa', 'SOA Record'),
+        ('spf', 'SPF Record'),
+        ('srv', 'SRV Record'),
+        ('sshfp', 'SSHFP Record'),
+        ('svcb', 'SVCB Record'),
+        ('tlsa', 'TLSA Record'),
         ('txt', 'TXT Record')
     ], string='Conversion Method', required=True, default='a')
     value = fields.Char(string='Value', required=True)
@@ -76,19 +90,59 @@ class Subdomain(models.Model):
     @api.constrains('value', 'conversion_method')
     def _check_record_value(self):
         for record in self:
+            # IP address validation for A and AAAA records
             if record.conversion_method == 'a':
                 try:
-                    # Validate IP address for A records
+                    # Validate IPv4 address for A records
                     validators.ip_address(record.value)
+                    # Further check that it's IPv4, not IPv6
+                    if ':' in record.value:
+                        raise ValidationError(_("A records must use IPv4 addresses, not IPv6: %s") % record.value)
                 except errors.InvalidIPAddressError:
                     raise ValidationError(_("Invalid IP address for A record: %s") % record.value)
-            elif record.conversion_method == 'cname':
+            
+            elif record.conversion_method == 'aaaa':
                 try:
-                    # Validate domain for CNAME records
-                    validators.domain(record.value)
+                    # Validate IPv6 address for AAAA records
+                    validators.ip_address(record.value)
+                    # Check that it's actually IPv6
+                    if ':' not in record.value:
+                        raise ValidationError(_("AAAA records must use IPv6 addresses, not IPv4: %s") % record.value)
+                except errors.InvalidIPAddressError:
+                    raise ValidationError(_("Invalid IPv6 address for AAAA record: %s") % record.value)
+            
+            # Domain name validation for records pointing to other domains
+            elif record.conversion_method in ['cname', 'mx', 'ns', 'ptr']:
+                try:
+                    # Validate domain
+                    validators.domain(record.value.rstrip('.'))
                 except errors.InvalidDomainError:
-                    raise ValidationError(_("Invalid domain for CNAME record: %s") % record.value)
-            elif record.conversion_method == 'txt':
-                # TXT records can have almost any value, but check for basic validity
+                    raise ValidationError(_("Invalid domain for %s record: %s") % (record.conversion_method.upper(), record.value))
+            
+            # MX records need priority
+            elif record.conversion_method == 'mx':
+                # Check for priority value (e.g., "10 mail.example.com")
+                if not re.match(r'^\d+\s+[a-zA-Z0-9][a-zA-Z0-9\-\.]+[a-zA-Z0-9]\.?$', record.value):
+                    raise ValidationError(_("Invalid MX record format. Should be 'priority domain' (e.g., '10 mail.example.com'): %s") % record.value)
+            
+            # Basic validation for TXT and SPF records
+            elif record.conversion_method in ['txt', 'spf']:
                 if not record.value or len(record.value) > 255:
-                    raise ValidationError(_("TXT record value must be between 1 and 255 characters: %s") % record.value)
+                    raise ValidationError(_("TXT/SPF record value must be between 1 and 255 characters: %s") % record.value)
+            
+            # SRV records validation
+            elif record.conversion_method == 'srv':
+                if not re.match(r'^\d+\s+\d+\s+\d+\s+[a-zA-Z0-9][a-zA-Z0-9\-\.]+[a-zA-Z0-9]\.?$', record.value):
+                    raise ValidationError(_("Invalid SRV record format. Should be 'priority weight port target' (e.g., '0 5 5060 sip.example.com'): %s") % record.value)
+            
+            # CAA records validation
+            elif record.conversion_method == 'caa':
+                if not re.match(r'^\d+\s+(issue|issuewild|iodef)\s+"[^"]+"$', record.value):
+                    raise ValidationError(_("Invalid CAA record format. Should be 'flag tag \"value\"' (e.g., '0 issue \"ca.example.com\"'): %s") % record.value)
+            
+            # Basic length validation for other record types
+            else:
+                if not record.value:
+                    raise ValidationError(_("Record value cannot be empty"))
+                elif len(record.value) > 500:  # General limit for most DNS values
+                    raise ValidationError(_("Record value exceeds maximum length: %s") % record.value)
