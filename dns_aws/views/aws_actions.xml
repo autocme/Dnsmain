@@ -41,19 +41,19 @@
         <field name="binding_view_types">list</field>
         <field name="state">code</field>
         <field name="code">
-            for record in records:
-                if record.domain_id.route53_sync:
-                    record.sync_to_route53()
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Route 53 Sync',
-                    'message': '%s records pushed to Route 53' % len(records),
-                    'sticky': False,
-                    'type': 'success',
-                }
-            }
+for record in records:
+    if record.domain_id.route53_sync:
+        record.sync_to_route53()
+return {
+    'type': 'ir.actions.client',
+    'tag': 'display_notification',
+    'params': {
+        'title': 'Route 53 Sync',
+        'message': '%s records pushed to Route 53' % len(records),
+        'sticky': False,
+        'type': 'success',
+    }
+}
         </field>
     </record>
 </odoo>
