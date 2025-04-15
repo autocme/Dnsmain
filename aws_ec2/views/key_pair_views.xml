@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Key Pair Tree View -->
+    <record id="view_ec2_key_pair_tree" model="ir.ui.view">
+        <field name="name">aws.ec2.key.pair.tree</field>
+        <field name="model">aws.ec2.key.pair</field>
+        <field name="arch" type="xml">
+            <tree string="Key Pairs" decoration-muted="active == False" decoration-danger="sync_status == 'error'" decoration-info="sync_status == 'syncing'">
+                <field name="key_name"/>
+                <field name="key_fingerprint"/>
+                <field name="key_type"/>
+                <field name="instance_count"/>
+                <field name="sync_status"/>
+                <field name="active" invisible="1"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Key Pair Form View -->
+    <record id="view_ec2_key_pair_form" model="ir.ui.view">
+        <field name="name">aws.ec2.key.pair.form</field>
+        <field name="model">aws.ec2.key.pair</field>
+        <field name="arch" type="xml">
+            <form string="Key Pair">
+                <header>
+                    <button name="download_key_file" string="Download Key File" type="object" 
+                            class="oe_highlight" attrs="{'invisible': [('key_file', '=', False)]}"/>
+                    <field name="sync_status" widget="statusbar" statusbar_visible="not_synced,syncing,synced,error"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="key_name" placeholder="e.g. my-key-pair"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="key_fingerprint" readonly="1"/>
+                            <field name="key_type" attrs="{'readonly': [('key_fingerprint', '!=', False)]}"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="key_filename" readonly="1"/>
+                            <field name="key_file" invisible="1"/>
+                            <field name="aws_credentials_id" widget="selection" domain="[('active', '=', True)]"/>
+                            <field name="aws_region"/>
+                            <field name="last_sync" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Associated Instances" name="instances">
+                            <field name="instance_ids" readonly="1">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="instance_id"/>
+                                    <field name="state"/>
+                                    <field name="public_ip"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Tags" name="tags">
+                            <field name="tags" placeholder="{'Environment': 'Production', 'Project': 'Website'}"/>
+                        </page>
+                        <page string="Sync Status" name="sync">
+                            <group>
+                                <field name="sync_message" readonly="1"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Key Pair Search View -->
+    <record id="view_ec2_key_pair_search" model="ir.ui.view">
+        <field name="name">aws.ec2.key.pair.search</field>
+        <field name="model">aws.ec2.key.pair</field>
+        <field name="arch" type="xml">
+            <search string="Key Pairs">
+                <field name="key_name"/>
+                <field name="key_fingerprint"/>
+                <filter string="RSA Keys" name="rsa" domain="[('key_type', '=', 'rsa')]"/>
+                <filter string="ED25519 Keys" name="ed25519" domain="[('key_type', '=', 'ed25519')]"/>
+                <filter string="Used by Instances" name="in_use" domain="[('instance_count', '>', 0)]"/>
+                <filter string="Unused" name="unused" domain="[('instance_count', '=', 0)]"/>
+                <filter string="Synced" name="synced" domain="[('sync_status', '=', 'synced')]"/>
+                <filter string="Not Synced" name="not_synced" domain="[('sync_status', '=', 'not_synced')]"/>
+                <filter string="Error" name="error" domain="[('sync_status', '=', 'error')]"/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Key Type" name="group_by_type" domain="[]" context="{'group_by': 'key_type'}"/>
+                    <filter string="Sync Status" name="group_by_sync" domain="[]" context="{'group_by': 'sync_status'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Key Pair Action -->
+    <record id="action_ec2_key_pair" model="ir.actions.act_window">
+        <field name="name">Key Pairs</field>
+        <field name="res_model">aws.ec2.key.pair</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_ec2_key_pair_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first key pair
+            </p>
+            <p>
+                Key pairs are used to securely connect to your EC2 instances via SSH.
+                Amazon EC2 stores the public key and you store the private key.
+            </p>
+            <p>
+                When you create a new key pair, you can download the private key file (.pem).
+                This is the only chance to save the private key file, so make sure to download and store it securely.
+            </p>
+        </field>
+    </record>
+
+    <!-- Import Key Pairs Action -->
+    <record id="action_import_ec2_key_pairs" model="ir.actions.server">
+        <field name="name">Import Key Pairs</field>
+        <field name="model_id" ref="model_aws_ec2_key_pair"/>
+        <field name="binding_model_id" ref="model_aws_ec2_key_pair"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = model.import_key_pairs_from_aws()</field>
+    </record>
+</odoo>

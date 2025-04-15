@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Route 53 Menu -->
+    <menuitem id="menu_route53_root" 
+              name="Route 53" 
+              parent="boto_base.menu_aws_services"
+              sequence="20" 
+              groups="aws_route53.group_route53_user"/>
+    
+    <!-- Hosted Zones Menu -->
+    <menuitem id="menu_route53_hosted_zone"
+              name="Hosted Zones"
+              parent="menu_route53_root"
+              action="action_route53_hosted_zone"
+              sequence="10"/>
+    
+    <!-- DNS Records Menu -->
+    <menuitem id="menu_route53_dns_record"
+              name="DNS Records"
+              parent="menu_route53_root"
+              action="action_route53_dns_record"
+              sequence="20"/>
+    
+    <!-- Health Checks Menu -->
+    <menuitem id="menu_route53_health_check"
+              name="Health Checks"
+              parent="menu_route53_root"
+              action="action_route53_health_check"
+              sequence="30"/>
+</odoo>

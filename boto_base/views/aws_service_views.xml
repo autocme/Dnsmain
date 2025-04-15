@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- AWS Service Tree View -->
+    <record id="view_aws_service_tree" model="ir.ui.view">
+        <field name="name">aws.service.tree</field>
+        <field name="model">aws.service</field>
+        <field name="arch" type="xml">
+            <tree string="AWS Services">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- AWS Service Form View -->
+    <record id="view_aws_service_form" model="ir.ui.view">
+        <field name="name">aws.service.form</field>
+        <field name="model">aws.service</field>
+        <field name="arch" type="xml">
+            <form string="AWS Service">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="e.g. Amazon S3"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <field name="code"/>
+                        <field name="active"/>
+                    </group>
+                    <notebook>
+                        <page string="Description" name="description">
+                            <field name="description" placeholder="Enter a description of this AWS service..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- AWS Service Search View -->
+    <record id="view_aws_service_search" model="ir.ui.view">
+        <field name="name">aws.service.search</field>
+        <field name="model">aws.service</field>
+        <field name="arch" type="xml">
+            <search string="AWS Services">
+                <field name="name"/>
+                <field name="code"/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- AWS Service Action -->
+    <record id="action_aws_service" model="ir.actions.act_window">
+        <field name="name">AWS Services</field>
+        <field name="res_model">aws.service</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_aws_service_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No AWS services found!
+            </p>
+            <p>
+                AWS services should be initialized automatically.
+                If not, an administrator can manually add them.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Add to menu -->
+    <menuitem id="menu_aws_service_list"
+              name="Services"
+              parent="menu_aws_configuration"
+              action="action_aws_service"
+              sequence="10"
+              groups="boto_base.group_aws_manager"/>
+</odoo>

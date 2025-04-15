@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- AWS Integration Settings -->
+    <record id="res_config_settings_view_form_aws" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.aws</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority">20</field>
+        <field name="inherit_id" ref="base_setup.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[hasclass('settings')]" position="inside">
+                <div class="app_settings_block" data-string="AWS Integration" string="AWS Integration" data-key="boto_base">
+                    <h2>AWS Integration</h2>
+                    <div class="row mt16 o_settings_container" id="aws_settings">
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <field name="aws_manage_credentials"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="aws_manage_credentials"/>
+                                <div class="text-muted">
+                                    Manage AWS credentials for service integrations
+                                </div>
+                                <div class="mt8" attrs="{'invisible': [('aws_manage_credentials', '=', False)]}">
+                                    <field name="aws_default_region" class="oe_inline" placeholder="e.g. us-east-1"/>
+                                    <label for="aws_default_region"/>
+                                </div>
+                                <div class="mt8" attrs="{'invisible': [('aws_manage_credentials', '=', False)]}">
+                                    <label for="aws_credentials_count" class="oe_inline"/>
+                                    <field name="aws_credentials_count" class="oe_inline"/>
+                                    <button name="action_aws_credentials" 
+                                            type="object" 
+                                            string="Manage Credentials" 
+                                            class="oe_link" 
+                                            attrs="{'invisible': [('aws_manage_credentials', '=', False)]}"
+                                            icon="fa-cog"/>
+                                </div>
+                                <div class="mt8" attrs="{'invisible': ['|', ('aws_manage_credentials', '=', False), ('aws_default_credentials_id', '=', False)]}">
+                                    <label for="aws_default_credentials_id" class="oe_inline"/>
+                                    <field name="aws_default_credentials_id" readonly="1"/>
+                                    <button name="test_aws_connectivity" 
+                                            type="object" 
+                                            string="Test Connection" 
+                                            class="oe_link" 
+                                            attrs="{'invisible': [('aws_default_credentials_id', '=', False)]}"
+                                            icon="fa-check"/>
+                                </div>
+                                <div class="mt8" attrs="{'invisible': [('aws_manage_credentials', '=', False)]}">
+                                    <button name="action_create_aws_credentials" 
+                                            type="object" 
+                                            string="Add New Credentials" 
+                                            class="btn-primary" 
+                                            attrs="{'invisible': [('aws_manage_credentials', '=', False)]}"
+                                            icon="fa-plus"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

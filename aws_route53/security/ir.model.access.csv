@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_aws_route53_hosted_zone_user,aws.route53.hosted.zone.user,model_aws_route53_hosted_zone,aws_route53.group_route53_user,1,0,0,0
+access_aws_route53_hosted_zone_manager,aws.route53.hosted.zone.manager,model_aws_route53_hosted_zone,aws_route53.group_route53_manager,1,1,1,1
+access_aws_route53_dns_record_user,aws.route53.dns.record.user,model_aws_route53_dns_record,aws_route53.group_route53_user,1,0,0,0
+access_aws_route53_dns_record_manager,aws.route53.dns.record.manager,model_aws_route53_dns_record,aws_route53.group_route53_manager,1,1,1,1
+access_aws_route53_health_check_user,aws.route53.health.check.user,model_aws_route53_health_check,aws_route53.group_route53_user,1,0,0,0
+access_aws_route53_health_check_manager,aws.route53.health.check.manager,model_aws_route53_health_check,aws_route53.group_route53_manager,1,1,1,1

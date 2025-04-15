@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- AWS Operation Log Tree View -->
+    <record id="view_aws_operation_log_tree" model="ir.ui.view">
+        <field name="name">aws.operation.log.tree</field>
+        <field name="model">aws.operation.log</field>
+        <field name="arch" type="xml">
+            <tree string="AWS Operation Logs" decoration-danger="status=='error'" decoration-warning="status=='warning'" decoration-success="status=='success'">
+                <field name="create_date" string="Date"/>
+                <field name="service_name"/>
+                <field name="name"/>
+                <field name="region"/>
+                <field name="status"/>
+                <field name="credentials_id"/>
+                <field name="duration_ms" string="Duration (ms)"/>
+                <field name="model"/>
+                <field name="record_name"/>
+                <field name="user_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- AWS Operation Log Form View -->
+    <record id="view_aws_operation_log_form" model="ir.ui.view">
+        <field name="name">aws.operation.log.form</field>
+        <field name="model">aws.operation.log</field>
+        <field name="arch" type="xml">
+            <form string="AWS Operation Log">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="service_name" readonly="1"/>
+                            <field name="region" readonly="1"/>
+                            <field name="status" readonly="1"/>
+                            <field name="create_date" string="Date" readonly="1"/>
+                            <field name="duration_ms" string="Duration (ms)" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="credentials_id" readonly="1"/>
+                            <field name="model" readonly="1"/>
+                            <field name="res_id" readonly="1"/>
+                            <field name="record_name" readonly="1"/>
+                            <field name="user_id" readonly="1"/>
+                            <field name="company_id" readonly="1" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Request Data" name="request_data" attrs="{'invisible': [('request_data', '=', False)]}">
+                            <field name="request_data" readonly="1" widget="ace" options="{'mode': 'json'}"/>
+                        </page>
+                        <page string="Response Data" name="response_data" attrs="{'invisible': [('response_data', '=', False)]}">
+                            <field name="response_data" readonly="1" widget="ace" options="{'mode': 'json'}"/>
+                        </page>
+                        <page string="Error" name="error" attrs="{'invisible': [('error_message', '=', False)]}">
+                            <field name="error_message" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- AWS Operation Log Search View -->
+    <record id="view_aws_operation_log_search" model="ir.ui.view">
+        <field name="name">aws.operation.log.search</field>
+        <field name="model">aws.operation.log</field>
+        <field name="arch" type="xml">
+            <search string="AWS Operation Logs">
+                <field name="name"/>
+                <field name="service_name"/>
+                <field name="region"/>
+                <field name="model"/>
+                <field name="record_name"/>
+                <field name="credentials_id"/>
+                <field name="user_id"/>
+                <filter string="Success" name="success" domain="[('status', '=', 'success')]"/>
+                <filter string="Error" name="error" domain="[('status', '=', 'error')]"/>
+                <filter string="Warning" name="warning" domain="[('status', '=', 'warning')]"/>
+                <filter string="Today" name="today" domain="[('create_date', '>=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter string="This Week" name="this_week" domain="[('create_date', '>=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Status" name="status" domain="[]" context="{'group_by': 'status'}"/>
+                    <filter string="Service" name="service" domain="[]" context="{'group_by': 'service_name'}"/>
+                    <filter string="Region" name="region" domain="[]" context="{'group_by': 'region'}"/>
+                    <filter string="Credentials" name="credentials" domain="[]" context="{'group_by': 'credentials_id'}"/>
+                    <filter string="Model" name="model" domain="[]" context="{'group_by': 'model'}"/>
+                    <filter string="User" name="user" domain="[]" context="{'group_by': 'user_id'}"/>
+                    <filter string="Date" name="date" domain="[]" context="{'group_by': 'create_date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- AWS Operation Log Pivot View -->
+    <record id="view_aws_operation_log_pivot" model="ir.ui.view">
+        <field name="name">aws.operation.log.pivot</field>
+        <field name="model">aws.operation.log</field>
+        <field name="arch" type="xml">
+            <pivot string="AWS Operation Statistics" sample="1">
+                <field name="service_name" type="row"/>
+                <field name="name" type="row"/>
+                <field name="status" type="col"/>
+                <field name="duration_ms" type="measure" string="Avg Duration (ms)" operator="avg"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- AWS Operation Log Graph View -->
+    <record id="view_aws_operation_log_graph" model="ir.ui.view">
+        <field name="name">aws.operation.log.graph</field>
+        <field name="model">aws.operation.log</field>
+        <field name="arch" type="xml">
+            <graph string="AWS Operations" sample="1">
+                <field name="service_name"/>
+                <field name="status"/>
+                <field name="duration_ms" type="measure" operator="avg"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- AWS Operation Log Dashboard View -->
+    <record id="view_aws_operation_log_dashboard" model="ir.ui.view">
+        <field name="name">aws.operation.log.dashboard</field>
+        <field name="model">aws.operation.log</field>
+        <field name="arch" type="xml">
+            <dashboard sample="1">
+                <view type="graph" ref="view_aws_operation_log_graph"/>
+                <group>
+                    <aggregate name="status_success" string="Success" field="status" invisible="context.get('dashboard_merge_domains', False)" domain="[('status', '=', 'success')]" group_operator="count" help="Number of successful operations"/>
+                    <aggregate name="status_error" string="Errors" field="status" invisible="context.get('dashboard_merge_domains', False)" domain="[('status', '=', 'error')]" group_operator="count" help="Number of failed operations"/>
+                    <aggregate name="status_warning" string="Warnings" field="status" invisible="context.get('dashboard_merge_domains', False)" domain="[('status', '=', 'warning')]" group_operator="count" help="Number of operations with warnings"/>
+                    <aggregate name="avg_duration" string="Avg Duration" field="duration_ms" group_operator="avg" value_label="ms" help="Average operation duration"/>
+                </group>
+                <view type="pivot" ref="view_aws_operation_log_pivot"/>
+            </dashboard>
+        </field>
+    </record>
+
+    <!-- AWS Operation Log Action -->
+    <record id="action_aws_operation_log" model="ir.actions.act_window">
+        <field name="name">AWS Operation Logs</field>
+        <field name="res_model">aws.operation.log</field>
+        <field name="view_mode">tree,form,pivot,graph,dashboard</field>
+        <field name="search_view_id" ref="view_aws_operation_log_search"/>
+        <field name="context">{'search_default_today': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No AWS operation logs yet!
+            </p>
+            <p>
+                AWS operations will be logged here when they are performed.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Add to menu -->
+    <menuitem id="menu_aws_operation_log"
+              name="Operation Logs"
+              parent="menu_aws_configuration"
+              action="action_aws_operation_log"
+              sequence="20"
+              groups="boto_base.group_aws_manager"/>
+</odoo>

@@ -3,7 +3,4 @@
 #
 # Copyright (C) 2023 JAAH
 
-from . import aws_credentials
-from . import route53_config
-from . import domain
-from . import dns_records
+from . import models

@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Security Group Tree View -->
+    <record id="view_ec2_security_group_tree" model="ir.ui.view">
+        <field name="name">aws.ec2.security.group.tree</field>
+        <field name="model">aws.ec2.security.group</field>
+        <field name="arch" type="xml">
+            <tree string="Security Groups" decoration-muted="active == False" decoration-danger="sync_status == 'error'" decoration-info="sync_status == 'syncing'">
+                <field name="name"/>
+                <field name="group_id"/>
+                <field name="description"/>
+                <field name="vpc_id"/>
+                <field name="instance_count"/>
+                <field name="sync_status"/>
+                <field name="active" invisible="1"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Security Group Form View -->
+    <record id="view_ec2_security_group_form" model="ir.ui.view">
+        <field name="name">aws.ec2.security.group.form</field>
+        <field name="model">aws.ec2.security.group</field>
+        <field name="arch" type="xml">
+            <form string="Security Group">
+                <header>
+                    <button name="_refresh_security_group_data" string="Refresh" type="object" 
+                            attrs="{'invisible': [('group_id', '=', False)]}"/>
+                    <field name="sync_status" widget="statusbar" statusbar_visible="not_synced,syncing,synced,error"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="e.g. Web Server Security Group"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="group_id" readonly="1"/>
+                            <field name="description"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="vpc_id" attrs="{'readonly': [('group_id', '!=', False)]}"/>
+                            <field name="aws_credentials_id" widget="selection" domain="[('active', '=', True)]"/>
+                            <field name="aws_region"/>
+                            <field name="last_sync" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Inbound Rules" name="inbound_rules">
+                            <field name="inbound_rules" placeholder='''[
+  {
+    "IpProtocol": "tcp",
+    "FromPort": 22,
+    "ToPort": 22,
+    "IpRanges": [
+      {
+        "CidrIp": "0.0.0.0/0",
+        "Description": "SSH access"
+      }
+    ]
+  }
+]'''/>
+                        </page>
+                        <page string="Outbound Rules" name="outbound_rules">
+                            <field name="outbound_rules" placeholder='''[
+  {
+    "IpProtocol": "-1",
+    "IpRanges": [
+      {
+        "CidrIp": "0.0.0.0/0",
+        "Description": "Allow all outbound traffic"
+      }
+    ]
+  }
+]'''/>
+                        </page>
+                        <page string="Associated Instances" name="instances">
+                            <field name="instance_ids" readonly="1">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="instance_id"/>
+                                    <field name="state"/>
+                                    <field name="public_ip"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Tags" name="tags">
+                            <field name="tags" placeholder="{'Environment': 'Production', 'Project': 'Website'}"/>
+                        </page>
+                        <page string="Sync Status" name="sync">
+                            <group>
+                                <field name="sync_message" readonly="1"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Security Group Search View -->
+    <record id="view_ec2_security_group_search" model="ir.ui.view">
+        <field name="name">aws.ec2.security.group.search</field>
+        <field name="model">aws.ec2.security.group</field>
+        <field name="arch" type="xml">
+            <search string="Security Groups">
+                <field name="name"/>
+                <field name="group_id"/>
+                <field name="description"/>
+                <field name="vpc_id"/>
+                <filter string="Used by Instances" name="in_use" domain="[('instance_count', '>', 0)]"/>
+                <filter string="Unused" name="unused" domain="[('instance_count', '=', 0)]"/>
+                <filter string="Synced" name="synced" domain="[('sync_status', '=', 'synced')]"/>
+                <filter string="Not Synced" name="not_synced" domain="[('sync_status', '=', 'not_synced')]"/>
+                <filter string="Error" name="error" domain="[('sync_status', '=', 'error')]"/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="VPC" name="group_by_vpc" domain="[]" context="{'group_by': 'vpc_id'}"/>
+                    <filter string="Sync Status" name="group_by_sync" domain="[]" context="{'group_by': 'sync_status'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Security Group Action -->
+    <record id="action_ec2_security_group" model="ir.actions.act_window">
+        <field name="name">Security Groups</field>
+        <field name="res_model">aws.ec2.security.group</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_ec2_security_group_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first security group
+            </p>
+            <p>
+                Security groups act as a virtual firewall for your EC2 instances
+                to control inbound and outbound traffic.
+            </p>
+        </field>
+    </record>
+
+    <!-- Import Security Groups Action -->
+    <record id="action_import_ec2_security_groups" model="ir.actions.server">
+        <field name="name">Import Security Groups</field>
+        <field name="model_id" ref="model_aws_ec2_security_group"/>
+        <field name="binding_model_id" ref="model_aws_ec2_security_group"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = model.import_security_groups_from_aws()</field>
+    </record>
+
+    <!-- Refresh All Security Groups Action -->
+    <record id="action_refresh_all_ec2_security_groups" model="ir.actions.server">
+        <field name="name">Refresh All Security Groups</field>
+        <field name="model_id" ref="model_aws_ec2_security_group"/>
+        <field name="binding_model_id" ref="model_aws_ec2_security_group"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = model.refresh_all_security_groups()</field>
+    </record>
+</odoo>

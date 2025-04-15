@@ -121,7 +121,7 @@ class Subdomain(models.Model):
                             'ResourceRecordSet': {
                                 'Name': self.full_domain + '.',  # Add trailing dot
                                 'Type': record_type,
-                                'TTL': 300,
+                                'TTL': self.ttl,
                                 'ResourceRecords': [
                                     {
                                         'Value': record_value
@@ -165,7 +165,7 @@ class Subdomain(models.Model):
     def write(self, vals):
         result = super(Subdomain, self).write(vals)
         # Sync updated records to Route 53 if enabled and relevant fields changed
-        if any(field in vals for field in ['name', 'domain_id', 'type', 'value']):
+        if any(field in vals for field in ['name', 'domain_id', 'type', 'value', 'ttl']):
             for record in self:
                 if record.domain_id.route53_sync:
                     record.sync_to_route53()
@@ -239,7 +239,7 @@ class Subdomain(models.Model):
                                     'ResourceRecordSet': {
                                         'Name': record.full_domain + '.',  # Add trailing dot
                                         'Type': record_type,
-                                        'TTL': 300,
+                                        'TTL': record.ttl,
                                         'ResourceRecords': [
                                             {
                                                 'Value': record_value
@@ -261,8 +261,8 @@ class Subdomain(models.Model):
     @api.model
     def sync_route53_records(self, domain_id=None):
         """
-        Sync AWS Route 53 records to Odoo subdomains
-        This creates subdomain records in Odoo for any DNS records found in Route 53
+        Sync AWS Route 53 records to Odoo DNS records
+        This creates DNS record entries in Odoo for any records found in Route 53
         that don't already exist.
         
         Args:
@@ -413,14 +413,14 @@ class Subdomain(models.Model):
                         _logger.warning("Empty value for %s record: %s - skipping", record_type, record.get('Name', ''))
                         continue
                     
-                    # Check if subdomain already exists
-                    existing_subdomain = self.search([
+                    # Check if DNS record already exists
+                    existing_record = self.search([
                         ('name', '=', subdomain_part),
                         ('domain_id', '=', domain.id)
                     ], limit=1)
                     
-                    if not existing_subdomain:
-                        # Create new subdomain
+                    if not existing_record:
+                        # Create new DNS record
                         # Map AWS record type to our conversion method
                         type_mapping = {
                             'A': 'a',
@@ -442,18 +442,22 @@ class Subdomain(models.Model):
                             'TXT': 'txt'
                         }
                         record_type_value = type_mapping.get(record_type, 'txt')  # Default to TXT for unknown types
-                        new_subdomain = self.create({
+                        # Get TTL from Route53 or use default
+                        ttl = record.get('TTL', 300)
+                        
+                        new_record = self.create({
                             'name': subdomain_part,
                             'domain_id': domain.id,
                             'type': record_type_value,
                             'value': record_value,
+                            'ttl': ttl,
                             'route53_record_id': f"{record_type}:{full_name}",
                             'route53_last_sync': fields.Datetime.now(),
                         })
                         record_count += 1
                     else:
                         # Only update if it doesn't have a Route 53 record ID
-                        if not existing_subdomain.route53_record_id:
+                        if not existing_record.route53_record_id:
                             # Use the same mapping as for new records
                             type_mapping = {
                                 'A': 'a',
@@ -475,9 +479,13 @@ class Subdomain(models.Model):
                                 'TXT': 'txt'
                             }
                             record_type_value = type_mapping.get(record_type, 'txt')
-                            existing_subdomain.write({
+                            # Get TTL from Route53 or use default
+                            ttl = record.get('TTL', 300)
+                            
+                            existing_record.write({
                                 'type': record_type_value,
                                 'value': record_value,
+                                'ttl': ttl,
                                 'route53_record_id': f"{record_type}:{full_name}",
                                 'route53_last_sync': fields.Datetime.now(),
                             })
@@ -504,7 +512,7 @@ class Subdomain(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Sync Completed With Errors'),
-                    'message': _(f"Created/updated {record_count} subdomain records. Errors: {'; '.join(error_messages)}"),
+                    'message': _(f"Created/updated {record_count} DNS records. Errors: {'; '.join(error_messages)}"),
                     'sticky': True,
                     'type': 'warning',
                 }
@@ -515,7 +523,7 @@ class Subdomain(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Sync Completed'),
-                    'message': _(f"Successfully created/updated {record_count} subdomain records from Route 53."),
+                    'message': _(f"Successfully created/updated {record_count} DNS records from Route 53."),
                     'sticky': False,
                     'type': 'success',
                 }

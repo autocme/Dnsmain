@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Hosted Zone Tree View -->
+    <record id="view_route53_hosted_zone_tree" model="ir.ui.view">
+        <field name="name">aws.route53.hosted.zone.tree</field>
+        <field name="model">aws.route53.hosted.zone</field>
+        <field name="arch" type="xml">
+            <tree string="Hosted Zones" decoration-muted="active == False" decoration-danger="sync_status == 'error'" decoration-info="sync_status == 'syncing'">
+                <field name="domain_name"/>
+                <field name="hosted_zone_id"/>
+                <field name="record_count"/>
+                <field name="is_private"/>
+                <field name="vpc_id" attrs="{'invisible': [('is_private', '=', False)]}"/>
+                <field name="vpc_region" attrs="{'invisible': [('is_private', '=', False)]}"/>
+                <field name="sync_status"/>
+                <field name="last_sync"/>
+                <field name="active" invisible="1"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Hosted Zone Form View -->
+    <record id="view_route53_hosted_zone_form" model="ir.ui.view">
+        <field name="name">aws.route53.hosted.zone.form</field>
+        <field name="model">aws.route53.hosted.zone</field>
+        <field name="arch" type="xml">
+            <form string="Hosted Zone">
+                <header>
+                    <button name="import_records_from_aws" string="Import DNS Records from AWS" type="object" 
+                            class="oe_highlight" attrs="{'invisible': [('hosted_zone_id', '=', False)]}"/>
+                    <field name="sync_status" widget="statusbar" statusbar_visible="not_synced,syncing,synced,error"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_records" type="object" class="oe_stat_button" icon="fa-list">
+                            <field name="record_count" string="Records" widget="statinfo"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="domain_name" placeholder="e.g. example.com"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="hosted_zone_id" readonly="1"/>
+                            <field name="name_servers" readonly="1"/>
+                            <field name="active"/>
+                            <field name="is_private"/>
+                        </group>
+                        <group>
+                            <field name="caller_reference" readonly="1"/>
+                            <field name="aws_credentials_id" widget="selection" domain="[('active', '=', True)]"/>
+                            <field name="aws_region"/>
+                            <field name="last_sync" readonly="1"/>
+                        </group>
+                    </group>
+                    <group attrs="{'invisible': [('is_private', '=', False)]}">
+                        <group string="VPC Configuration">
+                            <field name="vpc_id" attrs="{'required': [('is_private', '=', True)]}"/>
+                            <field name="vpc_region" attrs="{'required': [('is_private', '=', True)]}"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Description" name="description">
+                            <field name="description" placeholder="Enter description..."/>
+                        </page>
+                        <page string="Comment" name="comment">
+                            <field name="comment" placeholder="Enter comment..."/>
+                        </page>
+                        <page string="DNS Records" name="records">
+                            <field name="record_ids">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="type"/>
+                                    <field name="value"/>
+                                    <field name="ttl"/>
+                                    <field name="sync_status"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Sync Status" name="sync">
+                            <group>
+                                <field name="sync_message"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Hosted Zone Search View -->
+    <record id="view_route53_hosted_zone_search" model="ir.ui.view">
+        <field name="name">aws.route53.hosted.zone.search</field>
+        <field name="model">aws.route53.hosted.zone</field>
+        <field name="arch" type="xml">
+            <search string="Hosted Zones">
+                <field name="domain_name"/>
+                <field name="hosted_zone_id"/>
+                <field name="vpc_id"/>
+                <filter string="Private Zones" name="private" domain="[('is_private', '=', True)]"/>
+                <filter string="Public Zones" name="public" domain="[('is_private', '=', False)]"/>
+                <filter string="Synced" name="synced" domain="[('sync_status', '=', 'synced')]"/>
+                <filter string="Not Synced" name="not_synced" domain="[('sync_status', '=', 'not_synced')]"/>
+                <filter string="Error" name="error" domain="[('sync_status', '=', 'error')]"/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Private/Public" name="group_by_private" domain="[]" context="{'group_by': 'is_private'}"/>
+                    <filter string="Sync Status" name="group_by_sync" domain="[]" context="{'group_by': 'sync_status'}"/>
+                    <filter string="VPC" name="group_by_vpc" domain="[]" context="{'group_by': 'vpc_id'}"/>
+                    <filter string="Region" name="group_by_region" domain="[]" context="{'group_by': 'vpc_region'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Hosted Zone Action -->
+    <record id="action_route53_hosted_zone" model="ir.actions.act_window">
+        <field name="name">Hosted Zones</field>
+        <field name="res_model">aws.route53.hosted.zone</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_route53_hosted_zone_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first Route 53 hosted zone
+            </p>
+            <p>
+                A hosted zone is a container for DNS records. Create a hosted zone to start managing your domain's DNS records.
+            </p>
+            <p>
+                You can also import existing hosted zones from AWS by clicking on the "Import Hosted Zones" button above.
+            </p>
+        </field>
+    </record>
+
+    <!-- Import Hosted Zones Action -->
+    <record id="action_import_route53_hosted_zones" model="ir.actions.server">
+        <field name="name">Import Hosted Zones</field>
+        <field name="model_id" ref="model_aws_route53_hosted_zone"/>
+        <field name="binding_model_id" ref="model_aws_route53_hosted_zone"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = model.import_hosted_zones_from_aws()</field>
+    </record>
+</odoo>
