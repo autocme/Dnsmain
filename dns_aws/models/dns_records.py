@@ -14,6 +14,7 @@ class Subdomain(models.Model):
     _inherit = 'dns.subdomain'
     
     route53_record_id = fields.Char(string='Route 53 Record ID', readonly=True)
+    route53_sync = fields.Boolean(string='Sync with Route 53', related='domain_id.route53_sync', store=True, readonly=True)
     route53_sync_status = fields.Selection([
         ('not_synced', 'Not Synced'),
         ('synced', 'Synced'),
