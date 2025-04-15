@@ -489,7 +489,7 @@ class EC2Instance(models.Model):
                 
                 # Refresh instance data after a short delay
                 self.env.cr.commit()  # Commit to ensure the state update is saved
-                instance._refresh_instance_data()
+                instance.refresh_instance_data()
                 
             except Exception as e:
                 error_msg = f"Failed to start instance {instance.instance_id}: {str(e)}"
@@ -526,7 +526,7 @@ class EC2Instance(models.Model):
                 
                 # Refresh instance data after a short delay
                 self.env.cr.commit()  # Commit to ensure the state update is saved
-                instance._refresh_instance_data()
+                instance.refresh_instance_data()
                 
             except Exception as e:
                 error_msg = f"Failed to stop instance {instance.instance_id}: {str(e)}"
@@ -562,7 +562,7 @@ class EC2Instance(models.Model):
                 
                 # Refresh instance data after a short delay
                 self.env.cr.commit()  # Commit to ensure the state update is saved
-                instance._refresh_instance_data()
+                instance.refresh_instance_data()
                 
             except Exception as e:
                 error_msg = f"Failed to reboot instance {instance.instance_id}: {str(e)}"
@@ -575,7 +575,7 @@ class EC2Instance(models.Model):
         
         return True
 
-    def _refresh_instance_data(self):
+    def refresh_instance_data(self):
         """
         Refresh instance data from AWS.
         """
@@ -720,7 +720,7 @@ class EC2Instance(models.Model):
         instances = self.search([('active', '=', True), ('instance_id', '!=', False)])
         for instance in instances:
             try:
-                instance._refresh_instance_data()
+                instance.refresh_instance_data()
             except Exception as e:
                 _logger.error(f"Failed to refresh instance {instance.instance_id}: {str(e)}")
         
