@@ -40,7 +40,7 @@
                             <field name="subdomain_ids">
                                 <tree string="Subdomains" editable="bottom">
                                     <field name="name"/>
-                                    <field name="conversion_method"/>
+                                    <field name="type"/>
                                     <field name="value"/>
                                     <field name="full_domain"/>
                                     <field name="active"/>
@@ -79,7 +79,7 @@
                 Create your first domain!
             </p>
             <p>
-                Manage your DNS domains and their subdomains.
+                Manage your DNS domains and their subdomains with full support for all common DNS record types.
             </p>
         </field>
     </record>

@@ -15,7 +15,7 @@ class Subdomain(models.Model):
 
     name = fields.Char(string='Subdomain', required=True)
     domain_id = fields.Many2one('dns.domain', string='Domain', required=True, ondelete='cascade')
-    conversion_method = fields.Selection([
+    type = fields.Selection([
         ('a', 'A Record'),
         ('aaaa', 'AAAA Record'),
         ('caa', 'CAA Record'),
@@ -33,7 +33,7 @@ class Subdomain(models.Model):
         ('svcb', 'SVCB Record'),
         ('tlsa', 'TLSA Record'),
         ('txt', 'TXT Record')
-    ], string='Conversion Method', required=True, default='a')
+    ], string='Type', required=True, default='a')
     value = fields.Char(string='Value', required=True)
     full_domain = fields.Char(string='Full Domain', compute='_compute_full_domain', store=True)
     active = fields.Boolean(default=True)
@@ -87,11 +87,11 @@ class Subdomain(models.Model):
                 except errors.InvalidDomainError:
                     raise ValidationError(_("Invalid full domain: %s") % record.full_domain)
 
-    @api.constrains('value', 'conversion_method')
+    @api.constrains('value', 'type')
     def _check_record_value(self):
         for record in self:
             # IP address validation for A and AAAA records
-            if record.conversion_method == 'a':
+            if record.type == 'a':
                 try:
                     # Validate IPv4 address for A records
                     validators.ip_address(record.value)
@@ -101,7 +101,7 @@ class Subdomain(models.Model):
                 except errors.InvalidIPAddressError:
                     raise ValidationError(_("Invalid IP address for A record: %s") % record.value)
             
-            elif record.conversion_method == 'aaaa':
+            elif record.type == 'aaaa':
                 try:
                     # Validate IPv6 address for AAAA records
                     validators.ip_address(record.value)
@@ -112,31 +112,31 @@ class Subdomain(models.Model):
                     raise ValidationError(_("Invalid IPv6 address for AAAA record: %s") % record.value)
             
             # Domain name validation for records pointing to other domains
-            elif record.conversion_method in ['cname', 'mx', 'ns', 'ptr']:
+            elif record.type in ['cname', 'mx', 'ns', 'ptr']:
                 try:
                     # Validate domain
                     validators.domain(record.value.rstrip('.'))
                 except errors.InvalidDomainError:
-                    raise ValidationError(_("Invalid domain for %s record: %s") % (record.conversion_method.upper(), record.value))
+                    raise ValidationError(_("Invalid domain for %s record: %s") % (record.type.upper(), record.value))
             
             # MX records need priority
-            elif record.conversion_method == 'mx':
+            elif record.type == 'mx':
                 # Check for priority value (e.g., "10 mail.example.com")
                 if not re.match(r'^\d+\s+[a-zA-Z0-9][a-zA-Z0-9\-\.]+[a-zA-Z0-9]\.?$', record.value):
                     raise ValidationError(_("Invalid MX record format. Should be 'priority domain' (e.g., '10 mail.example.com'): %s") % record.value)
             
             # Basic validation for TXT and SPF records
-            elif record.conversion_method in ['txt', 'spf']:
+            elif record.type in ['txt', 'spf']:
                 if not record.value or len(record.value) > 255:
                     raise ValidationError(_("TXT/SPF record value must be between 1 and 255 characters: %s") % record.value)
             
             # SRV records validation
-            elif record.conversion_method == 'srv':
+            elif record.type == 'srv':
                 if not re.match(r'^\d+\s+\d+\s+\d+\s+[a-zA-Z0-9][a-zA-Z0-9\-\.]+[a-zA-Z0-9]\.?$', record.value):
                     raise ValidationError(_("Invalid SRV record format. Should be 'priority weight port target' (e.g., '0 5 5060 sip.example.com'): %s") % record.value)
             
             # CAA records validation
-            elif record.conversion_method == 'caa':
+            elif record.type == 'caa':
                 if not re.match(r'^\d+\s+(issue|issuewild|iodef)\s+"[^"]+"$', record.value):
                     raise ValidationError(_("Invalid CAA record format. Should be 'flag tag \"value\"' (e.g., '0 issue \"ca.example.com\"'): %s") % record.value)
             

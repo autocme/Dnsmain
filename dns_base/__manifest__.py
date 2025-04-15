@@ -11,8 +11,9 @@
     'description': """
 DNS Domain Management
 ====================
-This module allows you to manage DNS domains and subdomains.
-For each subdomain, you can specify the value and conversion method (A or CNAME).
+This module allows you to manage DNS domains and subdomains with comprehensive record type support.
+For each subdomain, you can specify the record type (A, AAAA, CAA, CNAME, DS, HTTPS, MX, NAPTR, NS, PTR, SOA, SPF, SRV, SSHFP, SVCB, TLSA, TXT) and value.
+Includes robust validation for each record type.
     """,
     'author': 'JAAH',
     'website': 'https://www.example.com',
