@@ -11,14 +11,25 @@
         </field>
     </record>
     
-    <!-- Server action to sync AWS Route 53 records to DNS Records -->
+    <!-- Server action to sync AWS Route 53 records to DNS Records (with deletion) -->
     <record id="action_sync_route53_records" model="ir.actions.server">
-        <field name="name">Sync Route 53 Records</field>
+        <field name="name">Sync Route 53 Records (with cleanup)</field>
         <field name="model_id" ref="dns_base.model_dns_subdomain"/>
         <field name="binding_model_id" ref="dns_base.model_dns_subdomain"/>
         <field name="state">code</field>
         <field name="code">
-            action = model.sync_route53_records()
+            action = model.sync_route53_records(delete_orphans=True)
+        </field>
+    </record>
+    
+    <!-- Server action to sync AWS Route 53 records to DNS Records (no deletion) -->
+    <record id="action_sync_route53_records_safe" model="ir.actions.server">
+        <field name="name">Sync Route 53 Records (safe mode)</field>
+        <field name="model_id" ref="dns_base.model_dns_subdomain"/>
+        <field name="binding_model_id" ref="dns_base.model_dns_subdomain"/>
+        <field name="state">code</field>
+        <field name="code">
+            action = model.sync_route53_records(delete_orphans=False)
         </field>
     </record>
     

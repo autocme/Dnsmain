@@ -424,7 +424,7 @@ class Subdomain(models.Model):
         return super(Subdomain, self).unlink()
         
     @api.model
-    def sync_route53_records(self, domain_id=None):
+    def sync_route53_records(self, domain_id=None, delete_orphans=True):
         """
         Sync AWS Route 53 records to Odoo DNS records
         This creates DNS record entries in Odoo for any records found in Route 53
@@ -432,6 +432,7 @@ class Subdomain(models.Model):
         
         Args:
             domain_id: Optional domain ID to limit the sync to a specific domain
+            delete_orphans: Whether to delete Odoo records that no longer exist in AWS
         """
         # Get domains to sync
         Domain = self.env['dns.domain']
@@ -725,36 +726,82 @@ class Subdomain(models.Model):
                             record_count += 1
                 
                 # Track Route 53 records that exist for this domain
+                # First collect all AWS records BEFORE processing them
+                # This ensures we don't miss any records during deletion detection
                 aws_records = []
+                _logger.info("Beginning to collect existing AWS records for domain %s", domain.name)
                 
-                # Collect all record identifiers that exist in AWS
-                for record in response.get('ResourceRecordSets', []):
-                    record_type = record.get('Type')
-                    if record_type in supported_types:
-                        full_name = record.get('Name', '').rstrip('.')
-                        if full_name.endswith(domain_name) and full_name != domain_name:
-                            aws_records.append(f"{record_type}:{full_name}")
+                # Collect all record identifiers that exist in AWS for this domain
+                # Process each record in the original response to ensure consistency
+                for aws_record in response.get('ResourceRecordSets', []):
+                    aws_record_type = aws_record.get('Type')
+                    aws_record_name = aws_record.get('Name', '')
+                    
+                    # Skip unsupported record types and domain apex records
+                    if aws_record_type not in supported_types:
+                        continue
+                        
+                    aws_full_name = aws_record_name.rstrip('.')
+                    if aws_full_name == domain_name:
+                        continue
+                        
+                    # Check if record belongs to this domain
+                    if aws_full_name.endswith('.' + domain_name) or aws_full_name == domain_name:
+                        # This is a record of our domain
+                        record_id = f"{aws_record_type}:{aws_full_name}"
+                        aws_records.append(record_id)
+                        _logger.info("Found AWS record: %s", record_id)
+                
+                _logger.info("Collected %d total AWS records for domain %s", len(aws_records), domain.name)
                 
                 # Find records in Odoo that no longer exist in AWS and delete them
                 domain_records = self.search([
                     ('domain_id', '=', domain.id),
-                    ('route53_sync', '=', True),
-                    ('route53_record_id', '!=', False)
+                    ('route53_record_id', '!=', False)  # Remove route53_sync condition as it's handled at domain level
                 ])
                 
-                # Delete records that no longer exist in AWS
-                to_delete = self.env['dns.subdomain']
-                for odoo_record in domain_records:
-                    if odoo_record.route53_record_id and odoo_record.route53_record_id not in aws_records:
-                        _logger.info("Record %s no longer exists in Route 53, marking for deletion", odoo_record.full_domain)
-                        to_delete |= odoo_record
+                # Find and log records that no longer exist in AWS
+                _logger.info("Checking for Odoo records that no longer exist in AWS Route 53")
+                _logger.info("Found %d Odoo records with Route 53 IDs for domain %s", len(domain_records), domain.name)
                 
-                # Delete the records
-                if to_delete:
-                    _logger.info("Deleting %d DNS records that no longer exist in Route 53", len(to_delete))
-                    deleted_count += len(to_delete)
-                    # Set special context flag to avoid triggering Route 53 deletion when deleting from Odoo
-                    to_delete.with_context(skip_route53_delete=True).unlink()
+                to_delete = self.env['dns.subdomain']
+                orphaned_records = []  # Track orphaned records even if we don't delete them
+                
+                for odoo_record in domain_records:
+                    if not odoo_record.route53_record_id:
+                        _logger.info("Record %s has no Route 53 ID - skipping", odoo_record.full_domain)
+                        continue
+                        
+                    # Log the record we're checking
+                    _logger.info("Checking if record still exists in AWS: %s (ID: %s)", 
+                               odoo_record.full_domain, odoo_record.route53_record_id)
+                               
+                    if odoo_record.route53_record_id not in aws_records:
+                        _logger.info("Record %s with ID %s no longer exists in Route 53, marking as orphaned", 
+                                    odoo_record.full_domain, odoo_record.route53_record_id)
+                        orphaned_records.append(odoo_record.full_domain)
+                        
+                        if delete_orphans:
+                            to_delete |= odoo_record
+                    else:
+                        _logger.info("Record %s still exists in AWS, keeping", odoo_record.full_domain)
+                
+                # Report orphaned records even if we're not deleting them
+                if orphaned_records:
+                    if delete_orphans:
+                        # Only delete if delete_orphans is True
+                        _logger.info("Records to delete: %s", ", ".join([r.full_domain for r in to_delete]))
+                        _logger.info("Deleting %d DNS records that no longer exist in Route 53", len(to_delete))
+                        deleted_count += len(to_delete)
+                        
+                        # Set special context flag to avoid triggering Route 53 deletion when deleting from Odoo
+                        to_delete.with_context(skip_route53_delete=True).unlink()
+                    else:
+                        _logger.info("Found %d orphaned records but not deleting due to delete_orphans=False", 
+                                    len(orphaned_records))
+                        _logger.info("Orphaned records: %s", ", ".join(orphaned_records))
+                else:
+                    _logger.info("No orphaned records found for domain %s", domain.name)
                 
                 # Update domain last sync time
                 domain.write({
