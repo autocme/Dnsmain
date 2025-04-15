@@ -11,65 +11,49 @@
                     <group>
                         <group>
                             <field name="route53_sync"/>
-                            <field name="aws_credentials_id"/>
-                            <field name="route53_auto_region_sync"/>
-                            <field name="route53_config_id"/>
-                            <field name="route53_hosted_zone_id"/>
+                            <field name="aws_credentials_id" attrs="{'invisible': [('route53_sync', '=', False)], 'required': [('route53_sync', '=', True)]}"/>
+                            <field name="route53_auto_region_sync" attrs="{'invisible': [('route53_sync', '=', False)]}"/>
+                            <field name="route53_config_id" attrs="{'invisible': [('route53_sync', '=', False)], 'required': [('route53_sync', '=', True)]}"/>
+                            <field name="route53_hosted_zone_id" attrs="{'invisible': [('route53_sync', '=', False)]}"/>
                         </group>
                         <group>
-                            <field name="route53_sync_status" widget="badge" decoration-success="route53_sync_status == 'synced'" decoration-warning="route53_sync_status == 'not_synced'" decoration-danger="route53_sync_status == 'error'"/>
-                            <field name="route53_last_sync"/>
+                            <field name="route53_sync_status" widget="badge"
+                                   decoration-success="route53_sync_status == 'synced'"
+                                   decoration-warning="route53_sync_status == 'not_synced'"
+                                   decoration-danger="route53_sync_status == 'error'"
+                                   attrs="{'invisible': [('route53_sync', '=', False)]}"/>
+                            <field name="route53_last_sync" attrs="{'invisible': [('route53_sync', '=', False)]}"/>
                         </group>
                     </group>
-                    <!-- Error message section -->
+
                     <group attrs="{'invisible': [('route53_error_message', '=', False)]}">
                         <field name="route53_error_message" readonly="1" nolabel="1"/>
                     </group>
-                    
-                    <!-- Sync buttons section -->
-                    <group attrs="{'invisible': [('route53_sync', '=', False)]}">
-                        <button name="sync_all_subdomains_to_route53" string="Sync All Subdomains to Route 53" type="object" class="oe_highlight" icon="fa-upload"/>
-                        <button name="%(dns_aws.action_sync_domain_route53_records)d" string="Sync Records from Route 53" type="action" class="oe_highlight" icon="fa-download"/>
-                    </group>
+
+                    <div attrs="{'invisible': [('route53_sync', '=', False)]}">
+                        <button name="sync_all_subdomains_to_route53"
+                                string="Sync All Subdomains to Route 53"
+                                type="object" class="oe_highlight"
+                                icon="fa-upload"/>
+                        <button name="%(dns_aws.action_sync_domain_route53_records)d"
+                                string="Sync Records from Route 53"
+                                type="action" class="oe_highlight"
+                                icon="fa-download"/>
+                    </div>
                 </page>
             </notebook>
-            
+
             <!-- Add sync status indicator to the DNS Records list -->
             <xpath expr="//field[@name='subdomain_ids']/tree" position="inside">
                 <field name="route53_sync" invisible="1"/>
-                <field name="route53_sync_status" widget="badge" decoration-success="route53_sync_status == 'synced'" decoration-warning="route53_sync_status == 'not_synced'" decoration-danger="route53_sync_status == 'error'" optional="show"/>
+                <field name="route53_sync_status" widget="badge"
+                       decoration-success="route53_sync_status == 'synced'"
+                       decoration-warning="route53_sync_status == 'not_synced'"
+                       decoration-danger="route53_sync_status == 'error'"
+                       optional="show"/>
                 <field name="route53_last_sync" optional="hide"/>
                 <field name="route53_error_message" invisible="1"/>
             </xpath>
-        </field>
-    </record>
-    
-    <!-- Add filter and fields to Domain Search View -->
-    <record id="view_domain_search_aws_inherit" model="ir.ui.view">
-        <field name="name">dns.domain.search.aws.inherit</field>
-        <field name="model">dns.domain</field>
-        <field name="inherit_id" ref="dns_base.view_domain_search"/>
-        <field name="arch" type="xml">
-            <filter name="inactive" position="after">
-                <separator/>
-                <filter string="Route 53 Enabled" name="route53_enabled" domain="[('route53_sync', '=', True)]"/>
-                <filter string="Route 53 Status" name="route53_status" domain="[]" context="{'group_by': 'route53_sync_status'}"/>
-            </filter>
-        </field>
-    </record>
-    
-    <!-- Add Route 53 fields to Domain Tree View -->
-    <record id="view_domain_tree_aws_inherit" model="ir.ui.view">
-        <field name="name">dns.domain.tree.aws.inherit</field>
-        <field name="model">dns.domain</field>
-        <field name="inherit_id" ref="dns_base.view_domain_tree"/>
-        <field name="arch" type="xml">
-            <field name="active" position="after">
-                <field name="route53_sync" optional="hide"/>
-                <field name="route53_sync_status" widget="badge" decoration-success="route53_sync_status == 'synced'" decoration-warning="route53_sync_status == 'not_synced'" decoration-danger="route53_sync_status == 'error'" optional="show"/>
-                <field name="route53_last_sync" optional="hide"/>
-                <field name="route53_error_message" optional="hide"/>
-            </field>
         </field>
     </record>
 </odoo>
