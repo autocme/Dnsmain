@@ -350,9 +350,21 @@ class Subdomain(models.Model):
                         
                         # Handle wildcard domains: convert \052 to * if present
                         if subdomain_part.startswith('\\052'):
-                            subdomain_part = '*' + subdomain_part[4:]  # Replace \052 with *
+                            # Replace \052 with * 
+                            if len(subdomain_part) == 4:  # just \052
+                                subdomain_part = '*'
+                            elif subdomain_part[4:].startswith('.'):  # \052.something
+                                subdomain_part = '*' + subdomain_part[4:]
+                            else:  # \052something (unlikely but handle it)
+                                subdomain_part = '*' + subdomain_part[4:]
                         elif subdomain_part.startswith(r'\052'):
-                            subdomain_part = '*' + subdomain_part[4:]  # Replace \052 with *
+                            # Replace \052 with * (raw string version)
+                            if len(subdomain_part) == 4:  # just \052
+                                subdomain_part = '*'
+                            elif subdomain_part[4:].startswith('.'):  # \052.something
+                                subdomain_part = '*' + subdomain_part[4:]
+                            else:  # \052something (unlikely but handle it)
+                                subdomain_part = '*' + subdomain_part[4:]
                     else:
                         continue  # Not part of this domain
                     
