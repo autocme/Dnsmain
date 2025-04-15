@@ -1,9 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Add the Route 53 Configuration action directly to the main DNS menu -->
-    <menuitem id="menu_aws_route53_configs"
-              name="AWS Route 53 Configurations"
+    <!-- AWS Configuration menu -->
+    <menuitem id="menu_aws_configs"
+              name="AWS Configuration"
               parent="dns_base.menu_dns_base"
-              action="dns_aws.action_route53_configs"
               sequence="90"/>
+              
+    <!-- AWS Credentials menu -->
+    <menuitem id="menu_aws_credentials"
+              name="AWS Credentials"
+              parent="menu_aws_configs"
+              action="dns_aws.action_aws_credentials"
+              sequence="10"/>
+              
+    <!-- Route 53 Configurations menu -->
+    <menuitem id="menu_aws_route53_configs"
+              name="Route 53 Configurations"
+              parent="menu_aws_configs"
+              action="dns_aws.action_route53_configs"
+              sequence="20"/>
 </odoo>

@@ -11,6 +11,8 @@
                     <group>
                         <group>
                             <field name="route53_sync"/>
+                            <field name="aws_credentials_id" invisible="not route53_sync" required="route53_sync"/>
+                            <field name="route53_auto_region_sync" invisible="not route53_sync"/>
                             <field name="route53_config_id" invisible="not route53_sync" required="route53_sync"/>
                             <field name="route53_hosted_zone_id" invisible="not route53_sync"/>
                         </group>

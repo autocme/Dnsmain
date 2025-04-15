@@ -1,3 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_dns_route53_config_user,dns.route53.config.user,dns_aws.model_dns_route53_config,base.group_user,1,0,0,0
 access_dns_route53_config_system,dns.route53.config.system,dns_aws.model_dns_route53_config,base.group_system,1,1,1,1
+access_dns_aws_credentials_user,dns.aws.credentials.user,dns_aws.model_dns_aws_credentials,base.group_user,1,0,0,0
+access_dns_aws_credentials_system,dns.aws.credentials.system,dns_aws.model_dns_aws_credentials,base.group_system,1,1,1,1

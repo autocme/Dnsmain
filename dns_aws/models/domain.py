@@ -15,6 +15,8 @@ class Domain(models.Model):
     route53_config_id = fields.Many2one('dns.route53.config', string='Route 53 Configuration')
     route53_hosted_zone_id = fields.Char(string='Route 53 Hosted Zone ID', help='If empty, we will try to find it automatically')
     route53_sync = fields.Boolean(string='Sync with Route 53', default=False)
+    route53_auto_region_sync = fields.Boolean(string='Auto-sync Region', default=True, 
+                                             help='Automatically select the best AWS region based on the domain geographic region')
     route53_sync_status = fields.Selection([
         ('not_synced', 'Not Synced'),
         ('synced', 'Synced'),
@@ -22,6 +24,8 @@ class Domain(models.Model):
     ], string='Route 53 Sync Status', compute='_compute_route53_sync_status', store=True)
     route53_last_sync = fields.Datetime(string='Last Route 53 Sync')
     route53_error_message = fields.Text(string='Route 53 Error Message')
+    aws_credentials_id = fields.Many2one('dns.aws.credentials', string='AWS Credentials', 
+                                         help='AWS credentials to use for this domain')
     
     @api.depends('route53_sync', 'route53_config_id', 'route53_last_sync', 'route53_error_message')
     def _compute_route53_sync_status(self):
@@ -34,6 +38,31 @@ class Domain(models.Model):
                 domain.route53_sync_status = 'synced'
             else:
                 domain.route53_sync_status = 'not_synced'
+    
+    @api.onchange('region', 'route53_auto_region_sync', 'aws_credentials_id')
+    def _onchange_region_for_route53(self):
+        """Update Route53 configuration based on the domain's geographic region"""
+        if self.region and self.route53_auto_region_sync and self.aws_credentials_id:
+            try:
+                # Get or create a configuration for this region
+                Route53Config = self.env['dns.route53.config']
+                config = Route53Config.create_config_for_region(
+                    self.region, 
+                    self.aws_credentials_id
+                )
+                
+                # Set the configuration for this domain
+                self.route53_config_id = config.id
+                
+                # Now try to find the hosted zone ID
+                if self.name and not self.route53_hosted_zone_id:
+                    hosted_zone_id = config.get_hosted_zone_id_by_domain(self.name)
+                    if hosted_zone_id:
+                        self.route53_hosted_zone_id = hosted_zone_id
+                        
+            except Exception as e:
+                _logger.error("Error syncing AWS region: %s", str(e))
+                # Don't raise error in onchange, just log it
     
     @api.onchange('route53_config_id', 'name')
     def _onchange_route53_config(self):
