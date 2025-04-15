@@ -717,21 +717,122 @@ class EC2Instance(models.Model):
         """
         Refresh all active instances.
         """
-        instances = self.search([('active', '=', True), ('instance_id', '!=', False)])
+        instances = self.search([('active', '=', True)])
         for instance in instances:
-            try:
-                instance.refresh_instance_data()
-            except Exception as e:
-                _logger.error(f"Failed to refresh instance {instance.instance_id}: {str(e)}")
+            instance.refresh_instance_data()
         
-        # Return a notification message
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': _('Instance Refresh'),
-                'message': _('Refreshed %s instances.') % len(instances),
+                'title': _('Refresh Completed'),
+                'message': _('%s instances have been refreshed from AWS EC2.') % len(instances),
                 'sticky': False,
                 'type': 'success',
             }
         }
+    
+    def sync_all_to_aws(self):
+        """
+        Sync all active instances to AWS EC2.
+        Creates missing instances in AWS or updates existing ones.
+        """
+        instances = self.search([('active', '=', True)])
+        success_count = 0
+        error_messages = []
+        
+        for instance in instances:
+            try:
+                if not instance.instance_id:
+                    # Launch in AWS if not already launched
+                    instance._launch_instance_in_aws()
+                    success_count += 1
+                else:
+                    # Update AWS instance with current Odoo data
+                    instance._update_instance_in_aws(instance._fields.keys())
+                    success_count += 1
+            except Exception as e:
+                error_message = f"Error syncing instance '{instance.name}': {str(e)}"
+                _logger.error(error_message)
+                error_messages.append(error_message)
+                instance.write({
+                    'sync_status': 'error',
+                    'sync_message': error_message,
+                })
+        
+        # Generate response message
+        if error_messages:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Sync Completed With Errors'),
+                    'message': _(f"Successfully synced {success_count}/{len(instances)} instances to AWS EC2. Errors: {'; '.join(error_messages)}"),
+                    'sticky': True,
+                    'type': 'warning',
+                }
+            }
+        else:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Sync Completed'),
+                    'message': _(f"Successfully synced {success_count} instances to AWS EC2."),
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+            
+    def sync_instance_to_aws(self):
+        """
+        Sync this instance to AWS EC2.
+        """
+        self.ensure_one()
+        
+        try:
+            if not self.instance_id:
+                # Launch in AWS if not already launched
+                self._launch_instance_in_aws()
+                message = _("Instance '%s' has been created in AWS EC2.") % self.name
+            else:
+                # Update AWS instance with current Odoo data
+                self._update_instance_in_aws(self._fields.keys())
+                message = _("Instance '%s' has been updated in AWS EC2.") % self.name
+                
+            self.write({
+                'sync_status': 'synced',
+                'last_sync': fields.Datetime.now(),
+                'sync_message': False,
+            })
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Sync Successful'),
+                    'message': message,
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+            
+        except Exception as e:
+            error_message = str(e)
+            _logger.error("EC2 sync error for %s: %s", self.name, error_message)
+            
+            self.write({
+                'sync_status': 'error',
+                'sync_message': error_message,
+            })
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Sync Failed'),
+                    'message': _(f"Failed to sync instance '{self.name}' to AWS EC2: {error_message}"),
+                    'sticky': True,
+                    'type': 'danger',
+                }
+            }
