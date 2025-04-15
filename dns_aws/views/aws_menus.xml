@@ -3,7 +3,6 @@
     <!-- AWS Configuration menu -->
     <menuitem id="menu_aws_configs"
               name="AWS Configuration"
-              parent="menu_dns_base"
               sequence="90"/>
               
     <!-- AWS Credentials menu -->
