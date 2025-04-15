@@ -92,7 +92,7 @@ class EC2Image(models.Model):
     # Usage Information
     instance_ids = fields.One2many('aws.ec2.instance', 'image_id', string='Instances Using This AMI',
                                   compute='_compute_instances')
-    instance_count = fields.Integer(string='Instance Count', compute='_compute_instances',
+    instance_count = fields.Integer(string='Instance Count', compute='_compute_instances', store=True,
                                    help='Number of instances using this AMI.')
     
     # Sync Status
@@ -106,6 +106,7 @@ class EC2Image(models.Model):
     last_sync = fields.Datetime(string='Last Sync')
     sync_message = fields.Text(string='Sync Message')
 
+    @api.depends('image_id')
     def _compute_instances(self):
         """
         Compute the instances using this AMI.
