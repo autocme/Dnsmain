@@ -488,9 +488,17 @@ class Subdomain(models.Model):
                     HostedZoneId=hosted_zone_id
                 )
                 
+                # Log number of records found in Route 53
+                aws_record_count = len(response.get('ResourceRecordSets', []))
+                _logger.info("Found %d records in Route 53 for domain %s", aws_record_count, domain.name)
+                
                 # Process each record
                 for record in response.get('ResourceRecordSets', []):
                     record_type = record.get('Type')
+                    record_name = record.get('Name', '')
+                    
+                    # Enhanced logging for better debugging
+                    _logger.info("Processing AWS record: Type=%s, Name=%s", record_type, record_name)
                     
                     # Check if this is a supported record type
                     supported_types = ['A', 'AAAA', 'CAA', 'CNAME', 'DS', 'HTTPS', 'MX', 
@@ -498,40 +506,49 @@ class Subdomain(models.Model):
                                       'SVCB', 'TLSA', 'TXT']
                     if record_type not in supported_types:
                         # Skip unsupported record types
-                        _logger.info("Skipping unsupported record type: %s for %s", record_type, record.get('Name', ''))
+                        _logger.info("Skipping unsupported record type: %s for %s", record_type, record_name)
                         continue
                     
                     # Get the full domain name and strip trailing dot
-                    full_name = record.get('Name', '').rstrip('.')
+                    full_name = record_name.rstrip('.')
                     domain_name = domain.name
                     
                     # Skip the domain's own records (SOA, NS, etc.)
                     if full_name == domain_name:
+                        _logger.info("Skipping apex record for domain: %s", full_name)
                         continue
                     
-                    # Extract subdomain part
-                    if full_name.endswith(domain_name):
+                    # Extract subdomain part with more robust logic
+                    subdomain_part = ''
+                    
+                    # Check if the record belongs to this domain
+                    if full_name == domain_name:
+                        # This is the apex record (@), but we already skipped it above
+                        _logger.info("Skipping domain apex record again (should not happen)")
+                        continue
+                    elif full_name.endswith('.' + domain_name):
+                        # Regular subdomain: remove domain name and trailing dot
                         subdomain_part = full_name[:-len(domain_name)-1]  # -1 for the dot
-                        
-                        # Handle wildcard domains: convert \052 to * if present
-                        if subdomain_part.startswith('\\052'):
-                            # Replace \052 with * 
-                            if len(subdomain_part) == 4:  # just \052
-                                subdomain_part = '*'
-                            elif subdomain_part[4:].startswith('.'):  # \052.something
-                                subdomain_part = '*' + subdomain_part[4:]
-                            else:  # \052something (unlikely but handle it)
-                                subdomain_part = '*' + subdomain_part[4:]
-                        elif subdomain_part.startswith(r'\052'):
-                            # Replace \052 with * (raw string version)
-                            if len(subdomain_part) == 4:  # just \052
-                                subdomain_part = '*'
-                            elif subdomain_part[4:].startswith('.'):  # \052.something
-                                subdomain_part = '*' + subdomain_part[4:]
-                            else:  # \052something (unlikely but handle it)
-                                subdomain_part = '*' + subdomain_part[4:]
-                    else:
-                        continue  # Not part of this domain
+                        _logger.info("Extracted subdomain part: '%s' from '%s'", subdomain_part, full_name)
+                    elif not domain_name.startswith(full_name):
+                        # If full_name doesn't end with domain_name and domain_name doesn't start with full_name
+                        # then this record likely belongs to a different domain
+                        _logger.info("Record %s doesn't seem to belong to domain %s - skipping", full_name, domain_name)
+                        continue
+                    
+                    # Handle wildcard domains: Route 53 encodes '*' as '\052' in responses
+                    if '\\052' in subdomain_part:
+                        old_part = subdomain_part
+                        subdomain_part = subdomain_part.replace('\\052', '*')
+                        _logger.info("Converted wildcard: '%s' to '%s'", old_part, subdomain_part)
+                    elif r'\052' in subdomain_part:
+                        old_part = subdomain_part
+                        subdomain_part = subdomain_part.replace(r'\052', '*')
+                        _logger.info("Converted raw wildcard: '%s' to '%s'", old_part, subdomain_part)
+                    
+                    # Additional logging
+                    _logger.info("Final subdomain name: '%s' for record: Type=%s, Name=%s", 
+                                subdomain_part, record_type, record_name)
                     
                     # Get record value
                     record_value = ''
@@ -597,51 +614,83 @@ class Subdomain(models.Model):
                         _logger.warning("Empty value for %s record: %s - skipping", record_type, record.get('Name', ''))
                         continue
                     
-                    # Check if DNS record already exists
+                    # Map AWS record type to our type field
+                    type_mapping = {
+                        'A': 'a',
+                        'AAAA': 'aaaa',
+                        'CAA': 'caa',
+                        'CNAME': 'cname',
+                        'DS': 'ds',
+                        'HTTPS': 'https',
+                        'MX': 'mx',
+                        'NAPTR': 'naptr',
+                        'NS': 'ns',
+                        'PTR': 'ptr',
+                        'SOA': 'soa',
+                        'SPF': 'spf',
+                        'SRV': 'srv',
+                        'SSHFP': 'sshfp',
+                        'SVCB': 'svcb',
+                        'TLSA': 'tlsa',
+                        'TXT': 'txt'
+                    }
+                    record_type_value = type_mapping.get(record_type, 'txt')  # Default to TXT for unknown types
+                    
+                    # Get TTL from Route53 or use default
+                    ttl = record.get('TTL', 300)
+                    record_id = f"{record_type}:{full_name}"
+                    
+                    # First check if we have a record with the same Route 53 ID
                     existing_record = self.search([
-                        ('name', '=', subdomain_part),
-                        ('domain_id', '=', domain.id)
+                        ('domain_id', '=', domain.id),
+                        ('route53_record_id', '=', record_id)
                     ], limit=1)
                     
                     if not existing_record:
-                        # Create new DNS record
-                        # Map AWS record type to our conversion method
-                        type_mapping = {
-                            'A': 'a',
-                            'AAAA': 'aaaa',
-                            'CAA': 'caa',
-                            'CNAME': 'cname',
-                            'DS': 'ds',
-                            'HTTPS': 'https',
-                            'MX': 'mx',
-                            'NAPTR': 'naptr',
-                            'NS': 'ns',
-                            'PTR': 'ptr',
-                            'SOA': 'soa',
-                            'SPF': 'spf',
-                            'SRV': 'srv',
-                            'SSHFP': 'sshfp',
-                            'SVCB': 'svcb',
-                            'TLSA': 'tlsa',
-                            'TXT': 'txt'
-                        }
-                        record_type_value = type_mapping.get(record_type, 'txt')  # Default to TXT for unknown types
-                        # Get TTL from Route53 or use default
-                        ttl = record.get('TTL', 300)
+                        # If no record with same ID, try to find by name and domain
+                        existing_record = self.search([
+                            ('name', '=', subdomain_part),
+                            ('domain_id', '=', domain.id),
+                            ('type', '=', record_type_value)
+                        ], limit=1)
+                    
+                    if not existing_record:
+                        # Log creation
+                        _logger.info("Creating new record: %s.%s (%s)", subdomain_part, domain_name, record_type)
                         
+                        # Create new DNS record
                         new_record = self.create({
                             'name': subdomain_part,
                             'domain_id': domain.id,
                             'type': record_type_value,
                             'value': record_value,
                             'ttl': ttl,
-                            'route53_record_id': f"{record_type}:{full_name}",
+                            'route53_record_id': record_id,
                             'route53_last_sync': fields.Datetime.now(),
                         })
                         record_count += 1
                     else:
-                        # Only update if it doesn't have a Route 53 record ID
-                        if not existing_record.route53_record_id:
+                        # Update existing record
+                        # Check if any field needs updating
+                        update_needed = False
+                        
+                        if existing_record.route53_record_id != record_id:
+                            update_needed = True
+                            _logger.info("Updating record ID: %s -> %s", existing_record.route53_record_id, record_id)
+                        
+                        if existing_record.type != record_type_value:
+                            update_needed = True
+                            _logger.info("Updating record type: %s -> %s", existing_record.type, record_type_value)
+                        
+                        if existing_record.value != record_value:
+                            update_needed = True
+                            _logger.info("Updating record value: %s -> %s", existing_record.value, record_value)
+                        
+                        if existing_record.ttl != ttl:
+                            update_needed = True
+                            _logger.info("Updating record TTL: %s -> %s", existing_record.ttl, ttl)
+                        
+                        if update_needed:
                             # Use the same mapping as for new records
                             type_mapping = {
                                 'A': 'a',
