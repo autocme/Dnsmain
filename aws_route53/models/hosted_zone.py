@@ -385,6 +385,136 @@ class Route53HostedZone(models.Model):
                 }
             }
             
+    def check_dns_propagation(self):
+        """
+        Check DNS propagation for this hosted zone.
+        """
+        self.ensure_one()
+        
+        if not self.hosted_zone_id:
+            raise UserError("No hosted zone ID available. The zone might not be synchronized with AWS.")
+        
+        try:
+            # Initialize boto3 client
+            r53_client = self._get_boto3_client('route53')
+            
+            # Get nameservers for this hosted zone
+            response = r53_client.get_hosted_zone(Id=self.hosted_zone_id)
+            nameservers = response.get('DelegationSet', {}).get('NameServers', [])
+            
+            if not nameservers:
+                raise UserError("No nameservers found for this hosted zone.")
+            
+            # Construct message with nameservers
+            nameserver_list = "\n".join([f"- {ns}" for ns in nameservers])
+            message = f"""
+DNS Propagation Check for {self.domain_name}:
+
+The following nameservers are configured for this domain:
+{nameserver_list}
+
+To check DNS propagation:
+1. Use an online DNS propagation checker like https://www.whatsmydns.net/ or https://dnschecker.org/
+2. Enter your domain name ({self.domain_name})
+3. Select the record type you want to check
+4. The tool will show the propagation status across different DNS servers worldwide
+
+For more detailed checking:
+- Use command line tools like 'dig' or 'nslookup'
+- Example: dig @{nameservers[0]} {self.domain_name} ANY
+- This will query a specific nameserver for your domain records
+            """
+            
+            # Return the message as a dialog
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('DNS Propagation Information'),
+                    'message': message,
+                    'sticky': True,
+                    'type': 'info',
+                }
+            }
+        
+        except Exception as e:
+            error_msg = f"Failed to check DNS propagation: {str(e)}"
+            self._log_aws_operation('check_dns_propagation', 'error', error_msg)
+            raise UserError(error_msg)
+    
+    def create_dnssec_key(self):
+        """
+        Create a DNSSEC key for this hosted zone.
+        """
+        self.ensure_one()
+        
+        if not self.hosted_zone_id:
+            raise UserError("No hosted zone ID available. The zone might not be synchronized with AWS.")
+        
+        try:
+            # Initialize boto3 client
+            r53_client = self._get_boto3_client('route53')
+            
+            # Check if DNSSEC is already enabled
+            try:
+                dnssec_status = r53_client.get_dnssec(
+                    HostedZoneId=self.hosted_zone_id
+                )
+                if dnssec_status.get('Status', {}).get('ServeSignature') == 'SIGNING':
+                    raise UserError("DNSSEC is already enabled for this hosted zone.")
+            except r53_client.exceptions.ClientError as e:
+                if 'NoSuchHostedZone' not in str(e):
+                    # If error is not "no DNSSEC config exists", re-raise
+                    raise
+            
+            # Enable DNSSEC for the hosted zone
+            response = r53_client.enable_dnssec_signing(
+                HostedZoneId=self.hosted_zone_id
+            )
+            
+            # Extract key info
+            key_info = ""
+            if 'KeySigningKey' in response:
+                key_info = f"""
+Key Signing Key information:
+- Name: {response['KeySigningKey'].get('Name', 'N/A')}
+- Status: {response['KeySigningKey'].get('Status', 'N/A')}
+- KSK length: {response['KeySigningKey'].get('KSKLength', 'N/A')}
+- DNSKEY record: {response['KeySigningKey'].get('DNSKEYRecord', 'N/A')}
+                """
+            
+            # Log the success
+            self._log_aws_operation('create_dnssec_key', 'success', 
+                                   f"Successfully enabled DNSSEC for {self.domain_name}")
+            
+            # Show success message
+            message = f"""
+DNSSEC has been successfully enabled for {self.domain_name}.
+
+{key_info}
+
+To fully implement DNSSEC:
+1. Make sure the domain registrar supports DNSSEC
+2. Add the DS (Delegation Signer) record to your domain at the registrar
+3. This process can take 24-48 hours to fully propagate
+            """
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('DNSSEC Enabled'),
+                    'message': message,
+                    'sticky': True,
+                    'type': 'success',
+                }
+            }
+        
+        except Exception as e:
+            error_msg = f"Failed to enable DNSSEC: {str(e)}"
+            self._log_aws_operation('create_dnssec_key', 'error', error_msg)
+            raise UserError(error_msg)
+    
     def action_view_records(self):
         """
         Open a view with all DNS records for this hosted zone.
