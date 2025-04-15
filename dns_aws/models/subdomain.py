@@ -60,13 +60,55 @@ class Subdomain(models.Model):
             config = domain.route53_config_id
             client = config._get_route53_client()
             
-            # Prepare record parameters based on conversion method (A or CNAME)
-            record_type = 'A' if self.conversion_method == 'a' else 'CNAME'
+            # Map conversion method to Route 53 record type
+            record_type_mapping = {
+                'a': 'A',
+                'aaaa': 'AAAA',
+                'caa': 'CAA',
+                'cname': 'CNAME',
+                'ds': 'DS',
+                'https': 'HTTPS',
+                'mx': 'MX',
+                'naptr': 'NAPTR',
+                'ns': 'NS',
+                'ptr': 'PTR',
+                'soa': 'SOA',
+                'spf': 'SPF',
+                'srv': 'SRV',
+                'sshfp': 'SSHFP',
+                'svcb': 'SVCB',
+                'tlsa': 'TLSA',
+                'txt': 'TXT'
+            }
+            
+            record_type = record_type_mapping.get(self.conversion_method, 'TXT')
             record_value = self.value
             
-            # If CNAME, ensure value ends with a dot
-            if record_type == 'CNAME' and not record_value.endswith('.'):
-                record_value = record_value + '.'
+            # Process value based on record type
+            if record_type in ['CNAME', 'NS', 'PTR', 'MX', 'SRV']:
+                # Domain records require trailing dot
+                if not record_value.endswith('.'):
+                    if record_type == 'MX':
+                        # For MX records, only add dot to domain part
+                        parts = record_value.split(' ', 1)
+                        if len(parts) == 2:
+                            record_value = f"{parts[0]} {parts[1]}."
+                        else:
+                            record_value = record_value + '.'
+                    elif record_type == 'SRV':
+                        # For SRV records, only add dot to target part
+                        parts = record_value.rsplit(' ', 1)
+                        if len(parts) == 2:
+                            record_value = f"{parts[0]} {parts[1]}."
+                        else:
+                            record_value = record_value + '.'
+                    else:
+                        record_value = record_value + '.'
+            
+            elif record_type == 'TXT' or record_type == 'SPF':
+                # TXT records need to be enclosed in quotes if not already
+                if not (record_value.startswith('"') and record_value.endswith('"')):
+                    record_value = f'"{record_value}"'
                 
             # Create or update Route 53 record
             response = client.change_resource_record_sets(
@@ -137,13 +179,55 @@ class Subdomain(models.Model):
                     config = record.domain_id.route53_config_id
                     client = config._get_route53_client()
                     
-                    # Delete Route 53 record
-                    record_type = 'A' if record.conversion_method == 'a' else 'CNAME'
+                    # Delete Route 53 record using the same type mapping as sync_to_route53
+                    record_type_mapping = {
+                        'a': 'A',
+                        'aaaa': 'AAAA',
+                        'caa': 'CAA',
+                        'cname': 'CNAME',
+                        'ds': 'DS',
+                        'https': 'HTTPS',
+                        'mx': 'MX',
+                        'naptr': 'NAPTR',
+                        'ns': 'NS',
+                        'ptr': 'PTR',
+                        'soa': 'SOA',
+                        'spf': 'SPF',
+                        'srv': 'SRV',
+                        'sshfp': 'SSHFP',
+                        'svcb': 'SVCB',
+                        'tlsa': 'TLSA',
+                        'txt': 'TXT'
+                    }
+                    
+                    record_type = record_type_mapping.get(record.conversion_method, 'TXT')
                     record_value = record.value
                     
-                    # If CNAME, ensure value ends with a dot
-                    if record_type == 'CNAME' and not record_value.endswith('.'):
-                        record_value = record_value + '.'
+                    # Process value based on record type
+                    if record_type in ['CNAME', 'NS', 'PTR', 'MX', 'SRV']:
+                        # Domain records require trailing dot
+                        if not record_value.endswith('.'):
+                            if record_type == 'MX':
+                                # For MX records, only add dot to domain part
+                                parts = record_value.split(' ', 1)
+                                if len(parts) == 2:
+                                    record_value = f"{parts[0]} {parts[1]}."
+                                else:
+                                    record_value = record_value + '.'
+                            elif record_type == 'SRV':
+                                # For SRV records, only add dot to target part
+                                parts = record_value.rsplit(' ', 1)
+                                if len(parts) == 2:
+                                    record_value = f"{parts[0]} {parts[1]}."
+                                else:
+                                    record_value = record_value + '.'
+                            else:
+                                record_value = record_value + '.'
+                    
+                    elif record_type == 'TXT' or record_type == 'SPF':
+                        # TXT records need to be enclosed in quotes if not already
+                        if not (record_value.startswith('"') and record_value.endswith('"')):
+                            record_value = f'"{record_value}"'
                     
                     client.change_resource_record_sets(
                         HostedZoneId=record.domain_id.route53_hosted_zone_id,
@@ -242,8 +326,11 @@ class Subdomain(models.Model):
                 for record in response.get('ResourceRecordSets', []):
                     record_type = record.get('Type')
                     
-                    # We handle A, CNAME, TXT and other compatible record types
-                    if record_type not in ['A', 'CNAME', 'TXT']:
+                    # Check if this is a supported record type
+                    supported_types = ['A', 'AAAA', 'CAA', 'CNAME', 'DS', 'HTTPS', 'MX', 
+                                      'NAPTR', 'NS', 'PTR', 'SOA', 'SPF', 'SRV', 'SSHFP', 
+                                      'SVCB', 'TLSA', 'TXT']
+                    if record_type not in supported_types:
                         # Skip unsupported record types
                         _logger.info("Skipping unsupported record type: %s for %s", record_type, record.get('Name', ''))
                         continue
@@ -265,18 +352,66 @@ class Subdomain(models.Model):
                     # Get record value
                     record_value = ''
                     if record.get('ResourceRecords'):
+                        # Get the raw value
+                        raw_value = record['ResourceRecords'][0]['Value']
+                        
+                        # Process the value based on record type
                         if record_type == 'A':
-                            record_value = record['ResourceRecords'][0]['Value']
-                        elif record_type == 'CNAME':
-                            record_value = record['ResourceRecords'][0]['Value'].rstrip('.')
-                        elif record_type == 'TXT':
-                            # Handle TXT records
-                            record_value = record['ResourceRecords'][0]['Value'].strip('"')
+                            # For A records (IPv4 addresses)
+                            record_value = raw_value
+                        
+                        elif record_type == 'AAAA':
+                            # For AAAA records (IPv6 addresses)
+                            record_value = raw_value
+                        
+                        elif record_type in ['CNAME', 'NS', 'PTR']:
+                            # Domain names, remove trailing dot
+                            record_value = raw_value.rstrip('.')
+                        
+                        elif record_type == 'MX':
+                            # MX records have priority and domain
+                            # Format: "10 mail.example.com."
+                            parts = raw_value.split(' ', 1)
+                            if len(parts) == 2:
+                                domain_part = parts[1].rstrip('.')
+                                record_value = f"{parts[0]} {domain_part}"
+                            else:
+                                record_value = raw_value
+                        
+                        elif record_type == 'TXT' or record_type == 'SPF':
+                            # Handle TXT and SPF records, remove quotes
+                            record_value = raw_value.strip('"')
+                        
+                        elif record_type == 'SRV':
+                            # SRV records: priority weight port target
+                            # Format: "1 10 5269 xmpp-server.example.com."
+                            parts = raw_value.rsplit(' ', 1)
+                            if len(parts) == 2:
+                                record_value = f"{parts[0]} {parts[1].rstrip('.')}"
+                            else:
+                                record_value = raw_value
+                        
+                        elif record_type == 'CAA':
+                            # CAA records
+                            # Format: "0 issue \"ca.example.com\""
+                            record_value = raw_value
+                        
                         else:
-                            # For other record types
-                            record_value = record['ResourceRecords'][0]['Value']
+                            # For all other record types
+                            record_value = raw_value
+                    
+                    elif record.get('AliasTarget'):
+                        # Handle alias records
+                        alias_target = record.get('AliasTarget', {}).get('DNSName', '').rstrip('.')
+                        record_value = f"ALIAS: {alias_target}"
+                    
                     else:
                         continue  # Skip if no valid value
+                    
+                    # Additional validation for empty values
+                    if not record_value:
+                        _logger.warning("Empty value for %s record: %s - skipping", record_type, record.get('Name', ''))
+                        continue
                     
                     # Check if subdomain already exists
                     existing_subdomain = self.search([
@@ -286,14 +421,27 @@ class Subdomain(models.Model):
                     
                     if not existing_subdomain:
                         # Create new subdomain
-                        if record_type == 'A':
-                            conversion_method = 'a'
-                        elif record_type == 'CNAME':
-                            conversion_method = 'cname'
-                        elif record_type == 'TXT':
-                            conversion_method = 'txt'
-                        else:
-                            conversion_method = 'cname'  # Default to CNAME for other types
+                        # Map AWS record type to our conversion method
+                        type_mapping = {
+                            'A': 'a',
+                            'AAAA': 'aaaa',
+                            'CAA': 'caa',
+                            'CNAME': 'cname',
+                            'DS': 'ds',
+                            'HTTPS': 'https',
+                            'MX': 'mx',
+                            'NAPTR': 'naptr',
+                            'NS': 'ns',
+                            'PTR': 'ptr',
+                            'SOA': 'soa',
+                            'SPF': 'spf',
+                            'SRV': 'srv',
+                            'SSHFP': 'sshfp',
+                            'SVCB': 'svcb',
+                            'TLSA': 'tlsa',
+                            'TXT': 'txt'
+                        }
+                        conversion_method = type_mapping.get(record_type, 'txt')  # Default to TXT for unknown types
                         new_subdomain = self.create({
                             'name': subdomain_part,
                             'domain_id': domain.id,
@@ -306,7 +454,27 @@ class Subdomain(models.Model):
                     else:
                         # Only update if it doesn't have a Route 53 record ID
                         if not existing_subdomain.route53_record_id:
-                            conversion_method = 'a' if record_type == 'A' else 'cname'
+                            # Use the same mapping as for new records
+                            type_mapping = {
+                                'A': 'a',
+                                'AAAA': 'aaaa',
+                                'CAA': 'caa',
+                                'CNAME': 'cname',
+                                'DS': 'ds',
+                                'HTTPS': 'https',
+                                'MX': 'mx',
+                                'NAPTR': 'naptr',
+                                'NS': 'ns',
+                                'PTR': 'ptr',
+                                'SOA': 'soa',
+                                'SPF': 'spf',
+                                'SRV': 'srv',
+                                'SSHFP': 'sshfp',
+                                'SVCB': 'svcb',
+                                'TLSA': 'tlsa',
+                                'TXT': 'txt'
+                            }
+                            conversion_method = type_mapping.get(record_type, 'txt')
                             existing_subdomain.write({
                                 'conversion_method': conversion_method,
                                 'value': record_value,
