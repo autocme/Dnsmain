@@ -7,41 +7,19 @@
         <field name="priority" eval="30"/>
         <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//div[hasclass('settings')]" position="inside">
-                <div class="app_settings_block" data-string="DNS AWS Integration" string="DNS AWS Integration" data-key="dns_aws">
-                    <h2>AWS Default Settings</h2>
-                    <div class="row mt16 o_settings_container">
-                        <div class="col-12 col-lg-6 o_setting_box">
-                            <div class="o_setting_left_pane"/>
-                            <div class="o_setting_right_pane">
-                                <span class="o_form_label">Default AWS Region</span>
-                                <div class="text-muted">
-                                    Default AWS region to use when not specified
-                                </div>
-                                <div class="content-group">
-                                    <div class="mt16">
-                                        <field name="default_aws_region" class="o_light_label"/>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <!-- In Odoo 17, the settings structure has changed -->
+            <xpath expr="//form" position="inside">
+                <app string="DNS AWS Integration" name="dns_aws" groups="base.group_system">
+                    <block title="AWS Default Settings">
+                        <setting help="Default AWS region to use when not specified" string="Default AWS Region">
+                            <field name="default_aws_region"/>
+                        </setting>
                         
-                        <div class="col-12 col-lg-6 o_setting_box">
-                            <div class="o_setting_left_pane"/>
-                            <div class="o_setting_right_pane">
-                                <span class="o_form_label">Default AWS Credentials</span>
-                                <div class="text-muted">
-                                    Default AWS credentials to use when not specified
-                                </div>
-                                <div class="content-group">
-                                    <div class="mt16">
-                                        <field name="default_aws_credentials_id" class="o_light_label"/>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                        <setting help="Default AWS credentials to use when not specified" string="Default AWS Credentials">
+                            <field name="default_aws_credentials_id"/>
+                        </setting>
+                    </block>
+                </app>
             </xpath>
         </field>
     </record>
