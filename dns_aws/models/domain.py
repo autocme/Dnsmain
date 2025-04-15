@@ -76,8 +76,8 @@ class Domain(models.Model):
                 _logger.error("Error getting hosted zone ID: %s", str(e))
                 # Don't raise error in onchange, just log it
     
-    def sync_all_dns_records_to_route53(self):
-        """Sync all DNS records for this domain to Route 53"""
+    def sync_all_subdomains_to_route53(self):
+        """Sync all subdomains for this domain to Route 53"""
         self.ensure_one()
         
         if not self.route53_sync:
@@ -234,6 +234,13 @@ class Domain(models.Model):
                     'type': 'danger',
                 }
             }
+    
+    def sync_all_route53_records_from_aws(self):
+        """
+        Action called by the 'Sync Domain Records from Route 53' button.
+        This method is the same as sync_route53_records_from_aws but is used for the server action.
+        """
+        return self.sync_route53_records_from_aws()
     
     @api.model
     def sync_route53_hosted_zones(self):
