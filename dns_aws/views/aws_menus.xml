@@ -22,7 +22,7 @@
               
     <!-- AWS Route 53 Synchronization menu -->
     <menuitem id="menu_aws_route53_sync"
-              name="Route 53 Synchronization"
+              name="Route 53 Sync"
               parent="dns_base.menu_dns_base"
               sequence="91"/>
               
