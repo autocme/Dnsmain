@@ -56,7 +56,7 @@ class EC2Subnet(models.Model):
     # Instance Information
     instance_ids = fields.One2many('aws.ec2.instance', 'subnet_id', string='Instances',
                                   compute='_compute_instances')
-    instance_count = fields.Integer(string='Instance Count', compute='_compute_instances',
+    instance_count = fields.Integer(string='Instance Count', compute='_compute_instances', store=True,
                                    help='Number of instances in this subnet.')
     
     # Tags and Metadata
@@ -74,6 +74,7 @@ class EC2Subnet(models.Model):
     last_sync = fields.Datetime(string='Last Sync')
     sync_message = fields.Text(string='Sync Message')
 
+    @api.depends('subnet_id')
     def _compute_instances(self):
         """
         Compute the instances in this subnet.

@@ -49,7 +49,7 @@ class EC2KeyPair(models.Model):
     # Usage Information
     instance_ids = fields.One2many('aws.ec2.instance', 'key_pair_id', string='Associated Instances',
                                   help='Instances using this key pair.')
-    instance_count = fields.Integer(string='Instance Count', compute='_compute_instance_count',
+    instance_count = fields.Integer(string='Instance Count', compute='_compute_instance_count', store=True,
                                    help='Number of instances using this key pair.')
     
     # Sync Status
@@ -63,6 +63,7 @@ class EC2KeyPair(models.Model):
     last_sync = fields.Datetime(string='Last Sync')
     sync_message = fields.Text(string='Sync Message')
 
+    @api.depends('instance_ids')
     def _compute_instance_count(self):
         """
         Compute the number of instances using this key pair.

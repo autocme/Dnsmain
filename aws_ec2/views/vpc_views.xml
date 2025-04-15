@@ -110,8 +110,8 @@
                 <filter string="Custom VPCs" name="custom" domain="[('is_default', '=', False)]"/>
                 <filter string="With DNS Support" name="dns_support" domain="[('dns_support', '=', True)]"/>
                 <filter string="With DNS Hostnames" name="dns_hostnames" domain="[('dns_hostnames', '=', True)]"/>
-                <filter string="With Subnets" name="with_subnets" domain="[('subnet_count', '>', 0)]"/>
-                <filter string="With Instances" name="with_instances" domain="[('instance_count', '>', 0)]"/>
+                <filter string="With Subnets" name="with_subnets" domain="[('subnet_ids', '!=', False)]"/>
+                <filter string="With Instances" name="with_instances" domain="[('instance_ids', '!=', False)]"/>
                 <filter string="Synced" name="synced" domain="[('sync_status', '=', 'synced')]"/>
                 <filter string="Not Synced" name="not_synced" domain="[('sync_status', '=', 'not_synced')]"/>
                 <filter string="Error" name="error" domain="[('sync_status', '=', 'error')]"/>

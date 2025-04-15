@@ -46,7 +46,7 @@ class EC2SecurityGroup(models.Model):
     instance_ids = fields.Many2many('aws.ec2.instance', string='Associated Instances', 
                                    compute='_compute_associated_instances',
                                    help='Instances using this security group.')
-    instance_count = fields.Integer(string='Instance Count', compute='_compute_associated_instances',
+    instance_count = fields.Integer(string='Instance Count', compute='_compute_associated_instances', store=True,
                                    help='Number of instances using this security group.')
     
     # Sync Status
@@ -60,6 +60,7 @@ class EC2SecurityGroup(models.Model):
     last_sync = fields.Datetime(string='Last Sync')
     sync_message = fields.Text(string='Sync Message')
 
+    @api.depends('group_id')
     def _compute_associated_instances(self):
         """
         Compute the instances associated with this security group.

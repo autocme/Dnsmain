@@ -110,8 +110,8 @@
                 <field name="group_id"/>
                 <field name="description"/>
                 <field name="vpc_id"/>
-                <filter string="Used by Instances" name="in_use" domain="[('instance_count', '>', 0)]"/>
-                <filter string="Unused" name="unused" domain="[('instance_count', '=', 0)]"/>
+                <filter string="Used by Instances" name="in_use" domain="[('instance_ids', '!=', False)]"/>
+                <filter string="Unused" name="unused" domain="[('instance_ids', '=', False)]"/>
                 <filter string="Synced" name="synced" domain="[('sync_status', '=', 'synced')]"/>
                 <filter string="Not Synced" name="not_synced" domain="[('sync_status', '=', 'not_synced')]"/>
                 <filter string="Error" name="error" domain="[('sync_status', '=', 'error')]"/>
