@@ -242,8 +242,10 @@ class Subdomain(models.Model):
                 for record in response.get('ResourceRecordSets', []):
                     record_type = record.get('Type')
                     
-                    # We only care about A and CNAME records
-                    if record_type not in ['A', 'CNAME']:
+                    # We handle A, CNAME, TXT and other compatible record types
+                    if record_type not in ['A', 'CNAME', 'TXT']:
+                        # Skip unsupported record types
+                        _logger.info("Skipping unsupported record type: %s for %s", record_type, record.get('Name', ''))
                         continue
                     
                     # Get the full domain name and strip trailing dot
@@ -262,10 +264,17 @@ class Subdomain(models.Model):
                     
                     # Get record value
                     record_value = ''
-                    if record_type == 'A' and record.get('ResourceRecords'):
-                        record_value = record['ResourceRecords'][0]['Value']
-                    elif record_type == 'CNAME' and record.get('ResourceRecords'):
-                        record_value = record['ResourceRecords'][0]['Value'].rstrip('.')
+                    if record.get('ResourceRecords'):
+                        if record_type == 'A':
+                            record_value = record['ResourceRecords'][0]['Value']
+                        elif record_type == 'CNAME':
+                            record_value = record['ResourceRecords'][0]['Value'].rstrip('.')
+                        elif record_type == 'TXT':
+                            # Handle TXT records
+                            record_value = record['ResourceRecords'][0]['Value'].strip('"')
+                        else:
+                            # For other record types
+                            record_value = record['ResourceRecords'][0]['Value']
                     else:
                         continue  # Skip if no valid value
                     
@@ -277,7 +286,14 @@ class Subdomain(models.Model):
                     
                     if not existing_subdomain:
                         # Create new subdomain
-                        conversion_method = 'a' if record_type == 'A' else 'cname'
+                        if record_type == 'A':
+                            conversion_method = 'a'
+                        elif record_type == 'CNAME':
+                            conversion_method = 'cname'
+                        elif record_type == 'TXT':
+                            conversion_method = 'txt'
+                        else:
+                            conversion_method = 'cname'  # Default to CNAME for other types
                         new_subdomain = self.create({
                             'name': subdomain_part,
                             'domain_id': domain.id,
