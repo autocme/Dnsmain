@@ -27,6 +27,7 @@ the aws_route53 module for AWS Route 53 specific operations.
     'depends': ['dns_base', 'aws_route53'],
     'data': [
         'security/ir.model.access.csv',
+        'views/aws_actions.xml',
         'views/route53_config_views.xml',
         'views/domain_views.xml',
         'views/dns_record_views.xml',
