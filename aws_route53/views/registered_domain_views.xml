@@ -26,10 +26,10 @@
         <field name="arch" type="xml">
             <form string="Registered Domain">
                 <header>
-                    <button name="_refresh_domain_data" string="Refresh" type="object" 
+                    <button name="refresh_domain_data" string="Refresh" type="object" 
                             class="oe_highlight"/>
                     <button name="create_hosted_zone" string="Create Hosted Zone" type="object" 
-                            attrs="{'invisible': [('hosted_zone_id', '!=', False)]}"
+                            invisible="hosted_zone_id"
                             class="oe_highlight"/>
                     <field name="status" widget="statusbar" statusbar_visible="registered,pending,expired,redemption_period"/>
                 </header>

@@ -92,7 +92,7 @@ class Route53RegisteredDomain(models.Model):
         ('domain_name_unique', 'UNIQUE(domain_name)', 'Domain name must be unique!')
     ]
 
-    def _refresh_domain_data(self):
+    def refresh_domain_data(self):
         """
         Refresh domain registration data from AWS.
         """
@@ -775,7 +775,7 @@ class Route53RegisteredDomain(models.Model):
         domains = self.search([('active', '=', True)])
         for domain in domains:
             try:
-                domain._refresh_domain_data()
+                domain.refresh_domain_data()
             except Exception as e:
                 _logger.error(f"Failed to refresh domain {domain.domain_name}: {str(e)}")
         
