@@ -67,72 +67,72 @@
                     </group>
                     
                     <!-- Contextual help section -->
-                    <group string="Record Format Help" attrs="{'invisible': [('type', '=', False)]}">
-                        <div attrs="{'invisible': [('type', '!=', 'a')]}">
+                    <group string="Record Format Help" invisible="not type">
+                        <div invisible="type != 'a'">
                             <strong>A Record Format:</strong> IPv4 address (e.g., 192.168.1.1)<br/>
                             <em>Maps a domain name to an IPv4 address.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'aaaa')]}">
+                        <div invisible="type != 'aaaa'">
                             <strong>AAAA Record Format:</strong> IPv6 address (e.g., 2001:db8::1)<br/>
                             <em>Maps a domain name to an IPv6 address.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'cname')]}">
+                        <div invisible="type != 'cname'">
                             <strong>CNAME Record Format:</strong> Domain name (e.g., target.example.com)<br/>
                             <em>Creates an alias from one domain to another. The source cannot have other record types.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'mx')]}">
+                        <div invisible="type != 'mx'">
                             <strong>MX Record Format:</strong> Priority and domain (e.g., 10 mail.example.com)<br/>
                             <em>Specifies mail servers for a domain and their priority. Lower priority values are preferred.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'ns')]}">
+                        <div invisible="type != 'ns'">
                             <strong>NS Record Format:</strong> Domain name (e.g., ns1.example.com)<br/>
                             <em>Delegates a domain or subdomain to a set of name servers.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'txt')]}">
+                        <div invisible="type != 'txt'">
                             <strong>TXT Record Format:</strong> Text value in quotes (e.g., "v=spf1 include:_spf.example.com ~all")<br/>
                             <em>Stores text information associated with a domain, often used for verification.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'srv')]}">
+                        <div invisible="type != 'srv'">
                             <strong>SRV Record Format:</strong> Priority weight port target (e.g., 0 5 5060 sip.example.com)<br/>
                             <em>Specifies location of services (like SIP, XMPP) with priority, weight, port and target host.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'caa')]}">
+                        <div invisible="type != 'caa'">
                             <strong>CAA Record Format:</strong> Flag tag value (e.g., 0 issue "ca.example.com")<br/>
                             <em>Specifies which Certificate Authorities are allowed to issue certificates for a domain.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'ds')]}">
+                        <div invisible="type != 'ds'">
                             <strong>DS Record Format:</strong> Key tag algorithm digest-type digest (e.g., 12345 8 2 ABCDEF...)<br/>
                             <em>Part of DNSSEC, contains hash of DNSKEY record for a delegated zone.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'https')]}">
+                        <div invisible="type != 'https'">
                             <strong>HTTPS Record Format:</strong> Priority target parameters (e.g., 1 . alpn=h3,h2 ipv4hint=192.0.2.1)<br/>
                             <em>Enables secure connection to a service, providing connection parameters and hints.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'svcb')]}">
+                        <div invisible="type != 'svcb'">
                             <strong>SVCB Record Format:</strong> Priority target parameters (e.g., 1 . alpn=h3,h2 ipv4hint=192.0.2.1)<br/>
                             <em>Service binding record, generic version of HTTPS record, enables service endpoint discovery.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'tlsa')]}">
+                        <div invisible="type != 'tlsa'">
                             <strong>TLSA Record Format:</strong> Usage selector matching-type certificate-data (e.g., 3 0 1 ABCDEF...)<br/>
                             <em>Associates TLS certificate with domain name, part of DANE protocol.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'sshfp')]}">
+                        <div invisible="type != 'sshfp'">
                             <strong>SSHFP Record Format:</strong> Algorithm fingerprint-type fingerprint (e.g., 2 1 123456789ABCDEF...)<br/>
                             <em>Stores SSH public key fingerprints, allows SSH clients to verify server host keys.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'naptr')]}">
+                        <div invisible="type != 'naptr'">
                             <strong>NAPTR Record Format:</strong> Order pref flags service regexp replacement (e.g., 10 100 "S" "SIP+D2U" "!^.*$!sip:example.com!" _sip._udp.example.com)<br/>
                             <em>Used for ENUM and other applications, provides rules for rewriting domain names.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'ptr')]}">
+                        <div invisible="type != 'ptr'">
                             <strong>PTR Record Format:</strong> Domain name (e.g., host.example.com)<br/>
                             <em>Maps an IP address to a domain name, used for reverse DNS lookups.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'spf')]}">
+                        <div invisible="type != 'spf'">
                             <strong>SPF Record Format:</strong> SPF policy (e.g., v=spf1 ip4:192.168.1.1 ~all)<br/>
                             <em>Specifies authorized mail servers for a domain. Now usually implemented as TXT records.</em>
                         </div>
-                        <div attrs="{'invisible': [('type', '!=', 'soa')]}">
+                        <div invisible="type != 'soa'">
                             <strong>SOA Record Format:</strong> Primary nameserver email serial refresh retry expire minimum (e.g., ns1.example.com. admin.example.com. 2023010101 3600 900 1209600 86400)<br/>
                             <em>Specifies authoritative information about a DNS zone, including zone transfers.</em>
                         </div>
