@@ -784,9 +784,10 @@ class EC2Instance(models.Model):
                 }
             }
             
-    def sync_instance_to_aws(self):
+    def action_launch_in_aws(self):
         """
-        Sync this instance to AWS EC2.
+        Launch this instance in AWS EC2.
+        Public method that can be called from a button in a view.
         """
         self.ensure_one()
         
@@ -795,31 +796,38 @@ class EC2Instance(models.Model):
                 # Launch in AWS if not already launched
                 self._launch_instance_in_aws()
                 message = _("Instance '%s' has been created in AWS EC2.") % self.name
-            else:
-                # Update AWS instance with current Odoo data
-                self._update_instance_in_aws(self._fields.keys())
-                message = _("Instance '%s' has been updated in AWS EC2.") % self.name
                 
-            self.write({
-                'sync_status': 'synced',
-                'last_sync': fields.Datetime.now(),
-                'sync_message': False,
-            })
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Sync Successful'),
-                    'message': message,
-                    'sticky': False,
-                    'type': 'success',
+                self.write({
+                    'sync_status': 'synced',
+                    'last_sync': fields.Datetime.now(),
+                    'sync_message': False,
+                })
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Launch Successful'),
+                        'message': message,
+                        'sticky': False,
+                        'type': 'success',
+                    }
                 }
-            }
+            else:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Already Launched'),
+                        'message': _("Instance '%s' is already launched in AWS EC2.") % self.name,
+                        'sticky': False,
+                        'type': 'warning',
+                    }
+                }
             
         except Exception as e:
             error_message = str(e)
-            _logger.error("EC2 sync error for %s: %s", self.name, error_message)
+            _logger.error("EC2 launch error for %s: %s", self.name, error_message)
             
             self.write({
                 'sync_status': 'error',
@@ -830,8 +838,69 @@ class EC2Instance(models.Model):
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'title': _('Sync Failed'),
-                    'message': _(f"Failed to sync instance '{self.name}' to AWS EC2: {error_message}"),
+                    'title': _('Launch Failed'),
+                    'message': _(f"Failed to launch instance '{self.name}' in AWS EC2: {error_message}"),
+                    'sticky': True,
+                    'type': 'danger',
+                }
+            }
+            
+    def action_update_in_aws(self):
+        """
+        Update this instance in AWS EC2.
+        Public method that can be called from a button in a view.
+        """
+        self.ensure_one()
+        
+        try:
+            if self.instance_id:
+                # Update AWS instance with current Odoo data
+                self._update_instance_in_aws(self._fields.keys())
+                message = _("Instance '%s' has been updated in AWS EC2.") % self.name
+                
+                self.write({
+                    'sync_status': 'synced',
+                    'last_sync': fields.Datetime.now(),
+                    'sync_message': False,
+                })
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Update Successful'),
+                        'message': message,
+                        'sticky': False,
+                        'type': 'success',
+                    }
+                }
+            else:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Not Launched'),
+                        'message': _("Instance '%s' must be launched in AWS EC2 first.") % self.name,
+                        'sticky': False,
+                        'type': 'warning',
+                    }
+                }
+                
+        except Exception as e:
+            error_message = str(e)
+            _logger.error("EC2 update error for %s: %s", self.name, error_message)
+            
+            self.write({
+                'sync_status': 'error',
+                'sync_message': error_message,
+            })
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Update Failed'),
+                    'message': _(f"Failed to update instance '{self.name}' in AWS EC2: {error_message}"),
                     'sticky': True,
                     'type': 'danger',
                 }
