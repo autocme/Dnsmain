@@ -220,12 +220,116 @@ class Subdomain(models.Model):
         return records
     
     def write(self, vals):
+        # Store old values to handle name changes
+        old_values = {}
+        if 'name' in vals:
+            for record in self:
+                old_values[record.id] = {
+                    'name': record.name,
+                    'full_domain': record.full_domain,
+                    'domain_id': record.domain_id.id,
+                    'type': record.type,
+                    'ttl': record.ttl,
+                    'value': record.value
+                }
+        
         result = super(Subdomain, self).write(vals)
+        
+        # Handle special case: if name was changed, first delete the old record
+        if 'name' in vals and old_values:
+            for record in self:
+                if record.id in old_values and record.domain_id.route53_sync:
+                    try:
+                        old_data = old_values[record.id]
+                        # Only if the domain hasn't changed
+                        if old_data['domain_id'] == record.domain_id.id:
+                            config = record.domain_id.route53_config_id
+                            if config:
+                                client = config._get_route53_client()
+                                
+                                # Map old type to Route 53 record type
+                                record_type_mapping = {
+                                    'a': 'A',
+                                    'aaaa': 'AAAA',
+                                    'caa': 'CAA',
+                                    'cname': 'CNAME',
+                                    'ds': 'DS',
+                                    'https': 'HTTPS',
+                                    'mx': 'MX',
+                                    'naptr': 'NAPTR',
+                                    'ns': 'NS',
+                                    'ptr': 'PTR',
+                                    'soa': 'SOA',
+                                    'spf': 'SPF',
+                                    'srv': 'SRV',
+                                    'sshfp': 'SSHFP',
+                                    'svcb': 'SVCB',
+                                    'tlsa': 'TLSA',
+                                    'txt': 'TXT'
+                                }
+                                
+                                old_record_type = record_type_mapping.get(old_data['type'], 'TXT')
+                                old_record_value = old_data['value']
+                                
+                                # Process value based on record type (same as in sync_to_route53)
+                                if old_record_type in ['CNAME', 'NS', 'PTR', 'MX', 'SRV']:
+                                    if not old_record_value.endswith('.'):
+                                        if old_record_type == 'MX':
+                                            parts = old_record_value.split(' ', 1)
+                                            if len(parts) == 2:
+                                                old_record_value = f"{parts[0]} {parts[1]}."
+                                            else:
+                                                old_record_value = old_record_value + '.'
+                                        elif old_record_type == 'SRV':
+                                            parts = old_record_value.rsplit(' ', 1)
+                                            if len(parts) == 2:
+                                                old_record_value = f"{parts[0]} {parts[1]}."
+                                            else:
+                                                old_record_value = old_record_value + '.'
+                                        else:
+                                            old_record_value = old_record_value + '.'
+                                
+                                elif old_record_type == 'TXT' or old_record_type == 'SPF':
+                                    if not (old_record_value.startswith('"') and old_record_value.endswith('"')):
+                                        old_record_value = f'"{old_record_value}"'
+                                
+                                # Delete old record first
+                                _logger.info("Deleting old record %s before updating name", old_data['full_domain'])
+                                try:
+                                    client.change_resource_record_sets(
+                                        HostedZoneId=record.domain_id.route53_hosted_zone_id,
+                                        ChangeBatch={
+                                            'Comment': 'Deleted by Odoo DNS Management due to name change',
+                                            'Changes': [
+                                                {
+                                                    'Action': 'DELETE',
+                                                    'ResourceRecordSet': {
+                                                        'Name': old_data['full_domain'] + '.',  # Add trailing dot
+                                                        'Type': old_record_type,
+                                                        'TTL': old_data['ttl'],
+                                                        'ResourceRecords': [
+                                                            {
+                                                                'Value': old_record_value
+                                                            }
+                                                        ]
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    )
+                                    _logger.info("Successfully deleted old record %s", old_data['full_domain'])
+                                except Exception as e:
+                                    _logger.warning("Error deleting old record %s: %s", old_data['full_domain'], str(e))
+                    except Exception as e:
+                        _logger.error("Error in pre-delete for renamed record: %s", str(e))
+                        # Continue with sync even if this fails
+        
         # Sync updated records to Route 53 if enabled and relevant fields changed
         if any(field in vals for field in ['name', 'domain_id', 'type', 'value', 'ttl']):
             for record in self:
                 if record.domain_id.route53_sync:
                     record.sync_to_route53()
+        
         return result
     
     def unlink(self):
