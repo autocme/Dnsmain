@@ -108,19 +108,7 @@
         </field>
     </record>
 
-    <!-- AWS Operation Log Pivot View -->
-    <record id="view_aws_operation_log_pivot" model="ir.ui.view">
-        <field name="name">aws.operation.log.pivot</field>
-        <field name="model">aws.operation.log</field>
-        <field name="arch" type="xml">
-            <pivot string="AWS Logs Stats">
-                <field name="status" type="row"/>
-                <field name="duration_ms" type="measure"/>
-            </pivot>
-        </field>
-    </record>
-
-    <!-- AWS Operation Log Dashboard View - Simplified for Odoo 17 -->
+    <!-- AWS Operation Log Dashboard View - Simplified for Odoo 17 CE -->
     <record id="view_aws_operation_log_dashboard" model="ir.ui.view">
         <field name="name">aws.operation.log.dashboard</field>
         <field name="model">aws.operation.log</field>
@@ -131,7 +119,6 @@
                     <aggregate name="status_count" field="status" group_operator="count"/>
                     <aggregate name="duration" field="duration_ms" group_operator="avg"/>
                 </group>
-                <view type="pivot" ref="view_aws_operation_log_pivot"/>
             </dashboard>
         </field>
     </record>
@@ -140,7 +127,7 @@
     <record id="action_aws_operation_log" model="ir.actions.act_window">
         <field name="name">AWS Operation Logs</field>
         <field name="res_model">aws.operation.log</field>
-        <field name="view_mode">tree,form,pivot,graph,dashboard</field>
+        <field name="view_mode">tree,form,graph,dashboard</field>
         <field name="search_view_id" ref="view_aws_operation_log_search"/>
         <field name="context">{'search_default_today': 1}</field>
         <field name="help" type="html">
