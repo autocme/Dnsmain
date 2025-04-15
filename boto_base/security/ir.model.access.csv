@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_aws_credentials_user,aws.credentials.user,model_aws_credentials,boto_base.group_aws_user,1,0,0,0
+access_aws_credentials_manager,aws.credentials.manager,model_aws_credentials,boto_base.group_aws_manager,1,1,1,1
+access_aws_service_user,aws.service.user,model_aws_service,boto_base.group_aws_user,1,0,0,0
+access_aws_service_manager,aws.service.manager,model_aws_service,boto_base.group_aws_manager,1,1,1,1
+access_aws_operation_log_user,aws.operation.log.user,model_aws_operation_log,boto_base.group_aws_user,1,0,1,0
+access_aws_operation_log_manager,aws.operation.log.manager,model_aws_operation_log,boto_base.group_aws_manager,1,1,1,1

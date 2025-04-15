@@ -13,10 +13,10 @@
               action="action_domains"
               sequence="10"/>
     
-    <!-- Subdomains Menu -->
-    <menuitem id="menu_subdomains"
-              name="Subdomains"
+    <!-- DNS Records Menu -->
+    <menuitem id="menu_dns_records"
+              name="DNS Records"
               parent="menu_dns_base"
-              action="action_subdomains"
+              action="action_dns_records"
               sequence="20"/>
 </odoo>

@@ -1,27 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Subdomain Tree View -->
-    <record id="view_subdomain_tree" model="ir.ui.view">
+    <!-- DNS Records Tree View -->
+    <record id="view_dns_record_tree" model="ir.ui.view">
         <field name="name">dns.subdomain.tree</field>
         <field name="model">dns.subdomain</field>
         <field name="arch" type="xml">
-            <tree string="Subdomains">
+            <tree string="DNS Records">
                 <field name="name"/>
                 <field name="domain_id"/>
                 <field name="full_domain"/>
                 <field name="type"/>
                 <field name="value"/>
+                <field name="ttl"/>
                 <field name="active"/>
             </tree>
         </field>
     </record>
 
-    <!-- Subdomain Form View -->
-    <record id="view_subdomain_form" model="ir.ui.view">
+    <!-- DNS Record Form View -->
+    <record id="view_dns_record_form" model="ir.ui.view">
         <field name="name">dns.subdomain.form</field>
         <field name="model">dns.subdomain</field>
         <field name="arch" type="xml">
-            <form string="Subdomain">
+            <form string="DNS Record">
                 <sheet>
                     <div class="oe_title">
                         <label for="name" class="oe_edit_only"/>
@@ -38,6 +39,7 @@
                         <group>
                             <field name="type"/>
                             <field name="value" placeholder="e.g. 192.168.1.1 or target.example.com"/>
+                            <field name="ttl"/>
                         </group>
                     </group>
                 </sheet>
@@ -45,39 +47,41 @@
         </field>
     </record>
 
-    <!-- Subdomain Search View -->
-    <record id="view_subdomain_search" model="ir.ui.view">
+    <!-- DNS Records Search View -->
+    <record id="view_dns_record_search" model="ir.ui.view">
         <field name="name">dns.subdomain.search</field>
         <field name="model">dns.subdomain</field>
         <field name="arch" type="xml">
-            <search string="Subdomains">
+            <search string="DNS Records">
                 <field name="name"/>
                 <field name="domain_id"/>
                 <field name="full_domain"/>
                 <field name="value"/>
+                <field name="ttl"/>
                 <filter string="A Records" name="a_records" domain="[('type', '=', 'a')]"/>
                 <filter string="CNAME Records" name="cname_records" domain="[('type', '=', 'cname')]"/>
                 <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
                 <group expand="0" string="Group By">
                     <filter string="Domain" name="domain" context="{'group_by': 'domain_id'}"/>
                     <filter string="Record Type" name="type" context="{'group_by': 'type'}"/>
+                    <filter string="TTL" name="ttl" context="{'group_by': 'ttl'}"/>
                 </group>
             </search>
         </field>
     </record>
 
-    <!-- Subdomain Action -->
-    <record id="action_subdomains" model="ir.actions.act_window">
-        <field name="name">Subdomains</field>
+    <!-- DNS Records Action -->
+    <record id="action_dns_records" model="ir.actions.act_window">
+        <field name="name">DNS Records</field>
         <field name="res_model">dns.subdomain</field>
         <field name="view_mode">tree,form</field>
-        <field name="search_view_id" ref="view_subdomain_search"/>
+        <field name="search_view_id" ref="view_dns_record_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Create your first subdomain!
+                Create your first DNS record!
             </p>
             <p>
-                Manage subdomains with various DNS record types (A, AAAA, CAA, CNAME, DS, HTTPS, MX, NAPTR, NS, PTR, SOA, SPF, SRV, SSHFP, SVCB, TLSA, TXT).
+                Manage DNS records with various types (A, AAAA, CAA, CNAME, DS, HTTPS, MX, NAPTR, NS, PTR, SOA, SPF, SRV, SSHFP, SVCB, TLSA, TXT).
             </p>
         </field>
     </record>

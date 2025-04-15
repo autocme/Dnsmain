@@ -16,8 +16,8 @@ class Domain(models.Model):
     description = fields.Text(string='Description')
     region = fields.Char(string='Region', help='Geographic region where the domain is primarily used')
     active = fields.Boolean(default=True)
-    subdomain_ids = fields.One2many('dns.subdomain', 'domain_id', string='Subdomains')
-    subdomain_count = fields.Integer(compute='_compute_subdomain_count', string='Subdomain Count')
+    subdomain_ids = fields.One2many('dns.subdomain', 'domain_id', string='DNS Records')
+    subdomain_count = fields.Integer(compute='_compute_subdomain_count', string='DNS Records Count')
     
     _sql_constraints = [
         ('name_unique', 'UNIQUE(name)', 'Domain name must be unique!')
@@ -37,10 +37,10 @@ class Domain(models.Model):
             except errors.InvalidDomainError:
                 raise ValidationError(_("Invalid domain name: %s") % record.name)
     
-    def action_view_subdomains(self):
+    def action_view_dns_records(self):
         self.ensure_one()
         return {
-            'name': _('Subdomains'),
+            'name': _('DNS Records'),
             'view_mode': 'tree,form',
             'res_model': 'dns.subdomain',
             'domain': [('domain_id', '=', self.id)],

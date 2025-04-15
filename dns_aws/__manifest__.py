@@ -4,40 +4,36 @@
 # Copyright (C) 2023 JAAH
 
 {
-    'name': 'DNS AWS Route 53 Integration',
+    'name': 'DNS AWS Integration',
     'version': '1.0',
     'category': 'Tools',
-    'summary': 'Manage DNS records via AWS Route 53',
+    'summary': 'Integrate DNS Management with AWS Route 53',
     'description': """
-DNS AWS Route 53 Integration
-============================
-This module integrates with AWS Route 53 to update DNS records when 
-subdomains are modified in Odoo.
+DNS AWS Integration
+==================
+This module integrates the DNS Base module with AWS Route 53, allowing you to:
 
-Features:
-- Integration with AWS Route 53 API
-- Automatic updating of DNS records in Route 53 hostzones
-- Support for all 17 Route 53 DNS record types (A, AAAA, CAA, CNAME, DS, HTTPS, MX, NAPTR, NS, PTR, SOA, SPF, SRV, SSHFP, SVCB, TLSA, TXT)
-- Automatic record type mapping between Odoo and Route 53
-- Smart region-based configuration for optimal latency
-- Configuration for AWS credentials and settings
+- Automatically sync domain and DNS record changes with AWS Route 53
+- Import existing Route 53 configurations into your Odoo DNS management
+- Validate DNS records against AWS Route 53 specifications
+- Monitor the status of your AWS Route 53 hosted zones and records
+- Manage DNS failover configurations
+
+This module depends on the dns_base module for core DNS management functionality and 
+the aws_route53 module for AWS Route 53 specific operations.
     """,
     'author': 'JAAH',
     'website': 'https://www.example.com',
-    'depends': ['dns_base'],
+    'depends': ['dns_base', 'aws_route53'],
     'data': [
         'security/ir.model.access.csv',
-        'views/aws_credentials_views.xml',
         'views/route53_config_views.xml',
         'views/domain_views.xml',
-        'views/aws_actions.xml',
-        'views/aws_menus.xml',
+        'views/dns_record_views.xml',
+        'views/menu_views.xml',
     ],
     'installable': True,
     'application': False,
     'auto_install': False,
     'license': 'LGPL-3',
-    'external_dependencies': {
-        'python': ['boto3'],
-    },
 }

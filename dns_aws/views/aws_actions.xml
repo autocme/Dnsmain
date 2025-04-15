@@ -11,7 +11,7 @@
         </field>
     </record>
     
-    <!-- Server action to sync AWS Route 53 records to subdomains -->
+    <!-- Server action to sync AWS Route 53 records to DNS Records -->
     <record id="action_sync_route53_records" model="ir.actions.server">
         <field name="name">Sync Route 53 Records</field>
         <field name="model_id" ref="dns_base.model_dns_subdomain"/>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- EC2 Menu -->
+    <menuitem id="menu_ec2_root" 
+              name="EC2" 
+              parent="boto_base.menu_aws_services"
+              sequence="10" 
+              groups="aws_ec2.group_ec2_user"/>
+    
+    <!-- Instances Menu Section -->
+    <menuitem id="menu_ec2_instances_section"
+              name="Instances"
+              parent="menu_ec2_root"
+              sequence="10"/>
+              
+    <menuitem id="menu_ec2_instance"
+              name="Instances"
+              parent="menu_ec2_instances_section"
+              action="action_ec2_instance"
+              sequence="10"/>
+              
+    <menuitem id="menu_ec2_image"
+              name="AMIs"
+              parent="menu_ec2_instances_section"
+              action="action_ec2_image"
+              sequence="20"/>
+              
+    <menuitem id="menu_ec2_key_pair"
+              name="Key Pairs"
+              parent="menu_ec2_instances_section"
+              action="action_ec2_key_pair"
+              sequence="30"/>
+    
+    <!-- Network & Security Menu Section -->
+    <menuitem id="menu_ec2_network_section"
+              name="Network &amp; Security"
+              parent="menu_ec2_root"
+              sequence="20"/>
+              
+    <menuitem id="menu_ec2_vpc"
+              name="VPCs"
+              parent="menu_ec2_network_section"
+              action="action_ec2_vpc"
+              sequence="10"/>
+              
+    <menuitem id="menu_ec2_subnet"
+              name="Subnets"
+              parent="menu_ec2_network_section"
+              action="action_ec2_subnet"
+              sequence="20"/>
+              
+    <menuitem id="menu_ec2_security_group"
+              name="Security Groups"
+              parent="menu_ec2_network_section"
+              action="action_ec2_security_group"
+              sequence="30"/>
+</odoo>

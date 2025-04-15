@@ -4,4 +4,4 @@
 # Copyright (C) 2023 JAAH
 
 from . import domain
-from . import subdomain
+from . import dns_records

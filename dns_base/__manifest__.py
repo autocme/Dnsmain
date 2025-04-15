@@ -7,12 +7,12 @@
     'name': 'DNS Base',
     'version': '1.0',
     'category': 'Tools',
-    'summary': 'Manage DNS domains and subdomains',
+    'summary': 'Manage DNS domains and DNS records',
     'description': """
 DNS Domain Management
 ====================
-This module allows you to manage DNS domains and subdomains with comprehensive record type support.
-For each subdomain, you can specify the record type (A, AAAA, CAA, CNAME, DS, HTTPS, MX, NAPTR, NS, PTR, SOA, SPF, SRV, SSHFP, SVCB, TLSA, TXT) and value.
+This module allows you to manage DNS domains and DNS records with comprehensive record type support.
+For each DNS record, you can specify the record type (A, AAAA, CAA, CNAME, DS, HTTPS, MX, NAPTR, NS, PTR, SOA, SPF, SRV, SSHFP, SVCB, TLSA, TXT) and value.
 Includes robust validation for each record type.
     """,
     'author': 'JAAH',
@@ -21,7 +21,7 @@ Includes robust validation for each record type.
     'data': [
         'security/ir.model.access.csv',
         'views/domain_views.xml',
-        'views/subdomain_views.xml',
+        'views/dns_records_views.xml',
         'views/menu_views.xml',
     ],
     'installable': True,

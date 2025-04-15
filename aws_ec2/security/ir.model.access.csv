@@ -1,0 +1,13 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_aws_ec2_instance_user,aws.ec2.instance.user,model_aws_ec2_instance,aws_ec2.group_ec2_user,1,0,0,0
+access_aws_ec2_instance_manager,aws.ec2.instance.manager,model_aws_ec2_instance,aws_ec2.group_ec2_manager,1,1,1,1
+access_aws_ec2_security_group_user,aws.ec2.security.group.user,model_aws_ec2_security_group,aws_ec2.group_ec2_user,1,0,0,0
+access_aws_ec2_security_group_manager,aws.ec2.security.group.manager,model_aws_ec2_security_group,aws_ec2.group_ec2_manager,1,1,1,1
+access_aws_ec2_key_pair_user,aws.ec2.key.pair.user,model_aws_ec2_key_pair,aws_ec2.group_ec2_user,1,0,0,0
+access_aws_ec2_key_pair_manager,aws.ec2.key.pair.manager,model_aws_ec2_key_pair,aws_ec2.group_ec2_manager,1,1,1,1
+access_aws_ec2_image_user,aws.ec2.image.user,model_aws_ec2_image,aws_ec2.group_ec2_user,1,0,0,0
+access_aws_ec2_image_manager,aws.ec2.image.manager,model_aws_ec2_image,aws_ec2.group_ec2_manager,1,1,1,1
+access_aws_ec2_vpc_user,aws.ec2.vpc.user,model_aws_ec2_vpc,aws_ec2.group_ec2_user,1,0,0,0
+access_aws_ec2_vpc_manager,aws.ec2.vpc.manager,model_aws_ec2_vpc,aws_ec2.group_ec2_manager,1,1,1,1
+access_aws_ec2_subnet_user,aws.ec2.subnet.user,model_aws_ec2_subnet,aws_ec2.group_ec2_user,1,0,0,0
+access_aws_ec2_subnet_manager,aws.ec2.subnet.manager,model_aws_ec2_subnet,aws_ec2.group_ec2_manager,1,1,1,1

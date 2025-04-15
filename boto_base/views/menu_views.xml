@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- AWS Integration Menu -->
+    <menuitem id="menu_aws_root" 
+              name="AWS" 
+              web_icon="boto_base,static/description/icon.png" 
+              sequence="90" 
+              groups="boto_base.group_aws_user"/>
+    
+    <!-- AWS Credentials Menu -->
+    <menuitem id="menu_aws_credentials"
+              name="AWS Credentials"
+              parent="menu_aws_root"
+              action="action_aws_credentials"
+              sequence="10"
+              groups="boto_base.group_aws_manager"/>
+    
+    <!-- AWS Services Menu -->
+    <menuitem id="menu_aws_services"
+              name="AWS Services"
+              parent="menu_aws_root"
+              sequence="20"
+              groups="boto_base.group_aws_user"/>
+    
+    <!-- AWS Configuration Menu -->
+    <menuitem id="menu_aws_configuration"
+              name="Configuration"
+              parent="menu_aws_root"
+              sequence="100"
+              groups="boto_base.group_aws_manager"/>
+</odoo>

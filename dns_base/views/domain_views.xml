@@ -22,8 +22,8 @@
             <form string="Domain">
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button name="action_view_subdomains" type="object" class="oe_stat_button" icon="fa-sitemap">
-                            <field name="subdomain_count" widget="statinfo" string="Subdomains"/>
+                        <button name="action_view_dns_records" type="object" class="oe_stat_button" icon="fa-sitemap">
+                            <field name="subdomain_count" widget="statinfo" string="DNS Records"/>
                         </button>
                     </div>
                     <div class="oe_title">
@@ -36,9 +36,9 @@
                         <field name="description"/>
                     </group>
                     <notebook>
-                        <page string="Subdomains">
+                        <page string="DNS Records">
                             <field name="subdomain_ids">
-                                <tree string="Subdomains" editable="bottom">
+                                <tree string="DNS Records" editable="bottom">
                                     <field name="name"/>
                                     <field name="type"/>
                                     <field name="value"/>
@@ -79,7 +79,7 @@
                 Create your first domain!
             </p>
             <p>
-                Manage your DNS domains and their subdomains with full support for all common DNS record types.
+                Manage your DNS domains and their DNS records with full support for all common DNS record types.
             </p>
         </field>
     </record>

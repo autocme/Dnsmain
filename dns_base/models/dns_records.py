@@ -10,10 +10,10 @@ import re
 
 class Subdomain(models.Model):
     _name = 'dns.subdomain'
-    _description = 'DNS Subdomain'
+    _description = 'DNS Records'
     _order = 'name'
 
-    name = fields.Char(string='Subdomain', required=True)
+    name = fields.Char(string='DNS Record Name', required=True)
     domain_id = fields.Many2one('dns.domain', string='Domain', required=True, ondelete='cascade')
     type = fields.Selection([
         ('a', 'A Record'),
@@ -35,11 +35,13 @@ class Subdomain(models.Model):
         ('txt', 'TXT Record')
     ], string='Type', required=True, default='a')
     value = fields.Char(string='Value', required=True)
+    ttl = fields.Integer(string='TTL', required=True, default=300, 
+                         help='Time To Live in seconds. Default is 300 seconds (5 minutes)')
     full_domain = fields.Char(string='Full Domain', compute='_compute_full_domain', store=True)
     active = fields.Boolean(default=True)
     
     _sql_constraints = [
-        ('name_domain_unique', 'UNIQUE(name, domain_id)', 'Subdomain must be unique per domain!')
+        ('name_domain_unique', 'UNIQUE(name, domain_id)', 'DNS Record must be unique per domain!')
     ]
     
     @api.depends('name', 'domain_id.name')
@@ -87,6 +89,14 @@ class Subdomain(models.Model):
                 except errors.InvalidDomainError:
                     raise ValidationError(_("Invalid full domain: %s") % record.full_domain)
 
+    @api.constrains('ttl')
+    def _check_ttl_value(self):
+        for record in self:
+            if record.ttl < 0:
+                raise ValidationError(_("TTL value cannot be negative"))
+            elif record.ttl > 86400 * 7:  # 7 days in seconds
+                raise ValidationError(_("TTL value too high. Maximum allowed is 7 days (604800 seconds)"))
+    
     @api.constrains('value', 'type')
     def _check_record_value(self):
         for record in self:

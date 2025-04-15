@@ -76,8 +76,8 @@ class Domain(models.Model):
                 _logger.error("Error getting hosted zone ID: %s", str(e))
                 # Don't raise error in onchange, just log it
     
-    def sync_all_subdomains_to_route53(self):
-        """Sync all subdomains for this domain to Route 53"""
+    def sync_all_dns_records_to_route53(self):
+        """Sync all DNS records for this domain to Route 53"""
         self.ensure_one()
         
         if not self.route53_sync:
@@ -117,9 +117,9 @@ class Domain(models.Model):
             }
         
         try:
-            # Trigger sync for all subdomains
-            for subdomain in self.subdomain_ids:
-                subdomain.sync_to_route53()
+            # Trigger sync for all DNS records
+            for dns_record in self.subdomain_ids:
+                dns_record.sync_to_route53()
                 
             self.write({
                 'route53_last_sync': fields.Datetime.now(),
@@ -131,7 +131,7 @@ class Domain(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Sync Complete'),
-                    'message': _('All subdomains have been synchronized with Route 53.'),
+                    'message': _('All DNS records have been synchronized with Route 53.'),
                     'sticky': False,
                     'type': 'success',
                 }
@@ -156,7 +156,7 @@ class Domain(models.Model):
             }
             
     def sync_route53_records_from_aws(self):
-        """Sync DNS records from AWS Route 53 to Odoo subdomains for this domain"""
+        """Sync DNS records from AWS Route 53 to Odoo DNS records for this domain"""
         self.ensure_one()
         
         if not self.route53_sync:
@@ -196,9 +196,9 @@ class Domain(models.Model):
             }
         
         try:
-            # Call the sync method in subdomain model
-            Subdomain = self.env['dns.subdomain']
-            result = Subdomain.sync_route53_records(domain_id=self.id)
+            # Call the sync method in DNS record model
+            DNSRecord = self.env['dns.subdomain']
+            result = DNSRecord.sync_route53_records(domain_id=self.id)
             
             # Update last sync timestamp
             self.write({
