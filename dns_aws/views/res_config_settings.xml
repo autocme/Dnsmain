@@ -12,11 +12,11 @@
                 <app string="DNS AWS Integration" name="dns_aws" groups="base.group_system">
                     <block title="AWS Default Settings">
                         <setting help="Default AWS region to use when not specified" string="Default AWS Region">
-                            <field name="default_aws_region"/>
+                            <field name="aws_region"/>
                         </setting>
                         
                         <setting help="Default AWS credentials to use when not specified" string="Default AWS Credentials">
-                            <field name="default_aws_credentials_id"/>
+                            <field name="aws_credentials_id"/>
                         </setting>
                     </block>
                 </app>
