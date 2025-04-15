@@ -5,8 +5,9 @@
 
 from . import models
 
-def _init_aws_services(cr, registry):
-    """Initialize AWS services on module installation"""
-    from odoo import api, SUPERUSER_ID
-    env = api.Environment(cr, SUPERUSER_ID, {})
+def _init_aws_services(env):
+    """Initialize AWS services on module installation
+    
+    In Odoo 17, post_init_hook functions receive the env directly.
+    """
     env['aws.service']._init_aws_services()
