@@ -28,4 +28,12 @@
               parent="menu_aws_root"
               sequence="100"
               groups="boto_base.group_aws_manager"/>
+              
+    <!-- AWS Services Configuration Menu -->
+    <menuitem id="menu_aws_service_list"
+              name="Services"
+              parent="menu_aws_configuration"
+              action="action_aws_service"
+              sequence="10"
+              groups="boto_base.group_aws_manager"/>
 </odoo>
