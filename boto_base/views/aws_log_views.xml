@@ -96,34 +96,31 @@
         </field>
     </record>
 
-    <!-- AWS Operation Log Pivot View -->
-    <record id="view_aws_operation_log_pivot" model="ir.ui.view">
-        <field name="name">aws.operation.log.pivot</field>
-        <field name="model">aws.operation.log</field>
-        <field name="arch" type="xml">
-            <pivot string="AWS Operation Statistics" sample="1">
-                <field name="service_name" type="row"/>
-                <field name="name" type="row"/>
-                <field name="status" type="col"/>
-                <field name="duration_ms" type="measure" string="Avg Duration (ms)" operator="avg"/>
-            </pivot>
-        </field>
-    </record>
-
     <!-- AWS Operation Log Graph View -->
     <record id="view_aws_operation_log_graph" model="ir.ui.view">
         <field name="name">aws.operation.log.graph</field>
         <field name="model">aws.operation.log</field>
         <field name="arch" type="xml">
-            <graph string="AWS Operations" sample="1">
-                <field name="service_name"/>
+            <graph string="AWS Logs">
                 <field name="status"/>
-                <field name="duration_ms" type="measure" operator="avg"/>
+                <field name="duration_ms"/>
             </graph>
         </field>
     </record>
 
-    <!-- AWS Operation Log Dashboard View -->
+    <!-- AWS Operation Log Pivot View -->
+    <record id="view_aws_operation_log_pivot" model="ir.ui.view">
+        <field name="name">aws.operation.log.pivot</field>
+        <field name="model">aws.operation.log</field>
+        <field name="arch" type="xml">
+            <pivot string="AWS Logs Stats">
+                <field name="status" type="row"/>
+                <field name="duration_ms" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- AWS Operation Log Dashboard View - Simplified for Odoo 17 -->
     <record id="view_aws_operation_log_dashboard" model="ir.ui.view">
         <field name="name">aws.operation.log.dashboard</field>
         <field name="model">aws.operation.log</field>
@@ -131,10 +128,8 @@
             <dashboard>
                 <view type="graph" ref="view_aws_operation_log_graph"/>
                 <group>
-                    <aggregate name="status_success_count" string="Success" field="status" domain="[('status', '=', 'success')]" group_operator="count"/>
-                    <aggregate name="status_error_count" string="Errors" field="status" domain="[('status', '=', 'error')]" group_operator="count"/>
-                    <aggregate name="status_warning_count" string="Warnings" field="status" domain="[('status', '=', 'warning')]" group_operator="count"/>
-                    <aggregate name="avg_duration" string="Avg Duration" field="duration_ms" group_operator="avg"/>
+                    <aggregate name="status_count" field="status" group_operator="count"/>
+                    <aggregate name="duration" field="duration_ms" group_operator="avg"/>
                 </group>
                 <view type="pivot" ref="view_aws_operation_log_pivot"/>
             </dashboard>
