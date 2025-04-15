@@ -150,6 +150,31 @@ class Subdomain(models.Model):
                 if not re.match(r'^\d+\s+(issue|issuewild|iodef)\s+"[^"]+"$', record.value):
                     raise ValidationError(_("Invalid CAA record format. Should be 'flag tag \"value\"' (e.g., '0 issue \"ca.example.com\"'): %s") % record.value)
             
+            # DS (Delegation Signer) records validation
+            elif record.type == 'ds':
+                if not re.match(r'^\d+\s+\d+\s+\d+\s+[A-Fa-f0-9]+$', record.value):
+                    raise ValidationError(_("Invalid DS record format. Should be 'key_tag algorithm_number digest_type digest' (e.g., '12345 8 2 ABCDEF...): %s") % record.value)
+            
+            # HTTPS and SVCB records validation
+            elif record.type in ['https', 'svcb']:
+                if not re.match(r'^\d+\s+\S+\s+.+$', record.value):
+                    raise ValidationError(_("Invalid HTTPS/SVCB record format. Should be 'priority target-name param-list' (e.g., '1 . alpn=h3,h2 ipv4hint=192.0.2.1'): %s") % record.value)
+            
+            # SSHFP (SSH Fingerprint) record validation
+            elif record.type == 'sshfp':
+                if not re.match(r'^[1-4]\s+[1-2]\s+[A-Fa-f0-9]+$', record.value):
+                    raise ValidationError(_("Invalid SSHFP record format. Should be 'algorithm fingerprint-type fingerprint' (e.g., '2 1 123456789ABCDEF...): %s") % record.value)
+            
+            # TLSA record validation
+            elif record.type == 'tlsa':
+                if not re.match(r'^[0-3]\s+[0-1]\s+[0-2]\s+[A-Fa-f0-9]+$', record.value):
+                    raise ValidationError(_("Invalid TLSA record format. Should be 'cert-usage selector matching-type certdata' (e.g., '3 0 1 ABCDEF...): %s") % record.value)
+            
+            # NAPTR record validation
+            elif record.type == 'naptr':
+                if not re.match(r'^\d+\s+\d+\s+"[^"]+"\s+"[^"]*"\s+"[^"]*"\s+\S+$', record.value):
+                    raise ValidationError(_("Invalid NAPTR record format. Should be 'order preference \"flags\" \"service\" \"regexp\" replacement' (e.g., '10 100 \"S\" \"SIP+D2U\" \"!^.*$!sip:cs.example.com!\" _sip._udp.example.com.'): %s") % record.value)
+            
             # Basic length validation for other record types
             else:
                 if not record.value:
