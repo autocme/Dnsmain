@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- DNS Record Form Extension -->
+    <record id="view_subdomain_form_aws_inherit" model="ir.ui.view">
+        <field name="name">dns.subdomain.form.aws.inherit</field>
+        <field name="model">dns.subdomain</field>
+        <field name="inherit_id" ref="dns_base.view_subdomain_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet//notebook" position="inside">
+                <page string="AWS Route 53" name="route53" 
+                      attrs="{'invisible': [('route53_sync', '=', False)]}">
+                    <group>
+                        <group name="route53_details" string="Route 53 Details">
+                            <field name="route53_sync" invisible="1"/>
+                            <field name="route53_record_id" readonly="1"/>
+                            <field name="route53_sync_status" widget="badge" 
+                                   decoration-success="route53_sync_status == 'synced'" 
+                                   decoration-warning="route53_sync_status == 'not_synced'" 
+                                   decoration-danger="route53_sync_status == 'error'"/>
+                            <field name="route53_last_sync"/>
+                        </group>
+                    </group>
+                    
+                    <group invisible="not route53_error_message">
+                        <field name="route53_error_message" readonly="1" nolabel="1"
+                               style="color: red; font-weight: bold;"/>
+                    </group>
+                    
+                    <group name="route53_actions">
+                        <button name="sync_to_route53" 
+                                string="Sync to Route 53" 
+                                type="object" 
+                                class="oe_highlight" 
+                                icon="fa-upload"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+    
+    <!-- DNS Record Tree Extension -->
+    <record id="view_subdomain_tree_aws_inherit" model="ir.ui.view">
+        <field name="name">dns.subdomain.tree.aws.inherit</field>
+        <field name="model">dns.subdomain</field>
+        <field name="inherit_id" ref="dns_base.view_subdomain_tree"/>
+        <field name="arch" type="xml">
+            <field name="active" position="after">
+                <field name="route53_sync" invisible="1"/>
+                <field name="route53_sync_status" 
+                       widget="badge" 
+                       decoration-success="route53_sync_status == 'synced'" 
+                       decoration-warning="route53_sync_status == 'not_synced'" 
+                       decoration-danger="route53_sync_status == 'error'" 
+                       optional="show"/>
+                <field name="route53_last_sync" optional="hide"/>
+            </field>
+        </field>
+    </record>
+    
+    <!-- DNS Record Search Extension -->
+    <record id="view_subdomain_search_aws_inherit" model="ir.ui.view">
+        <field name="name">dns.subdomain.search.aws.inherit</field>
+        <field name="model">dns.subdomain</field>
+        <field name="inherit_id" ref="dns_base.view_subdomain_search"/>
+        <field name="arch" type="xml">
+            <filter name="inactive" position="after">
+                <separator/>
+                <filter string="Route 53 Status" name="route53_status" domain="[]" context="{'group_by': 'route53_sync_status'}"/>
+            </filter>
+        </field>
+    </record>
+</odoo>
