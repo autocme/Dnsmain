@@ -347,6 +347,12 @@ class Subdomain(models.Model):
                     # Extract subdomain part
                     if full_name.endswith(domain_name):
                         subdomain_part = full_name[:-len(domain_name)-1]  # -1 for the dot
+                        
+                        # Handle wildcard domains: convert \052 to * if present
+                        if subdomain_part.startswith('\\052'):
+                            subdomain_part = '*' + subdomain_part[4:]  # Replace \052 with *
+                        elif subdomain_part.startswith(r'\052'):
+                            subdomain_part = '*' + subdomain_part[4:]  # Replace \052 with *
                     else:
                         continue  # Not part of this domain
                     

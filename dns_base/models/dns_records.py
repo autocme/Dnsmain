@@ -113,8 +113,12 @@ class Subdomain(models.Model):
                 if not re.match(r'^[a-zA-Z0-9_]([a-zA-Z0-9_\-\.]{0,61}[a-zA-Z0-9_])?$', record.name):
                     raise ValidationError(_("Invalid special DNS record name: %s. Special records can contain letters, numbers, hyphens, and underscores.") % record.name)
             else:
+                # Check for wildcard subdomain (e.g., *.example.com)
+                if record.name == '*':
+                    # Wildcard is allowed as a standalone subdomain name
+                    pass
                 # Standard subdomain rules - alphanumeric, hyphens, no spaces
-                if not re.match(r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$', record.name):
+                elif not re.match(r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$', record.name):
                     raise ValidationError(_("Invalid subdomain name: %s. Subdomains can only contain letters, numbers, and hyphens (not at the beginning or end).") % record.name)
     
     @api.constrains('full_domain')
@@ -123,11 +127,19 @@ class Subdomain(models.Model):
             if not record.full_domain:
                 continue
             
-            # Skip strict validation for special records (containing underscores)
+            # Skip strict validation for special records (containing underscores) or wildcards
             if '_' in record.full_domain:
                 # Basic validation for special DNS records
                 if not re.match(r'^[a-zA-Z0-9_][a-zA-Z0-9_\-\.]{0,253}[a-zA-Z0-9_]$', record.full_domain):
                     raise ValidationError(_("Invalid special record full domain: %s") % record.full_domain)
+            elif record.full_domain.startswith('*.'):
+                # Process wildcard domains
+                # Check if the domain after the *. is valid
+                base_domain = record.full_domain[2:]  # Remove the *. prefix
+                try:
+                    validators.domain(base_domain)
+                except errors.InvalidDomainError:
+                    raise ValidationError(_("Invalid wildcard domain: %s") % record.full_domain)
             else:
                 try:
                     # Validate standard domains using validator-collection
