@@ -17,6 +17,9 @@ subdomains are modified in Odoo.
 Features:
 - Integration with AWS Route 53 API
 - Automatic updating of DNS records in Route 53 hostzones
+- Support for all 17 Route 53 DNS record types (A, AAAA, CAA, CNAME, DS, HTTPS, MX, NAPTR, NS, PTR, SOA, SPF, SRV, SSHFP, SVCB, TLSA, TXT)
+- Automatic record type mapping between Odoo and Route 53
+- Smart region-based configuration for optimal latency
 - Configuration for AWS credentials and settings
     """,
     'author': 'JAAH',

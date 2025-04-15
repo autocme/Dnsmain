@@ -60,7 +60,7 @@ class Subdomain(models.Model):
             config = domain.route53_config_id
             client = config._get_route53_client()
             
-            # Map conversion method to Route 53 record type
+            # Map type to Route 53 record type
             record_type_mapping = {
                 'a': 'A',
                 'aaaa': 'AAAA',
@@ -81,7 +81,7 @@ class Subdomain(models.Model):
                 'txt': 'TXT'
             }
             
-            record_type = record_type_mapping.get(self.conversion_method, 'TXT')
+            record_type = record_type_mapping.get(self.type, 'TXT')
             record_value = self.value
             
             # Process value based on record type
@@ -165,7 +165,7 @@ class Subdomain(models.Model):
     def write(self, vals):
         result = super(Subdomain, self).write(vals)
         # Sync updated records to Route 53 if enabled and relevant fields changed
-        if any(field in vals for field in ['name', 'domain_id', 'conversion_method', 'value']):
+        if any(field in vals for field in ['name', 'domain_id', 'type', 'value']):
             for record in self:
                 if record.domain_id.route53_sync:
                     record.sync_to_route53()
@@ -200,7 +200,7 @@ class Subdomain(models.Model):
                         'txt': 'TXT'
                     }
                     
-                    record_type = record_type_mapping.get(record.conversion_method, 'TXT')
+                    record_type = record_type_mapping.get(record.type, 'TXT')
                     record_value = record.value
                     
                     # Process value based on record type
@@ -441,11 +441,11 @@ class Subdomain(models.Model):
                             'TLSA': 'tlsa',
                             'TXT': 'txt'
                         }
-                        conversion_method = type_mapping.get(record_type, 'txt')  # Default to TXT for unknown types
+                        record_type_value = type_mapping.get(record_type, 'txt')  # Default to TXT for unknown types
                         new_subdomain = self.create({
                             'name': subdomain_part,
                             'domain_id': domain.id,
-                            'conversion_method': conversion_method,
+                            'type': record_type_value,
                             'value': record_value,
                             'route53_record_id': f"{record_type}:{full_name}",
                             'route53_last_sync': fields.Datetime.now(),
@@ -474,9 +474,9 @@ class Subdomain(models.Model):
                                 'TLSA': 'tlsa',
                                 'TXT': 'txt'
                             }
-                            conversion_method = type_mapping.get(record_type, 'txt')
+                            record_type_value = type_mapping.get(record_type, 'txt')
                             existing_subdomain.write({
-                                'conversion_method': conversion_method,
+                                'type': record_type_value,
                                 'value': record_value,
                                 'route53_record_id': f"{record_type}:{full_name}",
                                 'route53_last_sync': fields.Datetime.now(),
