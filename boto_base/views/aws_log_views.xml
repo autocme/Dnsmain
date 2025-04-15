@@ -50,13 +50,13 @@
                         </group>
                     </group>
                     <notebook>
-                        <page string="Request Data" name="request_data" attrs="{'invisible': [('request_data', '=', False)]}">
+                        <page string="Request Data" name="request_data" invisible="not request_data">
                             <field name="request_data" readonly="1" widget="ace" options="{'mode': 'json'}"/>
                         </page>
-                        <page string="Response Data" name="response_data" attrs="{'invisible': [('response_data', '=', False)]}">
+                        <page string="Response Data" name="response_data" invisible="not response_data">
                             <field name="response_data" readonly="1" widget="ace" options="{'mode': 'json'}"/>
                         </page>
-                        <page string="Error" name="error" attrs="{'invisible': [('error_message', '=', False)]}">
+                        <page string="Error" name="error" invisible="not error_message">
                             <field name="error_message" readonly="1"/>
                         </page>
                     </notebook>
@@ -158,11 +158,4 @@
         </field>
     </record>
     
-    <!-- Add to menu -->
-    <menuitem id="menu_aws_operation_log"
-              name="Operation Logs"
-              parent="menu_aws_configuration"
-              action="action_aws_operation_log"
-              sequence="20"
-              groups="boto_base.group_aws_manager"/>
 </odoo>
