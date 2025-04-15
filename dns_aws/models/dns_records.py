@@ -334,6 +334,10 @@ class Subdomain(models.Model):
     
     def unlink(self):
         # Delete records from Route 53 before deleting from Odoo
+        # Skip Route 53 deletion if context flag is set
+        if self.env.context.get('skip_route53_delete'):
+            return super(Subdomain, self).unlink()
+            
         for record in self:
             if record.domain_id.route53_sync and record.domain_id.route53_config_id and record.domain_id.route53_hosted_zone_id:
                 try:
@@ -424,7 +428,7 @@ class Subdomain(models.Model):
         """
         Sync AWS Route 53 records to Odoo DNS records
         This creates DNS record entries in Odoo for any records found in Route 53
-        that don't already exist.
+        that don't already exist, and removes records from Odoo that no longer exist in Route 53.
         
         Args:
             domain_id: Optional domain ID to limit the sync to a specific domain
@@ -464,6 +468,7 @@ class Subdomain(models.Model):
             }
         
         record_count = 0
+        deleted_count = 0
         error_messages = []
         
         # Process each domain
@@ -670,6 +675,38 @@ class Subdomain(models.Model):
                             })
                             record_count += 1
                 
+                # Track Route 53 records that exist for this domain
+                aws_records = []
+                
+                # Collect all record identifiers that exist in AWS
+                for record in response.get('ResourceRecordSets', []):
+                    record_type = record.get('Type')
+                    if record_type in supported_types:
+                        full_name = record.get('Name', '').rstrip('.')
+                        if full_name.endswith(domain_name) and full_name != domain_name:
+                            aws_records.append(f"{record_type}:{full_name}")
+                
+                # Find records in Odoo that no longer exist in AWS and delete them
+                domain_records = self.search([
+                    ('domain_id', '=', domain.id),
+                    ('route53_sync', '=', True),
+                    ('route53_record_id', '!=', False)
+                ])
+                
+                # Delete records that no longer exist in AWS
+                to_delete = self.env['dns.subdomain']
+                for odoo_record in domain_records:
+                    if odoo_record.route53_record_id and odoo_record.route53_record_id not in aws_records:
+                        _logger.info("Record %s no longer exists in Route 53, marking for deletion", odoo_record.full_domain)
+                        to_delete |= odoo_record
+                
+                # Delete the records
+                if to_delete:
+                    _logger.info("Deleting %d DNS records that no longer exist in Route 53", len(to_delete))
+                    deleted_count += len(to_delete)
+                    # Set special context flag to avoid triggering Route 53 deletion when deleting from Odoo
+                    to_delete.with_context(skip_route53_delete=True).unlink()
+                
                 # Update domain last sync time
                 domain.write({
                     'route53_last_sync': fields.Datetime.now(),
@@ -697,12 +734,17 @@ class Subdomain(models.Model):
                 }
             }
         else:
+            message = _(f"Successfully synced with Route 53. Created/updated {record_count} records")
+            if deleted_count > 0:
+                message += _(f", deleted {deleted_count} records that no longer exist in AWS")
+            message += "."
+            
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Sync Completed'),
-                    'message': _(f"Successfully created/updated {record_count} DNS records from Route 53."),
+                    'message': message,
                     'sticky': False,
                     'type': 'success',
                 }
