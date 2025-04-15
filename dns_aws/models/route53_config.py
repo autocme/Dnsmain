@@ -63,6 +63,7 @@ REGION_MAPPING = {
 class Route53Config(models.Model):
     _name = 'dns.route53.config'
     _description = 'AWS Route 53 Configuration'
+    _inherit = ['dns.aws.client.mixin']
 
     name = fields.Char(string='Configuration Name', required=True)
     aws_credentials_id = fields.Many2one('dns.aws.credentials', string='AWS Credentials', required=True)
@@ -83,13 +84,8 @@ class Route53Config(models.Model):
             if not self.aws_credentials_id:
                 raise ValidationError(_("AWS credentials are required to create a Route 53 client"))
                 
-            client = boto3.client(
-                'route53',
-                aws_access_key_id=self.aws_credentials_id.aws_access_key_id,
-                aws_secret_access_key=self.aws_credentials_id.aws_secret_access_key,
-                region_name=self.aws_region
-            )
-            return client
+            # Use the AWS client mixin to create the client
+            return self._get_boto3_client('route53')
         except Exception as e:
             _logger.error("Failed to create Route 53 client: %s", str(e))
             raise ValidationError(_("Failed to create Route 53 client: %s") % str(e))

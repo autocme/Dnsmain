@@ -6,11 +6,14 @@
 import logging
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
+import boto3
+from botocore.exceptions import ClientError
 
 _logger = logging.getLogger(__name__)
 
 class Domain(models.Model):
-    _inherit = 'dns.domain'
+    _inherit = ['dns.domain', 'dns.aws.client.mixin']
+    _name = 'dns.domain'
     
     route53_config_id = fields.Many2one('dns.route53.config', string='Route 53 Configuration')
     route53_hosted_zone_id = fields.Char(string='Route 53 Hosted Zone ID', help='If empty, we will try to find it automatically')

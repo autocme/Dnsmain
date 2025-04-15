@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- AWS Operation Log Tree View -->
+    <record id="view_dns_aws_operation_log_tree" model="ir.ui.view">
+        <field name="name">dns.aws.operation.log.tree</field>
+        <field name="model">dns.aws.operation.log</field>
+        <field name="arch" type="xml">
+            <tree string="AWS Operation Logs" decoration-danger="status == 'error'" decoration-warning="status == 'warning'">
+                <field name="create_date" string="Date"/>
+                <field name="name"/>
+                <field name="aws_service"/>
+                <field name="status"/>
+                <field name="model"/>
+                <field name="res_id"/>
+                <field name="resource_id"/>
+                <field name="duration" widget="float_time"/>
+                <field name="user_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- AWS Operation Log Form View -->
+    <record id="view_dns_aws_operation_log_form" model="ir.ui.view">
+        <field name="name">dns.aws.operation.log.form</field>
+        <field name="model">dns.aws.operation.log</field>
+        <field name="arch" type="xml">
+            <form string="AWS Operation Log">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="aws_service"/>
+                            <field name="status" widget="badge" decoration-danger="status == 'error'" decoration-warning="status == 'warning'" decoration-success="status == 'success'"/>
+                            <field name="user_id"/>
+                            <field name="create_date" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="model"/>
+                            <field name="res_id"/>
+                            <field name="resource_id"/>
+                            <field name="duration" widget="float_time"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Request Data" name="request_data">
+                            <field name="request_data" widget="text_code"/>
+                        </page>
+                        <page string="Response Data" name="response_data">
+                            <field name="response_data" widget="text_code"/>
+                        </page>
+                        <page string="Error Message" name="error_message" attrs="{'invisible': [('status', '!=', 'error')]}">
+                            <field name="error_message" widget="text_code"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- AWS Operation Log Search View -->
+    <record id="view_dns_aws_operation_log_search" model="ir.ui.view">
+        <field name="name">dns.aws.operation.log.search</field>
+        <field name="model">dns.aws.operation.log</field>
+        <field name="arch" type="xml">
+            <search string="Search AWS Operation Logs">
+                <field name="name"/>
+                <field name="aws_service"/>
+                <field name="resource_id"/>
+                <field name="model"/>
+                <field name="user_id"/>
+                <filter string="Errors" name="errors" domain="[('status', '=', 'error')]"/>
+                <filter string="Warnings" name="warnings" domain="[('status', '=', 'warning')]"/>
+                <filter string="Success" name="success" domain="[('status', '=', 'success')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Status" name="group_by_status" context="{'group_by': 'status'}"/>
+                    <filter string="AWS Service" name="group_by_aws_service" context="{'group_by': 'aws_service'}"/>
+                    <filter string="Model" name="group_by_model" context="{'group_by': 'model'}"/>
+                    <filter string="User" name="group_by_user" context="{'group_by': 'user_id'}"/>
+                    <filter string="Date" name="group_by_date" context="{'group_by': 'create_date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- AWS Operation Log Action -->
+    <record id="action_dns_aws_operation_log" model="ir.actions.act_window">
+        <field name="name">AWS Operation Logs</field>
+        <field name="res_model">dns.aws.operation.log</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_dns_aws_operation_log_search"/>
+        <field name="context">{'search_default_errors': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No AWS operation logs found
+            </p>
+            <p>
+                This view shows all AWS operations performed by the system, including successful and failed operations.
+            </p>
+        </field>
+    </record>
+
+    <!-- Add AWS Operation Logs Menu Item -->
+    <menuitem id="menu_dns_aws_operation_log"
+              name="AWS Operation Logs"
+              parent="dns_base.menu_dns_tools"
+              action="action_dns_aws_operation_log"
+              sequence="30"/>
+</odoo>

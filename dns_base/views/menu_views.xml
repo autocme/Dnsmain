@@ -19,4 +19,10 @@
               parent="menu_dns_base"
               action="action_dns_records"
               sequence="20"/>
+              
+    <!-- Tools Menu -->
+    <menuitem id="menu_dns_tools"
+              name="Tools"
+              parent="menu_dns_base"
+              sequence="80"/>
 </odoo>
