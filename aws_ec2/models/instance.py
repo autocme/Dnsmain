@@ -8,6 +8,7 @@ from odoo.exceptions import UserError, ValidationError
 import json
 import time
 import logging
+from datetime import datetime
 
 _logger = logging.getLogger(__name__)
 
@@ -162,6 +163,41 @@ class EC2Instance(models.Model):
                 _logger.error(f"Failed to terminate EC2 instance {instance.instance_id}: {str(e)}")
                 raise UserError(f"Failed to terminate EC2 instance: {str(e)}")
         return super(EC2Instance, self).unlink()
+        
+    def _log_aws_operation(self, operation, status, message=None):
+        """
+        Log AWS operations to both system log and aws.operation.log model.
+        
+        Args:
+            operation: Name of the operation performed
+            status: 'success', 'error', or 'warning'
+            message: Optional message to include in the log
+        """
+        if status == 'success':
+            _logger.info(f"EC2 {operation} successful for instance {self.instance_id or 'New'}: {message or ''}")
+        elif status == 'error':
+            _logger.error(f"EC2 {operation} failed for instance {self.instance_id or 'New'}: {message or ''}")
+        else:
+            _logger.warning(f"EC2 {operation} warning for instance {self.instance_id or 'New'}: {message or ''}")
+            
+        # Log to aws.operation.log if it exists in the database
+        if self.env.get('aws.operation.log'):
+            try:
+                # Get AWS credentials used for this instance
+                aws_credentials = self.get_aws_credentials()
+                
+                self.env['aws.operation.log'].log_operation(
+                    service_name='ec2',
+                    operation_name=operation,
+                    status=status,
+                    credentials=aws_credentials,
+                    region=aws_credentials.aws_default_region if aws_credentials else None,
+                    model=self._name,
+                    res_id=self.id if isinstance(self.id, int) else False,
+                    error_message=message if status == 'error' else None,
+                )
+            except Exception as e:
+                _logger.error(f"Failed to log EC2 operation: {str(e)}")
 
     def _launch_instance_in_aws(self):
         """
@@ -691,8 +727,30 @@ class EC2Instance(models.Model):
             # Show a success message
             message = f"Successfully imported {imported_count} new instances and updated {updated_count} existing instances."
             
-            # Log the import operation
-            self._log_aws_operation('import_instances', 'success', message)
+            # Log the operation
+            # For model-level operations, log directly to aws.operation.log
+            if self.env.get('aws.operation.log'):
+                try:
+                    # Get AWS credentials
+                    aws_credentials = None
+                    if aws_credentials_id:
+                        aws_credentials = self.env['aws.credentials'].browse(aws_credentials_id).exists()
+                    
+                    self.env['aws.operation.log'].log_operation(
+                        service_name='ec2',
+                        operation_name='import_instances',
+                        status='success',
+                        credentials=aws_credentials,
+                        region=region_name,
+                        model=self._name,
+                        request_data=None,
+                        response_data=message,
+                    )
+                except Exception as e:
+                    _logger.error(f"Failed to log EC2 operation: {str(e)}")
+            
+            # Also log to system log
+            _logger.info(f"EC2 import_instances successful: {message}")
             
             # Return action to display instances
             return {
@@ -710,7 +768,29 @@ class EC2Instance(models.Model):
             
         except Exception as e:
             error_msg = f"Failed to import EC2 instances: {str(e)}"
-            self._log_aws_operation('import_instances', 'error', error_msg)
+            
+            # For model-level operations, log directly to aws.operation.log
+            if self.env.get('aws.operation.log'):
+                try:
+                    # Get AWS credentials
+                    aws_credentials = None
+                    if aws_credentials_id:
+                        aws_credentials = self.env['aws.credentials'].browse(aws_credentials_id).exists()
+                    
+                    self.env['aws.operation.log'].log_operation(
+                        service_name='ec2',
+                        operation_name='import_instances',
+                        status='error',
+                        credentials=aws_credentials,
+                        region=region_name,
+                        model=self._name,
+                        error_message=error_msg,
+                    )
+                except Exception as log_error:
+                    _logger.error(f"Failed to log EC2 operation: {str(log_error)}")
+            
+            # Also log to system log
+            _logger.error(f"EC2 import_instances failed: {error_msg}")
             raise UserError(error_msg)
 
     def refresh_all_instances(self):
@@ -718,19 +798,60 @@ class EC2Instance(models.Model):
         Refresh all active instances.
         """
         instances = self.search([('active', '=', True)])
-        for instance in instances:
-            instance.refresh_instance_data()
+        success_count = 0
+        error_messages = []
         
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Refresh Completed'),
-                'message': _('%s instances have been refreshed from AWS EC2.') % len(instances),
-                'sticky': False,
-                'type': 'success',
+        for instance in instances:
+            try:
+                instance.refresh_instance_data()
+                success_count += 1
+            except Exception as e:
+                error_message = f"Error refreshing instance '{instance.name}': {str(e)}"
+                _logger.error(error_message)
+                error_messages.append(error_message)
+                instance.write({
+                    'sync_status': 'error',
+                    'sync_message': error_message,
+                })
+        
+        # Log the operation
+        if self.env.get('aws.operation.log'):
+            try:
+                self.env['aws.operation.log'].log_operation(
+                    service_name='ec2',
+                    operation_name='refresh_all_instances',
+                    status='success' if not error_messages else 'warning',
+                    model=self._name,
+                    error_message='; '.join(error_messages) if error_messages else None,
+                    response_data=f"Successfully refreshed {success_count}/{len(instances)} instances" if not error_messages else None,
+                )
+            except Exception as e:
+                _logger.error(f"Failed to log EC2 operation: {str(e)}")
+        
+        # Generate response message
+        if error_messages:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Refresh Completed With Errors'),
+                    'message': _(f"Successfully refreshed {success_count}/{len(instances)} instances from AWS EC2. Errors: {'; '.join(error_messages)}"),
+                    'sticky': True,
+                    'type': 'warning',
+                }
             }
-        }
+        else:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Refresh Completed'),
+                    'message': _('%s instances have been refreshed from AWS EC2.') % len(instances),
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+        
     
     def sync_all_to_aws(self):
         """
@@ -759,6 +880,26 @@ class EC2Instance(models.Model):
                     'sync_status': 'error',
                     'sync_message': error_message,
                 })
+        
+        # Log the operation
+        if self.env.get('aws.operation.log'):
+            try:
+                self.env['aws.operation.log'].log_operation(
+                    service_name='ec2',
+                    operation_name='sync_all_to_aws',
+                    status='success' if not error_messages else 'warning',
+                    model=self._name,
+                    error_message='; '.join(error_messages) if error_messages else None,
+                    response_data=f"Successfully synced {success_count}/{len(instances)} instances" if not error_messages else None,
+                )
+            except Exception as e:
+                _logger.error(f"Failed to log EC2 operation: {str(e)}")
+                
+        # Also log to system log
+        if error_messages:
+            _logger.warning(f"EC2 sync_all_to_aws completed with errors: {'; '.join(error_messages)}")
+        else:
+            _logger.info(f"EC2 sync_all_to_aws successful: {success_count} instances synced")
         
         # Generate response message
         if error_messages:
