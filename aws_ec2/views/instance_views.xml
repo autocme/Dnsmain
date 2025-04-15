@@ -33,9 +33,9 @@
                     <button name="action_reboot" string="Reboot" type="object" 
                             invisible="state not in ['running']"/>
                     <button name="refresh_instance_data" string="Refresh from AWS" type="object" 
-                            invisible="not instance_id"/>
-                    <button name="sync_instance_to_aws" string="Sync to AWS" type="object" 
-                            class="oe_highlight" icon="fa-upload"/>
+                            invisible="instance_id == False"/>
+                    <button name="_launch_instance_in_aws" string="Launch in AWS" type="object" 
+                            class="oe_highlight" icon="fa-upload" invisible="instance_id != False"/>
                     <field name="state" widget="statusbar" statusbar_visible="pending,running,stopping,stopped"/>
                 </header>
                 <sheet>
