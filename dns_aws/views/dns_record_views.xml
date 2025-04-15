@@ -7,7 +7,7 @@
         <field name="inherit_id" ref="dns_base.view_dns_record_form"/>
         <field name="arch" type="xml">
             <xpath expr="//sheet" position="inside">
-                <notebook invisible="not route53_sync">
+                <notebook invisible="route53_sync == False">
                     <page string="AWS Route 53" name="route53">
                         <group>
                             <group name="route53_details" string="Route 53 Details">
@@ -21,7 +21,7 @@
                             </group>
                         </group>
                         
-                        <group attrs="{'invisible': [('route53_error_message','=',False)]}">
+                        <group invisible="route53_error_message == False">
                             <field name="route53_error_message" readonly="1" nolabel="1"
                                    style="color: red; font-weight: bold;"/>
                         </group>
