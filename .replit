@@ -31,8 +31,8 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pip install -q validator-collection && python -m odoo --addons-path=. -d testdb -i dns_base --no-http --stop-after-init && python -m odoo --addons-path=. -d testdb --dev=all"
-waitForPort = 5000
+args = "rm -rf odoo_repo 2>/dev/null || true && git clone https://github.com/odoo/odoo.git -b 17.0 --depth=1 odoo_repo && pip install -e odoo_repo && python -m odoo --addons-path=. -d testdb -i dns_base --no-http --stop-after-init && python -m odoo --addons-path=. -d testdb --dev=all"
+waitForPort = 8069
 
 [[workflows.workflow]]
 name = "odoo_server"
@@ -46,7 +46,8 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pip install -q validator-collection && python -m pip install -q odoo && python -m odoo -d test_db -i dns_base --stop-after-init && python -m odoo -d test_db"
+args = "pip install -q validator-collection boto3 && cd odoo_repo && python -m odoo -d test_db -i dns_base --stop-after-init && python -m odoo -d test_db --addons-path=.. -i dns_base,dns_aws --dev=all"
+waitForPort = 8069
 
 [deployment]
-run = ["sh", "-c", "pip install -q validator-collection && python -m odoo --addons-path=. -d testdb -i dns_base --no-http --stop-after-init && python -m odoo --addons-path=. -d testdb --dev=all"]
+run = ["sh", "-c", "rm -rf odoo_repo 2>/dev/null || true && git clone https://github.com/odoo/odoo.git -b 17.0 --depth=1 odoo_repo && pip install -e odoo_repo && python -m odoo --addons-path=. -d testdb -i dns_base --no-http --stop-after-init && python -m odoo --addons-path=. -d testdb --dev=all"]
