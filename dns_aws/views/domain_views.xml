@@ -11,27 +11,27 @@
                     <group>
                         <group name="aws_route53_config" string="Route 53 Configuration">
                             <field name="route53_sync"/>
-                            <field name="aws_credentials_id" attrs="{'invisible': [('route53_sync', '=', False)], 'required': [('route53_sync', '=', True)]}"/>
-                            <field name="route53_auto_region_sync" attrs="{'invisible': [('route53_sync', '=', False)]}"/>
-                            <field name="route53_config_id" attrs="{'invisible': [('route53_sync', '=', False)], 'required': [('route53_sync', '=', True)]}"/>
-                            <field name="route53_hosted_zone_id" attrs="{'invisible': [('route53_sync', '=', False)]}"/>
+                            <field name="aws_credentials_id" invisible="route53_sync == False" required="route53_sync"/>
+                            <field name="route53_auto_region_sync" invisible="route53_sync == False"/>
+                            <field name="route53_config_id" invisible="route53_sync == False" required="route53_sync"/>
+                            <field name="route53_hosted_zone_id" invisible="route53_sync == False"/>
                         </group>
                         <group name="aws_route53_status" string="Status">
                             <field name="route53_sync_status" widget="badge" 
                                    decoration-success="route53_sync_status == 'synced'" 
                                    decoration-warning="route53_sync_status == 'not_synced'" 
                                    decoration-danger="route53_sync_status == 'error'" 
-                                   attrs="{'invisible': [('route53_sync', '=', False)]}"/>
-                            <field name="route53_last_sync" attrs="{'invisible': [('route53_sync', '=', False)]}"/>
+                                   invisible="route53_sync == False"/>
+                            <field name="route53_last_sync" invisible="route53_sync == False"/>
                         </group>
                     </group>
                     
-                    <group attrs="{'invisible': [('route53_error_message','=',False)]}">
+                    <group invisible="route53_error_message == False">
                         <field name="route53_error_message" readonly="1" nolabel="1"
                                style="color: red; font-weight: bold;"/>
                     </group>
                     
-                    <group name="route53_actions" attrs="{'invisible': [('route53_sync', '=', False)]}">
+                    <group name="route53_actions" invisible="route53_sync == False">
                         <button name="sync_all_subdomains_to_route53" 
                                 string="Sync All Subdomains to Route 53" 
                                 type="object" 
