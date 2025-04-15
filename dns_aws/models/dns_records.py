@@ -111,11 +111,62 @@ class Subdomain(models.Model):
                 if not (record_value.startswith('"') and record_value.endswith('"')):
                     record_value = f'"{record_value}"'
                 
-            # Create or update Route 53 record
-            response = client.change_resource_record_sets(
-                HostedZoneId=domain.route53_hosted_zone_id,
-                ChangeBatch={
+            # Get existing record first if we have a route53_record_id
+            existing_record = None
+            if self.route53_record_id:
+                try:
+                    # Try to find the existing record to ensure we're truly updating
+                    record_name = self.full_domain + '.'  # Add trailing dot
+                    _logger.info("Looking for existing record: %s (%s)", record_name, record_type)
+                    
+                    # Get current records that match our name and type
+                    response = client.list_resource_record_sets(
+                        HostedZoneId=domain.route53_hosted_zone_id,
+                        StartRecordName=record_name,
+                        StartRecordType=record_type,
+                        MaxItems='10'
+                    )
+                    
+                    for aws_record in response.get('ResourceRecordSets', []):
+                        if aws_record.get('Name') == record_name and aws_record.get('Type') == record_type:
+                            existing_record = aws_record
+                            _logger.info("Found existing record: %s", aws_record)
+                            break
+                except Exception as e:
+                    _logger.warning("Error fetching existing record: %s", str(e))
+            
+            # If we found an existing record and need to update it, first delete, then create
+            if existing_record and self.route53_record_id:
+                _logger.info("Updating existing Route 53 record: %s", self.full_domain)
+                
+                # Build the change batch with both DELETE and CREATE operations
+                change_batch = {
                     'Comment': 'Updated by Odoo DNS Management',
+                    'Changes': [
+                        {
+                            'Action': 'DELETE',
+                            'ResourceRecordSet': existing_record
+                        },
+                        {
+                            'Action': 'CREATE',
+                            'ResourceRecordSet': {
+                                'Name': self.full_domain + '.',  # Add trailing dot
+                                'Type': record_type,
+                                'TTL': self.ttl,
+                                'ResourceRecords': [
+                                    {
+                                        'Value': record_value
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            else:
+                # If no existing record found, use UPSERT
+                _logger.info("Creating new Route 53 record: %s", self.full_domain)
+                change_batch = {
+                    'Comment': 'Created by Odoo DNS Management',
                     'Changes': [
                         {
                             'Action': 'UPSERT',
@@ -132,6 +183,11 @@ class Subdomain(models.Model):
                         }
                     ]
                 }
+            
+            # Execute the change
+            response = client.change_resource_record_sets(
+                HostedZoneId=domain.route53_hosted_zone_id,
+                ChangeBatch=change_batch
             )
             
             # Update subdomain record with sync info
