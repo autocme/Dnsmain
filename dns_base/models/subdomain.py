@@ -17,7 +17,8 @@ class Subdomain(models.Model):
     domain_id = fields.Many2one('dns.domain', string='Domain', required=True, ondelete='cascade')
     conversion_method = fields.Selection([
         ('a', 'A Record'),
-        ('cname', 'CNAME Record')
+        ('cname', 'CNAME Record'),
+        ('txt', 'TXT Record')
     ], string='Conversion Method', required=True, default='a')
     value = fields.Char(string='Value', required=True)
     full_domain = fields.Char(string='Full Domain', compute='_compute_full_domain', store=True)
@@ -42,21 +43,35 @@ class Subdomain(models.Model):
             if not record.name:
                 continue
             
-            # Validate subdomain format - alphanumeric, hyphens, no spaces
-            if not re.match(r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$', record.name):
-                raise ValidationError(_("Invalid subdomain name: %s. Subdomains can only contain letters, numbers, and hyphens (not at the beginning or end).") % record.name)
+            # Check for special DNS record types (like DKIM or SPF) which can contain underscores
+            is_special_record = '_' in record.name
+            
+            if is_special_record:
+                # Special DNS records - allow underscores but validate general format
+                if not re.match(r'^[a-zA-Z0-9_]([a-zA-Z0-9_\-\.]{0,61}[a-zA-Z0-9_])?$', record.name):
+                    raise ValidationError(_("Invalid special DNS record name: %s. Special records can contain letters, numbers, hyphens, and underscores.") % record.name)
+            else:
+                # Standard subdomain rules - alphanumeric, hyphens, no spaces
+                if not re.match(r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$', record.name):
+                    raise ValidationError(_("Invalid subdomain name: %s. Subdomains can only contain letters, numbers, and hyphens (not at the beginning or end).") % record.name)
     
     @api.constrains('full_domain')
     def _check_full_domain(self):
         for record in self:
             if not record.full_domain:
                 continue
-                
-            try:
-                # Validate full domain using validator-collection
-                validators.domain(record.full_domain)
-            except errors.InvalidDomainError:
-                raise ValidationError(_("Invalid full domain: %s") % record.full_domain)
+            
+            # Skip strict validation for special records (containing underscores)
+            if '_' in record.full_domain:
+                # Basic validation for special DNS records
+                if not re.match(r'^[a-zA-Z0-9_][a-zA-Z0-9_\-\.]{0,253}[a-zA-Z0-9_]$', record.full_domain):
+                    raise ValidationError(_("Invalid special record full domain: %s") % record.full_domain)
+            else:
+                try:
+                    # Validate standard domains using validator-collection
+                    validators.domain(record.full_domain)
+                except errors.InvalidDomainError:
+                    raise ValidationError(_("Invalid full domain: %s") % record.full_domain)
 
     @api.constrains('value', 'conversion_method')
     def _check_record_value(self):
@@ -73,3 +88,7 @@ class Subdomain(models.Model):
                     validators.domain(record.value)
                 except errors.InvalidDomainError:
                     raise ValidationError(_("Invalid domain for CNAME record: %s") % record.value)
+            elif record.conversion_method == 'txt':
+                # TXT records can have almost any value, but check for basic validity
+                if not record.value or len(record.value) > 255:
+                    raise ValidationError(_("TXT record value must be between 1 and 255 characters: %s") % record.value)
