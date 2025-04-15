@@ -52,7 +52,17 @@ class AWSClientMixin(models.AbstractModel):
                 'aws_secret_access_key': self.route53_config_id.aws_credentials_id.aws_secret_access_key,
             }
             
-        # Default fallback - get credentials from system parameters
+        # Default fallback - get credentials from the default AWS credentials in settings
+        AWSUtils = self.env['dns.aws.utils']
+        default_creds = AWSUtils.get_default_aws_credentials()
+        
+        if default_creds:
+            return {
+                'aws_access_key_id': default_creds.aws_access_key_id,
+                'aws_secret_access_key': default_creds.aws_secret_access_key,
+            }
+            
+        # Last resort fallback to direct parameter lookup
         # This should be avoided in production environments for security reasons
         IrParam = self.env['ir.config_parameter'].sudo()
         return {
