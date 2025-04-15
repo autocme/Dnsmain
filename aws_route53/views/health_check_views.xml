@@ -28,7 +28,7 @@
             <form string="Health Check">
                 <header>
                     <button name="refresh_status" string="Refresh Status" type="object" 
-                            class="oe_highlight" attrs="{'invisible': [('health_check_id', '=', False)]}"/>
+                            class="oe_highlight" invisible="not health_check_id"/>
                     <field name="sync_status" widget="statusbar" statusbar_visible="not_synced,syncing,synced,error"/>
                 </header>
                 <sheet>
@@ -56,18 +56,18 @@
                     <notebook>
                         <page string="Endpoint Configuration" name="endpoint">
                             <group>
-                                <group string="HTTP/HTTPS Configuration" attrs="{'invisible': [('health_check_type', 'not in', ['HTTP', 'HTTPS', 'HTTP_STR_MATCH', 'HTTPS_STR_MATCH'])]}">
-                                    <field name="endpoint_url" attrs="{'required': [('health_check_type', 'in', ['HTTP', 'HTTPS', 'HTTP_STR_MATCH', 'HTTPS_STR_MATCH'])]}"/>
+                                <group string="HTTP/HTTPS Configuration" invisible="health_check_type not in ['HTTP', 'HTTPS', 'HTTP_STR_MATCH', 'HTTPS_STR_MATCH']">
+                                    <field name="endpoint_url" required="health_check_type in ['HTTP', 'HTTPS', 'HTTP_STR_MATCH', 'HTTPS_STR_MATCH']"/>
                                     <field name="endpoint_path"/>
                                     <field name="endpoint_port"/>
-                                    <field name="enable_sni" attrs="{'invisible': [('health_check_type', 'not in', ['HTTPS', 'HTTPS_STR_MATCH'])]}"/>
+                                    <field name="enable_sni" invisible="health_check_type not in ['HTTPS', 'HTTPS_STR_MATCH']"/>
                                 </group>
-                                <group string="TCP Configuration" attrs="{'invisible': [('health_check_type', '!=', 'TCP')]}">
-                                    <field name="endpoint_ip" attrs="{'required': [('health_check_type', '=', 'TCP')]}"/>
-                                    <field name="endpoint_port" attrs="{'required': [('health_check_type', '=', 'TCP')]}"/>
+                                <group string="TCP Configuration" invisible="health_check_type != 'TCP'">
+                                    <field name="endpoint_ip" required="health_check_type == 'TCP'"/>
+                                    <field name="endpoint_port" required="health_check_type == 'TCP'"/>
                                 </group>
-                                <group string="String Match Configuration" attrs="{'invisible': [('health_check_type', 'not in', ['HTTP_STR_MATCH', 'HTTPS_STR_MATCH'])]}">
-                                    <field name="search_string" attrs="{'required': [('health_check_type', 'in', ['HTTP_STR_MATCH', 'HTTPS_STR_MATCH'])]}"/>
+                                <group string="String Match Configuration" invisible="health_check_type not in ['HTTP_STR_MATCH', 'HTTPS_STR_MATCH']">
+                                    <field name="search_string" required="health_check_type in ['HTTP_STR_MATCH', 'HTTPS_STR_MATCH']"/>
                                     <field name="invert_search"/>
                                 </group>
                             </group>
