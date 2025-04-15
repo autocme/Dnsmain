@@ -4,68 +4,6 @@ modules = ["python-3.11"]
 channel = "stable-24_05"
 
 [workflows]
-runButton = "Project"
-
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Odoo Server"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "odoo_server"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "test_xml"
-
-[[workflows.workflow]]
-name = "Odoo Server"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "rm -rf odoo_repo 2>/dev/null || true && git clone https://github.com/odoo/odoo.git -b 17.0 --depth=1 odoo_repo && pip install -e odoo_repo && python -m odoo --addons-path=. -d testdb -i dns_base --no-http --stop-after-init && python -m odoo --addons-path=. -d testdb --dev=all"
-waitForPort = 8069
-
-[[workflows.workflow]]
-name = "odoo_server"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pip install -q validator-collection boto3 && cd odoo_repo && python -m odoo -d test_db -i dns_base --stop-after-init && python -m odoo -d test_db --addons-path=.. -i dns_base,dns_aws --dev=all"
-waitForPort = 8069
-
-[[workflows.workflow]]
-name = "test_xml"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd odoo_repo && python setup.py install && cd .. && python -m odoo --addons-path=. -d testdb --stop-after-init"
 
 [deployment]
 run = ["sh", "-c", "rm -rf odoo_repo 2>/dev/null || true && git clone https://github.com/odoo/odoo.git -b 17.0 --depth=1 odoo_repo && pip install -e odoo_repo && python -m odoo --addons-path=. -d testdb -i dns_base --no-http --stop-after-init && python -m odoo --addons-path=. -d testdb --dev=all"]
