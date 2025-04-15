@@ -26,13 +26,13 @@
                                    style="color: red; font-weight: bold;"/>
                         </group>
                         
-                        <group name="route53_actions">
+                        <div name="route53_buttons" class="oe_button_box">
                             <button name="sync_to_route53" 
-                                    string="Sync to Route 53" 
+                                    string="Push to Route 53" 
                                     type="object" 
-                                    class="oe_highlight" 
+                                    class="btn-primary" 
                                     icon="fa-upload"/>
-                        </group>
+                        </div>
                     </page>
                 </notebook>
             </xpath>

@@ -32,8 +32,10 @@
                             invisible="state not in ['running', 'pending']"/>
                     <button name="action_reboot" string="Reboot" type="object" 
                             invisible="state not in ['running']"/>
-                    <button name="refresh_instance_data" string="Refresh" type="object" 
+                    <button name="refresh_instance_data" string="Refresh from AWS" type="object" 
                             invisible="not instance_id"/>
+                    <button name="sync_instance_to_aws" string="Sync to AWS" type="object" 
+                            class="oe_highlight" icon="fa-upload"/>
                     <field name="state" widget="statusbar" statusbar_visible="pending,running,stopping,stopped"/>
                 </header>
                 <sheet>
@@ -164,5 +166,15 @@
         <field name="binding_view_types">list</field>
         <field name="state">code</field>
         <field name="code">action = model.refresh_all_instances()</field>
+    </record>
+    
+    <!-- Sync All EC2 Instances to AWS Action -->
+    <record id="action_sync_all_ec2_instances" model="ir.actions.server">
+        <field name="name">Sync All to AWS</field>
+        <field name="model_id" ref="model_aws_ec2_instance"/>
+        <field name="binding_model_id" ref="model_aws_ec2_instance"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = model.sync_all_to_aws()</field>
     </record>
 </odoo>
