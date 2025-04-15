@@ -665,6 +665,7 @@ class EC2Instance(models.Model):
             Action to display imported instances
         """
         try:
+            start_time = datetime.now()
             # Use provided credentials or default from context
             if not aws_credentials_id:
                 aws_credentials_id = self.env.context.get('aws_credentials_id', False)
@@ -672,60 +673,145 @@ class EC2Instance(models.Model):
             if not region_name:
                 region_name = self.env.context.get('aws_region', False)
             
+            # Log start of operation
+            _logger.info(f"Starting EC2 instance import from AWS (credentials: {aws_credentials_id}, region: {region_name})")
+            
             ec2_client = self._get_boto3_client('ec2', aws_credentials_id, region_name)
             
-            # Get all instances
-            response = ec2_client.describe_instances()
-            
+            # Get all instances with pagination
             imported_count = 0
             updated_count = 0
+            skipped_count = 0
+            total_processed = 0
+            paginator = ec2_client.get_paginator('describe_instances')
             
-            if 'Reservations' in response:
-                for reservation in response['Reservations']:
+            # Get existing instances to optimize lookups (avoid repeated searches)
+            existing_instances = {
+                instance.instance_id: instance for instance in 
+                self.search([('instance_id', '!=', False)])
+            }
+            
+            # Batch operations for bulk create/update
+            instances_to_create = []
+            instances_to_update = []
+            
+            # Process paginated results
+            for page in paginator.paginate():
+                if 'Reservations' not in page:
+                    continue
+                    
+                for reservation in page['Reservations']:
                     for instance_data in reservation.get('Instances', []):
+                        total_processed += 1
                         instance_id = instance_data.get('InstanceId')
                         
                         # Skip if no instance ID
                         if not instance_id:
+                            skipped_count += 1
                             continue
-                        
-                        # Check if instance already exists
-                        existing = self.search([('instance_id', '=', instance_id)], limit=1)
-                        
+                            
                         # Extract name from tags
                         name = instance_id  # Default to instance ID
+                        tags_dict = {}
                         for tag in instance_data.get('Tags', []):
-                            if tag.get('Key') == 'Name' and tag.get('Value'):
-                                name = tag.get('Value')
-                                break
+                            key = tag.get('Key', '')
+                            value = tag.get('Value', '')
+                            if key == 'Name' and value:
+                                name = value
+                            tags_dict[key] = value
                         
-                        # Create or update the instance
-                        if existing:
-                            existing._update_from_aws_data(instance_data)
-                            updated_count += 1
+                        # Check if instance already exists using the dictionary lookup
+                        if instance_id in existing_instances:
+                            existing = existing_instances[instance_id]
+                            # Add to update batch
+                            instances_to_update.append((existing, instance_data))
                         else:
-                            # Create new instance record
+                            # Create new instance record - add to create batch
+                            state = instance_data.get('State', {}).get('Name', 'pending')
+                            launch_time = instance_data.get('LaunchTime')
+                            public_ip = instance_data.get('PublicIpAddress', '')
+                            private_ip = instance_data.get('PrivateIpAddress', '')
+                            public_dns = instance_data.get('PublicDnsName', '')
+                            private_dns = instance_data.get('PrivateDnsName', '')
+                            vpc_id = instance_data.get('VpcId', '')
+                            subnet_id = instance_data.get('SubnetId', '')
+                            
                             vals = {
                                 'name': name,
                                 'instance_id': instance_id,
                                 'instance_type': instance_data.get('InstanceType', ''),
                                 'image_id': instance_data.get('ImageId', ''),
-                                'vpc_id': instance_data.get('VpcId', ''),
-                                'subnet_id': instance_data.get('SubnetId', ''),
-                                'state': instance_data.get('State', {}).get('Name', 'pending'),
+                                'vpc_id': vpc_id,
+                                'subnet_id': subnet_id,
+                                'state': state,
+                                'public_ip': public_ip,
+                                'private_ip': private_ip,
+                                'public_dns': public_dns,
+                                'private_dns': private_dns,
+                                'launch_time': launch_time,
+                                'tags': json.dumps(tags_dict) if tags_dict else False,
                                 'aws_credentials_id': aws_credentials_id,
                                 'aws_region': region_name or self._get_default_region(),
+                                'sync_status': 'synced',
+                                'last_sync': fields.Datetime.now(),
                             }
-                            
-                            # Create instance with context to prevent launching in AWS
-                            new_instance = self.with_context(import_from_aws=True).create(vals)
-                            
-                            # Update with additional instance data
-                            new_instance._update_from_aws_data(instance_data)
+                            instances_to_create.append(vals)
+            
+            # Optimize: Process updates in batches to reduce database operations
+            update_batch_size = 20  # Can be adjusted based on performance testing
+            for i in range(0, len(instances_to_update), update_batch_size):
+                batch = instances_to_update[i:i+update_batch_size]
+                for existing, instance_data in batch:
+                    try:
+                        existing.with_context(import_from_aws=True)._update_from_aws_data(instance_data)
+                        existing.write({
+                            'sync_status': 'synced',
+                            'last_sync': fields.Datetime.now(),
+                            'sync_message': False,
+                        })
+                        updated_count += 1
+                    except Exception as update_error:
+                        _logger.error(f"Error updating instance {existing.instance_id}: {str(update_error)}")
+                        existing.write({
+                            'sync_status': 'error',
+                            'sync_message': str(update_error),
+                        })
+                        skipped_count += 1
+                        
+                # Commit after each batch to avoid long transactions
+                self.env.cr.commit()
+                _logger.info(f"Processed batch of {len(batch)} instance updates")
+            
+            # Optimize: Process creates in batches
+            create_batch_size = 20  # Can be adjusted based on performance testing
+            for i in range(0, len(instances_to_create), create_batch_size):
+                batch = instances_to_create[i:i+create_batch_size]
+                try:
+                    self.with_context(import_from_aws=True).create(batch)
+                    imported_count += len(batch)
+                    # Commit after each batch to avoid long transactions
+                    self.env.cr.commit()
+                    _logger.info(f"Created batch of {len(batch)} new instances")
+                except Exception as create_error:
+                    _logger.error(f"Error creating batch of instances: {str(create_error)}")
+                    # If batch create fails, try individual creates to salvage what we can
+                    for vals in batch:
+                        try:
+                            self.with_context(import_from_aws=True).create([vals])
                             imported_count += 1
+                        except Exception as ind_error:
+                            _logger.error(f"Error creating instance {vals.get('instance_id')}: {str(ind_error)}")
+                            skipped_count += 1
+                    
+                    # Commit even after error handling
+                    self.env.cr.commit()
+            
+            # Calculate execution time
+            execution_time = (datetime.now() - start_time).total_seconds()
             
             # Show a success message
-            message = f"Successfully imported {imported_count} new instances and updated {updated_count} existing instances."
+            message = (f"Successfully imported {imported_count} new instances and updated {updated_count} existing instances "
+                      f"({skipped_count} skipped) in {execution_time:.2f} seconds.")
             
             # Log the operation
             # For model-level operations, log directly to aws.operation.log
@@ -745,6 +831,7 @@ class EC2Instance(models.Model):
                         model=self._name,
                         request_data=None,
                         response_data=message,
+                        duration_ms=int(execution_time * 1000),
                     )
                 except Exception as e:
                     _logger.error(f"Failed to log EC2 operation: {str(e)}")
@@ -793,26 +880,143 @@ class EC2Instance(models.Model):
             _logger.error(f"EC2 import_instances failed: {error_msg}")
             raise UserError(error_msg)
 
-    def refresh_all_instances(self):
+    def refresh_all_instances(self, batch_size=20):
         """
         Refresh all active instances.
+        
+        Optimized version that processes instances in batches, with intermediate commits
+        to avoid long-running transactions.
+        
+        Args:
+            batch_size: Number of instances to process in each batch
         """
+        start_time = datetime.now()
         instances = self.search([('active', '=', True)])
+        total_count = len(instances)
         success_count = 0
         error_messages = []
+        skipped_count = 0
         
+        if not total_count:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('No Instances Found'),
+                    'message': _('No active EC2 instances found to refresh.'),
+                    'sticky': False,
+                    'type': 'info',
+                }
+            }
+            
+        _logger.info(f"Starting refresh of {total_count} EC2 instances")
+        
+        # Group instances by region for more efficient API calls
+        instances_by_region = {}
         for instance in instances:
-            try:
-                instance.refresh_instance_data()
-                success_count += 1
-            except Exception as e:
-                error_message = f"Error refreshing instance '{instance.name}': {str(e)}"
-                _logger.error(error_message)
-                error_messages.append(error_message)
-                instance.write({
-                    'sync_status': 'error',
-                    'sync_message': error_message,
-                })
+            region = instance.aws_region or self._get_default_region()
+            if region not in instances_by_region:
+                instances_by_region[region] = []
+            instances_by_region[region].append(instance)
+            
+        # Process each region
+        for region, region_instances in instances_by_region.items():
+            _logger.info(f"Processing {len(region_instances)} instances in region {region}")
+            
+            # Process in batches
+            for i in range(0, len(region_instances), batch_size):
+                batch = region_instances[i:i+batch_size]
+                _logger.info(f"Processing batch {i//batch_size + 1}/{(len(region_instances) + batch_size - 1)//batch_size} in region {region}")
+                
+                # Define a list of instance IDs to fetch in a single API call
+                instance_ids = [instance.instance_id for instance in batch if instance.instance_id]
+                
+                if not instance_ids:
+                    _logger.warning(f"No valid instance IDs in this batch, skipping")
+                    skipped_count += len(batch)
+                    continue
+                
+                try:
+                    # Get a client for this region
+                    # Use the credentials from the first instance in the batch
+                    aws_credentials_id = batch[0].aws_credentials_id if batch else None
+                    ec2_client = self._get_boto3_client('ec2', aws_credentials_id, region)
+                    
+                    # Make a single API call for all instances in this batch
+                    response = ec2_client.describe_instances(InstanceIds=instance_ids)
+                    
+                    # Build a dictionary for quick lookup
+                    instance_data_dict = {}
+                    if 'Reservations' in response:
+                        for reservation in response['Reservations']:
+                            for instance_data in reservation.get('Instances', []):
+                                instance_id = instance_data.get('InstanceId')
+                                if instance_id:
+                                    instance_data_dict[instance_id] = instance_data
+                    
+                    # Update each instance in the batch
+                    for instance in batch:
+                        if not instance.instance_id or instance.instance_id not in instance_data_dict:
+                            _logger.warning(f"Instance {instance.name} ({instance.instance_id}) not found in AWS response")
+                            error_message = f"Instance not found in AWS"
+                            error_messages.append(f"Error refreshing instance '{instance.name}': {error_message}")
+                            instance.write({
+                                'sync_status': 'error',
+                                'sync_message': error_message,
+                            })
+                            skipped_count += 1
+                            continue
+                        
+                        try:
+                            # Update from the cached data instead of making individual API calls
+                            instance_data = instance_data_dict[instance.instance_id]
+                            instance.with_context(import_from_aws=True)._update_from_aws_data(instance_data)
+                            instance.write({
+                                'sync_status': 'synced',
+                                'last_sync': fields.Datetime.now(),
+                                'sync_message': False,
+                            })
+                            success_count += 1
+                        except Exception as e:
+                            error_message = f"Error updating instance data: {str(e)}"
+                            _logger.error(f"Error refreshing instance '{instance.name}' ({instance.instance_id}): {error_message}")
+                            error_messages.append(f"Error refreshing instance '{instance.name}': {error_message}")
+                            instance.write({
+                                'sync_status': 'error',
+                                'sync_message': error_message,
+                            })
+                            skipped_count += 1
+                
+                except Exception as e:
+                    # Log the batch error
+                    error_message = f"Error refreshing batch in region {region}: {str(e)}"
+                    _logger.error(error_message)
+                    
+                    # Try to refresh each instance individually to recover
+                    for instance in batch:
+                        try:
+                            instance.refresh_instance_data()
+                            success_count += 1
+                        except Exception as ind_error:
+                            error_message = f"Error refreshing instance: {str(ind_error)}"
+                            _logger.error(f"Error refreshing instance '{instance.name}' ({instance.instance_id}): {error_message}")
+                            error_messages.append(f"Error refreshing instance '{instance.name}': {error_message}")
+                            instance.write({
+                                'sync_status': 'error',
+                                'sync_message': error_message,
+                            })
+                            skipped_count += 1
+                
+                # Commit after each batch to avoid long transactions
+                self.env.cr.commit()
+                _logger.info(f"Processed batch of {len(batch)} instances in region {region}")
+        
+        # Calculate execution time
+        execution_time = (datetime.now() - start_time).total_seconds()
+        
+        # Prepare the messages
+        summary_message = (f"Successfully refreshed {success_count} out of {total_count} instances "
+                          f"({skipped_count} skipped) in {execution_time:.2f} seconds.")
         
         # Log the operation
         if self.env.get('aws.operation.log'):
@@ -822,20 +1026,31 @@ class EC2Instance(models.Model):
                     operation_name='refresh_all_instances',
                     status='success' if not error_messages else 'warning',
                     model=self._name,
-                    error_message='; '.join(error_messages) if error_messages else None,
-                    response_data=f"Successfully refreshed {success_count}/{len(instances)} instances" if not error_messages else None,
+                    error_message='; '.join(error_messages[:5]) + (f" and {len(error_messages) - 5} more errors" if len(error_messages) > 5 else "") if error_messages else None,
+                    response_data=summary_message,
+                    duration_ms=int(execution_time * 1000),
                 )
             except Exception as e:
                 _logger.error(f"Failed to log EC2 operation: {str(e)}")
         
+        # Log to system log
+        if error_messages:
+            _logger.warning(f"EC2 refresh_all_instances completed with {len(error_messages)} errors: {summary_message}")
+        else:
+            _logger.info(f"EC2 refresh_all_instances successful: {summary_message}")
+        
         # Generate response message
         if error_messages:
+            error_display = '; '.join(error_messages[:3])
+            if len(error_messages) > 3:
+                error_display += f" and {len(error_messages) - 3} more errors"
+                
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Refresh Completed With Errors'),
-                    'message': _(f"Successfully refreshed {success_count}/{len(instances)} instances from AWS EC2. Errors: {'; '.join(error_messages)}"),
+                    'message': _(f"Successfully refreshed {success_count} out of {total_count} instances. Errors: {error_display}"),
                     'sticky': True,
                     'type': 'warning',
                 }
@@ -846,7 +1061,7 @@ class EC2Instance(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Refresh Completed'),
-                    'message': _('%s instances have been refreshed from AWS EC2.') % len(instances),
+                    'message': _(f"Successfully refreshed {success_count} instances from AWS EC2 in {execution_time:.2f} seconds."),
                     'sticky': False,
                     'type': 'success',
                 }
