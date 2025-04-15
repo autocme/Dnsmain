@@ -198,6 +198,49 @@ class EC2Instance(models.Model):
                 )
             except Exception as e:
                 _logger.error(f"Failed to log EC2 operation: {str(e)}")
+                
+    def _get_boto3_client(self, service_name, aws_credentials_id=None, region_name=None):
+        """
+        Get a boto3 client for the specified AWS service.
+        
+        Args:
+            service_name: AWS service name (e.g., 'ec2', 's3')
+            aws_credentials_id: Optional AWS credentials ID to use
+            region_name: Optional region name to override the default
+            
+        Returns:
+            boto3 client for the specified service
+        """
+        # Use instance's credentials if not specified
+        if not aws_credentials_id and hasattr(self, 'aws_credentials_id') and self.aws_credentials_id:
+            aws_credentials_id = self.aws_credentials_id.id
+            
+        # Use instance's region if not specified
+        if not region_name and hasattr(self, 'aws_region') and self.aws_region:
+            region_name = self.aws_region
+            
+        # Get credentials either from specified ID or default credentials
+        credentials = self.get_aws_credentials(aws_credentials_id=aws_credentials_id)
+        
+        # Get endpoint URL if specified on the instance
+        endpoint_url = self.aws_endpoint_url if hasattr(self, 'aws_endpoint_url') else None
+        
+        # Create the boto3 client using the AWS client mixin method
+        return self.get_aws_client(
+            service_name=service_name,
+            aws_credentials_id=credentials.id if credentials else None,
+            region_name=region_name,
+            endpoint_url=endpoint_url
+        )
+        
+    def _get_default_region(self):
+        """
+        Get the default AWS region from system parameters.
+        
+        Returns:
+            Default AWS region (e.g., 'us-east-1')
+        """
+        return self.env['ir.config_parameter'].sudo().get_param('boto_base.aws_default_region', 'us-east-1')
 
     def _launch_instance_in_aws(self):
         """
