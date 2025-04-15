@@ -131,9 +131,9 @@
             <dashboard sample="1">
                 <view type="graph" ref="view_aws_operation_log_graph"/>
                 <group>
-                    <aggregate name="status_success" string="Success" field="status" invisible="context.get('dashboard_merge_domains', False)" domain="[('status', '=', 'success')]" group_operator="count" help="Number of successful operations"/>
-                    <aggregate name="status_error" string="Errors" field="status" invisible="context.get('dashboard_merge_domains', False)" domain="[('status', '=', 'error')]" group_operator="count" help="Number of failed operations"/>
-                    <aggregate name="status_warning" string="Warnings" field="status" invisible="context.get('dashboard_merge_domains', False)" domain="[('status', '=', 'warning')]" group_operator="count" help="Number of operations with warnings"/>
+                    <aggregate name="status_success" string="Success" field="status" domain="[('status', '=', 'success')]" group_operator="count" help="Number of successful operations"/>
+                    <aggregate name="status_error" string="Errors" field="status" domain="[('status', '=', 'error')]" group_operator="count" help="Number of failed operations"/>
+                    <aggregate name="status_warning" string="Warnings" field="status" domain="[('status', '=', 'warning')]" group_operator="count" help="Number of operations with warnings"/>
                     <aggregate name="avg_duration" string="Avg Duration" field="duration_ms" group_operator="avg" value_label="ms" help="Average operation duration"/>
                 </group>
                 <view type="pivot" ref="view_aws_operation_log_pivot"/>
