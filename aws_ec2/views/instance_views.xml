@@ -27,13 +27,13 @@
             <form string="EC2 Instance">
                 <header>
                     <button name="action_start" string="Start" type="object" 
-                            class="oe_highlight" attrs="{'invisible': [('state', 'not in', ['stopped'])]}"/>
+                            class="oe_highlight" invisible="state not in ['stopped']"/>
                     <button name="action_stop" string="Stop" type="object" 
-                            attrs="{'invisible': [('state', 'not in', ['running', 'pending'])]}"/>
+                            invisible="state not in ['running', 'pending']"/>
                     <button name="action_reboot" string="Reboot" type="object" 
-                            attrs="{'invisible': [('state', 'not in', ['running'])]}"/>
-                    <button name="_refresh_instance_data" string="Refresh" type="object" 
-                            attrs="{'invisible': [('instance_id', '=', False)]}"/>
+                            invisible="state not in ['running']"/>
+                    <button name="refresh_instance_data" string="Refresh" type="object" 
+                            invisible="not instance_id"/>
                     <field name="state" widget="statusbar" statusbar_visible="pending,running,stopping,stopped"/>
                 </header>
                 <sheet>
@@ -45,15 +45,15 @@
                     <group>
                         <group>
                             <field name="instance_id" readonly="1"/>
-                            <field name="instance_type" attrs="{'readonly': [('instance_id', '!=', False), ('state', '!=', 'stopped')]}"/>
-                            <field name="image_id" attrs="{'readonly': [('instance_id', '!=', False)]}"/>
-                            <field name="key_pair_id" options="{'no_create': True}" attrs="{'readonly': [('instance_id', '!=', False)]}"/>
+                            <field name="instance_type" readonly="instance_id and state != 'stopped'"/>
+                            <field name="image_id" readonly="instance_id"/>
+                            <field name="key_pair_id" options="{'no_create': True}" readonly="instance_id"/>
                             <field name="launch_time" readonly="1"/>
                             <field name="active"/>
                         </group>
                         <group>
-                            <field name="vpc_id" attrs="{'readonly': [('instance_id', '!=', False)]}"/>
-                            <field name="subnet_id" attrs="{'readonly': [('instance_id', '!=', False)]}"/>
+                            <field name="vpc_id" readonly="instance_id"/>
+                            <field name="subnet_id" readonly="instance_id"/>
                             <field name="public_ip" readonly="1"/>
                             <field name="private_ip" readonly="1"/>
                             <field name="monitoring_enabled"/>
