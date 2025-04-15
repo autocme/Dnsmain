@@ -11,54 +11,9 @@ from botocore.exceptions import ClientError
 
 _logger = logging.getLogger(__name__)
 
-# Mapping of geographic regions to AWS regions
-# This helps determine the most appropriate AWS region based on a domain's geographic region
-REGION_MAPPING = {
-    # North America
-    'us': 'us-east-1',
-    'usa': 'us-east-1',
-    'us-east': 'us-east-1',
-    'us-west': 'us-west-2',
-    'canada': 'ca-central-1',
-    'mexico': 'us-east-1',
-    'north america': 'us-east-1',
-    
-    # Europe
-    'eu': 'eu-west-1',
-    'europe': 'eu-west-1',
-    'uk': 'eu-west-2',
-    'britain': 'eu-west-2',
-    'england': 'eu-west-2',
-    'germany': 'eu-central-1',
-    'france': 'eu-west-3',
-    'spain': 'eu-south-2',
-    'italy': 'eu-south-1',
-    'sweden': 'eu-north-1',
-    'ireland': 'eu-west-1',
-    
-    # Asia Pacific
-    'asia': 'ap-southeast-1',
-    'japan': 'ap-northeast-1',
-    'india': 'ap-south-1',
-    'australia': 'ap-southeast-2',
-    'singapore': 'ap-southeast-1',
-    'china': 'cn-north-1',
-    'hong kong': 'ap-east-1',
-    'korea': 'ap-northeast-2',
-    
-    # South America
-    'south america': 'sa-east-1',
-    'brazil': 'sa-east-1',
-    
-    # Middle East
-    'middle east': 'me-south-1',
-    'bahrain': 'me-south-1',
-    'uae': 'me-central-1',
-    
-    # Africa
-    'africa': 'af-south-1',
-    'south africa': 'af-south-1',
-}
+# Route 53 is a global service, so we don't need region mapping
+# We keep the standard global endpoint region (us-east-1) for API calls
+GLOBAL_REGION = 'us-east-1'
 
 class Route53Config(models.Model):
     _name = 'dns.route53.config'
@@ -67,7 +22,8 @@ class Route53Config(models.Model):
 
     name = fields.Char(string='Configuration Name', required=True)
     aws_credentials_id = fields.Many2one('dns.aws.credentials', string='AWS Credentials', required=True)
-    aws_region = fields.Char(string='AWS Region', required=True, default='us-east-1')
+    aws_region = fields.Char(string='AWS Region', required=True, default=GLOBAL_REGION, 
+                          help='Route 53 is a global service that uses the global endpoint region')
     active = fields.Boolean(default=True)
     
     # Fields for backward compatibility and convenience
@@ -79,7 +35,12 @@ class Route53Config(models.Model):
     ]
     
     def _get_route53_client(self):
-        """Create and return a boto3 Route 53 client"""
+        """
+        Create and return a boto3 Route 53 client
+        
+        Route 53 is a global service that always uses us-east-1 region,
+        regardless of the region specified in the aws_region field.
+        """
         try:
             if not self.aws_credentials_id:
                 raise ValidationError(_("AWS credentials are required to create a Route 53 client"))
@@ -146,37 +107,21 @@ class Route53Config(models.Model):
     @api.model
     def get_aws_region_for_geographic_region(self, geographic_region):
         """
-        Get the appropriate AWS region based on a geographic region string.
-        If no match is found, returns the default (us-east-1)
+        Route 53 is a global service, so we always return the global endpoint region
+        regardless of the geographic region passed
         """
-        if not geographic_region:
-            return 'us-east-1'
-            
-        # Normalize the geographic region for matching
-        geo_region = geographic_region.lower().strip()
-        
-        # Direct lookup in the mapping
-        if geo_region in REGION_MAPPING:
-            return REGION_MAPPING[geo_region]
-            
-        # Try partial matching if direct lookup fails
-        for region_key, aws_region in REGION_MAPPING.items():
-            if region_key in geo_region or geo_region in region_key:
-                return aws_region
-                
-        # Default to us-east-1 if no match is found
-        return 'us-east-1'
+        # Always return the global endpoint region for Route 53
+        return GLOBAL_REGION
         
     @api.model
     def create_config_for_region(self, region, aws_credentials_id):
         """
-        Create or find a Route53 configuration for a specific geographic region.
+        Create or find a Route53 configuration for the given credentials.
+        Route 53 is a global service, so we no longer need region-specific configurations.
         Returns the configuration record.
         """
-        # Check if a configuration already exists for the region
-        aws_region = self.get_aws_region_for_geographic_region(region)
+        # Check if a configuration already exists for these credentials
         existing_config = self.search([
-            ('aws_region', '=', aws_region),
             ('aws_credentials_id', '=', aws_credentials_id.id if hasattr(aws_credentials_id, 'id') else aws_credentials_id),
             ('active', '=', True)
         ], limit=1)
@@ -184,13 +129,12 @@ class Route53Config(models.Model):
         if existing_config:
             return existing_config
             
-        # Create a new configuration with region-specific naming
-        region_display = region or 'Default'
-        config_name = f"AWS Route53 - {region_display}"
+        # Create a new global configuration (region is always global for Route 53)
+        config_name = "AWS Route53 - Global Service"
         
         return self.create({
             'name': config_name,
             'aws_credentials_id': aws_credentials_id.id if hasattr(aws_credentials_id, 'id') else aws_credentials_id,
-            'aws_region': aws_region,
+            'aws_region': GLOBAL_REGION,
             'active': True
         })

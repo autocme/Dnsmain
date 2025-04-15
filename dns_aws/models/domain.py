@@ -18,8 +18,9 @@ class Domain(models.Model):
     route53_config_id = fields.Many2one('dns.route53.config', string='Route 53 Configuration')
     route53_hosted_zone_id = fields.Char(string='Route 53 Hosted Zone ID', help='If empty, we will try to find it automatically')
     route53_sync = fields.Boolean(string='Sync with Route 53', default=False)
-    route53_auto_region_sync = fields.Boolean(string='Auto-sync Region', default=True, 
-                                             help='Automatically select the best AWS region based on the domain geographic region')
+    # Keep field for backward compatibility but make it invisible in views later
+    route53_auto_region_sync = fields.Boolean(string='Legacy Field', default=True, 
+                                             help='Route 53 is a global service with no region requirements')
     route53_sync_status = fields.Selection([
         ('not_synced', 'Not Synced'),
         ('synced', 'Synced'),
@@ -42,15 +43,18 @@ class Domain(models.Model):
             else:
                 domain.route53_sync_status = 'not_synced'
     
-    @api.onchange('region', 'route53_auto_region_sync', 'aws_credentials_id')
+    @api.onchange('aws_credentials_id')
     def _onchange_region_for_route53(self):
-        """Update Route53 configuration based on the domain's geographic region"""
-        if self.region and self.route53_auto_region_sync and self.aws_credentials_id:
+        """
+        Update Route53 configuration based on the AWS credentials
+        Since Route53 is a global service, we just need a global configuration for the credentials
+        """
+        if self.aws_credentials_id:
             try:
-                # Get or create a configuration for this region
+                # Get or create a global configuration for these credentials
                 Route53Config = self.env['dns.route53.config']
                 config = Route53Config.create_config_for_region(
-                    self.region, 
+                    'global',  # Region name doesn't matter, will always return global config
                     self.aws_credentials_id
                 )
                 
@@ -64,7 +68,7 @@ class Domain(models.Model):
                         self.route53_hosted_zone_id = hosted_zone_id
                         
             except Exception as e:
-                _logger.error("Error syncing AWS region: %s", str(e))
+                _logger.error("Error creating Route53 configuration: %s", str(e))
                 # Don't raise error in onchange, just log it
     
     @api.onchange('route53_config_id', 'name')
