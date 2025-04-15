@@ -82,8 +82,8 @@
                 <field name="key_fingerprint"/>
                 <filter string="RSA Keys" name="rsa" domain="[('key_type', '=', 'rsa')]"/>
                 <filter string="ED25519 Keys" name="ed25519" domain="[('key_type', '=', 'ed25519')]"/>
-                <filter string="Used by Instances" name="in_use" domain="[('instance_ids', '!=', False)]"/>
-                <filter string="Unused" name="unused" domain="[('instance_ids', '=', False)]"/>
+                <filter string="Used by Instances" name="in_use" domain="[('instance_count', '>', 0)]"/>
+                <filter string="Unused" name="unused" domain="[('instance_count', '=', 0)]"/>
                 <filter string="Synced" name="synced" domain="[('sync_status', '=', 'synced')]"/>
                 <filter string="Not Synced" name="not_synced" domain="[('sync_status', '=', 'not_synced')]"/>
                 <filter string="Error" name="error" domain="[('sync_status', '=', 'error')]"/>

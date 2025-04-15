@@ -111,7 +111,7 @@
                 <filter string="Linux" name="linux" domain="[('platform', '=', 'linux')]"/>
                 <filter string="EBS-Backed" name="ebs_backed" domain="[('root_device_type', '=', 'ebs')]"/>
                 <filter string="Instance Store" name="instance_store" domain="[('root_device_type', '=', 'instance-store')]"/>
-                <filter string="In Use" name="in_use" domain="[('instance_ids', '!=', False)]"/>
+                <filter string="In Use" name="in_use" domain="[('instance_count', '>', 0)]"/>
                 <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
                 <group expand="0" string="Group By">
                     <filter string="State" name="group_by_state" domain="[]" context="{'group_by': 'state'}"/>
