@@ -28,10 +28,11 @@ the aws_route53 module for AWS Route 53 specific operations.
     'data': [
         'security/ir.model.access.csv',
         'views/aws_actions.xml',
+        'views/aws_credentials_views.xml',
         'views/route53_config_views.xml',
         'views/domain_views.xml',
         'views/dns_record_views.xml',
-        'views/menu_views.xml',
+        'views/aws_menus.xml',
     ],
     'installable': True,
     'application': False,
