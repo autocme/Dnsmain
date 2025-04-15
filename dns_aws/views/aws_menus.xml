@@ -33,10 +33,17 @@
               action="dns_aws.action_sync_route53_hosted_zones"
               sequence="10"/>
               
-    <!-- Sync Records menu -->
+    <!-- Sync Records menu (with cleanup) -->
     <menuitem id="menu_sync_route53_records"
-              name="Sync Records"
+              name="Sync Records (with cleanup)"
               parent="menu_aws_route53_sync"
               action="dns_aws.action_sync_route53_records"
               sequence="20"/>
+              
+    <!-- Safe Sync Records menu (no deletion) -->
+    <menuitem id="menu_sync_route53_records_safe"
+              name="Sync Records (safe mode)"
+              parent="menu_aws_route53_sync"
+              action="dns_aws.action_sync_route53_records_safe"
+              sequence="21"/>
 </odoo>
