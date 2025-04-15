@@ -10,6 +10,17 @@ from odoo.exceptions import ValidationError
 import boto3
 import botocore.exceptions
 
+# List of global AWS services that don't use regions
+AWS_GLOBAL_SERVICES = [
+    'route53',           # DNS service
+    'iam',               # Identity and Access Management
+    's3',                # Simple Storage Service (for API operations; bucket location is regional)
+    'cloudfront',        # Content Delivery Network
+    'route53domains',    # Domain registration service
+    'organizations',     # AWS Organizations
+    'globalaccelerator', # Global Accelerator
+]
+
 _logger = logging.getLogger(__name__)
 
 class AWSClientMixin(models.AbstractModel):
@@ -79,6 +90,7 @@ class AWSClientMixin(models.AbstractModel):
         Args:
             service_name: AWS service name (e.g., 'route53', 'ec2')
             region_name: AWS region name (default: None, which uses the record's region)
+                         For global services like Route53, the region will be ignored
             credentials: AWS credentials dict (default: None, which uses the record's credentials)
             
         Returns:
@@ -89,8 +101,15 @@ class AWSClientMixin(models.AbstractModel):
         # Use provided credentials or get them from the record
         creds = credentials or self._get_aws_credentials()
         
-        # Use provided region or get it from the record
-        region = region_name or self._get_aws_region()
+        # Set region based on service type
+        if service_name in AWS_GLOBAL_SERVICES:
+            # Global services always use the us-east-1 endpoint regardless of region
+            region = 'us-east-1'  # Global endpoint region
+            _logger.debug("Using global endpoint for %s service", service_name)
+        else:
+            # For regional services, use provided region or get it from the record
+            region = region_name or self._get_aws_region()
+            _logger.debug("Using region %s for %s service", region, service_name)
         
         # Validate credentials
         if not creds.get('aws_access_key_id') or not creds.get('aws_secret_access_key'):

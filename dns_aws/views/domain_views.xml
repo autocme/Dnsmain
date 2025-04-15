@@ -12,7 +12,8 @@
                         <group name="aws_route53_config" string="Route 53 Configuration">
                             <field name="route53_sync"/>
                             <field name="aws_credentials_id" invisible="route53_sync == False" required="route53_sync"/>
-                            <field name="route53_auto_region_sync" invisible="route53_sync == False"/>
+                            <!-- Route53 is a global service, so this field is now hidden -->
+                            <field name="route53_auto_region_sync" invisible="1"/>
                             <field name="route53_config_id" invisible="route53_sync == False" required="route53_sync"/>
                             <field name="route53_hosted_zone_id" invisible="route53_sync == False"/>
                         </group>
