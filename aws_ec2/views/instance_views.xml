@@ -34,8 +34,10 @@
                             invisible="state not in ['running']"/>
                     <button name="refresh_instance_data" string="Refresh from AWS" type="object" 
                             invisible="instance_id == False"/>
-                    <button name="_launch_instance_in_aws" string="Launch in AWS" type="object" 
+                    <button name="action_launch_in_aws" string="Launch in AWS" type="object" 
                             class="oe_highlight" icon="fa-upload" invisible="instance_id != False"/>
+                    <button name="action_update_in_aws" string="Update in AWS" type="object" 
+                            class="oe_highlight" icon="fa-refresh" invisible="instance_id == False"/>
                     <field name="state" widget="statusbar" statusbar_visible="pending,running,stopping,stopped"/>
                 </header>
                 <sheet>
