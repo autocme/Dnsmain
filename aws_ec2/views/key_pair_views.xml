@@ -24,7 +24,7 @@
             <form string="Key Pair">
                 <header>
                     <button name="download_key_file" string="Download Key File" type="object" 
-                            class="oe_highlight" attrs="{'invisible': [('key_file', '=', False)]}"/>
+                            class="oe_highlight" invisible="not key_file"/>
                     <field name="sync_status" widget="statusbar" statusbar_visible="not_synced,syncing,synced,error"/>
                 </header>
                 <sheet>
@@ -36,7 +36,7 @@
                     <group>
                         <group>
                             <field name="key_fingerprint" readonly="1"/>
-                            <field name="key_type" attrs="{'readonly': [('key_fingerprint', '!=', False)]}"/>
+                            <field name="key_type" readonly="key_fingerprint"/>
                             <field name="active"/>
                         </group>
                         <group>

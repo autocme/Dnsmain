@@ -380,7 +380,7 @@ class EC2VPC(models.Model):
             self._log_aws_operation('delete_vpc', 'error', error_msg)
             raise UserError(error_msg)
 
-    def _refresh_vpc_data(self):
+    def refresh_vpc_data(self):
         """
         Refresh VPC data from AWS.
         """
@@ -603,7 +603,7 @@ class EC2VPC(models.Model):
         vpcs = self.search([('active', '=', True), ('vpc_id', '!=', False)])
         for vpc in vpcs:
             try:
-                vpc._refresh_vpc_data()
+                vpc.refresh_vpc_data()
             except Exception as e:
                 _logger.error(f"Failed to refresh VPC {vpc.vpc_id}: {str(e)}")
         

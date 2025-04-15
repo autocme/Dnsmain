@@ -28,13 +28,14 @@
             <form string="AMI">
                 <header>
                     <button name="refresh_image_data" string="Refresh" type="object" 
-                            invisible="not image_id"/>
+                            invisible="not(image_id)"/>
                     <button name="deregister_image" string="Deregister AMI" type="object" 
-                            invisible="not image_id or instance_count > 0"
+                            invisible="not(image_id) or instance_count > 0"
                             confirm="Are you sure you want to deregister this AMI? This action cannot be undone."/>
                     <field name="state" widget="statusbar" statusbar_visible="pending,available"/>
                 </header>
                 <sheet>
+                    <field name="instance_count" invisible="1"/>
                     <div class="oe_title">
                         <h1>
                             <field name="name" placeholder="e.g. My Custom AMI"/>

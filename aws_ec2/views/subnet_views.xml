@@ -28,8 +28,8 @@
         <field name="arch" type="xml">
             <form string="Subnet">
                 <header>
-                    <button name="_refresh_subnet_data" string="Refresh" type="object" 
-                            attrs="{'invisible': [('subnet_id', '=', False)]}"/>
+                    <button name="refresh_subnet_data" string="Refresh" type="object" 
+                            invisible="not subnet_id"/>
                     <field name="state" widget="statusbar" statusbar_visible="pending,available"/>
                 </header>
                 <sheet>
@@ -41,9 +41,9 @@
                     <group>
                         <group>
                             <field name="subnet_id" readonly="1"/>
-                            <field name="vpc_id" options="{'no_create': True}" attrs="{'readonly': [('subnet_id', '!=', False)]}"/>
-                            <field name="cidr_block" attrs="{'readonly': [('subnet_id', '!=', False)]}"/>
-                            <field name="availability_zone" attrs="{'readonly': [('subnet_id', '!=', False)]}"/>
+                            <field name="vpc_id" options="{'no_create': True}" readonly="subnet_id"/>
+                            <field name="cidr_block" readonly="subnet_id"/>
+                            <field name="availability_zone" readonly="subnet_id"/>
                             <field name="active"/>
                         </group>
                         <group>
