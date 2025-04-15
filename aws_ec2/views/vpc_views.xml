@@ -26,8 +26,8 @@
         <field name="arch" type="xml">
             <form string="VPC">
                 <header>
-                    <button name="_refresh_vpc_data" string="Refresh" type="object" 
-                            attrs="{'invisible': [('vpc_id', '=', False)]}"/>
+                    <button name="refresh_vpc_data" string="Refresh" type="object" 
+                            invisible="not vpc_id"/>
                     <field name="state" widget="statusbar" statusbar_visible="pending,available"/>
                 </header>
                 <sheet>
@@ -39,7 +39,7 @@
                     <group>
                         <group>
                             <field name="vpc_id" readonly="1"/>
-                            <field name="cidr_block" attrs="{'readonly': [('vpc_id', '!=', False)]}"/>
+                            <field name="cidr_block" readonly="vpc_id"/>
                             <field name="is_default" readonly="1"/>
                             <field name="active"/>
                         </group>

@@ -24,8 +24,8 @@
         <field name="arch" type="xml">
             <form string="Security Group">
                 <header>
-                    <button name="_refresh_security_group_data" string="Refresh" type="object" 
-                            attrs="{'invisible': [('group_id', '=', False)]}"/>
+                    <button name="refresh_security_group_data" string="Refresh" type="object" 
+                            invisible="not group_id"/>
                     <field name="sync_status" widget="statusbar" statusbar_visible="not_synced,syncing,synced,error"/>
                 </header>
                 <sheet>
@@ -41,7 +41,7 @@
                             <field name="active"/>
                         </group>
                         <group>
-                            <field name="vpc_id" attrs="{'readonly': [('group_id', '!=', False)]}"/>
+                            <field name="vpc_id" readonly="group_id"/>
                             <field name="aws_credentials_id" widget="selection" domain="[('active', '=', True)]"/>
                             <field name="aws_region"/>
                             <field name="last_sync" readonly="1"/>

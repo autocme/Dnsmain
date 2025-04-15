@@ -346,7 +346,7 @@ class EC2Subnet(models.Model):
             self._log_aws_operation('delete_subnet', 'error', error_msg)
             raise UserError(error_msg)
 
-    def _refresh_subnet_data(self):
+    def refresh_subnet_data(self):
         """
         Refresh subnet data from AWS.
         """
@@ -549,7 +549,7 @@ class EC2Subnet(models.Model):
                         'aws_region': region_name or self._get_default_region(),
                     })
                     # Trigger import of VPC data
-                    vpc._refresh_vpc_data()
+                    vpc.refresh_vpc_data()
                 
                 # Create or update the subnet record
                 if existing:
@@ -623,7 +623,7 @@ class EC2Subnet(models.Model):
         subnets = self.search([('active', '=', True), ('subnet_id', '!=', False)])
         for subnet in subnets:
             try:
-                subnet._refresh_subnet_data()
+                subnet.refresh_subnet_data()
             except Exception as e:
                 _logger.error(f"Failed to refresh subnet {subnet.subnet_id}: {str(e)}")
         

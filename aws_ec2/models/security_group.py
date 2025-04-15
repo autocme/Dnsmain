@@ -381,7 +381,7 @@ class EC2SecurityGroup(models.Model):
             self._log_aws_operation('delete_security_group', 'error', error_msg)
             raise UserError(error_msg)
 
-    def _refresh_security_group_data(self):
+    def refresh_security_group_data(self):
         """
         Refresh security group data from AWS.
         """
@@ -562,7 +562,7 @@ class EC2SecurityGroup(models.Model):
         groups = self.search([('active', '=', True), ('group_id', '!=', False)])
         for group in groups:
             try:
-                group._refresh_security_group_data()
+                group.refresh_security_group_data()
             except Exception as e:
                 _logger.error(f"Failed to refresh security group {group.group_id}: {str(e)}")
         
