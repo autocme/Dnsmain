@@ -39,6 +39,7 @@ class Subdomain(models.Model):
                          help='Time To Live in seconds. Default is 300 seconds (5 minutes)')
     full_domain = fields.Char(string='Full Domain', compute='_compute_full_domain', store=True)
     active = fields.Boolean(default=True)
+    placeholder_helper = fields.Char(compute='_compute_placeholder_helper')
     
     _sql_constraints = [
         ('name_domain_unique', 'UNIQUE(name, domain_id)', 'DNS Record must be unique per domain!')
@@ -51,6 +52,51 @@ class Subdomain(models.Model):
                 record.full_domain = f"{record.name}.{record.domain_id.name}"
             else:
                 record.full_domain = False
+                
+    @api.depends('type')
+    def _compute_placeholder_helper(self):
+        """
+        Provides a placeholder text based on the selected record type.
+        This replaces the deprecated attrs="{'placeholder': [...]}" in Odoo 17.
+        """
+        for record in self:
+            placeholder = "Record value"
+            if record.type == 'a':
+                placeholder = "IPv4 address (e.g., 192.168.1.1)"
+            elif record.type == 'aaaa':
+                placeholder = "IPv6 address (e.g., 2001:db8::1)"
+            elif record.type == 'cname':
+                placeholder = "Domain name (e.g., target.example.com)"
+            elif record.type == 'mx':
+                placeholder = "Priority and domain (e.g., 10 mail.example.com)"
+            elif record.type == 'ns':
+                placeholder = "Domain name (e.g., ns1.example.com)"
+            elif record.type == 'txt':
+                placeholder = "Text value (e.g., v=spf1 include:_spf.example.com ~all)"
+            elif record.type == 'srv':
+                placeholder = "Priority weight port target (e.g., 0 5 5060 sip.example.com)"
+            elif record.type == 'caa':
+                placeholder = "Flag tag value (e.g., 0 issue \"ca.example.com\")"
+            elif record.type == 'ds':
+                placeholder = "Key tag algorithm digest type digest (e.g., 12345 8 2 ABCDEF...)"
+            elif record.type == 'https':
+                placeholder = "Priority target params (e.g., 1 . alpn=h3,h2 ipv4hint=192.0.2.1)"
+            elif record.type == 'svcb':
+                placeholder = "Priority target params (e.g., 1 . alpn=h3,h2 ipv4hint=192.0.2.1)"
+            elif record.type == 'tlsa':
+                placeholder = "Certificate usage selector matching type data (e.g., 3 0 1 ABCDEF...)"
+            elif record.type == 'sshfp':
+                placeholder = "Algorithm fingerprint-type fingerprint (e.g., 2 1 123456789ABCDEF...)"
+            elif record.type == 'naptr':
+                placeholder = "Order pref. flags service regexp replacement (e.g., 10 100 \"S\" \"SIP+D2U\" \"!^.*$!sip:example.com!\" _sip._udp.example.com)"
+            elif record.type == 'ptr':
+                placeholder = "Domain name (e.g., host.example.com)"
+            elif record.type == 'spf':
+                placeholder = "SPF record (e.g., v=spf1 ip4:192.168.1.1 ~all)"
+            elif record.type == 'soa':
+                placeholder = "Primary server email TTLs (e.g., ns1.example.com. admin.example.com. 2023010101 3600 900 1209600 86400)"
+            
+            record.placeholder_helper = placeholder
     
     @api.constrains('name')
     def _check_subdomain_name(self):

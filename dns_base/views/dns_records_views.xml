@@ -44,26 +44,8 @@
                     
                     <!-- Record value section with contextual help based on record type -->
                     <group>
-                        <field name="value" placeholder="Record value"
-                               attrs="{'placeholder': [
-                                    ('type', '=', 'a'), 'IPv4 address (e.g., 192.168.1.1)',
-                                    ('type', '=', 'aaaa'), 'IPv6 address (e.g., 2001:db8::1)',
-                                    ('type', '=', 'cname'), 'Domain name (e.g., target.example.com)',
-                                    ('type', '=', 'mx'), 'Priority and domain (e.g., 10 mail.example.com)',
-                                    ('type', '=', 'ns'), 'Domain name (e.g., ns1.example.com)',
-                                    ('type', '=', 'txt'), 'Text value (e.g., v=spf1 include:_spf.example.com ~all)',
-                                    ('type', '=', 'srv'), 'Priority weight port target (e.g., 0 5 5060 sip.example.com)',
-                                    ('type', '=', 'caa'), 'Flag tag value (e.g., 0 issue "ca.example.com")',
-                                    ('type', '=', 'ds'), 'Key tag algorithm digest type digest (e.g., 12345 8 2 ABCDEF...)',
-                                    ('type', '=', 'https'), 'Priority target params (e.g., 1 . alpn=h3,h2 ipv4hint=192.0.2.1)',
-                                    ('type', '=', 'svcb'), 'Priority target params (e.g., 1 . alpn=h3,h2 ipv4hint=192.0.2.1)',
-                                    ('type', '=', 'tlsa'), 'Certificate usage selector matching type data (e.g., 3 0 1 ABCDEF...)',
-                                    ('type', '=', 'sshfp'), 'Algorithm fingerprint-type fingerprint (e.g., 2 1 123456789ABCDEF...)',
-                                    ('type', '=', 'naptr'), 'Order pref. flags service regexp replacement (e.g., 10 100 "S" "SIP+D2U" "!^.*$!sip:example.com!" _sip._udp.example.com)',
-                                    ('type', '=', 'ptr'), 'Domain name (e.g., host.example.com)',
-                                    ('type', '=', 'spf'), 'SPF record (e.g., v=spf1 ip4:192.168.1.1 ~all)',
-                                    ('type', '=', 'soa'), 'Primary server email TTLs (e.g., ns1.example.com. admin.example.com. 2023010101 3600 900 1209600 86400)'
-                               ]}"/>
+                        <field name="placeholder_helper" invisible="1"/>
+                        <field name="value" placeholder="Enter record value based on selected type"/>
                     </group>
                     
                     <!-- Contextual help section -->
