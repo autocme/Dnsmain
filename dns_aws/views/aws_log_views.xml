@@ -49,7 +49,7 @@
                         <page string="Response Data" name="response_data">
                             <field name="response_data" widget="text_code"/>
                         </page>
-                        <page string="Error Message" name="error_message" attrs="{'invisible': [('status', '!=', 'error')]}">
+                        <page string="Error Message" name="error_message" invisible="status != 'error'">
                             <field name="error_message" widget="text_code"/>
                         </page>
                     </notebook>
