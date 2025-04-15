@@ -155,6 +155,86 @@ class Domain(models.Model):
                 }
             }
             
+    def sync_route53_records_from_aws(self):
+        """Sync DNS records from AWS Route 53 to Odoo subdomains for this domain"""
+        self.ensure_one()
+        
+        if not self.route53_sync:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Sync Disabled'),
+                    'message': _('Route 53 sync is disabled for this domain.'),
+                    'sticky': False,
+                    'type': 'warning',
+                }
+            }
+            
+        if not self.route53_config_id:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Config Missing'),
+                    'message': _('Please select a Route 53 configuration for this domain.'),
+                    'sticky': False,
+                    'type': 'warning',
+                }
+            }
+            
+        if not self.route53_hosted_zone_id:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Hosted Zone Missing'),
+                    'message': _('No hosted zone ID specified or found for this domain.'),
+                    'sticky': False,
+                    'type': 'warning',
+                }
+            }
+        
+        try:
+            # Call the sync method in subdomain model
+            Subdomain = self.env['dns.subdomain']
+            result = Subdomain.sync_route53_records(domain_id=self.id)
+            
+            # Update last sync timestamp
+            self.write({
+                'route53_last_sync': fields.Datetime.now(),
+                'route53_error_message': False,
+            })
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Sync Complete'),
+                    'message': _('DNS records have been synchronized from Route 53.'),
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+        except Exception as e:
+            error_message = str(e)
+            _logger.error("Route 53 sync error: %s", error_message)
+            
+            self.write({
+                'route53_error_message': error_message,
+            })
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Sync Error'),
+                    'message': error_message,
+                    'sticky': False,
+                    'type': 'danger',
+                }
+            }
+    
     @api.model
     def sync_route53_hosted_zones(self):
         """
