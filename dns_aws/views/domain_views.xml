@@ -25,9 +25,12 @@
                             <field name="route53_last_sync" invisible="route53_sync == False"/>
                         </group>
                     </group>
+                    <!-- We need both fields for conditions to work -->
+                    <field name="route53_error_message" invisible="1"/>
                     <group invisible="route53_error_message == False">
                         <field name="route53_error_message" readonly="1" nolabel="1"/>
                     </group>
+                    <field name="route53_sync" invisible="1"/>
                     <div invisible="route53_sync == False">
                         <button name="sync_all_subdomains_to_route53" string="Sync All Subdomains to Route 53" type="object" class="oe_highlight" icon="fa-upload"/>
                         <button name="%(dns_aws.action_sync_domain_route53_records)d" string="Sync Records from Route 53" type="action" class="oe_highlight" icon="fa-download"/>
@@ -37,12 +40,15 @@
             
             <!-- Add sync status indicator to the DNS Records list -->
             <xpath expr="//field[@name='subdomain_ids']/tree" position="inside">
+                <!-- Make sure route53_sync field is available for modifiers -->
+                <field name="route53_sync" invisible="1"/>
                 <field name="route53_sync_status" widget="badge" 
                     decoration-success="route53_sync_status == 'synced'" 
                     decoration-warning="route53_sync_status == 'not_synced'" 
                     decoration-danger="route53_sync_status == 'error'" 
                     optional="show"/>
                 <field name="route53_last_sync" optional="hide"/>
+                <field name="route53_error_message" invisible="1"/>
             </xpath>
         </field>
     </record>
@@ -74,6 +80,8 @@
                     decoration-warning="route53_sync_status == 'not_synced'" 
                     decoration-danger="route53_sync_status == 'error'" 
                     optional="show"/>
+                <field name="route53_last_sync" invisible="1"/>
+                <field name="route53_error_message" invisible="1"/>
             </field>
         </field>
     </record>
