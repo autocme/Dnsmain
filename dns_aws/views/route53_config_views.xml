@@ -33,8 +33,9 @@
                             <field name="aws_region"/>
                         </group>
                         <group>
-                            <field name="aws_access_key_id" password="True"/>
-                            <field name="aws_secret_access_key" password="True"/>
+                            <field name="aws_credentials_id" options="{'no_create': False, 'no_open': False}"/>
+                            <field name="aws_access_key_id" invisible="1"/>
+                            <field name="aws_secret_access_key" invisible="1"/>
                         </group>
                     </group>
                 </sheet>
