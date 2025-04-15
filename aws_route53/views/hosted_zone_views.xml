@@ -10,8 +10,8 @@
                 <field name="hosted_zone_id"/>
                 <field name="record_count"/>
                 <field name="is_private"/>
-                <field name="vpc_id" attrs="{'invisible': [('is_private', '=', False)]}"/>
-                <field name="vpc_region" attrs="{'invisible': [('is_private', '=', False)]}"/>
+                <field name="vpc_id" invisible="not is_private"/>
+                <field name="vpc_region" invisible="not is_private"/>
                 <field name="sync_status"/>
                 <field name="last_sync"/>
                 <field name="active" invisible="1"/>
@@ -27,11 +27,11 @@
             <form string="Hosted Zone">
                 <header>
                     <button name="import_records_from_aws" string="Import DNS Records from AWS" type="object" 
-                            class="oe_highlight" attrs="{'invisible': [('hosted_zone_id', '=', False)]}"/>
+                            class="oe_highlight" invisible="not hosted_zone_id"/>
                     <button name="check_dns_propagation" string="Check DNS Propagation" type="object" 
-                            attrs="{'invisible': [('hosted_zone_id', '=', False)]}"/>
+                            invisible="not hosted_zone_id"/>
                     <button name="create_dnssec_key" string="Set Up DNSSEC" type="object" 
-                            attrs="{'invisible': [('hosted_zone_id', '=', False)]}"/>
+                            invisible="not hosted_zone_id"/>
                     <field name="sync_status" widget="statusbar" statusbar_visible="not_synced,syncing,synced,error"/>
                 </header>
                 <sheet>
@@ -59,10 +59,10 @@
                             <field name="last_sync" readonly="1"/>
                         </group>
                     </group>
-                    <group attrs="{'invisible': [('is_private', '=', False)]}">
+                    <group invisible="not is_private">
                         <group string="VPC Configuration">
-                            <field name="vpc_id" attrs="{'required': [('is_private', '=', True)]}"/>
-                            <field name="vpc_region" attrs="{'required': [('is_private', '=', True)]}"/>
+                            <field name="vpc_id" required="is_private"/>
+                            <field name="vpc_region" required="is_private"/>
                         </group>
                     </group>
                     <notebook>
