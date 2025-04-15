@@ -7,55 +7,44 @@
         <field name="priority">20</field>
         <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//div[hasclass('app_settings_block')][last()]" position="after">
-                <div class="app_settings_block" data-string="AWS Integration" string="AWS Integration" data-key="boto_base">
-                    <h2>AWS Integration</h2>
-                    <div class="row mt16 o_settings_container" id="aws_settings">
-                        <div class="col-12 col-lg-6 o_setting_box">
-                            <div class="o_setting_left_pane">
-                                <field name="aws_manage_credentials"/>
-                            </div>
-                            <div class="o_setting_right_pane">
-                                <label for="aws_manage_credentials"/>
-                                <div class="text-muted">
-                                    Manage AWS credentials for service integrations
+            <xpath expr="//form" position="inside">
+                <app data-string="AWS Integration" string="AWS Integration" name="boto_base" groups="boto_base.group_aws_manager">
+                    <block title="AWS Credentials" name="aws_credentials_block">
+                        <setting id="aws_credentials" string="AWS Account" company_dependent="1" help="Manage AWS credentials for service integrations">
+                            <field name="aws_manage_credentials"/>
+                            <div class="content-group" attrs="{'invisible': [('aws_manage_credentials', '=', False)]}">
+                                <div class="row mt16">
+                                    <label for="aws_default_region" class="col-lg-3 o_light_label"/>
+                                    <field name="aws_default_region" placeholder="e.g. us-east-1"/>
                                 </div>
-                                <div class="mt8" attrs="{'invisible': [('aws_manage_credentials', '=', False)]}">
-                                    <field name="aws_default_region" class="oe_inline" placeholder="e.g. us-east-1"/>
-                                    <label for="aws_default_region"/>
-                                </div>
-                                <div class="mt8" attrs="{'invisible': [('aws_manage_credentials', '=', False)]}">
-                                    <label for="aws_credentials_count" class="oe_inline"/>
-                                    <field name="aws_credentials_count" class="oe_inline"/>
+                                <div class="row mt16">
+                                    <label for="aws_credentials_count" class="col-lg-3 o_light_label"/>
+                                    <field name="aws_credentials_count" readonly="1"/>
                                     <button name="action_aws_credentials" 
                                             type="object" 
                                             string="Manage Credentials" 
-                                            class="oe_link" 
-                                            attrs="{'invisible': [('aws_manage_credentials', '=', False)]}"
-                                            icon="fa-cog"/>
+                                            class="btn-link" 
+                                            icon="oi-arrow-right"/>
                                 </div>
-                                <div class="mt8" attrs="{'invisible': ['|', ('aws_manage_credentials', '=', False), ('aws_default_credentials_id', '=', False)]}">
-                                    <label for="aws_default_credentials_id" class="oe_inline"/>
+                                <div class="row mt16" attrs="{'invisible': [('aws_default_credentials_id', '=', False)]}">
+                                    <label for="aws_default_credentials_id" class="col-lg-3 o_light_label"/>
                                     <field name="aws_default_credentials_id" readonly="1"/>
                                     <button name="test_aws_connectivity" 
                                             type="object" 
                                             string="Test Connection" 
-                                            class="oe_link" 
-                                            attrs="{'invisible': [('aws_default_credentials_id', '=', False)]}"
+                                            class="btn-link" 
                                             icon="fa-check"/>
                                 </div>
-                                <div class="mt8" attrs="{'invisible': [('aws_manage_credentials', '=', False)]}">
+                                <div class="mt16">
                                     <button name="action_create_aws_credentials" 
                                             type="object" 
                                             string="Add New Credentials" 
-                                            class="btn-primary" 
-                                            attrs="{'invisible': [('aws_manage_credentials', '=', False)]}"
-                                            icon="fa-plus"/>
+                                            class="btn-primary"/>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
+                        </setting>
+                    </block>
+                </app>
             </xpath>
         </field>
     </record>
