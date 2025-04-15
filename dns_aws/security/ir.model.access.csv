@@ -3,3 +3,5 @@ access_dns_route53_config_user,dns.route53.config.user,dns_aws.model_dns_route53
 access_dns_route53_config_system,dns.route53.config.system,dns_aws.model_dns_route53_config,base.group_system,1,1,1,1
 access_dns_aws_credentials_user,dns.aws.credentials.user,dns_aws.model_dns_aws_credentials,base.group_user,1,0,0,0
 access_dns_aws_credentials_system,dns.aws.credentials.system,dns_aws.model_dns_aws_credentials,base.group_system,1,1,1,1
+access_dns_aws_operation_log_user,dns.aws.operation.log.user,dns_aws.model_dns_aws_operation_log,base.group_user,1,0,0,0
+access_dns_aws_operation_log_system,dns.aws.operation.log.system,dns_aws.model_dns_aws_operation_log,base.group_system,1,1,1,1

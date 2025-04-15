@@ -4,6 +4,7 @@
 # Copyright (C) 2023 JAAH
 
 import logging
+import boto3
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
 from botocore.exceptions import ClientError
@@ -11,7 +12,8 @@ from botocore.exceptions import ClientError
 _logger = logging.getLogger(__name__)
 
 class Subdomain(models.Model):
-    _inherit = 'dns.subdomain'
+    _inherit = ['dns.subdomain', 'dns.aws.client.mixin']
+    _name = 'dns.subdomain'
     
     route53_record_id = fields.Char(string='Route 53 Record ID', readonly=True)
     route53_sync = fields.Boolean(string='Sync with Route 53', related='domain_id.route53_sync', store=True, readonly=True)
@@ -119,8 +121,10 @@ class Subdomain(models.Model):
                     record_name = self.full_domain + '.'  # Add trailing dot
                     _logger.info("Looking for existing record: %s (%s)", record_name, record_type)
                     
-                    # Get current records that match our name and type
-                    response = client.list_resource_record_sets(
+                    # Get current records that match our name and type using the AWS client mixin
+                    response = self.execute_aws_operation(
+                        service_name='route53',
+                        operation_name='list_resource_record_sets',
                         HostedZoneId=domain.route53_hosted_zone_id,
                         StartRecordName=record_name,
                         StartRecordType=record_type,
@@ -184,8 +188,10 @@ class Subdomain(models.Model):
                     ]
                 }
             
-            # Execute the change
-            response = client.change_resource_record_sets(
+            # Execute the change using the AWS client mixin
+            response = self.execute_aws_operation(
+                service_name='route53',
+                operation_name='change_resource_record_sets',
                 HostedZoneId=domain.route53_hosted_zone_id,
                 ChangeBatch=change_batch
             )

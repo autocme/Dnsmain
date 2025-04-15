@@ -19,12 +19,12 @@ This module integrates the DNS Base module with AWS Route 53, allowing you to:
 - Monitor the status of your AWS Route 53 hosted zones and records
 - Manage DNS failover configurations
 
-This module depends on the dns_base module for core DNS management functionality and 
-the aws_route53 module for AWS Route 53 specific operations.
+This module depends on the dns_base module for core DNS management functionality and
+includes all necessary AWS Route 53 specific operations internally.
     """,
     'author': 'JAAH',
     'website': 'https://www.example.com',
-    'depends': ['dns_base', 'aws_route53'],
+    'depends': ['dns_base'],
     'data': [
         'security/ir.model.access.csv',
         'views/aws_actions.xml',
@@ -32,10 +32,15 @@ the aws_route53 module for AWS Route 53 specific operations.
         'views/route53_config_views.xml',
         'views/domain_views.xml',
         'views/dns_record_views.xml',
+        'views/aws_log_views.xml',
+        'views/res_config_settings.xml',
         'views/aws_menus.xml',
     ],
     'installable': True,
     'application': False,
     'auto_install': False,
     'license': 'LGPL-3',
+    'external_dependencies': {
+        'python': ['boto3', 'botocore'],
+    },
 }
