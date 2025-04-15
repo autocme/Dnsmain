@@ -108,26 +108,14 @@
         </field>
     </record>
 
-    <!-- AWS Operation Log Dashboard View - Simplified for Odoo 17 CE -->
-    <record id="view_aws_operation_log_dashboard" model="ir.ui.view">
-        <field name="name">aws.operation.log.dashboard</field>
-        <field name="model">aws.operation.log</field>
-        <field name="arch" type="xml">
-            <dashboard>
-                <view type="graph" ref="view_aws_operation_log_graph"/>
-                <group>
-                    <aggregate name="status_count" field="status" group_operator="count"/>
-                    <aggregate name="duration" field="duration_ms" group_operator="avg"/>
-                </group>
-            </dashboard>
-        </field>
-    </record>
+    <!-- Dashboard view is not supported in Odoo 17 CE - removed -->
+    <!-- The dashboard functionality requires Odoo Enterprise -->
 
     <!-- AWS Operation Log Action -->
     <record id="action_aws_operation_log" model="ir.actions.act_window">
         <field name="name">AWS Operation Logs</field>
         <field name="res_model">aws.operation.log</field>
-        <field name="view_mode">tree,form,graph,dashboard</field>
+        <field name="view_mode">tree,form,graph</field>
         <field name="search_view_id" ref="view_aws_operation_log_search"/>
         <field name="context">{'search_default_today': 1}</field>
         <field name="help" type="html">
