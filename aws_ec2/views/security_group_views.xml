@@ -49,32 +49,32 @@
                     </group>
                     <notebook>
                         <page string="Inbound Rules" name="inbound_rules">
-                            <field name="inbound_rules" placeholder='''[
+                            <field name="inbound_rules" placeholder="[
   {
-    "IpProtocol": "tcp",
-    "FromPort": 22,
-    "ToPort": 22,
-    "IpRanges": [
+    &quot;IpProtocol&quot;: &quot;tcp&quot;,
+    &quot;FromPort&quot;: 22,
+    &quot;ToPort&quot;: 22,
+    &quot;IpRanges&quot;: [
       {
-        "CidrIp": "0.0.0.0/0",
-        "Description": "SSH access"
+        &quot;CidrIp&quot;: &quot;0.0.0.0/0&quot;,
+        &quot;Description&quot;: &quot;SSH access&quot;
       }
     ]
   }
-]'''/>
+]"/>
                         </page>
                         <page string="Outbound Rules" name="outbound_rules">
-                            <field name="outbound_rules" placeholder='''[
+                            <field name="outbound_rules" placeholder="[
   {
-    "IpProtocol": "-1",
-    "IpRanges": [
+    &quot;IpProtocol&quot;: &quot;-1&quot;,
+    &quot;IpRanges&quot;: [
       {
-        "CidrIp": "0.0.0.0/0",
-        "Description": "Allow all outbound traffic"
+        &quot;CidrIp&quot;: &quot;0.0.0.0/0&quot;,
+        &quot;Description&quot;: &quot;Allow all outbound traffic&quot;
       }
     ]
   }
-]'''/>
+]"/>
                         </page>
                         <page string="Associated Instances" name="instances">
                             <field name="instance_ids" readonly="1">
@@ -87,7 +87,7 @@
                             </field>
                         </page>
                         <page string="Tags" name="tags">
-                            <field name="tags" placeholder="{'Environment': 'Production', 'Project': 'Website'}"/>
+                            <field name="tags" placeholder="{&quot;Environment&quot;: &quot;Production&quot;, &quot;Project&quot;: &quot;Website&quot;}"/>
                         </page>
                         <page string="Sync Status" name="sync">
                             <group>
