@@ -30,8 +30,8 @@
                             <field name="route53_error_message" readonly="1" nolabel="1"/>
                         </group>
                         <div invisible="not route53_sync">
-                            <button name="sync_all_subdomains_to_route53" string="Sync All Subdomains to Route 53" type="object" class="oe_highlight" icon="fa-upload"/>
-                            <button name="%(dns_aws.action_sync_domain_route53_records)d" string="Sync Records from Route 53" type="action" class="oe_highlight" icon="fa-download"/>
+                            <button name="sync_all_subdomains_to_route53" string="Sync All Subdomains to Route 53" type="object" class="oe_highlight" icon="fa-cloud-upload"/>
+                            <button name="%(dns_aws.action_sync_domain_route53_records)d" string="Sync Records from Route 53" type="action" class="oe_highlight" icon="fa-cloud-download"/>
                         </div>
                     </page>
                 </xpath>
