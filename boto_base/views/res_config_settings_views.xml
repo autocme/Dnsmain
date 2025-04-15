@@ -12,7 +12,7 @@
                     <block title="AWS Credentials" name="aws_credentials_block">
                         <setting id="aws_credentials" string="AWS Account" company_dependent="1" help="Manage AWS credentials for service integrations">
                             <field name="aws_manage_credentials"/>
-                            <div class="content-group" attrs="{'invisible': [('aws_manage_credentials', '=', False)]}">
+                            <div class="content-group" invisible="not aws_manage_credentials">
                                 <div class="row mt16">
                                     <label for="aws_default_region" class="col-lg-3 o_light_label"/>
                                     <field name="aws_default_region" placeholder="e.g. us-east-1"/>
@@ -26,7 +26,7 @@
                                             class="btn-link" 
                                             icon="oi-arrow-right"/>
                                 </div>
-                                <div class="row mt16" attrs="{'invisible': [('aws_default_credentials_id', '=', False)]}">
+                                <div class="row mt16" invisible="not aws_default_credentials_id">
                                     <label for="aws_default_credentials_id" class="col-lg-3 o_light_label"/>
                                     <field name="aws_default_credentials_id" readonly="1"/>
                                     <button name="test_aws_connectivity" 
