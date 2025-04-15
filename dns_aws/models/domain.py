@@ -154,3 +154,93 @@ class Domain(models.Model):
                     'type': 'danger',
                 }
             }
+            
+    @api.model
+    def sync_route53_hosted_zones(self):
+        """
+        Sync all AWS Route 53 hosted zones to Odoo domains
+        This creates domain records in Odoo for any hosted zones found in Route 53
+        that don't already exist.
+        """
+        # Get all active Route 53 configurations
+        Route53Config = self.env['dns.route53.config']
+        configs = Route53Config.search([('active', '=', True)])
+        
+        if not configs:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('No Configurations'),
+                    'message': _('No active Route 53 configurations found.'),
+                    'sticky': False,
+                    'type': 'warning',
+                }
+            }
+        
+        domain_count = 0
+        error_messages = []
+        
+        for config in configs:
+            try:
+                # Get all hosted zones from this config
+                hosted_zones = config.get_hosted_zones()
+                
+                for zone in hosted_zones:
+                    # Extract domain name from zone name (remove trailing dot)
+                    domain_name = zone['Name'].rstrip('.')
+                    zone_id = zone['Id'].split('/')[-1]  # Extract ID from path
+                    
+                    # Check if domain already exists
+                    existing_domain = self.search([
+                        ('name', '=', domain_name)
+                    ], limit=1)
+                    
+                    if not existing_domain:
+                        # Create the domain in Odoo
+                        new_domain = self.create({
+                            'name': domain_name,
+                            'route53_sync': True,
+                            'route53_config_id': config.id,
+                            'route53_hosted_zone_id': zone_id,
+                            'route53_last_sync': fields.Datetime.now(),
+                        })
+                        domain_count += 1
+                    elif not existing_domain.route53_hosted_zone_id:
+                        # Update existing domain with Route 53 info
+                        existing_domain.write({
+                            'route53_sync': True,
+                            'route53_config_id': config.id,
+                            'route53_hosted_zone_id': zone_id,
+                            'route53_last_sync': fields.Datetime.now(),
+                        })
+                        domain_count += 1
+            
+            except Exception as e:
+                error_message = f"Error with config '{config.name}': {str(e)}"
+                _logger.error(error_message)
+                error_messages.append(error_message)
+        
+        # Generate response message
+        if error_messages:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Sync Completed With Errors'),
+                    'message': _(f"Created/updated {domain_count} domains. Errors: {'; '.join(error_messages)}"),
+                    'sticky': True,
+                    'type': 'warning',
+                }
+            }
+        else:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Sync Completed'),
+                    'message': _(f"Successfully created/updated {domain_count} domains from Route 53 hosted zones."),
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
