@@ -173,3 +173,166 @@ class Subdomain(models.Model):
                     # Continue with deletion even if Route 53 deletion fails
         
         return super(Subdomain, self).unlink()
+        
+    @api.model
+    def sync_route53_records(self, domain_id=None):
+        """
+        Sync AWS Route 53 records to Odoo subdomains
+        This creates subdomain records in Odoo for any DNS records found in Route 53
+        that don't already exist.
+        
+        Args:
+            domain_id: Optional domain ID to limit the sync to a specific domain
+        """
+        # Get domains to sync
+        Domain = self.env['dns.domain']
+        if domain_id:
+            domains = Domain.browse(domain_id)
+            if not domains.exists():
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Domain Not Found'),
+                        'message': _('The specified domain was not found.'),
+                        'sticky': False,
+                        'type': 'warning',
+                    }
+                }
+        else:
+            domains = Domain.search([
+                ('route53_sync', '=', True),
+                ('route53_config_id', '!=', False),
+                ('route53_hosted_zone_id', '!=', False)
+            ])
+        
+        if not domains:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('No Domains Found'),
+                    'message': _('No domains with Route 53 sync enabled were found.'),
+                    'sticky': False,
+                    'type': 'warning',
+                }
+            }
+        
+        record_count = 0
+        error_messages = []
+        
+        # Process each domain
+        for domain in domains:
+            try:
+                # Skip if essential data is missing
+                if not domain.route53_sync or not domain.route53_config_id or not domain.route53_hosted_zone_id:
+                    continue
+                
+                # Get the Route 53 client
+                config = domain.route53_config_id
+                client = config._get_route53_client()
+                hosted_zone_id = domain.route53_hosted_zone_id
+                
+                # List records in the hosted zone
+                response = client.list_resource_record_sets(
+                    HostedZoneId=hosted_zone_id
+                )
+                
+                # Process each record
+                for record in response.get('ResourceRecordSets', []):
+                    record_type = record.get('Type')
+                    
+                    # We only care about A and CNAME records
+                    if record_type not in ['A', 'CNAME']:
+                        continue
+                    
+                    # Get the full domain name and strip trailing dot
+                    full_name = record.get('Name', '').rstrip('.')
+                    domain_name = domain.name
+                    
+                    # Skip the domain's own records (SOA, NS, etc.)
+                    if full_name == domain_name:
+                        continue
+                    
+                    # Extract subdomain part
+                    if full_name.endswith(domain_name):
+                        subdomain_part = full_name[:-len(domain_name)-1]  # -1 for the dot
+                    else:
+                        continue  # Not part of this domain
+                    
+                    # Get record value
+                    record_value = ''
+                    if record_type == 'A' and record.get('ResourceRecords'):
+                        record_value = record['ResourceRecords'][0]['Value']
+                    elif record_type == 'CNAME' and record.get('ResourceRecords'):
+                        record_value = record['ResourceRecords'][0]['Value'].rstrip('.')
+                    else:
+                        continue  # Skip if no valid value
+                    
+                    # Check if subdomain already exists
+                    existing_subdomain = self.search([
+                        ('name', '=', subdomain_part),
+                        ('domain_id', '=', domain.id)
+                    ], limit=1)
+                    
+                    if not existing_subdomain:
+                        # Create new subdomain
+                        conversion_method = 'a' if record_type == 'A' else 'cname'
+                        new_subdomain = self.create({
+                            'name': subdomain_part,
+                            'domain_id': domain.id,
+                            'conversion_method': conversion_method,
+                            'value': record_value,
+                            'route53_record_id': f"{record_type}:{full_name}",
+                            'route53_last_sync': fields.Datetime.now(),
+                        })
+                        record_count += 1
+                    else:
+                        # Only update if it doesn't have a Route 53 record ID
+                        if not existing_subdomain.route53_record_id:
+                            conversion_method = 'a' if record_type == 'A' else 'cname'
+                            existing_subdomain.write({
+                                'conversion_method': conversion_method,
+                                'value': record_value,
+                                'route53_record_id': f"{record_type}:{full_name}",
+                                'route53_last_sync': fields.Datetime.now(),
+                            })
+                            record_count += 1
+                
+                # Update domain last sync time
+                domain.write({
+                    'route53_last_sync': fields.Datetime.now(),
+                    'route53_error_message': False,
+                })
+                
+            except Exception as e:
+                error_message = f"Error syncing domain '{domain.name}': {str(e)}"
+                _logger.error(error_message)
+                error_messages.append(error_message)
+                domain.write({
+                    'route53_error_message': error_message,
+                })
+        
+        # Generate response message
+        if error_messages:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Sync Completed With Errors'),
+                    'message': _(f"Created/updated {record_count} subdomain records. Errors: {'; '.join(error_messages)}"),
+                    'sticky': True,
+                    'type': 'warning',
+                }
+            }
+        else:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Sync Completed'),
+                    'message': _(f"Successfully created/updated {record_count} subdomain records from Route 53."),
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }

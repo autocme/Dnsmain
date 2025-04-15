@@ -3,6 +3,7 @@
     <!-- AWS Configuration menu -->
     <menuitem id="menu_aws_configs"
               name="AWS Configuration"
+              parent="dns_base.menu_dns_base"
               sequence="90"/>
               
     <!-- AWS Credentials menu -->
@@ -17,5 +18,25 @@
               name="Route 53 Configurations"
               parent="menu_aws_configs"
               action="dns_aws.action_route53_configs"
+              sequence="20"/>
+              
+    <!-- AWS Route 53 Synchronization menu -->
+    <menuitem id="menu_aws_route53_sync"
+              name="Route 53 Synchronization"
+              parent="dns_base.menu_dns_base"
+              sequence="91"/>
+              
+    <!-- Sync Hosted Zones menu -->
+    <menuitem id="menu_sync_route53_hosted_zones"
+              name="Sync Hosted Zones"
+              parent="menu_aws_route53_sync"
+              action="dns_aws.action_sync_route53_hosted_zones"
+              sequence="10"/>
+              
+    <!-- Sync Records menu -->
+    <menuitem id="menu_sync_route53_records"
+              name="Sync Records"
+              parent="menu_aws_route53_sync"
+              action="dns_aws.action_sync_route53_records"
               sequence="20"/>
 </odoo>

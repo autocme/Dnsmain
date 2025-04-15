@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Server action to sync AWS Route 53 hosted zones to domains -->
+    <record id="action_sync_route53_hosted_zones" model="ir.actions.server">
+        <field name="name">Sync Route 53 Hosted Zones</field>
+        <field name="model_id" ref="dns_base.model_dns_domain"/>
+        <field name="binding_model_id" ref="dns_base.model_dns_domain"/>
+        <field name="state">code</field>
+        <field name="code">
+            action = model.sync_route53_hosted_zones()
+        </field>
+    </record>
+    
+    <!-- Server action to sync AWS Route 53 records to subdomains -->
+    <record id="action_sync_route53_records" model="ir.actions.server">
+        <field name="name">Sync Route 53 Records</field>
+        <field name="model_id" ref="dns_base.model_dns_subdomain"/>
+        <field name="binding_model_id" ref="dns_base.model_dns_subdomain"/>
+        <field name="state">code</field>
+        <field name="code">
+            action = model.sync_route53_records()
+        </field>
+    </record>
+    
+    <!-- Server action to sync Route 53 records for a specific domain -->
+    <record id="action_sync_domain_route53_records" model="ir.actions.server">
+        <field name="name">Sync Route 53 Records</field>
+        <field name="model_id" ref="dns_base.model_dns_domain"/>
+        <field name="binding_model_id" ref="dns_base.model_dns_domain"/>
+        <field name="binding_view_types">form</field>
+        <field name="state">code</field>
+        <field name="code">
+            if records:
+                action = env['dns.subdomain'].sync_route53_records(domain_id=records.id)
+        </field>
+    </record>
+</odoo>
