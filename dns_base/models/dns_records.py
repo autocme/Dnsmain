@@ -113,9 +113,16 @@ class Subdomain(models.Model):
                 if not re.match(r'^[a-zA-Z0-9_]([a-zA-Z0-9_\-\.]{0,61}[a-zA-Z0-9_])?$', record.name):
                     raise ValidationError(_("Invalid special DNS record name: %s. Special records can contain letters, numbers, hyphens, and underscores.") % record.name)
             else:
-                # Check for wildcard subdomain (e.g., *.example.com)
-                if record.name == '*':
-                    # Wildcard is allowed as a standalone subdomain name
+                # Check for wildcard subdomain (e.g., *.example.com or *.1.example.com)
+                if record.name.startswith('*'):
+                    # Wildcard is allowed at the beginning of a subdomain name
+                    # If it's just '*', it's already valid
+                    if record.name != '*' and len(record.name) > 1:
+                        # Check the part after '*' if it exists (e.g., in '*.1')
+                        subdomain_after_wildcard = record.name[2:]  # Skip '.*'
+                        if subdomain_after_wildcard and not re.match(r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$', subdomain_after_wildcard):
+                            raise ValidationError(_("Invalid subdomain name after wildcard: %s. Subdomains can only contain letters, numbers, and hyphens (not at the beginning or end).") % subdomain_after_wildcard)
+                    # Pass validation for wildcard subdomains
                     pass
                 # Standard subdomain rules - alphanumeric, hyphens, no spaces
                 elif not re.match(r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$', record.name):
