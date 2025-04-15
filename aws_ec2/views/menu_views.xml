@@ -54,4 +54,28 @@
               parent="menu_ec2_network_section"
               action="action_ec2_security_group"
               sequence="30"/>
+              
+    <!-- EC2 Sync Operations Menu Section -->
+    <menuitem id="menu_ec2_sync_section"
+              name="Sync Operations"
+              parent="menu_ec2_root"
+              sequence="90"/>
+              
+    <menuitem id="menu_import_ec2_instances"
+              name="Import EC2 Instances"
+              parent="menu_ec2_sync_section"
+              action="action_import_ec2_instances"
+              sequence="10"/>
+              
+    <menuitem id="menu_refresh_all_ec2_instances"
+              name="Refresh All Instances"
+              parent="menu_ec2_sync_section"
+              action="action_refresh_all_ec2_instances"
+              sequence="20"/>
+              
+    <menuitem id="menu_sync_all_ec2_instances"
+              name="Sync All to AWS"
+              parent="menu_ec2_sync_section"
+              action="action_sync_all_ec2_instances"
+              sequence="30"/>
 </odoo>
