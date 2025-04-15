@@ -6,3 +6,4 @@
 from . import hosted_zone
 from . import dns_record
 from . import health_check
+from . import registered_domain

@@ -7,24 +7,39 @@
               sequence="20" 
               groups="aws_route53.group_route53_user"/>
     
-    <!-- Hosted Zones Menu -->
-    <menuitem id="menu_route53_hosted_zone"
-              name="Hosted Zones"
+    <!-- Domain Management Section -->
+    <menuitem id="menu_route53_domain_section"
+              name="Domain Management"
               parent="menu_route53_root"
-              action="action_route53_hosted_zone"
+              sequence="10"/>
+              
+    <menuitem id="menu_route53_registered_domain"
+              name="Registered Domains"
+              parent="menu_route53_domain_section"
+              action="action_route53_registered_domain"
               sequence="10"/>
     
-    <!-- DNS Records Menu -->
-    <menuitem id="menu_route53_dns_record"
-              name="DNS Records"
-              parent="menu_route53_root"
-              action="action_route53_dns_record"
+    <menuitem id="menu_route53_hosted_zone"
+              name="Hosted Zones"
+              parent="menu_route53_domain_section"
+              action="action_route53_hosted_zone"
               sequence="20"/>
     
-    <!-- Health Checks Menu -->
+    <!-- DNS Records Section -->
+    <menuitem id="menu_route53_dns_section"
+              name="DNS Records"
+              parent="menu_route53_root"
+              sequence="20"/>
+              
+    <menuitem id="menu_route53_dns_record"
+              name="DNS Records"
+              parent="menu_route53_dns_section"
+              action="action_route53_dns_record"
+              sequence="10"/>
+    
     <menuitem id="menu_route53_health_check"
               name="Health Checks"
-              parent="menu_route53_root"
+              parent="menu_route53_dns_section"
               action="action_route53_health_check"
-              sequence="30"/>
+              sequence="20"/>
 </odoo>

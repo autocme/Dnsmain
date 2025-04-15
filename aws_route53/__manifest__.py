@@ -30,6 +30,7 @@ The module leverages the boto_base module for AWS credentials and API access.
         'views/hosted_zone_views.xml',
         'views/dns_record_views.xml',
         'views/health_check_views.xml',
+        'views/registered_domain_views.xml',
         'views/menu_views.xml',
     ],
     'installable': True,
