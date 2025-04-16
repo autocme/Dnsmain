@@ -44,7 +44,7 @@ class Domain(models.Model):
                 domain.route53_sync_status = 'not_synced'
     
     @api.onchange('aws_credentials_id')
-    def _onchange_region_for_route53(self):
+    def _onchange_credentials_for_route53(self):
         """
         Update Route53 configuration based on the AWS credentials
         Since Route53 is a global service, we just need a global configuration for the credentials

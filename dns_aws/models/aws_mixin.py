@@ -29,7 +29,8 @@ class AWSClientMixin(models.AbstractModel):
     _inherit = ['dns.aws.log.mixin']
 
     aws_credentials_id = fields.Many2one('dns.aws.credentials', string='AWS Credentials')
-    aws_region = fields.Char(string='AWS Region', default='us-east-1')
+    aws_region = fields.Char(string='AWS Region', default='us-east-1',
+                            help='Region is only used for regional AWS services. Global services like Route53 always use the global endpoint.')
     
     def _get_aws_credentials(self):
         """
@@ -100,11 +101,17 @@ class AWSClientMixin(models.AbstractModel):
         Args:
             service_name: AWS service name (e.g., 'route53', 'ec2')
             region_name: AWS region name (default: None, which uses the record's region)
-                         For global services like Route53, the region will be ignored
+                         For global services like Route53, IAM, CloudFront, etc., the region 
+                         will be automatically set to 'us-east-1' regardless of this parameter
             credentials: AWS credentials dict (default: None, which uses the record's credentials)
             
         Returns:
             A boto3 client for the specified service
+            
+        Note:
+            Global AWS services (like Route53) always use the us-east-1 endpoint,
+            regardless of your geographic location or the region specified.
+            This is handled automatically by this method.
         """
         self.ensure_one()
         

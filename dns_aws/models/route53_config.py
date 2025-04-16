@@ -22,8 +22,8 @@ class Route53Config(models.Model):
 
     name = fields.Char(string='Configuration Name', required=True)
     aws_credentials_id = fields.Many2one('dns.aws.credentials', string='AWS Credentials', required=True)
-    aws_region = fields.Char(string='AWS Region', required=True, default=GLOBAL_REGION, 
-                          help='Route 53 is a global service that uses the global endpoint region')
+    aws_region = fields.Char(string='AWS Region', readonly=True, required=True, default=GLOBAL_REGION, 
+                          help='Route 53 is a global AWS service and always uses the us-east-1 endpoint, regardless of your geographic location')
     active = fields.Boolean(default=True)
     
     # Fields for backward compatibility and convenience
