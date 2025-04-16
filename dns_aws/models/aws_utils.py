@@ -39,6 +39,11 @@ class AWSUtils(models.AbstractModel):
         
         Returns:
             The default AWS region as a string
+            
+        Note:
+            This region is only used for regional AWS services.
+            Global AWS services like Route53 always use the global endpoint (us-east-1),
+            regardless of this setting.
         """
         return self.env['ir.config_parameter'].sudo().get_param('dns_aws.default_aws_region', 'us-east-1')
     
@@ -50,10 +55,14 @@ class AWSUtils(models.AbstractModel):
         Args:
             aws_access_key_id: AWS access key ID
             aws_secret_access_key: AWS secret access key
-            region_name: AWS region name
+            region_name: AWS region name (ignored for IAM which is a global service)
             
         Returns:
             A dict with 'success' and 'message' keys
+            
+        Note:
+            This method uses the IAM service which is a global AWS service.
+            The region_name parameter is ignored since IAM always uses the global endpoint.
         """
         if not aws_access_key_id or not aws_secret_access_key:
             return {
@@ -63,11 +72,12 @@ class AWSUtils(models.AbstractModel):
         
         try:
             # Create a client for the IAM service (typically has the least restrictive permissions)
+            # IAM is a global service, so we always use the global endpoint (us-east-1)
             client = boto3.client(
                 'iam',
                 aws_access_key_id=aws_access_key_id,
                 aws_secret_access_key=aws_secret_access_key,
-                region_name=region_name
+                region_name='us-east-1'  # Global endpoint for IAM
             )
             
             # Try to get the current user
@@ -184,10 +194,14 @@ class AWSUtils(models.AbstractModel):
         Args:
             hosted_zone_id: Route 53 hosted zone ID
             credentials: Optional AWS credentials dict
-            region_name: Optional AWS region name
+            region_name: Optional AWS region name (ignored as Route53 is a global service)
             
         Returns:
             A list of record sets
+            
+        Note:
+            Route53 is a global service, so the region_name parameter is ignored.
+            The AWS global endpoint (us-east-1) is always used regardless of this parameter.
         """
         # Use provided credentials or get default credentials
         if not credentials:
@@ -217,12 +231,13 @@ class AWSUtils(models.AbstractModel):
             hosted_zone_id = hosted_zone_id.split('/hostedzone/')[1]
             
         try:
-            # Create a Route 53 client
+            # Create a Route 53 client - always use the global endpoint region (us-east-1)
+            # Ignoring the region_name parameter as Route53 is a global service
             client = boto3.client(
                 'route53',
                 aws_access_key_id=credentials['aws_access_key_id'],
                 aws_secret_access_key=credentials['aws_secret_access_key'],
-                region_name=region_name
+                region_name='us-east-1'  # Global endpoint for Route53
             )
             
             # Use pagination to get all record sets

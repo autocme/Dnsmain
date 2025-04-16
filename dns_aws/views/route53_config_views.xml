@@ -7,7 +7,8 @@
         <field name="arch" type="xml">
             <tree string="AWS Route 53 Configurations">
                 <field name="name"/>
-                <field name="aws_region"/>
+                <!-- Route53 is a global service, so region is hidden -->
+                <field name="aws_region" invisible="1"/>
                 <field name="active"/>
             </tree>
         </field>
@@ -30,7 +31,8 @@
                     <group>
                         <group>
                             <field name="active"/>
-                            <field name="aws_region"/>
+                            <!-- Route53 is a global service, so region is always global -->
+                            <field name="aws_region" invisible="1"/>
                         </group>
                         <group>
                             <field name="aws_credentials_id" options="{'no_create': False, 'no_open': False}"/>
@@ -50,7 +52,8 @@
         <field name="arch" type="xml">
             <search string="AWS Route 53 Configurations">
                 <field name="name"/>
-                <field name="aws_region"/>
+                <!-- Route53 is a global service, so region is hidden -->
+                <field name="aws_region" invisible="1"/>
                 <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
             </search>
         </field>

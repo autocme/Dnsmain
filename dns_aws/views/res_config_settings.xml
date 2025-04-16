@@ -11,8 +11,11 @@
             <xpath expr="//form" position="inside">
                 <app string="DNS AWS Integration" name="dns_aws" groups="base.group_system">
                     <block title="AWS Default Settings">
-                        <setting help="Default AWS region to use when not specified" string="Default AWS Region">
+                        <setting help="Default AWS region to use when not specified (only for non-global services, not needed for Route53)" string="Default AWS Region">
                             <field name="aws_region"/>
+                            <div class="text-muted">
+                                Route53 is a global AWS service and doesn't require region configuration.
+                            </div>
                         </setting>
                         
                         <setting help="Default AWS credentials to use when not specified" string="Default AWS Credentials">
