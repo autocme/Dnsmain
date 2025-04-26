@@ -550,7 +550,7 @@
                     executeBtn.addEventListener('click', executeCommand);
                     document.getElementById('disconnect-btn').addEventListener('click', function() {
                         if (confirm('Are you sure you want to disconnect?')) {
-                            if (socket && socket.readyState === WebSocket.OPEN) {
+                            if (socket &amp;&amp; socket.readyState === WebSocket.OPEN) {
                                 // Send a disconnect message
                                 socket.send(JSON.stringify({type: 'disconnect'}));
                                 // Close WebSocket
@@ -586,7 +586,7 @@
                                     return;
                                 }
                                 
-                                if (response.result && response.result.success) {
+                                if (response.result &amp;&amp; response.result.success) {
                                     sessionId = response.result.session_id;
                                     connectWebSocket(sessionId);
                                 } else {
@@ -663,7 +663,7 @@
                             
                             // Set up ping interval to keep connection alive
                             const pingInterval = setInterval(function() {
-                                if (socket && socket.readyState === WebSocket.OPEN) {
+                                if (socket &amp;&amp; socket.readyState === WebSocket.OPEN) {
                                     socket.send(JSON.stringify({type: 'ping'}));
                                 } else {
                                     clearInterval(pingInterval);
@@ -696,7 +696,7 @@
                         appendToTerminal('$ ' + command, 'command');
                         
                         // Send command via WebSocket
-                        if (socket && socket.readyState === WebSocket.OPEN) {
+                        if (socket &amp;&amp; socket.readyState === WebSocket.OPEN) {
                             socket.send(JSON.stringify({
                                 type: 'command',
                                 data: command
@@ -775,7 +775,7 @@
                         
                         // Auto-complete from common commands
                         const matchingCommands = commonCommands.filter(cmd => 
-                            cmd.startsWith(input) && cmd !== input
+                            cmd.startsWith(input) &amp;&amp; cmd !== input
                         );
                         
                         if (matchingCommands.length === 1) {
