@@ -61,13 +61,17 @@ class SshClientCategory(models.Model):
 
 class SshClient(models.Model):
     _name = 'ssh.client'
+    _description = 'SSH Client'
 
-    name = fields.Char()
-    host = fields.Char()
-    port = fields.Integer(default=22, group_operator=False)
-    user = fields.Char()
-    password = fields.Char()
-    private_key = fields.Binary()
+    name = fields.Char(string='Name', required=True)
+    host = fields.Char(string='Host', required=True)
+    port = fields.Integer(string='Port', default=22, group_operator=False, required=True)
+    user = fields.Char(string='Username', required=True)
+    password = fields.Char(string='Password')
+    private_key = fields.Binary(string='Private Key')
+    
+    # Saved commands for this client
+    saved_command_ids = fields.One2many('ssh.saved.command', 'ssh_client_id', string='Saved Commands')
     private_key_filename = fields.Char()
     private_key_password = fields.Char()
     auto_convert_ppk = fields.Boolean(

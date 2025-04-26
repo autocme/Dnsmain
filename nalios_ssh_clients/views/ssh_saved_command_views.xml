@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View for Saved Commands -->
+    <record id="view_ssh_saved_command_tree" model="ir.ui.view">
+        <field name="name">ssh.saved.command.tree</field>
+        <field name="model">ssh.saved.command</field>
+        <field name="arch" type="xml">
+            <tree string="Saved Commands">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="command"/>
+                <field name="ssh_client_id"/>
+                <field name="category"/>
+                <field name="is_favorite" widget="boolean_favorite"/>
+                <field name="use_count"/>
+                <field name="last_used"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View for Saved Commands -->
+    <record id="view_ssh_saved_command_form" model="ir.ui.view">
+        <field name="name">ssh.saved.command.form</field>
+        <field name="model">ssh.saved.command</field>
+        <field name="arch" type="xml">
+            <form string="Saved Command">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="execute_command" type="object" class="oe_stat_button" icon="fa-play"
+                                attrs="{'invisible': [('ssh_client_id', '=', False)]}"
+                                string="Execute"/>
+                        <button name="toggle_favorite" type="object" class="oe_stat_button" icon="fa-star"
+                                string="Favorite"/>
+                    </div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Command Name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="ssh_client_id" required="1"/>
+                            <field name="category"/>
+                            <field name="is_favorite" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="sequence" string="Sequence"/>
+                            <field name="use_count" readonly="1"/>
+                            <field name="last_used" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Command" name="command">
+                            <field name="command" widget="ace" options="{'mode': 'sh'}" placeholder="Enter your command here..."/>
+                        </page>
+                        <page string="Description" name="description">
+                            <field name="description" placeholder="Add a description of what this command does..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Search View for Saved Commands -->
+    <record id="view_ssh_saved_command_search" model="ir.ui.view">
+        <field name="name">ssh.saved.command.search</field>
+        <field name="model">ssh.saved.command</field>
+        <field name="arch" type="xml">
+            <search string="Search Saved Commands">
+                <field name="name"/>
+                <field name="command"/>
+                <field name="ssh_client_id"/>
+                <field name="tag_ids"/>
+                <separator/>
+                <filter string="Favorites" name="favorites" domain="[('is_favorite', '=', True)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="SSH Client" name="group_by_client" context="{'group_by': 'ssh_client_id'}"/>
+                    <filter string="Category" name="group_by_category" context="{'group_by': 'category'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    
+    <!-- Action for Saved Commands -->
+    <record id="action_ssh_saved_command" model="ir.actions.act_window">
+        <field name="name">Saved Commands</field>
+        <field name="res_model">ssh.saved.command</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_ssh_saved_command_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first saved command
+            </p>
+            <p>
+                Save frequently used commands for easy access. You can organize them by categories and mark your favorites for quick access.
+            </p>
+        </field>
+    </record>
+
+    <!-- Tree View for Command Tags -->
+    <record id="view_ssh_command_tag_tree" model="ir.ui.view">
+        <field name="name">ssh.command.tag.tree</field>
+        <field name="model">ssh.command.tag</field>
+        <field name="arch" type="xml">
+            <tree string="Command Tags">
+                <field name="name"/>
+                <field name="color" widget="color_picker"/>
+            </tree>
+        </field>
+    </record>
+    
+    <!-- Form View for Command Tags -->
+    <record id="view_ssh_command_tag_form" model="ir.ui.view">
+        <field name="name">ssh.command.tag.form</field>
+        <field name="model">ssh.command.tag</field>
+        <field name="arch" type="xml">
+            <form string="Command Tag">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="color" widget="color_picker"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Action for Command Tags -->
+    <record id="action_ssh_command_tag" model="ir.actions.act_window">
+        <field name="name">Command Tags</field>
+        <field name="res_model">ssh.command.tag</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first command tag
+            </p>
+            <p>
+                Tags help you organize and categorize your saved commands.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Menu Items -->
+    <menuitem id="menu_ssh_saved_command"
+              name="Saved Commands"
+              parent="menu_ssh_client_root"
+              action="action_ssh_saved_command"
+              sequence="20"/>
+              
+    <menuitem id="menu_ssh_command_tag"
+              name="Command Tags"
+              parent="menu_ssh_client_root"
+              action="action_ssh_command_tag"
+              sequence="30"/>
+</odoo>

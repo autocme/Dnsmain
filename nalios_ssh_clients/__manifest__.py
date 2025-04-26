@@ -27,6 +27,7 @@
         'security/res_groups.xml',
         'security/ir.model.access.csv',
         'views/ssh_manager_views.xml',
+        'views/ssh_saved_command_views.xml',
     ],
     'assets': {
         'web.assets_backend': [

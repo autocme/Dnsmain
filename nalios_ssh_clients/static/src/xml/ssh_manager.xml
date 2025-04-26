@@ -24,6 +24,9 @@
             <button t-on-click="toggleCommandHistory" title="Toggle command history">
                 <i class="fa fa-history"></i> History
             </button>
+            <button t-on-click="toggleSavedCommands" title="Toggle saved commands">
+                <i class="fa fa-bookmark"></i> Saved Commands
+            </button>
             <button t-on-click="copyToClipboard" title="Copy terminal content">
                 <i class="fa fa-copy"></i> Copy
             </button>
@@ -41,6 +44,56 @@
                 <div t-foreach="state.commandHistory" t-as="command" t-key="command_index" 
                      class="command-history-item" t-on-click="() => this.useHistoryCommand(command)">
                     <i class="fa fa-angle-right me-2"></i><span t-esc="command"></span>
+                </div>
+            </div>
+            
+            <!-- Saved commands panel (hidden by default) -->
+            <div class="saved-commands-panel" t-ref="savedCommandsPanel">
+                <div class="saved-commands-header">
+                    <h4>Saved Commands</h4>
+                    <button class="btn btn-sm btn-outline-primary add-command-btn" t-on-click="createSavedCommand">
+                        <i class="fa fa-plus"></i> New Command
+                    </button>
+                </div>
+                
+                <div class="saved-commands-categories">
+                    <button class="category-btn active" data-category="all">All</button>
+                    <button class="category-btn" data-category="system">System</button>
+                    <button class="category-btn" data-category="network">Network</button>
+                    <button class="category-btn" data-category="file">Files</button>
+                    <button class="category-btn" data-category="database">Database</button>
+                    <button class="category-btn" data-category="custom">Custom</button>
+                </div>
+                
+                <div class="saved-commands-list">
+                    <div t-if="!state.savedCommands.length" class="no-commands">
+                        <p>No saved commands found. Create your first command to get started!</p>
+                    </div>
+                    
+                    <div t-foreach="state.savedCommands" t-as="cmd" t-key="cmd.id" 
+                         class="saved-command-item" t-att-data-category="cmd.category"
+                         t-on-click="() => this.useSavedCommand(cmd)">
+                        <div class="command-content">
+                            <div class="command-name">
+                                <i t-if="cmd.is_favorite" class="fa fa-star text-warning me-1"></i>
+                                <span t-esc="cmd.name"></span>
+                            </div>
+                            <div class="command-text">
+                                <code t-esc="cmd.command"></code>
+                            </div>
+                            <div t-if="cmd.description" class="command-description text-muted">
+                                <small t-esc="cmd.description"></small>
+                            </div>
+                        </div>
+                        <div class="command-actions">
+                            <button class="btn btn-sm btn-link" t-on-click="(ev) => this.editSavedCommand(ev, cmd)" title="Edit command">
+                                <i class="fa fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-link" t-on-click="(ev) => this.deleteSavedCommand(ev, cmd)" title="Delete command">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
             
