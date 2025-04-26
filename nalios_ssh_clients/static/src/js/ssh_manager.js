@@ -221,22 +221,8 @@ export class SshManager extends Component {
     async _sendCommand(cmd) {
         try {
             const res = await this.orm.call('ssh.client', 'exec_command', [[this.client_id], cmd]);
-            
-            // Process the response to ensure proper wrapping of long lines
-            let processedResponse = res;
-            
-            // If the response contains ANSI content, make sure it's properly wrapped
-            if (res.includes('ansi2html-content')) {
-                // The response already contains HTML with ANSI formatting
-                // Add classes to ensure proper wrapping
-                processedResponse = res.replace(
-                    /<pre class="ansi2html-content">/g, 
-                    '<pre class="ansi2html-content terminal-formatted">'
-                );
-            }
-            
             // Wrap the response in a div for styling
-            this.terminal.el.innerHTML += `<div class="terminal-response">${processedResponse}</div>`;
+            this.terminal.el.innerHTML += `<div class="terminal-response">${res}</div>`;
         } catch (error) {
             console.error("Command execution error:", error);
             throw error;
