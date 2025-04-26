@@ -52,7 +52,7 @@
                             <field name="name" placeholder="Image Name"/>
                         </h1>
                         <div class="o_row">
-                            <span t-if="dangling" class="badge badge-warning">Dangling</span>
+                            <span class="badge badge-warning" invisible="not dangling">Dangling</span>
                         </div>
                     </div>
                     <group>
@@ -145,7 +145,7 @@
                                         <field name="name"/>
                                     </strong>
                                     <span class="float-right">
-                                        <span t-if="record.dangling.raw_value" class="badge badge-warning">Dangling</span>
+                                        <span t-att-class="record.dangling.raw_value ? 'badge badge-warning' : 'd-none'">Dangling</span>
                                     </span>
                                 </div>
                             </div>

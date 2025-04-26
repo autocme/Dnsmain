@@ -232,7 +232,7 @@
                                         <span><t t-esc="record.schedule_type.value"/></span>
                                     </div>
                                 </div>
-                                <div class="row" t-if="record.last_run.value">
+                                <div class="row" t-att-class="record.last_run.value ? '' : 'd-none'">
                                     <div class="col-5">
                                         <strong>Last Run:</strong>
                                     </div>
@@ -240,7 +240,7 @@
                                         <span><t t-esc="record.last_run.value"/></span>
                                     </div>
                                 </div>
-                                <div class="row" t-if="record.next_run.value">
+                                <div class="row" t-att-class="record.next_run.value ? '' : 'd-none'">
                                     <div class="col-5">
                                         <strong>Next Run:</strong>
                                     </div>
@@ -251,7 +251,7 @@
                             </div>
                             <div class="o_kanban_record_bottom">
                                 <div class="oe_kanban_bottom_left">
-                                    <span t-if="record.success_count.raw_value > 0 || record.failure_count.raw_value > 0">
+                                    <span t-att-class="(record.success_count.raw_value > 0 || record.failure_count.raw_value > 0) ? '' : 'd-none'">
                                         <t t-esc="record.success_count.value"/> / <t t-esc="record.success_count.value + record.failure_count.value"/>
                                     </span>
                                 </div>
