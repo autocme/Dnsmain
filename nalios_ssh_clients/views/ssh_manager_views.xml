@@ -62,6 +62,7 @@
             <form>
                 <header>
                     <button name="ssh_connect" type="object" class="oe_highlight" string="Connect to SSH"/>
+                    <button name="webssh_connect" type="object" string="Connect with WebSSH" attrs="{'invisible': [('use_webssh', '=', False)]}"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -87,6 +88,7 @@
                         <group>
                             <field name="terminal_background" widget="color"/>
                             <field name="terminal_text_color" widget="color"/>
+                            <field name="use_webssh"/>
                         </group>
                     </group>
                     <notebook>
