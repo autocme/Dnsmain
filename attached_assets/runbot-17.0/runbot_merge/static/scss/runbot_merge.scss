@@ -1,0 +1,124 @@
+:root {
+  --border-color: color-mix(
+    in oklch,
+    var(--body-color) 30%,
+    var(--body-bg)
+  )
+}
+
+.bg-unmerged {
+  background-color: color-mix(
+    in lab,
+    rgba(var(--info-rgb), var(--bg-opacity)),
+    rgba(var(--success-rgb), var(--bg-opacity))
+  );
+}
+
+html {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.list-inline {
+  margin-bottom: 10px;
+}
+.list-inline > li {
+  padding: 0 5px;
+  margin-right: 0;
+  // TODO: find better way to do this
+  display: inline-block;
+}
+
+.btn {
+  user-select: text;
+}
+
+// mergebot layouting
+.stagings {
+  display: flex;
+  align-items: stretch;
+
+  > li {
+    flex: 1;
+    // prevent content-based autosizing otherwise that's flex' starting point
+    width: 0;
+
+    padding: 0.1em 0.1em 0.1em 0.5em;
+
+    &:not(:last-child) {
+      border-right: 1px solid var(--border-color);
+    }
+  }
+  .batch {
+    // cut off branch names if they can't be line-wrapped and would break the
+    // layout, works with flex to force all columns to be at the same size
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:not(:last-child) {
+      border-bottom: 1px solid var(--border-color);
+    }
+  }
+
+  .batch a:not(:last-of-type) a:after {
+    content: ",";
+  }
+
+  button.dropdown-toggle {
+    text-align: left;
+    white-space: wrap;
+  }
+}
+.pr-listing > * { display: inline-block; }
+.pr-awaiting { opacity: 0.8; }
+.pr-blocked { opacity: 0.6; }
+.pr-failed { opacity: 0.9; }
+
+ul.todo {
+  list-style-type: '☐ ';
+  > li.ok {
+    //@extend .alert-success;
+    list-style-type: '☑ ';
+  }
+  > li.fail {
+    @extend .alert-danger;
+    list-style-type: '☒ ';
+  }
+}
+
+dl.runbot-merge-fields {
+  @extend .row;
+  > dt {
+    @extend .col-sm-2;
+  }
+  > dd {
+    @extend .col-sm-10;
+  }
+}
+
+.staging-statuses {
+  cursor: wait;
+}
+
+/* forwardport */
+.outstanding-partners > * {
+  @extend .pt-1;
+  // because there's a trailing space which is annoying to remove, which plays
+  // the role of padding-right
+  @extend .ps-1;
+  @extend .text-nowrap;
+  // works better for the left edge of the *box*
+  @extend .border-start;
+}
+
+// batches sequence table in PR dashboard: mostly uses (customised) bootstrap
+// but some of the style is bespoke because inline styles don't work well with
+// CSP
+.closed {
+  text-decoration: line-through;
+}
+tr.inactive {
+  opacity: 0.5;
+}
+td.detached {
+  border-top: 2px solid var(--danger);
+}

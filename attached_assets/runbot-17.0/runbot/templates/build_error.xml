@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+    <template id="runbot.build_error_cards">
+      <div t-if="build_errors" class="accordion" t-attf-id="accordion_{{accordion_id}}">
+        <div class="card">
+          <div class="card-header">
+            <div class="row">
+              <div class="col">Last seen date</div>
+              <div class="col col-md-8">Summary</div>
+              <div class="col">Triggers</div>
+              <div class="col">Assigned to</div>
+              <div class="col">&amp;nbsp;</div>
+            </div>
+          </div>
+        </div>
+        <t t-foreach="build_errors" t-as="build_error">
+          <div class="card">
+            <div class="card-header">
+              <div class="row">
+                <div class="col"><t t-esc="build_error.last_seen_date" t-options='{"widget": "datetime"}'/></div>
+                <div class="col col-md-8">
+                  <button class="btn accordion-button collapsed" type="button" data-bs-toggle="collapse" t-attf-data-bs-target="#collapse{{build_error.id}}" aria-expanded="true" aria-controls="collapseOne">
+                    <code><t t-esc="build_error.name"/></code>
+                  </button>
+                </div>
+                <div class="col">
+                  <t t-foreach="build_error.trigger_ids" t-as="trigger">
+                    <span class="badge text-bg-pill text-bg-info small"><t t-esc="trigger.name"/></span>
+                  </t>
+                </div>
+                <div class="col">
+                  <t t-if="build_error.responsible" t-esc="build_error.responsible.name"/>
+                  <a t-else="" t-attf-href="/runbot/errors/assign/{{build_error.id}}" data-runbot="action" role="button" class="btn btn-primary btn-sm">Assign to me</a>
+                </div>
+                <div class="col">
+                  <a t-att-href="build_error.last_seen_build_id.build_url" t-attf-title="View last affected build ({{build_error.last_seen_build_id.id}})"><i class="fa fa-external-link"/></a>
+                  <a groups="base.group_user" t-attf-href="/web/#id={{build_error.id}}&amp;view_type=form&amp;model=runbot.build.error&amp;menu_id={{env['ir.model.data']._xmlid_to_res_id('runbot.runbot_menu_root')}}" target="new" title="View in Backend">
+                    <span class="badge text-bg-info" t-esc="build_error.build_count" t-attf-title="This error was seen {{build_error.build_count}} View in backend"/>
+                  </a>
+                  <span groups="!base.group_user" class="badge text-bg-info" t-esc="build_error.build_count" t-attf-title="This error was seen {{build_error.build_count}}"/>
+                  <span class="fa fa-random" t-if="build_error.random"/>
+                </div>
+              </div>
+            </div>
+
+            <div t-attf-id="collapse{{build_error.id}}" class="collapse" aria-labelledby="headingOne" t-attf-data-parent="#accordion_{{accordion_id}}">
+              <div class="card-body">
+                <pre class="pre-scrollable bg-danger-subtle"><t t-esc="build_error.content.strip()" /></pre>
+              </div>
+            </div>
+          </div>
+        </t>
+      </div>
+    </template>
+
+    <template id="runbot.build_error">
+      <t t-call='runbot.layout'>
+        <div class="container-fluid">
+          <div class="row">
+            <div class='col-md-12'>
+              <t t-if="page==1 and current_user_errors">
+                <h4>Your assigned build errors</h4>
+                <t t-call="runbot.build_error_cards">
+                  <t t-set="build_errors" t-value="current_user_errors"/>
+                  <t t-set="accordion_id">user_errors</t>
+                </t>
+              </t>
+              <t t-if="page==1 and current_team_errors">
+                <h4>Team unassigned build errors</h4>
+                <t t-call="runbot.build_error_cards">
+                  <t t-set="build_errors" t-value="current_team_errors"/>
+                  <t t-set="accordion_id">user_errors</t>
+                </t>
+              </t>
+              <t t-if="build_errors">
+                <nav class="navbar navbar-expand-lg navbar-light">
+                  <h4 class="d-inline"> All builds errors</h4>
+                    <span class="ms-auto">
+                      <span class="dropdown me-auto">
+                      <a role="button" href="#" class="dropdown-toggle btn btn-secondary" data-bs-toggle="dropdown">
+                        Sort By: <t t-esc="request.params.get('sort', '')"/>
+                      </a>
+                      <div class="dropdown-menu" aria-labelledby="sortMenuButton" role="menu">
+                        <t t-foreach="sort_order_choices" t-as="sort_choice">
+                          <a role="menuitem" class="dropdown-item" t-attf-href="/runbot/errors?sort={{sort_choice}}"><t t-esc="sort_order_choices[sort_choice]"/></a>
+                        </t>
+                      </div>
+                    </span>
+                  </span>
+                  <span class="ms-auto">
+                    <t t-call="website.pager" />
+                  </span>
+                </nav>
+
+                <t t-call="runbot.build_error_cards">
+                  <t t-set="build_errors" t-value="build_errors"/>
+                  <t t-set="accordion_id">all_errors</t>
+                </t>
+              </t>
+            </div>
+          </div>
+        </div>
+      </t>
+    </template>
+
+    <template id="runbot.team">
+      <t t-call='runbot.layout'>
+        <div class="container-fluid">
+          <div class="row">
+            <div t-if="team" class='col-md-12'>
+              <div class="col-lg-12 text-center mb16">
+                <h2>Team <t t-esc="team.name.capitalize()"/>
+                  <a groups="base.group_user" t-attf-href="/web/#id={{team.id}}&amp;view_type=form&amp;model=runbot.team&amp;menu_id={{env['ir.model.data']._xmlid_to_res_id('runbot.runbot_menu_root')}}" target="new" title="View in Backend">
+                    <i class="fa fa-list"/>
+                  </a>
+                </h2>
+              </div>
+              <div t-if="team.dashboard_id">
+                <h3 t-if="team.dashboard_id.dashboard_tile_ids">Dashboards</h3>
+                <t t-call="runbot.dashboard">
+                  <t t-set="dashboard" t-value="team.dashboard_id"/>
+                </t>
+              </div>
+              <div class="d-flex">
+                <h3 t-if="assignment_ids">Team assigned Errors</h3>
+                <t t-call="portal.portal_searchbar">
+                  <t t-set="classes" t-valuef="o_runbot_team_searchbar border-0"/>
+                  <t t-set="title">&amp;nbsp;</t>
+                </t>
+              </div>
+              <t t-call="runbot.build_error_cards">
+                <t t-set="build_errors" t-value="assignment_ids"/>
+                <t t-set="accordion_id">team_errors</t>
+              </t>
+            </div>
+            <!-- Display list of teams of no team is supplied -->
+            <div t-if="not team" class='col-md-12'>
+              <h3> Teams</h3>
+              <div class="row">
+                <div class="list-group list-group-horizontal">
+                  <t t-foreach="teams" t-as="team">
+                    <a t-attf-href="/runbot/teams/{{ team.id }}" class="list-group-item list-group-item-action"><t t-esc="team.name"/></a>
+                  </t>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </t>
+    </template>
+  </data>
+</odoo>

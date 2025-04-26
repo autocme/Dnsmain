@@ -1,0 +1,93 @@
+<odoo>
+    <record id="runbot_merge_form_project" model="ir.ui.view">
+        <field name="name">Project Form</field>
+        <field name="model">runbot_merge.project</field>
+        <field name="arch" type="xml">
+            <form>
+                <field name="freeze_id" invisible="1"/>
+                <header>
+                    <button type="object" name="action_prepare_freeze"
+                            string="Freeze"
+                            invisible="freeze_id"/>
+                    <button type="object" name="action_prepare_freeze"
+                            string="View Freeze" class="oe_highlight"
+                            invisible="not freeze_id"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Name"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="github_prefix" string="bot name"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group>
+                            <field name="github_token"/>
+                            <field name="github_name" readonly="0"
+                                   help="Identity when creating new commits, defaults to github name, falls back to login."/>
+                            <field name="github_email" readonly="0"
+                                   help="Identity when creating new commits, defaults to public email, falls back to primary email."/>
+                            <span invisible="not (staging_statuses and staging_rpc)" class="alert alert-warning" role="alert">
+                                Avoid overlaps between GH and RPC as the older
+                                GH statuses may overwrite more recent RPC statuses.
+                            </span>
+                            <field name="staging_statuses" string="Validate via GH statuses"/>
+                            <field name="staging_rpc" string="Validate via direct RPC"/>
+                        </group>
+                        <group>
+                            <field name="staging_enabled" widget="boolean_toggle"/>
+                            <field name="staging_priority"/>
+                            <field name="uniquifier"/>
+                            <field name="ci_timeout"/>
+                            <field name="batch_limit"/>
+                        </group>
+                    </group>
+
+                    <group class="oe_edit_only">
+                        <group colspan="4">
+                            <label for="freeze_reminder">
+                                Reminder to show after freeze
+                            </label>
+                            <field colspan="4" name="freeze_reminder" nolabel="1"/>
+                        </group>
+                    </group>
+
+                    <separator string="Repositories"/>
+                    <field name="repo_ids">
+                        <tree>
+                            <field name="sequence" widget="handle"/>
+                            <button type="object" name="get_formview_action" icon="fa-external-link" title="open repo"/>
+                            <field name="name"/>
+                            <field name="branch_filter"/>
+                            <field name="status_ids" widget="many2many_tags"/>
+                        </tree>
+                    </field>
+                    <separator string="Branches"/>
+                    <field name="branch_ids">
+                        <tree editable="bottom" decoration-muted="not active">
+                            <field name="sequence" widget="handle" />
+                            <button type="object" name="get_formview_action" icon="fa-external-link" title="open branch"/>
+                            <field name="name"/>
+                            <field name="active" widget="boolean_toggle" options="{'autosave': false}"/>
+                            <field name="staging_enabled" widget="boolean_toggle" options="{'autosave': false}"/>
+                        </tree>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="project_freeze_reminder" model="ir.ui.view">
+        <field name="name">Project Form</field>
+        <field name="model">runbot_merge.project</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <field name="freeze_reminder" nolabel="1" readonly="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

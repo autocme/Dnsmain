@@ -1,0 +1,85 @@
+$variable-prefix: '';
+// colors from the original mergebot
+$primary: #276e72;
+$secondary: #685563;
+$success: #28a745;
+$info: #17a2b8;
+$warning: #ffc107;
+$danger: #dc3545;
+$light: #f8f9fa;
+$dark: #212529;
+$theme-colors: (
+  "primary":    $primary,
+  "secondary":  $secondary,
+  "success":    $success,
+  "info":       $info,
+  "warning":    $warning,
+  "danger":     $danger,
+  "light":      $light,
+  "dark":       $dark,
+);
+// gray-700
+$body-color: #495057;
+// same as table-bg and alert-bg
+$bg-scale: -80%;
+
+$o-system-fonts: sans-serif;
+
+// mostly reverts a bunch of shit from the default odoo theming
+$o-community-color: $primary;
+$o-enterprise-color: $primary;
+
+$font-size-root:              null;
+$font-size-base:              0.875rem;
+$font-size-sm:                $font-size-base * .875;
+$font-size-lg:                $font-size-base * 1.25;
+
+$font-weight-lighter:         lighter;
+$font-weight-light:           300;
+$font-weight-normal:          400;
+$font-weight-bold:            500;
+$font-weight-bolder:          bolder;
+
+$font-weight-base:            $font-weight-normal;
+
+$line-height-base:            1.5;
+$line-height-sm:              1.25;
+$line-height-lg:              2;
+
+$h1-font-size:                $font-size-base * 2.5;
+$h2-font-size:                $font-size-base * 2;
+$h3-font-size:                $font-size-base * 1.75;
+$h4-font-size:                $font-size-base * 1.5;
+$h5-font-size:                $font-size-base;
+$h6-font-size:                $font-size-base;
+
+$border-radius: 0.25rem;
+
+// The builtins utilities-bg system is completely stupid because we do a bunch
+// of transformations on the theme-color, then we ignore them all because we
+// just reference the `--#{$category}-rgb` css variables.
+//
+// Update rgba-css-var to reference target-suffixed vars (e.g. -bg, -text) but
+// fallback to the un-suffixed vars if necessary.
+//
+// Affects utilities-text-color, which affects $utilities[color]([values]),
+//    which is then used to define the `.text-#{$category}` in
+//    boostrap/scss/mixin/_utilities.scss
+// note: can use (map|deep)-merge to update $utilities maybe?
+@function rgba-css-var($identifier, $target) {
+  @return rgba(
+    var(
+      --#{$variable-prefix}#{$identifier}-#{$target}-rgb,
+      var(--#{$variable-prefix}#{$identifier}-rgb)
+    ),
+    var(--#{$variable-prefix}#{$target}-opacity, 1)
+  );
+}
+$utilities-bg-colors: map-loop($theme-colors, rgba-css-var, "$key", "bg");
+// nuke text-emphasis-variant because it resets the text colors in
+//    bootstrap_review_frontend (though might not matter much...)
+@mixin text-emphasis-variant($parent, $color) {
+  #{$parent} {
+    --ignore: 1;
+  }
+}

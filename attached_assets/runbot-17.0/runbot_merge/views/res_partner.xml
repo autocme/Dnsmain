@@ -1,0 +1,101 @@
+<odoo>
+    <record id="runbot_merge_search_partner" model="ir.ui.view">
+        <field name="name">Improve search on partners</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+            <field name="name" position="attributes">
+                <attribute name="filter_domain">[
+                    '|', '|',
+                    ('name', 'ilike', self),
+                    ('github_login', 'ilike', self),
+                    ('email', 'ilike', self),
+                ]</attribute>
+            </field>
+        </field>
+    </record>
+
+    <record id="runbot_merge_tree_partner" model="ir.ui.view">
+        <field name="name">Configure partners list to be useful</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//tree" position="replace">
+                <tree string="Contacts">
+                    <field name="display_name" string="Name"/>
+                    <field name="github_login"/>
+                    <field name="review_rights" widget="many2many_tags"/>
+                    <field name="user_id" invisible="1"/>
+                </tree>
+            </xpath>
+        </field>
+    </record>
+    <record id="runbot_merge_form_partner" model="ir.ui.view">
+        <field name="name">Add mergebot/GH info to partners form</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="before">
+                <field name="github_login" invisible="1"/>
+                <field name="review_rights" invisible="1"/>
+                <header>
+                    <button type="object" name="fetch_github_email"
+                            string="Fetch Github Email" class="oe_highlight"
+                            invisible="email or not github_login"
+                    />
+                </header>
+                <div class="alert alert-warning" role="alert"
+                     invisible="email or not review_rights">
+                  Reviewers must have an email address set! Without an email
+                  configured, reviews will be ignored.
+                </div>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="Mergebot" groups="runbot_merge.group_admin">
+                    <field name="override_sensitive" invisible="1"/>
+                    <group>
+                        <group>
+                            <field name="github_login"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group colspan="4" string="Review Rights">
+                            <div colspan="2" class="alert alert-warning" role="alert" invisible="not review_rights">
+                                Review access requires successfully following
+                                the Code Review (QDP) and Security (DLE)
+                                trainings. Please check before giving r+ access.
+                            </div>
+                            <field colspan="2" name="review_rights" nolabel="1">
+                                <tree string="Review ACLs" editable="bottom">
+                                    <field name="repository_id"/>
+                                    <field name="review"/>
+                                    <field name="self_review"/>
+                                </tree>
+                            </field>
+                        </group>
+                        <group colspan="2">
+                            <div colspan="2" class="alert alert-danger" role="alert" invisible="not override_sensitive">
+                                Security Override <b>REQUIRES</b> successfully
+                                following the Security training. Please ask DLE
+                                before granting access.
+                            </div>
+                            <field colspan="2" name="override_rights" widget="many2many_tags"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group colspan="2" string="Delegate On">
+                            <field name="delegate_reviewer" nolabel="1" colspan="2">
+                                <tree>
+                                    <field name="repository"/>
+                                    <field name="number"/>
+                                    <field name="target"/>
+                                    <field name="state"/>
+                                </tree>
+                            </field>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
