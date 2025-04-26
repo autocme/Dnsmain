@@ -189,21 +189,7 @@
         </field>
     </record>
     
-    <!-- Pivot View -->
-    <record id="view_docker_volume_pivot" model="ir.ui.view">
-        <field name="name">docker.volume.pivot</field>
-        <field name="model">docker.volume</field>
-        <field name="arch" type="xml">
-            <pivot string="Volume Analysis">
-                <field name="server_id" type="row"/>
-                <field name="driver" type="row"/>
-                <field name="scope" type="col"/>
-                <field name="__count" type="measure"/>
-                <field name="used_by_container_count" type="measure"/>
-            </pivot>
-        </field>
-    </record>
-    
+
     <!-- Graph View -->
     <record id="view_docker_volume_graph" model="ir.ui.view">
         <field name="name">docker.volume.graph</field>
@@ -221,7 +207,7 @@
     <record id="action_docker_volume" model="ir.actions.act_window">
         <field name="name">Volumes</field>
         <field name="res_model">docker.volume</field>
-        <field name="view_mode">kanban,tree,form,pivot,graph</field>
+        <field name="view_mode">kanban,tree,form,graph</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 No volumes found

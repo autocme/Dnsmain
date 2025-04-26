@@ -119,19 +119,7 @@
         </field>
     </record>
     
-    <!-- Pivot View -->
-    <record id="view_docker_logs_pivot" model="ir.ui.view">
-        <field name="name">docker.logs.pivot</field>
-        <field name="model">docker.logs</field>
-        <field name="arch" type="xml">
-            <pivot string="Log Analysis">
-                <field name="server_id" type="row"/>
-                <field name="level" type="col"/>
-                <field name="__count__" type="measure"/>
-            </pivot>
-        </field>
-    </record>
-    
+
     <!-- Graph View -->
     <record id="view_docker_logs_graph" model="ir.ui.view">
         <field name="name">docker.logs.graph</field>
@@ -162,7 +150,7 @@
     <record id="action_docker_logs" model="ir.actions.act_window">
         <field name="name">Logs</field>
         <field name="res_model">docker.logs</field>
-        <field name="view_mode">tree,form,pivot,graph,calendar</field>
+        <field name="view_mode">tree,form,graph,calendar</field>
         <field name="context">{'search_default_today': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">

@@ -201,21 +201,7 @@
         </field>
     </record>
     
-    <!-- Pivot View -->
-    <record id="view_docker_network_pivot" model="ir.ui.view">
-        <field name="name">docker.network.pivot</field>
-        <field name="model">docker.network</field>
-        <field name="arch" type="xml">
-            <pivot string="Network Analysis">
-                <field name="server_id" type="row"/>
-                <field name="driver" type="row"/>
-                <field name="scope" type="col"/>
-                <field name="__count" type="measure"/>
-                <field name="connected_container_count" type="measure"/>
-            </pivot>
-        </field>
-    </record>
-    
+
     <!-- Graph View -->
     <record id="view_docker_network_graph" model="ir.ui.view">
         <field name="name">docker.network.graph</field>
@@ -233,7 +219,7 @@
     <record id="action_docker_network" model="ir.actions.act_window">
         <field name="name">Networks</field>
         <field name="res_model">docker.network</field>
-        <field name="view_mode">kanban,tree,form,pivot,graph</field>
+        <field name="view_mode">kanban,tree,form,graph</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 No networks found

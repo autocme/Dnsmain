@@ -282,23 +282,7 @@
         </field>
     </record>
     
-    <!-- Pivot View -->
-    <record id="view_docker_task_pivot" model="ir.ui.view">
-        <field name="name">docker.task.pivot</field>
-        <field name="model">docker.task</field>
-        <field name="arch" type="xml">
-            <pivot string="Task Analysis">
-                <field name="server_id" type="row"/>
-                <field name="task_type" type="row"/>
-                <field name="last_status" type="col"/>
-                <field name="__count__" type="measure"/>
-                <field name="success_count" type="measure"/>
-                <field name="failure_count" type="measure"/>
-                <field name="last_duration" type="measure"/>
-            </pivot>
-        </field>
-    </record>
-    
+
     <!-- Graph View -->
     <record id="view_docker_task_graph" model="ir.ui.view">
         <field name="name">docker.task.graph</field>
@@ -318,7 +302,7 @@
     <record id="action_docker_task" model="ir.actions.act_window">
         <field name="name">Tasks</field>
         <field name="res_model">docker.task</field>
-        <field name="view_mode">kanban,tree,form,calendar,pivot,graph</field>
+        <field name="view_mode">kanban,tree,form,calendar,graph</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 No tasks found
