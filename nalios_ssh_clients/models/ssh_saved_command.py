@@ -59,6 +59,12 @@ class SshSavedCommand(models.Model):
         
         # Execute the command on the SSH client
         return self.ssh_client_id.exec_command(self.command)
+        
+    def toggle_favorite(self):
+        """Toggle the favorite status of this command"""
+        self.ensure_one()
+        self.is_favorite = not self.is_favorite
+        return True
 
 class SshCommandTag(models.Model):
     _name = 'ssh.command.tag'
