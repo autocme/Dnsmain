@@ -33,7 +33,8 @@
             <form>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button name="action_view_related_entity" type="object" class="oe_stat_button" icon="fa-external-link" attrs="{'invisible': [('server_id', '=', False), ('container_id', '=', False), ('image_id', '=', False), ('network_id', '=', False), ('volume_id', '=', False), ('task_id', '=', False)]}">
+                        <button name="action_view_related_entity" type="object" class="oe_stat_button" icon="fa-external-link" 
+                               invisible="not server_id and not container_id and not image_id and not network_id and not volume_id and not task_id">
                             <div class="o_stat_info">
                                 <span class="o_stat_text">View</span>
                                 <span class="o_stat_text">Source</span>
@@ -59,11 +60,11 @@
                             <field name="server_id" readonly="1"/>
                         </group>
                         <group>
-                            <field name="container_id" readonly="1" attrs="{'invisible': [('container_id', '=', False)]}"/>
-                            <field name="image_id" readonly="1" attrs="{'invisible': [('image_id', '=', False)]}"/>
-                            <field name="network_id" readonly="1" attrs="{'invisible': [('network_id', '=', False)]}"/>
-                            <field name="volume_id" readonly="1" attrs="{'invisible': [('volume_id', '=', False)]}"/>
-                            <field name="task_id" readonly="1" attrs="{'invisible': [('task_id', '=', False)]}"/>
+                            <field name="container_id" readonly="1" invisible="not container_id"/>
+                            <field name="image_id" readonly="1" invisible="not image_id"/>
+                            <field name="network_id" readonly="1" invisible="not network_id"/>
+                            <field name="volume_id" readonly="1" invisible="not volume_id"/>
+                            <field name="task_id" readonly="1" invisible="not task_id"/>
                         </group>
                     </group>
                     <group string="Details">
