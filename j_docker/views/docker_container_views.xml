@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_docker_container_tree" model="ir.ui.view">
+        <field name="name">docker.container.tree</field>
+        <field name="model">docker.container</field>
+        <field name="arch" type="xml">
+            <tree decoration-success="status == 'running'" 
+                  decoration-warning="status == 'paused' or status == 'restarting'" 
+                  decoration-danger="status == 'dead'" 
+                  decoration-muted="status == 'exited'">
+                <field name="name"/>
+                <field name="docker_id"/>
+                <field name="image"/>
+                <field name="status"/>
+                <field name="status_text"/>
+                <field name="ports"/>
+                <field name="cpu_usage" widget="float_percentage"/>
+                <field name="memory_usage"/>
+                <field name="server_id"/>
+                <field name="ip_address"/>
+                <field name="created"/>
+                <field name="last_updated"/>
+            </tree>
+        </field>
+    </record>
+    
+    <!-- Form View -->
+    <record id="view_docker_container_form" model="ir.ui.view">
+        <field name="name">docker.container.form</field>
+        <field name="model">docker.container</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_start" string="Start" type="object" 
+                            attrs="{'invisible': [('status', 'in', ['running', 'paused'])]}" 
+                            class="btn-success"/>
+                    <button name="action_stop" string="Stop" type="object" 
+                            attrs="{'invisible': [('status', 'not in', ['running', 'paused'])]}" 
+                            class="btn-danger"/>
+                    <button name="action_restart" string="Restart" type="object" 
+                            attrs="{'invisible': [('status', 'not in', ['running', 'paused'])]}" 
+                            class="btn-warning"/>
+                    <button name="action_remove" string="Remove" type="object" 
+                            attrs="{'invisible': [('status', '=', 'running')]}" 
+                            class="btn-danger" 
+                            confirm="Are you sure you want to remove this container?"/>
+                    <button name="action_view_logs" string="Logs" type="object" class="btn-info"/>
+                    <button name="action_inspect" string="Inspect" type="object" class="btn-secondary"/>
+                    <button name="action_exec" string="Execute Command" type="object" class="btn-secondary"/>
+                    <button name="action_refresh" string="Refresh" type="object" class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_logs" type="object" class="oe_stat_button" icon="fa-list-alt">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Logs</span>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Container Name"/>
+                        </h1>
+                        <div>
+                            <field name="status" widget="badge" 
+                                   decoration-success="status == 'running'" 
+                                   decoration-warning="status == 'paused' or status == 'restarting'" 
+                                   decoration-danger="status == 'dead'" 
+                                   decoration-info="status == 'created'" 
+                                   decoration-secondary="status == 'exited' or status == 'unknown'"/>
+                        </div>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="server_id" options="{'no_create': True, 'no_open': False}"/>
+                            <field name="docker_id"/>
+                            <field name="image"/>
+                            <field name="created"/>
+                            <field name="status_text"/>
+                            <field name="ports"/>
+                            <field name="command"/>
+                        </group>
+                        <group>
+                            <field name="ip_address"/>
+                            <field name="restart_policy"/>
+                            <field name="cpu_usage" widget="float_percentage"/>
+                            <field name="memory_usage"/>
+                            <field name="memory_limit"/>
+                            <field name="last_updated"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Environment" name="environment">
+                            <field name="environment" widget="ace" options="{'mode': 'text'}" placeholder="No environment variables"/>
+                        </page>
+                        <page string="Volumes" name="volumes">
+                            <field name="volumes" widget="ace" options="{'mode': 'text'}" placeholder="No mounted volumes"/>
+                        </page>
+                        <page string="Networks" name="networks">
+                            <field name="networks" widget="ace" options="{'mode': 'text'}" placeholder="No networks"/>
+                        </page>
+                        <page string="Labels" name="labels">
+                            <field name="labels" widget="ace" options="{'mode': 'text'}" placeholder="No labels"/>
+                        </page>
+                        <page string="Notes" name="notes">
+                            <field name="notes" placeholder="Add your notes here..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Search View -->
+    <record id="view_docker_container_search" model="ir.ui.view">
+        <field name="name">docker.container.search</field>
+        <field name="model">docker.container</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="docker_id"/>
+                <field name="image"/>
+                <field name="server_id"/>
+                <separator/>
+                <filter string="Running" name="running" domain="[('status', '=', 'running')]"/>
+                <filter string="Paused" name="paused" domain="[('status', '=', 'paused')]"/>
+                <filter string="Exited" name="exited" domain="[('status', '=', 'exited')]"/>
+                <filter string="Created" name="created" domain="[('status', '=', 'created')]"/>
+                <separator/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Status" name="group_by_status" context="{'group_by': 'status'}"/>
+                    <filter string="Server" name="group_by_server" context="{'group_by': 'server_id'}"/>
+                    <filter string="Image" name="group_by_image" context="{'group_by': 'image'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    
+    <!-- Kanban View -->
+    <record id="view_docker_container_kanban" model="ir.ui.view">
+        <field name="name">docker.container.kanban</field>
+        <field name="model">docker.container</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile" default_group_by="status">
+                <field name="id"/>
+                <field name="name"/>
+                <field name="docker_id"/>
+                <field name="image"/>
+                <field name="status"/>
+                <field name="status_text"/>
+                <field name="ports"/>
+                <field name="server_id"/>
+                <field name="cpu_usage"/>
+                <field name="memory_usage"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_global_click o_kanban_record_has_image_fill">
+                            <div class="o_kanban_image_fill_left d-none d-md-block" 
+                                 t-attf-style="background-color: #{record.status.raw_value == 'running' ? '#28a745' : 
+                                                                  record.status.raw_value == 'paused' ? '#ffc107' : 
+                                                                  record.status.raw_value == 'dead' ? '#dc3545' : 
+                                                                  record.status.raw_value == 'exited' ? '#6c757d' : '#17a2b8'};"/>
+                            <div class="oe_kanban_details d-flex flex-column">
+                                <div class="o_kanban_record_top mb-0">
+                                    <div class="o_kanban_record_headings">
+                                        <strong class="o_kanban_record_title">
+                                            <field name="name"/>
+                                        </strong>
+                                        <span class="float-right">
+                                            <field name="status" widget="label_selection" 
+                                                   options="{'classes': {'running': 'success', 'paused': 'warning', 'dead': 'danger', 'exited': 'secondary', 'created': 'info', 'restarting': 'warning', 'unknown': 'secondary'}}"/>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_body">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>Image:</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            <span><t t-esc="record.image.value"/></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>Ports:</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            <span><t t-esc="record.ports.value || 'None'"/></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>Server:</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            <span><t t-esc="record.server_id.value[1]"/></span>
+                                        </div>
+                                    </div>
+                                    <div t-if="record.status.raw_value == 'running'" class="mt-2">
+                                        <div class="progress">
+                                            <div class="progress-bar bg-info" role="progressbar" t-attf-style="width: #{record.cpu_usage.value}%;" 
+                                                 t-attf-aria-valuenow="#{record.cpu_usage.value}" aria-valuemin="0" aria-valuemax="100" 
+                                                 t-attf-title="CPU: #{record.cpu_usage.value}%"></div>
+                                        </div>
+                                        <div class="progress mt-1">
+                                            <div class="progress-bar bg-primary" role="progressbar" t-attf-style="width: #{record.memory_usage.value/record.memory_limit.value*100}%;" 
+                                                 t-attf-aria-valuenow="#{record.memory_usage.value}" aria-valuemin="0" t-attf-aria-valuemax="#{record.memory_limit.value}" 
+                                                 t-attf-title="Memory: #{record.memory_usage.value} MB / #{record.memory_limit.value} MB"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_bottom">
+                                    <div class="oe_kanban_bottom_left">
+                                        <span><t t-esc="record.status_text.value"/></span>
+                                    </div>
+                                    <div class="oe_kanban_bottom_right">
+                                        <span class="oe_kanban_avatar">
+                                            <i class="fa fa-server" t-attf-style="color: #{record.status.raw_value == 'running' ? '#28a745' : '#6c757d'};"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+    
+    <!-- Calendar View -->
+    <record id="view_docker_container_calendar" model="ir.ui.view">
+        <field name="name">docker.container.calendar</field>
+        <field name="model">docker.container</field>
+        <field name="arch" type="xml">
+            <calendar string="Containers" date_start="created" color="status" mode="month">
+                <field name="name"/>
+                <field name="image"/>
+                <field name="status"/>
+                <field name="server_id"/>
+            </calendar>
+        </field>
+    </record>
+    
+    <!-- Pivot View -->
+    <record id="view_docker_container_pivot" model="ir.ui.view">
+        <field name="name">docker.container.pivot</field>
+        <field name="model">docker.container</field>
+        <field name="arch" type="xml">
+            <pivot string="Container Analysis">
+                <field name="server_id" type="row"/>
+                <field name="status" type="col"/>
+                <field name="__count" type="measure"/>
+                <field name="cpu_usage" type="measure"/>
+                <field name="memory_usage" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    
+    <!-- Graph View -->
+    <record id="view_docker_container_graph" model="ir.ui.view">
+        <field name="name">docker.container.graph</field>
+        <field name="model">docker.container</field>
+        <field name="arch" type="xml">
+            <graph string="Container Usage" type="bar">
+                <field name="server_id"/>
+                <field name="status"/>
+                <field name="cpu_usage" type="measure"/>
+                <field name="memory_usage" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    
+    <!-- Action Window for All Containers -->
+    <record id="action_docker_container" model="ir.actions.act_window">
+        <field name="name">Containers</field>
+        <field name="res_model">docker.container</field>
+        <field name="view_mode">kanban,tree,form,pivot,graph,calendar</field>
+        <field name="context">{'search_default_running': 0}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No containers found
+            </p>
+            <p>
+                Create or scan for Docker containers on your servers.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Action Window for Running Containers -->
+    <record id="action_docker_container_running" model="ir.actions.act_window">
+        <field name="name">Running Containers</field>
+        <field name="res_model">docker.container</field>
+        <field name="view_mode">kanban,tree,form,pivot,graph,calendar</field>
+        <field name="domain">[('status', '=', 'running')]</field>
+        <field name="context">{'search_default_running': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No running containers found
+            </p>
+            <p>
+                Start containers or scan your Docker servers to find running containers.
+            </p>
+        </field>
+    </record>
+</odoo>

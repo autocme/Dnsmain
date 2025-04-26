@@ -433,19 +433,156 @@ class SshClient(models.Model):
         
     def _highlight_file_listing(self, html_output):
         """Add highlighting for file listings (ls command output)"""
-        # This would require more complex DOM manipulation that's better done in JS
-        # Just add a marker class for the frontend to handle
-        return html_output.replace(
+        import re
+        
+        # First add the marker class
+        html_output = html_output.replace(
             '<pre class="ansi2html-content">',
             '<pre class="ansi2html-content file-listing-output">'
         )
         
+        # Look for common file listing patterns and add highlighting spans
+        # This works both for standard HTML output and ANSI converted output
+        
+        # Function to wrap a matched pattern with a span class
+        def highlight_match(match, css_class):
+            return f'<span class="{css_class}">{match}</span>'
+        
+        # Apply regex patterns - these can handle both detailed and simple listings
+        
+        # 1. Directory names (either full "drwx..." entries or names ending with '/')
+        html_output = re.sub(
+            r'(d[-rwx]{9}.*?\s+\d+\s+\w+\s+\w+\s+\d+\s+\w+\s+\d+\s+[\d:]+\s+)(\S+)', 
+            r'\1<span class="directory">\2</span>', 
+            html_output
+        )
+        html_output = re.sub(r'(\s|^)(\S+/)(\s|$)', r'\1<span class="directory">\2</span>\3', html_output)
+        
+        # 2. Executable files (either full "-rwx..." entries or names ending with '*')
+        html_output = re.sub(
+            r'(-[-r][-w][-x].*?x.*?\s+\d+\s+\w+\s+\w+\s+\d+\s+\w+\s+\d+\s+[\d:]+\s+)(\S+)', 
+            r'\1<span class="executable">\2</span>', 
+            html_output
+        )
+        html_output = re.sub(r'(\s|^)(\S+\*)(\s|$)', r'\1<span class="executable">\2</span>\3', html_output)
+        
+        # 3. Symlinks (either full "l..." entries or 'name -> target' pattern)
+        html_output = re.sub(
+            r'(l[-rwx]{9}.*?\s+\d+\s+\w+\s+\w+\s+\d+\s+\w+\s+\d+\s+[\d:]+\s+)(\S+)(\s+->\s+)(\S+)', 
+            r'\1<span class="symlink">\2\3\4</span>', 
+            html_output
+        )
+        html_output = re.sub(r'(\S+)(\s+->\s+)(\S+)', r'<span class="symlink">\1\2\3</span>', html_output)
+        
+        # 4. Hidden files (starting with .)
+        html_output = re.sub(r'(\s|^)(\.(?!\.\.)\S+)(\s|$)', r'\1<span class="hidden-file">\2</span>\3', html_output)
+        
+        # 5. Image files
+        image_extensions = r'\.(?:jpg|jpeg|png|gif|svg|webp|bmp|ico|tiff)'
+        html_output = re.sub(
+            fr'(\s|^)(\S+{image_extensions})(\s|$)', 
+            r'\1<span class="image-file">\2</span>\3', 
+            html_output, 
+            flags=re.IGNORECASE
+        )
+        
+        # 6. Archive files
+        archive_extensions = r'\.(?:zip|tar|gz|bz2|xz|rar|7z)'
+        html_output = re.sub(
+            fr'(\s|^)(\S+{archive_extensions})(\s|$)', 
+            r'\1<span class="archive-file">\2</span>\3', 
+            html_output, 
+            flags=re.IGNORECASE
+        )
+        
+        # 7. AWS-specific files/directories (for AWS integration)
+        aws_patterns = [r'\.aws', r'aws-config', r'credentials', r'aws-cli']
+        for pattern in aws_patterns:
+            html_output = re.sub(
+                fr'(\s|^)({pattern}\S*)(\s|$)', 
+                r'\1<span class="aws-resource">\2</span>\3', 
+                html_output, 
+                flags=re.IGNORECASE
+            )
+        
+        return html_output
+        
     def _highlight_cloud_tool_output(self, html_output, tool):
         """Add highlighting for cloud tool outputs"""
-        return html_output.replace(
+        import re
+        
+        # First add the marker class
+        html_output = html_output.replace(
             '<pre class="ansi2html-content">',
             f'<pre class="ansi2html-content cloud-tool-output {tool}-output">'
         )
+        
+        # Different highlighting based on which cloud tool is being used
+        if tool == 'aws':
+            # AWS resource identifiers (i-*, ami-*, vol-*, etc.)
+            patterns = [
+                # EC2 instances
+                r'(i-[a-f0-9]{8,17})([^\w]|$)',
+                # AMIs
+                r'(ami-[a-f0-9]{8,17})([^\w]|$)',
+                # EBS volumes
+                r'(vol-[a-f0-9]{8,17})([^\w]|$)',
+                # Security groups
+                r'(sg-[a-f0-9]{8,17})([^\w]|$)',
+                # S3 buckets
+                r'(s3://[a-z0-9][-a-z0-9\.]*[a-z0-9])(/[^\\s]*)?([^\w]|$)',
+                # ARNs
+                r'(arn:aws:[a-z0-9\-]*:[a-z0-9\-]*:[0-9]{12}:[a-zA-Z0-9\-\*\/]+)([^\w]|$)',
+            ]
+            
+            for pattern in patterns:
+                html_output = re.sub(pattern, r'<span class="aws-resource">\1</span>\2', html_output)
+            
+            # AWS regions
+            region_pattern = r'([^\w]|^)(us-east-1|us-east-2|us-west-1|us-west-2|eu-west-1|eu-west-2|eu-central-1|ap-northeast-1|ap-northeast-2|ap-southeast-1|ap-southeast-2|sa-east-1)([^\w]|$)'
+            html_output = re.sub(region_pattern, r'\1<span class="aws-region">\2</span>\3', html_output)
+            
+            # AWS service names
+            service_pattern = r'([^\w]|^)(ec2|s3|route53|cloudfront|rds|dynamodb|lambda|iam|vpc)([^\w-]|$)'
+            html_output = re.sub(service_pattern, r'\1<span class="aws-service">\2</span>\3', html_output, flags=re.IGNORECASE)
+            
+            # AWS status indicators
+            status_patterns = {
+                'running': 'aws-status-running',
+                'available': 'aws-status-running', 
+                'active': 'aws-status-running',
+                'stopped': 'aws-status-stopped',
+                'stopping': 'aws-status-warning',
+                'pending': 'aws-status-pending',
+                'terminated': 'aws-status-terminated',
+                'shutting-down': 'aws-status-terminated',
+                'error': 'aws-status-error'
+            }
+            
+            for status, css_class in status_patterns.items():
+                pattern = fr'([^\w]|^)({status})([^\w-]|$)'
+                html_output = re.sub(pattern, fr'\1<span class="{css_class}">\2</span>\3', html_output, flags=re.IGNORECASE)
+                
+        elif tool == 'docker':
+            # Docker container IDs
+            html_output = re.sub(r'([a-f0-9]{12})([^\w]|$)', r'<span class="docker-container">\1</span>\2', html_output)
+            
+            # Docker image names
+            html_output = re.sub(r'([a-z0-9]+/[a-z0-9\-\_\.]+(?::[a-z0-9\.\-\_]+)?)', r'<span class="docker-image">\1</span>', html_output, flags=re.IGNORECASE)
+            
+            # Docker status indicators
+            status_patterns = {
+                'running': 'status-running',
+                'created': 'status-created',
+                'exited': 'status-exited',
+                'up': 'status-up'
+            }
+            
+            for status, css_class in status_patterns.items():
+                pattern = fr'([^\w]|^)({status})([^\w-]|$)'
+                html_output = re.sub(pattern, fr'\1<span class="{css_class}">\2</span>\3', html_output, flags=re.IGNORECASE)
+        
+        return html_output
 
     def test_connection(self):
         """
@@ -463,6 +600,66 @@ class SshClient(models.Model):
         self.ensure_one()
         return self.name
         
+    def create_temp_key_file(self):
+        """
+        Creates a temporary file with the private key for use with WebSSH
+        
+        Returns:
+            str: Path to the temporary key file
+        """
+        self.ensure_one()
+        
+        if not self.private_key:
+            return None
+            
+        try:
+            # Decode the private key
+            private_key_string = b64.decodebytes(self.private_key).decode('utf-8')
+            
+            # Check if the key is in PPK format and convert it if auto-convert is enabled
+            if self.auto_convert_ppk and is_ppk_format(private_key_string):
+                _logger.info("Auto-convert PPK enabled: Converting PPK to PEM format for temp file")
+                converted_key = convert_ppk_to_pem(private_key_string, passphrase=self.private_key_password)
+                if converted_key:
+                    _logger.info("PPK to PEM conversion successful for temp file")
+                    private_key_string = converted_key
+                else:
+                    _logger.warning("PPK to PEM conversion failed, using original key for temp file")
+            
+            # Create a temporary file
+            import tempfile
+            import os
+            
+            # Create a temporary file with the right permissions
+            fd, path = tempfile.mkstemp()
+            os.write(fd, private_key_string.encode())
+            os.close(fd)
+            
+            # Set the right permissions (0600 = read/write only for owner)
+            os.chmod(path, 0o600)
+            
+            return path
+        except Exception as e:
+            _logger.error(f"Error creating temporary key file: {e}")
+            raise UserError(_(f"Failed to create temporary key file: {e}"))
+            
+    def get_webssh_connection(self):
+        """
+        Get connection details for WebSSH integration
+        
+        Returns:
+            dict: Connection details for WebSSH
+        """
+        self.ensure_one()
+        
+        return {
+            'host': self.host,
+            'port': self.port,
+            'username': self.user,
+            'auth_method': self.auth_method,
+            'client_id': self.id,
+            'client_name': self.name
+        }
     def get_connection_details(self):
         """Get connection details for display in the UI"""
         self.ensure_one()

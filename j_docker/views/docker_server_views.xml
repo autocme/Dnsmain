@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_docker_server_tree" model="ir.ui.view">
+        <field name="name">docker.server.tree</field>
+        <field name="model">docker.server</field>
+        <field name="arch" type="xml">
+            <tree decoration-success="server_status == 'online'" decoration-danger="server_status == 'offline'" decoration-warning="server_status == 'error'" decoration-muted="server_status == 'unknown'">
+                <field name="name"/>
+                <field name="server_status"/>
+                <field name="docker_version"/>
+                <field name="cpu_usage" widget="percentage"/>
+                <field name="memory_usage" widget="percentage"/>
+                <field name="disk_usage" widget="percentage"/>
+                <field name="running_container_count"/>
+                <field name="container_count"/>
+                <field name="image_count"/>
+                <field name="last_check"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </tree>
+        </field>
+    </record>
+    
+    <!-- Form View -->
+    <record id="view_docker_server_form" model="ir.ui.view">
+        <field name="name">docker.server.form</field>
+        <field name="model">docker.server</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_check_connection" string="Check Connection" type="object" class="btn-primary"/>
+                    <button name="action_refresh_server_info" string="Refresh Info" type="object"/>
+                    <button name="action_scan_all" string="Scan All Resources" type="object"/>
+                    <button name="action_execute_command" string="Execute Command" type="object"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_containers" type="object" class="oe_stat_button" icon="fa-cubes">
+                            <div class="o_stat_info">
+                                <field name="running_container_count" class="o_stat_value"/>
+                                <span class="o_stat_text">Running</span>
+                            </div>
+                        </button>
+                        <button name="action_view_containers" type="object" class="oe_stat_button" icon="fa-cube">
+                            <div class="o_stat_info">
+                                <field name="container_count" class="o_stat_value"/>
+                                <span class="o_stat_text">Containers</span>
+                            </div>
+                        </button>
+                        <button name="action_view_images" type="object" class="oe_stat_button" icon="fa-file-image-o">
+                            <div class="o_stat_info">
+                                <field name="image_count" class="o_stat_value"/>
+                                <span class="o_stat_text">Images</span>
+                            </div>
+                        </button>
+                        <button name="action_view_networks" type="object" class="oe_stat_button" icon="fa-sitemap">
+                            <div class="o_stat_info">
+                                <field name="network_count" class="o_stat_value"/>
+                                <span class="o_stat_text">Networks</span>
+                            </div>
+                        </button>
+                        <button name="action_view_volumes" type="object" class="oe_stat_button" icon="fa-hdd-o">
+                            <div class="o_stat_info">
+                                <field name="volume_count" class="o_stat_value"/>
+                                <span class="o_stat_text">Volumes</span>
+                            </div>
+                        </button>
+                        <button name="action_view_tasks" type="object" class="oe_stat_button" icon="fa-tasks">
+                            <span class="o_stat_text">Tasks</span>
+                        </button>
+                        <button name="action_view_logs" type="object" class="oe_stat_button" icon="fa-list">
+                            <span class="o_stat_text">Logs</span>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Server Name"/>
+                        </h1>
+                        <div>
+                            <field name="server_status" widget="badge" decoration-info="server_status == 'unknown'" decoration-success="server_status == 'online'" decoration-danger="server_status == 'offline'" decoration-warning="server_status == 'error'"/>
+                        </div>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="ssh_client_id"/>
+                            <field name="docker_host"/>
+                            <field name="docker_api_version"/>
+                            <field name="docker_version"/>
+                            <field name="os_info"/>
+                        </group>
+                        <group>
+                            <field name="docker_cert_path" attrs="{'invisible': [('tls_verify', '=', False)]}"/>
+                            <field name="tls_verify"/>
+                            <field name="timeout"/>
+                            <field name="retries"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Resource Usage" name="resource_usage">
+                            <group>
+                                <group string="CPU Usage">
+                                    <field name="cpu_usage" widget="percentage"/>
+                                    <widget name="web_google_charts.google_chart" 
+                                            title="CPU Usage Over Time"
+                                            type="gauge"
+                                            dynamic_value="cpu_usage"
+                                            field_value="cpu_usage"
+                                            max_value="100" 
+                                            min_value="0"/>
+                                </group>
+                                <group string="Memory Usage">
+                                    <field name="memory_usage" widget="percentage"/>
+                                    <widget name="web_google_charts.google_chart" 
+                                            title="Memory Usage Over Time"
+                                            type="gauge"
+                                            dynamic_value="memory_usage"
+                                            field_value="memory_usage"
+                                            max_value="100" 
+                                            min_value="0"/>
+                                </group>
+                                <group string="Disk Usage">
+                                    <field name="disk_usage" widget="percentage"/>
+                                    <widget name="web_google_charts.google_chart" 
+                                            title="Disk Usage Over Time"
+                                            type="gauge"
+                                            dynamic_value="disk_usage"
+                                            field_value="disk_usage"
+                                            max_value="100" 
+                                            min_value="0"/>
+                                </group>
+                            </group>
+                            <group string="System Information">
+                                <field name="docker_api_info" widget="ace" options="{'mode': 'json'}"/>
+                            </group>
+                        </page>
+                        <page string="Notes" name="notes">
+                            <field name="notes" placeholder="Add your notes here..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Search View -->
+    <record id="view_docker_server_search" model="ir.ui.view">
+        <field name="name">docker.server.search</field>
+        <field name="model">docker.server</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="docker_host"/>
+                <field name="docker_version"/>
+                <field name="ssh_client_id"/>
+                <separator/>
+                <filter string="Online" name="online" domain="[('server_status', '=', 'online')]"/>
+                <filter string="Offline" name="offline" domain="[('server_status', '=', 'offline')]"/>
+                <filter string="Error" name="error" domain="[('server_status', '=', 'error')]"/>
+                <filter string="Unknown" name="unknown" domain="[('server_status', '=', 'unknown')]"/>
+                <separator/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Status" name="group_by_status" context="{'group_by': 'server_status'}"/>
+                    <filter string="Company" name="group_by_company" context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    
+    <!-- Kanban View -->
+    <record id="view_docker_server_kanban" model="ir.ui.view">
+        <field name="name">docker.server.kanban</field>
+        <field name="model">docker.server</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile">
+                <field name="id"/>
+                <field name="name"/>
+                <field name="server_status"/>
+                <field name="docker_version"/>
+                <field name="cpu_usage"/>
+                <field name="memory_usage"/>
+                <field name="disk_usage"/>
+                <field name="running_container_count"/>
+                <field name="container_count"/>
+                <field name="image_count"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_global_click o_kanban_record_has_image_fill">
+                            <div class="o_kanban_image_fill_left d-none d-md-block" 
+                                 t-attf-style="background-color: #{server_status == 'online' ? '#28a745' : server_status == 'offline' ? '#dc3545' : server_status == 'error' ? '#ffc107' : '#6c757d'};"/>
+                            <div class="oe_kanban_details d-flex flex-column">
+                                <div class="o_kanban_record_top mb-0">
+                                    <div class="o_kanban_record_headings">
+                                        <strong class="o_kanban_record_title">
+                                            <field name="name"/>
+                                        </strong>
+                                        <span class="float-right">
+                                            <field name="server_status" widget="label_selection" 
+                                                   options="{'classes': {'online': 'success', 'offline': 'danger', 'error': 'warning', 'unknown': 'secondary'}}"/>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_body">
+                                    <div class="row">
+                                        <div class="col-4">
+                                            <span class="o_value"><t t-esc="record.docker_version.value"/></span>
+                                            <div>Version</div>
+                                        </div>
+                                        <div class="col-4">
+                                            <span class="o_value"><t t-esc="record.running_container_count.value"/> / <t t-esc="record.container_count.value"/></span>
+                                            <div>Containers</div>
+                                        </div>
+                                        <div class="col-4">
+                                            <span class="o_value"><t t-esc="record.image_count.value"/></span>
+                                            <div>Images</div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <div class="progress">
+                                            <div class="progress-bar bg-info" role="progressbar" t-attf-style="width: #{record.cpu_usage.value}%;" 
+                                                 t-attf-aria-valuenow="#{record.cpu_usage.value}" aria-valuemin="0" aria-valuemax="100" 
+                                                 t-attf-title="CPU: #{record.cpu_usage.value}%"></div>
+                                        </div>
+                                        <div class="progress mt-1">
+                                            <div class="progress-bar bg-primary" role="progressbar" t-attf-style="width: #{record.memory_usage.value}%;" 
+                                                 t-attf-aria-valuenow="#{record.memory_usage.value}" aria-valuemin="0" aria-valuemax="100" 
+                                                 t-attf-title="Memory: #{record.memory_usage.value}%"></div>
+                                        </div>
+                                        <div class="progress mt-1">
+                                            <div class="progress-bar bg-warning" role="progressbar" t-attf-style="width: #{record.disk_usage.value}%;" 
+                                                 t-attf-aria-valuenow="#{record.disk_usage.value}" aria-valuemin="0" aria-valuemax="100" 
+                                                 t-attf-title="Disk: #{record.disk_usage.value}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+    
+    <!-- Calendar View -->
+    <record id="view_docker_server_calendar" model="ir.ui.view">
+        <field name="name">docker.server.calendar</field>
+        <field name="model">docker.server</field>
+        <field name="arch" type="xml">
+            <calendar string="Servers" date_start="last_check" color="server_status" mode="month">
+                <field name="name"/>
+                <field name="server_status"/>
+                <field name="docker_version"/>
+            </calendar>
+        </field>
+    </record>
+    
+    <!-- Pivot View -->
+    <record id="view_docker_server_pivot" model="ir.ui.view">
+        <field name="name">docker.server.pivot</field>
+        <field name="model">docker.server</field>
+        <field name="arch" type="xml">
+            <pivot string="Server Analysis">
+                <field name="server_status" type="row"/>
+                <field name="container_count" type="measure"/>
+                <field name="running_container_count" type="measure"/>
+                <field name="image_count" type="measure"/>
+                <field name="cpu_usage" type="measure"/>
+                <field name="memory_usage" type="measure"/>
+                <field name="disk_usage" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    
+    <!-- Graph View -->
+    <record id="view_docker_server_graph" model="ir.ui.view">
+        <field name="name">docker.server.graph</field>
+        <field name="model">docker.server</field>
+        <field name="arch" type="xml">
+            <graph string="Server Usage" type="bar">
+                <field name="name"/>
+                <field name="cpu_usage" type="measure"/>
+                <field name="memory_usage" type="measure"/>
+                <field name="disk_usage" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    
+    <!-- Action Window -->
+    <record id="action_docker_server" model="ir.actions.act_window">
+        <field name="name">Docker Servers</field>
+        <field name="res_model">docker.server</field>
+        <field name="view_mode">kanban,tree,form,pivot,graph,calendar</field>
+        <field name="context">{'search_default_online': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Add a Docker Server
+            </p>
+            <p>
+                Configure Docker servers to manage containers, images, and more.
+            </p>
+        </field>
+    </record>
+</odoo>

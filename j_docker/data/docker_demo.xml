@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Sample Docker Tasks - Basic commands -->
+        <record id="demo_docker_task_list_containers" model="docker.task">
+            <field name="name">List Running Containers</field>
+            <field name="task_type">docker_command</field>
+            <field name="command">docker ps</field>
+            <field name="description">List all running containers on the server</field>
+            <field name="schedule_type">manual</field>
+            <field name="timeout">30</field>
+            <field name="fail_action">stop</field>
+        </record>
+        
+        <record id="demo_docker_task_list_all_containers" model="docker.task">
+            <field name="name">List All Containers</field>
+            <field name="task_type">docker_command</field>
+            <field name="command">docker ps -a</field>
+            <field name="description">List all containers on the server, including stopped ones</field>
+            <field name="schedule_type">manual</field>
+            <field name="timeout">30</field>
+            <field name="fail_action">stop</field>
+        </record>
+        
+        <record id="demo_docker_task_list_images" model="docker.task">
+            <field name="name">List Images</field>
+            <field name="task_type">docker_command</field>
+            <field name="command">docker images</field>
+            <field name="description">List all images on the server</field>
+            <field name="schedule_type">manual</field>
+            <field name="timeout">30</field>
+            <field name="fail_action">stop</field>
+        </record>
+        
+        <record id="demo_docker_task_disk_space" model="docker.task">
+            <field name="name">Check Disk Space</field>
+            <field name="task_type">system_command</field>
+            <field name="command">df -h</field>
+            <field name="description">Check disk space usage on the server</field>
+            <field name="schedule_type">manual</field>
+            <field name="timeout">30</field>
+            <field name="fail_action">stop</field>
+        </record>
+        
+        <record id="demo_docker_task_docker_info" model="docker.task">
+            <field name="name">Docker System Info</field>
+            <field name="task_type">docker_command</field>
+            <field name="command">docker info</field>
+            <field name="description">Show Docker system information</field>
+            <field name="schedule_type">manual</field>
+            <field name="timeout">30</field>
+            <field name="fail_action">stop</field>
+        </record>
+        
+        <record id="demo_docker_task_prune_volumes" model="docker.task">
+            <field name="name">Prune Volumes</field>
+            <field name="task_type">prune_action</field>
+            <field name="command">docker volume prune -f</field>
+            <field name="description">Remove all unused volumes</field>
+            <field name="schedule_type">manual</field>
+            <field name="timeout">60</field>
+            <field name="fail_action">stop</field>
+        </record>
+        
+        <record id="demo_docker_task_prune_system" model="docker.task">
+            <field name="name">Prune System</field>
+            <field name="task_type">prune_action</field>
+            <field name="command">docker system prune -f</field>
+            <field name="description">Remove all unused data</field>
+            <field name="schedule_type">manual</field>
+            <field name="timeout">120</field>
+            <field name="fail_action">stop</field>
+        </record>
+        
+        <!-- Sample scheduled tasks -->
+        <record id="demo_docker_task_daily_cleanup" model="docker.task">
+            <field name="name">Daily Cleanup</field>
+            <field name="task_type">prune_action</field>
+            <field name="command">docker system prune -f</field>
+            <field name="description">Remove unused containers, networks, and images daily</field>
+            <field name="schedule_type">cron</field>
+            <field name="cron_expr">0 2 * * *</field>
+            <field name="timeout">300</field>
+            <field name="fail_action">stop</field>
+        </record>
+        
+        <record id="demo_docker_task_check_containers" model="docker.task">
+            <field name="name">Daily Container Check</field>
+            <field name="task_type">docker_command</field>
+            <field name="command">docker ps --filter "status=exited"</field>
+            <field name="description">Check for exited containers daily</field>
+            <field name="schedule_type">cron</field>
+            <field name="cron_expr">0 9 * * *</field>
+            <field name="timeout">60</field>
+            <field name="fail_action">stop</field>
+        </record>
+    </data>
+</odoo>

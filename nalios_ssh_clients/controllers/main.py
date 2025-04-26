@@ -1,15 +1,33 @@
 import json
 import logging
 import base64
-from datetime import datetime, timedelta
+import threading
+import time
+import uuid
 import os
 import tempfile
+from datetime import datetime, timedelta
+from werkzeug.exceptions import NotFound
 
 from odoo import http
 from odoo.http import request, Response
 from odoo.exceptions import AccessError, UserError
 
+# Try to import geventwebsocket
+try:
+    from geventwebsocket import WebSocketError
+    from geventwebsocket.handler import WebSocketHandler
+    _HAS_WEBSOCKET = True
+except ImportError:
+    _HAS_WEBSOCKET = False
+    _logger = logging.getLogger(__name__)
+    _logger.warning("WebSocket support is not available. Please install gevent-websocket.")
+
 _logger = logging.getLogger(__name__)
+
+# WebSocket sessions storage
+WEBSOCKET_SESSIONS = {}
+LOCKS = {}
 
 class WebSSHController(http.Controller):
     """Controller for WebSSH integration"""
@@ -184,4 +202,148 @@ class WebSSHController(http.Controller):
             
         except Exception as e:
             _logger.error(f"WebSSH command execution error: {e}")
+            return {'error': str(e)}
+            
+    @http.route('/webssh/socket/<string:session_id>', type='http', auth='user')
+    def webssh_socket(self, session_id, **kw):
+        """WebSocket endpoint for SSH terminal interactions"""
+        if not _HAS_WEBSOCKET:
+            return Response("WebSocket support is not available", status=501)
+            
+        wsock = request.httprequest.environ.get('wsgi.websocket')
+        if not wsock:
+            return Response("Expected WebSocket request", status=400)
+            
+        try:
+            # Get session data from the session ID
+            if session_id not in WEBSOCKET_SESSIONS:
+                wsock.send(json.dumps({'error': 'Invalid session ID'}))
+                wsock.close()
+                return Response("Invalid session ID", status=404)
+            
+            # Get session data
+            session_data = WEBSOCKET_SESSIONS.get(session_id)
+            client_id = session_data.get('client_id')
+            
+            # Create a lock for this session if it doesn't exist
+            if session_id not in LOCKS:
+                LOCKS[session_id] = threading.Lock()
+            
+            # Get SSH client connection
+            ssh_client = request.env['ssh.client'].browse(int(client_id))
+            if not ssh_client.exists():
+                wsock.send(json.dumps({'error': 'SSH client not found'}))
+                wsock.close()
+                return Response("SSH client not found", status=404)
+            
+            # Send initial connection success message
+            wsock.send(json.dumps({
+                'status': 'connected',
+                'message': f'Connected to {ssh_client.hostname}'
+            }))
+            
+            # Main WebSocket loop
+            while True:
+                try:
+                    # Wait for message from client
+                    message = wsock.receive()
+                    if message is None:
+                        break  # Client closed connection
+                    
+                    # Parse message
+                    data = json.loads(message)
+                    msg_type = data.get('type')
+                    
+                    if msg_type == 'ping':
+                        # Respond to ping with pong
+                        wsock.send(json.dumps({'type': 'pong'}))
+                        
+                    elif msg_type == 'command':
+                        # Execute command
+                        command = data.get('data', '')
+                        
+                        # Execute command with lock to prevent concurrent execution
+                        with LOCKS[session_id]:
+                            output = ssh_client.exec_command(command)
+                            
+                        # Send command output back to client
+                        wsock.send(json.dumps({
+                            'type': 'output',
+                            'data': output
+                        }))
+                        
+                    elif msg_type == 'disconnect':
+                        # Client is disconnecting - break the loop
+                        _logger.info(f"Client requested disconnect for session {session_id}")
+                        
+                        # Send acknowledgment back
+                        wsock.send(json.dumps({
+                            'type': 'info',
+                            'message': 'Disconnected from server'
+                        }))
+                        
+                        # Break out of the loop to close the connection
+                        break
+                    
+                except WebSocketError:
+                    break  # Socket closed or errored
+                except Exception as e:
+                    _logger.error(f"WebSocket error: {e}")
+                    wsock.send(json.dumps({
+                        'type': 'error',
+                        'error': str(e)
+                    }))
+                    break
+            
+            # Clean up
+            try:
+                # Clean up the SSH connection by calling disconnect
+                if ssh_client and session_id in WEBSOCKET_SESSIONS:
+                    ssh_client.disconnect_client()
+                    _logger.info(f"SSH client {client_id} disconnected")
+            except Exception as e:
+                _logger.error(f"Error disconnecting SSH client: {e}")
+                
+            # Remove session data
+            if session_id in LOCKS:
+                del LOCKS[session_id]
+            if session_id in WEBSOCKET_SESSIONS:
+                del WEBSOCKET_SESSIONS[session_id]
+                
+            return Response("WebSocket closed", status=200)
+            
+        except Exception as e:
+            _logger.error(f"WebSocket handler error: {e}")
+            return Response(f"WebSocket error: {str(e)}", status=500)
+    
+    @http.route('/webssh/ws_initialize', type='json', auth='user')
+    def webssh_initialize(self, client_id=None):
+        """Initialize a WebSocket session and return session ID"""
+        if not client_id:
+            return {'error': 'No client ID provided'}
+        
+        try:
+            # Validate the client exists
+            ssh_client = request.env['ssh.client'].browse(int(client_id))
+            if not ssh_client.exists():
+                return {'error': 'SSH client not found'}
+                
+            # Generate a unique session ID
+            session_id = str(uuid.uuid4())
+            
+            # Store session data
+            WEBSOCKET_SESSIONS[session_id] = {
+                'client_id': client_id,
+                'user_id': request.env.user.id,
+                'created_at': datetime.now().isoformat()
+            }
+            
+            # Return session ID to the client
+            return {
+                'success': True,
+                'session_id': session_id
+            }
+            
+        except Exception as e:
+            _logger.error(f"WebSocket initialization error: {e}")
             return {'error': str(e)}

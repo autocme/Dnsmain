@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_docker_logs_tree" model="ir.ui.view">
+        <field name="name">docker.logs.tree</field>
+        <field name="model">docker.logs</field>
+        <field name="arch" type="xml">
+            <tree decoration-info="level == 'info'" 
+                  decoration-warning="level == 'warning'" 
+                  decoration-danger="level == 'error'"
+                  decoration-muted="level == 'debug'"
+                  default_order="create_date desc">
+                <field name="create_date"/>
+                <field name="name"/>
+                <field name="level"/>
+                <field name="user_id"/>
+                <field name="server_id"/>
+                <field name="container_id"/>
+                <field name="image_id"/>
+                <field name="network_id"/>
+                <field name="volume_id"/>
+                <field name="task_id"/>
+                <field name="details"/>
+            </tree>
+        </field>
+    </record>
+    
+    <!-- Form View -->
+    <record id="view_docker_logs_form" model="ir.ui.view">
+        <field name="name">docker.logs.form</field>
+        <field name="model">docker.logs</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_related_entity" type="object" class="oe_stat_button" icon="fa-external-link" attrs="{'invisible': [('server_id', '=', False), ('container_id', '=', False), ('image_id', '=', False), ('network_id', '=', False), ('volume_id', '=', False), ('task_id', '=', False)]}">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">View</span>
+                                <span class="o_stat_text">Source</span>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Log Message"/>
+                        </h1>
+                        <div>
+                            <field name="level" widget="badge" 
+                                   decoration-info="level == 'info'" 
+                                   decoration-warning="level == 'warning'" 
+                                   decoration-danger="level == 'error'"
+                                   decoration-muted="level == 'debug'"/>
+                        </div>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="create_date" readonly="1"/>
+                            <field name="user_id" readonly="1"/>
+                            <field name="server_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="container_id" readonly="1" attrs="{'invisible': [('container_id', '=', False)]}"/>
+                            <field name="image_id" readonly="1" attrs="{'invisible': [('image_id', '=', False)]}"/>
+                            <field name="network_id" readonly="1" attrs="{'invisible': [('network_id', '=', False)]}"/>
+                            <field name="volume_id" readonly="1" attrs="{'invisible': [('volume_id', '=', False)]}"/>
+                            <field name="task_id" readonly="1" attrs="{'invisible': [('task_id', '=', False)]}"/>
+                        </group>
+                    </group>
+                    <group string="Details">
+                        <field name="details" widget="text" nolabel="1" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Search View -->
+    <record id="view_docker_logs_search" model="ir.ui.view">
+        <field name="name">docker.logs.search</field>
+        <field name="model">docker.logs</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="server_id"/>
+                <field name="container_id"/>
+                <field name="image_id"/>
+                <field name="network_id"/>
+                <field name="volume_id"/>
+                <field name="task_id"/>
+                <field name="user_id"/>
+                <separator/>
+                <filter string="Debug" name="debug" domain="[('level', '=', 'debug')]"/>
+                <filter string="Info" name="info" domain="[('level', '=', 'info')]"/>
+                <filter string="Warning" name="warning" domain="[('level', '=', 'warning')]"/>
+                <filter string="Error" name="error" domain="[('level', '=', 'error')]"/>
+                <separator/>
+                <filter string="Today" name="today" domain="[('create_date', '>=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter string="This Week" name="this_week" domain="[('create_date', '>=', (context_today() + relativedelta(weeks=-1,days=1,weekday=0)).strftime('%Y-%m-%d'))]"/>
+                <filter string="This Month" name="this_month" domain="[('create_date', '>=', (context_today() + relativedelta(day=1)).strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter string="Server Logs" name="server_logs" domain="[('server_id', '!=', False), ('container_id', '=', False), ('image_id', '=', False), ('network_id', '=', False), ('volume_id', '=', False), ('task_id', '=', False)]"/>
+                <filter string="Container Logs" name="container_logs" domain="[('container_id', '!=', False)]"/>
+                <filter string="Image Logs" name="image_logs" domain="[('image_id', '!=', False)]"/>
+                <filter string="Network Logs" name="network_logs" domain="[('network_id', '!=', False)]"/>
+                <filter string="Volume Logs" name="volume_logs" domain="[('volume_id', '!=', False)]"/>
+                <filter string="Task Logs" name="task_logs" domain="[('task_id', '!=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Level" name="group_by_level" context="{'group_by': 'level'}"/>
+                    <filter string="Server" name="group_by_server" context="{'group_by': 'server_id'}"/>
+                    <filter string="Container" name="group_by_container" context="{'group_by': 'container_id'}"/>
+                    <filter string="Image" name="group_by_image" context="{'group_by': 'image_id'}"/>
+                    <filter string="Network" name="group_by_network" context="{'group_by': 'network_id'}"/>
+                    <filter string="Volume" name="group_by_volume" context="{'group_by': 'volume_id'}"/>
+                    <filter string="Task" name="group_by_task" context="{'group_by': 'task_id'}"/>
+                    <filter string="User" name="group_by_user" context="{'group_by': 'user_id'}"/>
+                    <filter string="Date" name="group_by_date" context="{'group_by': 'create_date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    
+    <!-- Pivot View -->
+    <record id="view_docker_logs_pivot" model="ir.ui.view">
+        <field name="name">docker.logs.pivot</field>
+        <field name="model">docker.logs</field>
+        <field name="arch" type="xml">
+            <pivot string="Log Analysis">
+                <field name="server_id" type="row"/>
+                <field name="level" type="col"/>
+                <field name="__count" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    
+    <!-- Graph View -->
+    <record id="view_docker_logs_graph" model="ir.ui.view">
+        <field name="name">docker.logs.graph</field>
+        <field name="model">docker.logs</field>
+        <field name="arch" type="xml">
+            <graph string="Log Analysis" type="bar">
+                <field name="server_id"/>
+                <field name="level"/>
+                <field name="__count" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    
+    <!-- Calendar View -->
+    <record id="view_docker_logs_calendar" model="ir.ui.view">
+        <field name="name">docker.logs.calendar</field>
+        <field name="model">docker.logs</field>
+        <field name="arch" type="xml">
+            <calendar string="Logs" date_start="create_date" color="level" mode="month">
+                <field name="name"/>
+                <field name="level"/>
+                <field name="server_id"/>
+            </calendar>
+        </field>
+    </record>
+    
+    <!-- Action Window -->
+    <record id="action_docker_logs" model="ir.actions.act_window">
+        <field name="name">Logs</field>
+        <field name="res_model">docker.logs</field>
+        <field name="view_mode">tree,form,pivot,graph,calendar</field>
+        <field name="context">{'search_default_today': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No logs found
+            </p>
+            <p>
+                Logs will be automatically created when actions are performed on Docker resources.
+            </p>
+        </field>
+    </record>
+</odoo>
