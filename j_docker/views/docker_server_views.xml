@@ -102,35 +102,23 @@
                             <group>
                                 <group string="CPU Usage">
                                     <field name="cpu_usage" widget="percentage"/>
-                                    <div class="progress">
-                                        <div class="progress-bar bg-info" role="progressbar" 
-                                            t-att-style="'width: ' + record.cpu_usage.value + '%'" 
-                                            t-att-aria-valuenow="record.cpu_usage.value" 
-                                            aria-valuemin="0" aria-valuemax="100">
-                                            <t t-esc="record.cpu_usage.value + '%'"/>
-                                        </div>
+                                    <div class="o_cpu_usage_bar">
+                                        <!-- Simple colored bar without Owl templating directives -->
+                                        <field name="cpu_usage" widget="progressbar" options="{'width': '100%', 'colors': {'loading': 'info'}}"/>
                                     </div>
                                 </group>
                                 <group string="Memory Usage">
                                     <field name="memory_usage" widget="percentage"/>
-                                    <div class="progress">
-                                        <div class="progress-bar bg-primary" role="progressbar" 
-                                            t-att-style="'width: ' + record.memory_usage.value + '%'" 
-                                            t-att-aria-valuenow="record.memory_usage.value" 
-                                            aria-valuemin="0" aria-valuemax="100">
-                                            <t t-esc="record.memory_usage.value + '%'"/>
-                                        </div>
+                                    <div class="o_memory_usage_bar">
+                                        <!-- Simple colored bar without Owl templating directives -->
+                                        <field name="memory_usage" widget="progressbar" options="{'width': '100%', 'colors': {'loading': 'primary'}}"/>
                                     </div>
                                 </group>
                                 <group string="Disk Usage">
                                     <field name="disk_usage" widget="percentage"/>
-                                    <div class="progress">
-                                        <div class="progress-bar bg-warning" role="progressbar" 
-                                            t-att-style="'width: ' + record.disk_usage.value + '%'" 
-                                            t-att-aria-valuenow="record.disk_usage.value" 
-                                            aria-valuemin="0" aria-valuemax="100">
-                                            <t t-esc="record.disk_usage.value + '%'"/>
-                                        </div>
+                                    <div class="o_disk_usage_bar">
+                                        <!-- Simple colored bar without Owl templating directives -->
+                                        <field name="disk_usage" widget="progressbar" options="{'width': '100%', 'colors': {'loading': 'warning'}}"/>
                                     </div>
                                 </group>
                             </group>
@@ -191,9 +179,16 @@
                 <field name="image_count"/>
                 <templates>
                     <t t-name="kanban-box">
-                        <div t-attf-class="oe_kanban_global_click o_kanban_record_has_image_fill">
+                        <div class="oe_kanban_global_click o_kanban_record_has_image_fill">
+                            <!-- Use a simpler styling approach without Owl directives -->
                             <div class="o_kanban_image_fill_left d-none d-md-block" 
-                                 t-attf-style="background-color: #{server_status == 'online' ? '#28a745' : server_status == 'offline' ? '#dc3545' : server_status == 'error' ? '#ffc107' : '#6c757d'};"/>
+                                 t-if="record.server_status.raw_value == 'online'" style="background-color: #28a745;"/>
+                            <div class="o_kanban_image_fill_left d-none d-md-block" 
+                                 t-if="record.server_status.raw_value == 'offline'" style="background-color: #dc3545;"/>
+                            <div class="o_kanban_image_fill_left d-none d-md-block" 
+                                 t-if="record.server_status.raw_value == 'error'" style="background-color: #ffc107;"/>
+                            <div class="o_kanban_image_fill_left d-none d-md-block" 
+                                 t-if="record.server_status.raw_value == 'unknown'" style="background-color: #6c757d;"/>
                             <div class="oe_kanban_details d-flex flex-column">
                                 <div class="o_kanban_record_top mb-0">
                                     <div class="o_kanban_record_headings">
@@ -222,21 +217,14 @@
                                         </div>
                                     </div>
                                     <div class="mt-2">
-                                        <div class="progress">
-                                            <div class="progress-bar bg-info" role="progressbar" t-attf-style="width: #{record.cpu_usage.value}%;" 
-                                                 t-attf-aria-valuenow="#{record.cpu_usage.value}" aria-valuemin="0" aria-valuemax="100" 
-                                                 t-attf-title="CPU: #{record.cpu_usage.value}%"></div>
-                                        </div>
-                                        <div class="progress mt-1">
-                                            <div class="progress-bar bg-primary" role="progressbar" t-attf-style="width: #{record.memory_usage.value}%;" 
-                                                 t-attf-aria-valuenow="#{record.memory_usage.value}" aria-valuemin="0" aria-valuemax="100" 
-                                                 t-attf-title="Memory: #{record.memory_usage.value}%"></div>
-                                        </div>
-                                        <div class="progress mt-1">
-                                            <div class="progress-bar bg-warning" role="progressbar" t-attf-style="width: #{record.disk_usage.value}%;" 
-                                                 t-attf-aria-valuenow="#{record.disk_usage.value}" aria-valuemin="0" aria-valuemax="100" 
-                                                 t-attf-title="Disk: #{record.disk_usage.value}%"></div>
-                                        </div>
+                                        <!-- CPU Progress Bar -->
+                                        <field name="cpu_usage" widget="progressbar" options="{'width': '100%', 'colors': {'loading': 'info'}}"/>
+                                        
+                                        <!-- Memory Progress Bar -->
+                                        <field name="memory_usage" widget="progressbar" options="{'width': '100%', 'colors': {'loading': 'primary'}}"/>
+                                        
+                                        <!-- Disk Progress Bar -->
+                                        <field name="disk_usage" widget="progressbar" options="{'width': '100%', 'colors': {'loading': 'warning'}}"/>
                                     </div>
                                 </div>
                             </div>
