@@ -102,33 +102,36 @@
                             <group>
                                 <group string="CPU Usage">
                                     <field name="cpu_usage" widget="percentage"/>
-                                    <widget name="web_google_charts.google_chart" 
-                                            title="CPU Usage Over Time"
-                                            type="gauge"
-                                            dynamic_value="cpu_usage"
-                                            field_value="cpu_usage"
-                                            max_value="100" 
-                                            min_value="0"/>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-info" role="progressbar" 
+                                            t-att-style="'width: ' + record.cpu_usage.value + '%'" 
+                                            t-att-aria-valuenow="record.cpu_usage.value" 
+                                            aria-valuemin="0" aria-valuemax="100">
+                                            <t t-esc="record.cpu_usage.value + '%'"/>
+                                        </div>
+                                    </div>
                                 </group>
                                 <group string="Memory Usage">
                                     <field name="memory_usage" widget="percentage"/>
-                                    <widget name="web_google_charts.google_chart" 
-                                            title="Memory Usage Over Time"
-                                            type="gauge"
-                                            dynamic_value="memory_usage"
-                                            field_value="memory_usage"
-                                            max_value="100" 
-                                            min_value="0"/>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-primary" role="progressbar" 
+                                            t-att-style="'width: ' + record.memory_usage.value + '%'" 
+                                            t-att-aria-valuenow="record.memory_usage.value" 
+                                            aria-valuemin="0" aria-valuemax="100">
+                                            <t t-esc="record.memory_usage.value + '%'"/>
+                                        </div>
+                                    </div>
                                 </group>
                                 <group string="Disk Usage">
                                     <field name="disk_usage" widget="percentage"/>
-                                    <widget name="web_google_charts.google_chart" 
-                                            title="Disk Usage Over Time"
-                                            type="gauge"
-                                            dynamic_value="disk_usage"
-                                            field_value="disk_usage"
-                                            max_value="100" 
-                                            min_value="0"/>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-warning" role="progressbar" 
+                                            t-att-style="'width: ' + record.disk_usage.value + '%'" 
+                                            t-att-aria-valuenow="record.disk_usage.value" 
+                                            aria-valuemin="0" aria-valuemax="100">
+                                            <t t-esc="record.disk_usage.value + '%'"/>
+                                        </div>
+                                    </div>
                                 </group>
                             </group>
                             <group string="System Information">
