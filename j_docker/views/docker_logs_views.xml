@@ -127,7 +127,7 @@
             <pivot string="Log Analysis">
                 <field name="server_id" type="row"/>
                 <field name="level" type="col"/>
-                <field name="__count" type="measure"/>
+                <field name="__count__" type="measure"/>
             </pivot>
         </field>
     </record>
@@ -140,7 +140,7 @@
             <graph string="Log Analysis" type="bar">
                 <field name="server_id"/>
                 <field name="level"/>
-                <field name="__count" type="measure"/>
+                <field name="__count__" type="measure"/>
             </graph>
         </field>
     </record>

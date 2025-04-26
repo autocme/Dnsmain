@@ -258,7 +258,7 @@
             <pivot string="Container Analysis">
                 <field name="server_id" type="row"/>
                 <field name="status" type="col"/>
-                <field name="__count" type="measure"/>
+                <field name="__count__" type="measure"/>
                 <field name="cpu_usage" type="measure"/>
                 <field name="memory_usage" type="measure"/>
             </pivot>
