@@ -104,23 +104,15 @@ class DockerServer(models.Model):
     # -------------------------------------------------------------------------
     @api.model_create_multi
     def create(self, vals_list):
-        # First create the records normally
+        # First create the records normally without any automatic connection checks
         records = super(DockerServer, self).create(vals_list)
         
-        # Schedule a check connection after the transaction is completed
-        # to avoid _unknown object errors during creation
-        self.env.cr.after_commit.add(lambda: self._post_creation_check(records))
+        # Set default status to unknown without triggering connection checks
+        for record in records:
+            # Just set initial status without trying to connect or create logs
+            record.write({'server_status': 'unknown'})
         
         return records
-        
-    def _post_creation_check(self, records):
-        """Run connection check after the record has been fully created and committed"""
-        try:
-            for record in records:
-                if record.exists():  # Only check if the record still exists
-                    record._check_connection()
-        except Exception as e:
-            _logger.error("Failed to run post-creation connection check: %s", str(e))
         
     def write(self, vals):
         result = super(DockerServer, self).write(vals)
@@ -792,16 +784,26 @@ class DockerServer(models.Model):
     
     def _create_log_entry(self, level, message):
         """Create a log entry for the server"""
-        self.ensure_one()
-        
-        # Only create log entries if the record has an ID (has been saved to DB)
-        if not self.id:
-            _logger.info("Cannot create log entry for unsaved record: %s - %s", level, message)
-            return
-            
         try:
+            # Skip if called on a new/invalid record
+            if not self or not self.exists() or not self.id:
+                _logger.info("Cannot create log entry for invalid record: %s - %s", level, message)
+                return
+                
+            # Additional protection to ensure valid ID
+            server_id = self.id
+            if not isinstance(server_id, int) or server_id <= 0:
+                _logger.info("Invalid server ID for log entry: %s", server_id)
+                return
+                
+            # Check if docker.logs model exists
+            if 'docker.logs' not in self.env:
+                _logger.warning("docker.logs model not found in environment")
+                return
+                
+            # Create the log entry with error handling
             self.env['docker.logs'].create({
-                'server_id': self.id,
+                'server_id': server_id,
                 'level': level,
                 'name': message,
                 'user_id': self.env.user.id,
