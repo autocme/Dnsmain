@@ -107,7 +107,13 @@ class SshClient(models.Model):
             if not self.password and self.private_key:
                 try:
                     # Decode the binary private key to a string
+                    _logger.info(f"Decoding private key for connection to {self.host}:{self.port}")
                     private_key_string = b64.decodebytes(self.private_key).decode('utf-8')
+                    
+                    # Log the first few characters of the key to help with debugging
+                    # (don't log the entire key for security reasons)
+                    first_line = private_key_string.split('\n')[0] if '\n' in private_key_string else private_key_string[:20]
+                    _logger.info(f"Key starts with: {first_line}...")
                     
                     # Check if the key is in PPK format and convert it if needed
                     _logger.info("Checking if key needs conversion from PPK to PEM")
@@ -119,8 +125,13 @@ class SshClient(models.Model):
                     # Create a StringIO object to use with paramiko
                     private_key_fakefile = StringIO(private_key_string)
                     
-                    # Load the private key with paramiko
+                    # Try loading the key with different formats
+                    private_key = None
+                    errors = []
+                    
+                    # Try RSA key format first
                     try:
+                        _logger.info("Trying to load key as RSA format")
                         if self.private_key_password:
                             private_key = paramiko.RSAKey.from_private_key(
                                 private_key_fakefile, 
@@ -128,13 +139,16 @@ class SshClient(models.Model):
                             )
                         else:
                             private_key = paramiko.RSAKey.from_private_key(private_key_fakefile)
-                    except paramiko.ssh_exception.SSHException as e:
-                        _logger.warning(f"RSA key format failed, trying other key types: {str(e)}")
-                        # Reset the file pointer
+                        _logger.info("Successfully loaded key as RSA format")
+                    except Exception as e:
                         private_key_fakefile.seek(0)
-                        
-                        # Try with Ed25519 key if RSA fails
+                        errors.append(f"RSA format error: {str(e)}")
+                        _logger.warning(f"Failed to load key as RSA: {str(e)}")
+                    
+                    # If RSA failed, try Ed25519
+                    if not private_key:
                         try:
+                            _logger.info("Trying to load key as Ed25519 format")
                             if self.private_key_password:
                                 private_key = paramiko.Ed25519Key.from_private_key(
                                     private_key_fakefile, 
@@ -142,21 +156,68 @@ class SshClient(models.Model):
                                 )
                             else:
                                 private_key = paramiko.Ed25519Key.from_private_key(private_key_fakefile)
-                        except Exception as e2:
-                            _logger.error(f"Failed to load key as Ed25519: {str(e2)}")
-                            raise UserError(_("Could not load the private key. Please check the key format and password."))
+                            _logger.info("Successfully loaded key as Ed25519 format")
+                        except Exception as e:
+                            private_key_fakefile.seek(0)
+                            errors.append(f"Ed25519 format error: {str(e)}")
+                            _logger.warning(f"Failed to load key as Ed25519: {str(e)}")
+                    
+                    # If still failed, try DSS/DSA
+                    if not private_key:
+                        try:
+                            _logger.info("Trying to load key as DSS/DSA format")
+                            if self.private_key_password:
+                                private_key = paramiko.DSSKey.from_private_key(
+                                    private_key_fakefile, 
+                                    self.private_key_password
+                                )
+                            else:
+                                private_key = paramiko.DSSKey.from_private_key(private_key_fakefile)
+                            _logger.info("Successfully loaded key as DSS/DSA format")
+                        except Exception as e:
+                            private_key_fakefile.seek(0)
+                            errors.append(f"DSS format error: {str(e)}")
+                            _logger.warning(f"Failed to load key as DSS/DSA: {str(e)}")
+                    
+                    # If still failed, try ECDSA
+                    if not private_key:
+                        try:
+                            _logger.info("Trying to load key as ECDSA format")
+                            if self.private_key_password:
+                                private_key = paramiko.ECDSAKey.from_private_key(
+                                    private_key_fakefile, 
+                                    self.private_key_password
+                                )
+                            else:
+                                private_key = paramiko.ECDSAKey.from_private_key(private_key_fakefile)
+                            _logger.info("Successfully loaded key as ECDSA format")
+                        except Exception as e:
+                            private_key_fakefile.seek(0)
+                            errors.append(f"ECDSA format error: {str(e)}")
+                            _logger.warning(f"Failed to load key as ECDSA: {str(e)}")
+                    
+                    # If all key formats failed
+                    if not private_key:
+                        error_msg = "Could not load the private key in any supported format.\n"
+                        error_msg += "Tried the following formats:\n- " + "\n- ".join(errors)
+                        _logger.error(error_msg)
+                        raise UserError(_("Could not load the private key. Please check the key format and password."))
                     
                     private_key_fakefile.close()
                     
                     # Connect with the key
+                    _logger.info(f"Connecting to {self.host}:{self.port} with username {self.user} using private key")
                     ssh_connection.connect(
                         hostname=self.host,
                         port=self.port,
                         username=self.user,
                         pkey=private_key
                     )
+                    _logger.info(f"Successfully connected to {self.host}:{self.port}")
                 except Exception as e:
                     _logger.error(f"Error connecting with private key: {str(e)}")
+                    import traceback
+                    _logger.error(f"Connection traceback: {traceback.format_exc()}")
                     raise UserError(_("Failed to connect with private key: %s") % str(e))
             elif self.password and not self.private_key:
                 try:
