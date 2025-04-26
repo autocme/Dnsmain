@@ -1,3 +1,4 @@
+from . import mixin
 from . import docker_server
 from . import docker_container
 from . import docker_image

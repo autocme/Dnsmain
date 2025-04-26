@@ -9,6 +9,7 @@ class DockerContainer(models.Model):
     _name = 'docker.container'
     _description = 'Docker Container'
     _order = 'name'
+    _inherit = ['safe.read.mixin']
     # Commenting out inheritance until mail module is properly loaded
     # _inherit = ['mail.thread', 'mail.activity.mixin']
 
