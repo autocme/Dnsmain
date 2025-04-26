@@ -67,7 +67,6 @@
     ],
     'assets': {
         'web.assets_backend': [
-            'j_docker/static/src/js/docker_dashboard.js',
             'j_docker/static/src/css/docker_dashboard.css',
         ],
         'web.assets_qweb': [
