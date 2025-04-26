@@ -51,6 +51,7 @@
         'base',
         'web',
         'nalios_ssh_clients',  # Dependency on SSH client module
+        'mail',
     ],
     'data': [
         'security/docker_security.xml',
