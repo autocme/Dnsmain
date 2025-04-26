@@ -62,7 +62,7 @@
             <form>
                 <header>
                     <button name="ssh_connect" type="object" class="oe_highlight" string="Connect to SSH"/>
-                    <button name="webssh_connect" type="object" string="Connect with WebSSH" attrs="{'invisible': [('use_webssh', '=', False)]}"/>
+                    <button name="webssh_connect" type="object" string="Connect with WebSSH" invisible="not use_webssh"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
