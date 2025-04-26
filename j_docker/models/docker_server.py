@@ -87,37 +87,73 @@ class DockerServer(models.Model):
     @api.depends('container_ids', 'image_ids', 'volume_ids', 'network_ids')
     def _compute_docker_stats(self):
         for server in self:
-            # These will be computed live when the function is called
-            server.container_count = 0
-            server.running_container_count = 0
-            server.image_count = 0
-            server.volume_count = 0
-            server.network_count = 0
+            try:
+                # Skip computation for new records to avoid errors
+                if not server.id:
+                    server.container_count = 0
+                    server.running_container_count = 0
+                    server.image_count = 0
+                    server.volume_count = 0
+                    server.network_count = 0
+                    continue
+                    
+                # For existing records, compute based on relationships
+                server.container_count = len(server.container_ids) if server.container_ids else 0
+                server.running_container_count = len(server.container_ids.filtered(lambda c: c.status == 'running')) if server.container_ids else 0  
+                server.image_count = len(server.image_ids) if server.image_ids else 0
+                server.volume_count = len(server.volume_ids) if server.volume_ids else 0
+                server.network_count = len(server.network_ids) if server.network_ids else 0
+            except Exception as e:
+                _logger.error("Error computing docker stats: %s", str(e))
+                # Set safe defaults
+                server.container_count = 0
+                server.running_container_count = 0
+                server.image_count = 0
+                server.volume_count = 0
+                server.network_count = 0
     
     @api.onchange('ssh_client_id')
     def _onchange_ssh_client(self):
-        if self.ssh_client_id:
-            self.name = self.ssh_client_id.name
+        try:
+            # Only update name if ssh_client_id is set and has a name
+            if self.ssh_client_id and self.ssh_client_id.name:
+                self.name = self.ssh_client_id.name
+        except Exception as e:
+            _logger.error("Error in onchange ssh client: %s", str(e))
     
     # -------------------------------------------------------------------------
     # CRUD methods
     # -------------------------------------------------------------------------
     @api.model_create_multi
     def create(self, vals_list):
-        # First create the records normally without any automatic connection checks
+        # Explicitly set server_status to 'unknown' in all vals dictionaries
+        # to avoid any automatic status checks after creation
+        for vals in vals_list:
+            vals['server_status'] = 'unknown'
+            
+        # Create records normally with status already set
         records = super(DockerServer, self).create(vals_list)
-        
-        # Set default status to unknown without triggering connection checks
-        for record in records:
-            # Just set initial status without trying to connect or create logs
-            record.write({'server_status': 'unknown'})
-        
         return records
         
     def write(self, vals):
+        # Check if this is a new record (being created)
+        is_new = not self.id
+        
+        # Set status to unknown if this is a new record 
+        # to avoid connection checks that might trigger errors
+        if is_new and 'server_status' not in vals:
+            vals['server_status'] = 'unknown'
+            
         result = super(DockerServer, self).write(vals)
-        if 'ssh_client_id' in vals or 'docker_host' in vals or 'docker_api_version' in vals:
-            self._check_connection()
+        
+        # Only perform connection checks if this is an existing record
+        # and specific connection fields have changed
+        if not is_new and ('ssh_client_id' in vals or 'docker_host' in vals or 'docker_api_version' in vals):
+            try:
+                self._check_connection()
+            except Exception as e:
+                _logger.error("Error during connection check after write: %s", str(e))
+                
         return result
     
     def unlink(self):
