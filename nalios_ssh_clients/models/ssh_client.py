@@ -307,62 +307,72 @@ class SshClient(models.Model):
     def exec_command(self, command):
         """
         Execute a command on the SSH server with improved handling for interactive features
+        and better output formatting for both AJAX and form-based approaches
         """
         self.ensure_one()
-        ssh_connection = self.get_ssh_connection()
         
-        # Send the command with a newline
-        ssh_connection.send(command + "\n")
-        
-        # Initial wait for response
-        sleep(0.5)
-        
-        # Wait a bit longer for slower servers
-        timeout = 5  # 5 seconds max
-        start_time = time.time()
-        while not ssh_connection.recv_ready() and time.time() - start_time < timeout:
-            sleep(0.2)
-        
-        # If we timed out without receiving data, return a message
-        if not ssh_connection.recv_ready():
-            return '<div class="command-timeout">Command taking longer than expected. It may still be running...</div>'
-        
-        # Collect all the response data
-        alldata = b''
-        buffer_size = 4096  # Larger buffer for more efficient reads
-        
-        # Read initial data
-        alldata += ssh_connection.recv(buffer_size)
-        
-        # Continue reading while there's data available
-        while ssh_connection.recv_ready():
-            sleep(0.1)  # Small delay between reads
-            alldata += ssh_connection.recv(buffer_size)
-        
-        # Remove the command echo from the beginning of the response
         try:
-            alldata = re.sub(b'^' + re.escape(command.encode('utf-8')), b'', alldata)
-        except:
-            # If regex fails, continue with unmodified data
-            pass
+            ssh_connection = self.get_ssh_connection()
             
-        # Filter out control characters that may cause display issues
-        alldata = alldata.replace(b'\x00', b'')
-        
-        # Handle special terminal codes for better output formatting
-        formatted_data = self._format_terminal_output(alldata)
-        
-        # Convert ANSI escape sequences to HTML
-        conv = Ansi2HTMLConverter()
-        html_output = conv.convert(formatted_data).replace(
-            '<pre class="ansi2html-content">\n', 
-            '<pre class="ansi2html-content">'
-        )
-        
-        # Add syntax highlighting for common command outputs
-        html_output = self._add_syntax_highlighting(html_output, command)
-        
-        return html_output
+            # Send the command with a newline
+            ssh_connection.send(command + "\n")
+            
+            # Initial wait for response
+            sleep(0.5)
+            
+            # Wait a bit longer for slower servers
+            timeout = 5  # 5 seconds max
+            start_time = time.time()
+            while not ssh_connection.recv_ready() and time.time() - start_time < timeout:
+                sleep(0.2)
+            
+            # If we timed out without receiving data, return a message
+            if not ssh_connection.recv_ready():
+                return '<div class="terminal-warning">Command taking longer than expected. It may still be running...</div>'
+            
+            # Collect all the response data
+            alldata = b''
+            buffer_size = 4096  # Larger buffer for more efficient reads
+            
+            # Read initial data
+            alldata += ssh_connection.recv(buffer_size)
+            
+            # Continue reading while there's data available
+            while ssh_connection.recv_ready():
+                sleep(0.1)  # Small delay between reads
+                alldata += ssh_connection.recv(buffer_size)
+            
+            # Remove the command echo from the beginning of the response
+            try:
+                alldata = re.sub(b'^' + re.escape(command.encode('utf-8')), b'', alldata)
+            except:
+                # If regex fails, continue with unmodified data
+                pass
+                
+            # Filter out control characters that may cause display issues
+            alldata = alldata.replace(b'\x00', b'')
+            
+            # Handle special terminal codes for better output formatting
+            formatted_data = self._format_terminal_output(alldata)
+            
+            # Convert ANSI escape sequences to HTML
+            conv = Ansi2HTMLConverter(inline=True)
+            html_output = conv.convert(formatted_data)
+            
+            # Cleanup the output for better display
+            # Remove the outer pre tags from ansi2html if they exist
+            html_output = html_output.replace('<pre class="ansi2html-content">', '')
+            html_output = html_output.replace('</pre>', '')
+            
+            # Add syntax highlighting for common command outputs
+            html_output = self._add_syntax_highlighting(html_output, command)
+            
+            # Wrap in a terminal-output div for styling
+            return f'<div class="terminal-output">{html_output}</div>'
+            
+        except Exception as e:
+            _logger.error(f"Command execution error: {str(e)}")
+            return f'<div class="terminal-error">Error executing command: {str(e)}</div>'
         
     def _format_terminal_output(self, raw_data):
         """
@@ -436,6 +446,18 @@ class SshClient(models.Model):
             '<pre class="ansi2html-content">',
             f'<pre class="ansi2html-content cloud-tool-output {tool}-output">'
         )
+
+    def test_connection(self):
+        """
+        Test the SSH connection by running a simple command
+        """
+        self.ensure_one()
+        try:
+            # Try to run a simple command like 'echo' to test the connection
+            return self.exec_command('echo "Connection successful"')
+        except Exception as e:
+            _logger.error(f"SSH connection test failed: {str(e)}")
+            return f'<div class="terminal-error">Connection test failed: {str(e)}</div>'
 
     def get_client_name(self):
         self.ensure_one()
