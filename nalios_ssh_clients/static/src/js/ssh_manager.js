@@ -51,19 +51,40 @@ export class SshManager extends Component {
             const value = this.cmdline.el.value;
             const lastPre = document.querySelector('pre:last-child');
             if (lastPre) {
-                lastPre.innerHTML = lastPre.innerHTML.replace(/\n$/, 
-$/, value + '\n');
+                lastPre.innerHTML = lastPre.innerHTML.replace(/\n$/, '') + '\n' + value + '\n';
             } else {
                 document.querySelector('#terminal_window').innerHTML += value + '\n';
             }
             this.cmdline.el.value = '';
-            await this.sendCmd(value).then(() => {
+            await this._sendCommand(value).then(() => {
                 this.terminal.el.scrollTo(0, this.terminal.el.scrollHeight);
             });
         }
     }
 
-    async sendCmd(cmd) {
+    async sendCmd(ev) {
+        if (ev && ev.target) {
+            // This is called from the button click
+            const cmd = this.cmdline.el.value;
+            if (cmd) {
+                const lastPre = document.querySelector('pre:last-child');
+                if (lastPre) {
+                    lastPre.innerHTML = lastPre.innerHTML.replace(/\n$/, '') + '\n' + cmd + '\n';
+                } else {
+                    document.querySelector('#terminal_window').innerHTML += cmd + '\n';
+                }
+                this.cmdline.el.value = '';
+                await this._sendCommand(cmd).then(() => {
+                    this.terminal.el.scrollTo(0, this.terminal.el.scrollHeight);
+                });
+            }
+        } else {
+            // This is the internal method call with the command
+            await this._sendCommand(ev);
+        }
+    }
+    
+    async _sendCommand(cmd) {
         const res = await this.orm.call('ssh.client', 'exec_command', [[this.client_id], cmd]);
         this.terminal.el.innerHTML += res;
     }
@@ -91,5 +112,11 @@ $/, value + '\n');
     }
 }
 
+// In OWL 2.0, we set the template directly in the component definition
+SshManager.props = {
+    action: { type: Object }
+};
 SshManager.template = 'nalios_ssh_clients.ssh_manager';
+
+// Register the component as a client action
 registry.category('actions').add('ssh_client_main_window', SshManager);
