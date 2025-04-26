@@ -10,18 +10,19 @@ class DockerServer(models.Model):
     _name = 'docker.server'
     _description = 'Docker Server'
     _order = 'name'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    # Commenting out inheritance until mail module is properly loaded
+    # _inherit = ['mail.thread', 'mail.activity.mixin']
 
-    name = fields.Char(string='Name', required=True, tracking=True,
+    name = fields.Char(string='Name', required=True,
                       help="Name of the Docker server")
     
-    active = fields.Boolean(default=True, tracking=True)
+    active = fields.Boolean(default=True)
     company_id = fields.Many2one('res.company', string='Company', 
                                 default=lambda self: self.env.company)
     
     # Docker connection details
     ssh_client_id = fields.Many2one('nalios.ssh.client', string='SSH Client', 
-                                   required=True, tracking=True,
+                                   required=True,
                                    help="SSH Connection used to communicate with this Docker server")
     
     docker_host = fields.Char(string='Docker Host', default='unix:///var/run/docker.sock',
@@ -43,7 +44,7 @@ class DockerServer(models.Model):
         ('online', 'Online'),
         ('offline', 'Offline'),
         ('error', 'Error')
-    ], string='Status', default='unknown', tracking=True, readonly=True)
+    ], string='Status', default='unknown', readonly=True)
     
     docker_version = fields.Char(string='Docker Version', readonly=True)
     docker_api_info = fields.Text(string='Docker API Info', readonly=True)
