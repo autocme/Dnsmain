@@ -50,7 +50,8 @@ class DockerImage(models.Model):
     labels = fields.Text(string='Labels', readonly=True)
     
     used_by_containers = fields.Integer(string='Used By Containers', 
-                                      compute='_compute_used_by_containers')
+                                      compute='_compute_used_by_containers',
+                                      store=True)
     
     dangling = fields.Boolean(string='Dangling', 
                             compute='_compute_dangling',
@@ -87,6 +88,7 @@ class DockerImage(models.Model):
             else:
                 image.created_date = False
     
+    @api.depends('name', 'server_id')
     def _compute_used_by_containers(self):
         for image in self:
             # Count containers using this image
