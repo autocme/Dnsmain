@@ -1,7 +1,13 @@
-// Direct WebSSH implementation using web sockets
-// This is a simplified version that doesn't require the webssh package
+// Direct WebSSH implementation using AJAX - no WebSockets required
+// This is a simplified version for Odoo 17 compatibility
 
 document.addEventListener('DOMContentLoaded', function() {
+    let clientId = null;
+    let commandHistory = [];
+    let historyIndex = -1;
+    let currentInput = '';
+    let inputLine = null;
+    
     const terminal = document.getElementById('terminal');
     const statusIndicator = document.getElementById('connection-status');
     const sshInfoElement = document.getElementById('ssh-info');
@@ -11,172 +17,156 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    // Get connection info from the data attribute
-    const sshInfo = JSON.parse(sshInfoElement.getAttribute('data-ssh-info') || '{}');
-    
-    if (!sshInfo.host || !sshInfo.port || !sshInfo.username) {
-        appendToTerminal("Error: Missing SSH connection information", "error");
-        return;
-    }
-    
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/webssh/socket`;
-    
-    let socket = null;
-    let connected = false;
-    let commandHistory = [];
-    let historyIndex = -1;
-    let currentInput = '';
-    let inputLine = null;
+    // Initialize the terminal
+    init();
     
     function init() {
         // Setup terminal
         terminal.innerHTML = '<div class="terminal-welcome">Connecting to SSH server...</div>';
-        terminal.style.height = 'calc(100% - 30px)';
-        terminal.style.padding = '10px';
-        terminal.style.overflow = 'auto';
-        terminal.style.fontFamily = "'JetBrains Mono', monospace";
-        terminal.style.whiteSpace = 'pre-wrap';
-        terminal.style.fontSize = '14px';
-        terminal.style.lineHeight = '1.5';
-        
-        // Create input line
-        inputLine = document.createElement('div');
-        inputLine.className = 'input-line';
-        inputLine.innerHTML = '<span class="prompt">$ </span><span class="input" contenteditable="true" spellcheck="false"></span>';
-        terminal.appendChild(inputLine);
-        
-        // Get the editable span
-        const inputSpan = inputLine.querySelector('.input');
-        
-        // Focus on click
-        terminal.addEventListener('click', function() {
-            inputSpan.focus();
-        });
-        
-        // Handle key events
-        inputSpan.addEventListener('keydown', function(e) {
-            handleKeyDown(e, inputSpan);
-        });
-        
-        // Start WebSocket connection
-        connectWebSocket();
-    }
-    
-    function connectWebSocket() {
-        if (socket) {
-            socket.close();
-        }
         
         try {
-            socket = new WebSocket(wsUrl);
+            // Get connection info from the data attribute
+            const sshInfo = JSON.parse(sshInfoElement.getAttribute('data-ssh-info') || '{}');
+            clientId = sshInfo.id;
             
-            socket.onopen = function() {
-                console.log("WebSocket connection established");
-                // Send initial connection info
-                sendConnectionInfo();
-            };
-            
-            socket.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                
-                if (data.error) {
-                    appendToTerminal(data.error, "error");
-                    updateStatus(false);
-                }
-                
-                if (data.data) {
-                    appendToTerminal(data.data, "response");
-                }
-                
-                if (data.status === 'connected') {
-                    connected = true;
-                    updateStatus(true);
-                    appendToTerminal("Connected to " + sshInfo.username + "@" + sshInfo.host, "info");
-                    appendToTerminal("Type commands below:", "info");
-                    scrollToBottom();
-                }
-                
-                if (data.status === 'disconnected') {
-                    connected = false;
-                    updateStatus(false);
-                    appendToTerminal("Disconnected from server", "error");
-                }
-            };
-            
-            socket.onclose = function() {
-                connected = false;
+            if (!sshInfo.host || !sshInfo.username) {
+                appendToTerminal("Error: Missing SSH connection information", "error");
                 updateStatus(false);
-                appendToTerminal("Connection closed", "error");
-            };
-            
-            socket.onerror = function(error) {
-                connected = false;
-                updateStatus(false);
-                appendToTerminal("WebSocket error: " + error.message, "error");
-                console.error("WebSocket error:", error);
-            };
-            
-        } catch (error) {
-            appendToTerminal("Failed to connect: " + error.message, "error");
-            console.error("Failed to create WebSocket:", error);
-        }
-    }
-    
-    function sendConnectionInfo() {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-                type: 'connection',
-                data: {
-                    host: sshInfo.host,
-                    port: parseInt(sshInfo.port),
-                    username: sshInfo.username,
-                    password: sshInfo.password || '',
-                    privateKey: sshInfo.privateKey || '',
-                    passphrase: sshInfo.passphrase || ''
-                }
-            }));
-        }
-    }
-    
-    function sendCommand(command) {
-        if (!command || !command.trim()) return;
-        
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-                type: 'command',
-                data: command
-            }));
-            
-            // Add to history if not duplicate
-            if (!commandHistory.length || commandHistory[0] !== command) {
-                commandHistory.unshift(command);
-                if (commandHistory.length > 50) {
-                    commandHistory.pop();
-                }
+                createCommandInput();
+                return;
             }
             
-            historyIndex = -1;
-        } else {
-            appendToTerminal("Not connected to server", "error");
+            // Execute test command to check connection
+            executeCommand('echo "Connected to SSH server"', function(result) {
+                if (result.error) {
+                    appendToTerminal("Connection error: " + result.error, "error");
+                    updateStatus(false);
+                } else {
+                    // Connection successful
+                    appendToTerminal("Connected to " + sshInfo.username + "@" + sshInfo.host, "info");
+                    updateStatus(true);
+                    
+                    // Show welcome message
+                    appendToTerminal("Type commands below:", "info");
+                }
+                
+                // Create command input
+                createCommandInput();
+            });
+        } catch (error) {
+            appendToTerminal("Error parsing SSH info: " + error.message, "error");
+            updateStatus(false);
+            createCommandInput();
         }
+        
+        // Setup button handlers
+        setupButtonHandlers();
+    }
+    
+    function createCommandInput() {
+        // Create input line if it doesn't exist
+        if (!inputLine) {
+            inputLine = document.createElement('div');
+            inputLine.className = 'input-line';
+            inputLine.innerHTML = '<span class="prompt">$ </span><span class="input" contenteditable="true" spellcheck="false"></span>';
+            terminal.appendChild(inputLine);
+            
+            const inputSpan = inputLine.querySelector('.input');
+            
+            // Focus input
+            inputSpan.focus();
+            
+            // Handle key events
+            inputSpan.addEventListener('keydown', function(e) {
+                handleKeyDown(e, inputSpan);
+            });
+            
+            // Focus input on terminal click
+            terminal.addEventListener('click', function() {
+                inputSpan.focus();
+            });
+        }
+    }
+    
+    function executeCommand(command, callback) {
+        if (!clientId) {
+            console.error("No client ID available");
+            if (callback) callback({error: "No SSH client connection"});
+            return;
+        }
+        
+        // Execute command via Odoo's AJAX RPC
+        $.ajax({
+            url: '/web/dataset/call_kw/ssh.client/exec_command',
+            type: 'POST',
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                jsonrpc: "2.0",
+                method: "call",
+                params: {
+                    model: 'ssh.client',
+                    method: 'exec_command',
+                    args: [clientId, command],
+                    kwargs: {}
+                },
+                id: Math.floor(Math.random() * 1000000000)
+            }),
+            success: function(data) {
+                if (data.error) {
+                    console.error("Error executing command:", data.error);
+                    if (callback) callback({error: data.error.data?.message || "Unknown error"});
+                } else {
+                    if (callback) callback({success: true, result: data.result});
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error("AJAX error:", textStatus, errorThrown);
+                if (callback) callback({error: textStatus || "Network error"});
+            }
+        });
     }
     
     function handleKeyDown(e, inputElement) {
         if (e.key === 'Enter') {
             e.preventDefault();
             const command = inputElement.textContent;
+            if (!command) return;
             
-            // Create command display
+            // Add to history
+            if (!commandHistory.length || commandHistory[0] !== command) {
+                commandHistory.unshift(command);
+                if (commandHistory.length > 50) {
+                    commandHistory.pop();
+                }
+            }
+            historyIndex = -1;
+            
+            // Display command
             appendToTerminal('$ ' + command, 'command');
             
             // Clear input
             inputElement.textContent = '';
             
-            // Send command
-            sendCommand(command);
-            
-            return;
+            // Execute command
+            executeCommand(command, function(result) {
+                if (result.error) {
+                    appendToTerminal(result.error, "error");
+                } else if (result.result) {
+                    // Check if it's HTML (from server-side formatting)
+                    if (result.result.startsWith('<') && result.result.includes('</')) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'terminal-output';
+                        wrapper.innerHTML = result.result;
+                        terminal.insertBefore(wrapper, inputLine);
+                    } else {
+                        appendToTerminal(result.result, "output");
+                    }
+                }
+                
+                // Scroll to bottom
+                scrollToBottom();
+            });
         }
         
         // History navigation
@@ -214,23 +204,12 @@ document.addEventListener('DOMContentLoaded', function() {
             moveCursorToEnd(inputElement);
         }
         
-        // Tab completion (just for demo)
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            // Add a simple tab completion if needed
-        }
-        
-        // Ctrl+C to interrupt
+        // Ctrl+C to cancel
         if (e.key === 'c' && e.ctrlKey) {
             if (window.getSelection().toString()) {
                 // If text is selected, let the browser handle the copy
                 return;
             }
-            
-            socket.send(JSON.stringify({
-                type: 'signal',
-                data: 'SIGINT'
-            }));
             
             appendToTerminal('^C', 'command');
             inputElement.textContent = '';
@@ -247,25 +226,101 @@ document.addEventListener('DOMContentLoaded', function() {
             output.classList.add(`terminal-${type}`);
         }
         
-        // Process ANSI codes and colorize
+        // Process ANSI codes
         text = processAnsiCodes(text);
         
-        output.innerHTML = text;
-        terminal.insertBefore(output, inputLine);
+        if (text.indexOf('<') >= 0 && text.indexOf('>') >= 0) {
+            // Might be HTML, use innerHTML
+            output.innerHTML = text;
+        } else {
+            output.textContent = text;
+        }
+        
+        if (inputLine) {
+            terminal.insertBefore(output, inputLine);
+        } else {
+            terminal.appendChild(output);
+        }
+        
         scrollToBottom();
     }
     
     function processAnsiCodes(text) {
-        // Very simple ANSI code processing - in a real app, use a proper library
-        return text.replace(/\x1B\[([0-9;]+)m/g, function(match, p1) {
-            // This is a simplified version - would need more complex handling for real terminal
-            if (p1 === '0') return '</span>';
-            if (p1 === '31') return '<span style="color: #ff6b6b;">';
-            if (p1 === '32') return '<span style="color: #56e356;">';
-            if (p1 === '33') return '<span style="color: #ffc107;">';
-            if (p1 === '34') return '<span style="color: #56a0e3;">';
-            if (p1 === '37') return '<span style="color: #ffffff;">';
-            return '';
+        if (!text) return '';
+        
+        // Simple ANSI code processing
+        return text.replace(/\x1B\[([0-9;]+)m/g, function(match, codes) {
+            const params = codes.split(';');
+            let result = '';
+            
+            for (let i = 0; i < params.length; i++) {
+                const code = parseInt(params[i], 10);
+                
+                if (code === 0) {
+                    result += '</span>';
+                } else if (code === 1) {
+                    result += '<span style="font-weight: bold;">';
+                } else if (code === 31) {
+                    result += '<span style="color: #ff6b6b;">';
+                } else if (code === 32) {
+                    result += '<span style="color: #56e356;">';
+                } else if (code === 33) {
+                    result += '<span style="color: #e3c456;">';
+                } else if (code === 34) {
+                    result += '<span style="color: #56a0e3;">';
+                }
+            }
+            
+            return result;
+        });
+    }
+    
+    function setupButtonHandlers() {
+        // Reconnect button
+        document.getElementById('reconnect-btn')?.addEventListener('click', function() {
+            appendToTerminal("Reconnecting...", "info");
+            // Execute test command to check if connection is alive
+            executeCommand('echo "Reconnection test"', function(result) {
+                if (result.error) {
+                    appendToTerminal("Reconnection failed: " + result.error, "error");
+                    updateStatus(false);
+                } else {
+                    appendToTerminal("Reconnected successfully", "info");
+                    updateStatus(true);
+                }
+            });
+        });
+        
+        // Clear button
+        document.getElementById('clear-btn')?.addEventListener('click', function() {
+            // Keep only the input line
+            terminal.innerHTML = '';
+            if (inputLine) {
+                terminal.appendChild(inputLine);
+                inputLine.querySelector('.input')?.focus();
+            } else {
+                createCommandInput();
+            }
+        });
+        
+        // Disconnect button
+        document.getElementById('disconnect-btn')?.addEventListener('click', function() {
+            if (confirm('Are you sure you want to disconnect?')) {
+                window.location.href = '/web';
+            }
+        });
+        
+        // Fullscreen button
+        document.getElementById('fullscreen-btn')?.addEventListener('click', function() {
+            if (terminal.requestFullscreen) {
+                terminal.requestFullscreen();
+            } else if (terminal.mozRequestFullScreen) {
+                terminal.mozRequestFullScreen();
+            } else if (terminal.webkitRequestFullscreen) {
+                terminal.webkitRequestFullscreen();
+            } else if (terminal.msRequestFullscreen) {
+                terminal.msRequestFullscreen();
+            }
         });
     }
     
@@ -284,48 +339,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function moveCursorToEnd(element) {
-        const range = document.createRange();
-        const selection = window.getSelection();
-        range.selectNodeContents(element);
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
+        if (document.createRange) {
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            range.collapse(false);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
     }
-    
-    // Button event handlers
-    document.getElementById('reconnect-btn')?.addEventListener('click', function() {
-        appendToTerminal("Reconnecting...", "info");
-        connectWebSocket();
-    });
-    
-    document.getElementById('clear-btn')?.addEventListener('click', function() {
-        // Remove all elements except the input line
-        while (terminal.firstChild !== inputLine) {
-            terminal.removeChild(terminal.firstChild);
-        }
-    });
-    
-    document.getElementById('disconnect-btn')?.addEventListener('click', function() {
-        if (confirm('Are you sure you want to disconnect?')) {
-            if (socket) {
-                socket.close();
-            }
-            window.location.href = '/web';
-        }
-    });
-    
-    document.getElementById('fullscreen-btn')?.addEventListener('click', function() {
-        if (terminal.requestFullscreen) {
-            terminal.requestFullscreen();
-        } else if (terminal.mozRequestFullScreen) {
-            terminal.mozRequestFullScreen();
-        } else if (terminal.webkitRequestFullscreen) {
-            terminal.webkitRequestFullscreen();
-        } else if (terminal.msRequestFullscreen) {
-            terminal.msRequestFullscreen();
-        }
-    });
-    
-    // Start the client
-    init();
 });
