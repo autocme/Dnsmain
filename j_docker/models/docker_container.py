@@ -9,22 +9,23 @@ class DockerContainer(models.Model):
     _name = 'docker.container'
     _description = 'Docker Container'
     _order = 'name'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    # Commenting out inheritance until mail module is properly loaded
+    # _inherit = ['mail.thread', 'mail.activity.mixin']
 
-    name = fields.Char(string='Name', required=True, tracking=True, 
+    name = fields.Char(string='Name', required=True, 
                       help="Name of the container")
     
-    docker_id = fields.Char(string='Container ID', tracking=True, readonly=True,
+    docker_id = fields.Char(string='Container ID', readonly=True,
                           help="Docker container ID")
     
     server_id = fields.Many2one('docker.server', string='Server', required=True, 
-                              ondelete='cascade', tracking=True,
+                              ondelete='cascade',
                               help="Server where this container is running")
     
-    active = fields.Boolean(default=True, tracking=True)
+    active = fields.Boolean(default=True)
     
     # Container details
-    image = fields.Char(string='Image', tracking=True,
+    image = fields.Char(string='Image',
                        help="Docker image used by this container")
     
     status = fields.Selection([
@@ -35,7 +36,7 @@ class DockerContainer(models.Model):
         ('restarting', 'Restarting'),
         ('exited', 'Exited'),
         ('dead', 'Dead')
-    ], string='Status', default='unknown', tracking=True)
+    ], string='Status', default='unknown')
     
     status_text = fields.Char(string='Status Details', readonly=True)
     

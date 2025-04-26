@@ -9,25 +9,26 @@ class DockerImage(models.Model):
     _name = 'docker.image'
     _description = 'Docker Image'
     _order = 'name'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    # Commenting out inheritance until mail module is properly loaded
+    # _inherit = ['mail.thread', 'mail.activity.mixin']
 
-    name = fields.Char(string='Name', required=True, tracking=True,
+    name = fields.Char(string='Name', required=True,
                      help="Name of the Docker image (repository:tag)")
     
-    docker_id = fields.Char(string='Image ID', tracking=True, readonly=True,
+    docker_id = fields.Char(string='Image ID', readonly=True,
                           help="Docker image ID")
     
     server_id = fields.Many2one('docker.server', string='Server', required=True,
-                              ondelete='cascade', tracking=True,
+                              ondelete='cascade',
                               help="Server where this image is stored")
     
-    active = fields.Boolean(default=True, tracking=True)
+    active = fields.Boolean(default=True)
     
     # Image details
-    repository = fields.Char(string='Repository', tracking=True,
+    repository = fields.Char(string='Repository',
                            help="Image repository name")
     
-    tag = fields.Char(string='Tag', tracking=True,
+    tag = fields.Char(string='Tag',
                     help="Image tag")
     
     size = fields.Char(string='Size', readonly=True,

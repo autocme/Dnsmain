@@ -9,16 +9,17 @@ class DockerVolume(models.Model):
     _name = 'docker.volume'
     _description = 'Docker Volume'
     _order = 'name'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    # Commenting out inheritance until mail module is properly loaded
+    # _inherit = ['mail.thread', 'mail.activity.mixin']
 
-    name = fields.Char(string='Name', required=True, tracking=True,
+    name = fields.Char(string='Name', required=True,
                      help="Name of the Docker volume")
     
     server_id = fields.Many2one('docker.server', string='Server', required=True,
-                              ondelete='cascade', tracking=True,
+                              ondelete='cascade',
                               help="Server where this volume exists")
     
-    active = fields.Boolean(default=True, tracking=True)
+    active = fields.Boolean(default=True)
     
     # Volume details
     driver = fields.Char(string='Driver', readonly=True,
