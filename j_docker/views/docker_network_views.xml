@@ -99,8 +99,6 @@
                 <field name="subnet"/>
                 <field name="server_id"/>
                 <separator/>
-                <filter string="With Containers" name="with_containers" domain="[('connected_container_count', '>', 0)]"/>
-                <filter string="Empty Networks" name="empty_networks" domain="[('connected_container_count', '=', 0)]"/>
                 <filter string="User Networks" name="user_networks" domain="[('name', 'not in', ['bridge', 'host', 'none'])]"/>
                 <filter string="Default Networks" name="default_networks" domain="[('name', 'in', ['bridge', 'host', 'none'])]"/>
                 <separator/>
