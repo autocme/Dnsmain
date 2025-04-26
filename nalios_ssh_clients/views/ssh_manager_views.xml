@@ -80,6 +80,9 @@
                             <field name="private_key_filename" invisible="1"/>
                             <field name="private_key" filename="private_key_filename"/>
                             <field name="private_key_password" password="True"/>
+                            <div class="alert alert-info" role="alert">
+                                <i class="fa fa-info-circle"/> Both OpenSSH and PuTTY (PPK) key formats are supported. PPK files will be automatically converted to PEM format.
+                            </div>
                         </group>
                     </group>
                     <group>
