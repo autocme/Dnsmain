@@ -27,7 +27,7 @@
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         <button name="execute_command" type="object" class="oe_stat_button" icon="fa-play"
-                                attrs="{'invisible': [('ssh_client_id', '=', False)]}"
+                                invisible="not ssh_client_id"
                                 string="Execute"/>
                         <button name="toggle_favorite" type="object" class="oe_stat_button" icon="fa-star"
                                 string="Favorite"/>
