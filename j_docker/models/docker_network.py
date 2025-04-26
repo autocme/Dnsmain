@@ -9,19 +9,20 @@ class DockerNetwork(models.Model):
     _name = 'docker.network'
     _description = 'Docker Network'
     _order = 'name'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    # Commenting out inheritance until mail module is properly loaded
+    # _inherit = ['mail.thread', 'mail.activity.mixin']
 
-    name = fields.Char(string='Name', required=True, tracking=True,
+    name = fields.Char(string='Name', required=True,
                      help="Name of the Docker network")
     
-    docker_id = fields.Char(string='Network ID', tracking=True, readonly=True,
+    docker_id = fields.Char(string='Network ID', readonly=True,
                           help="Docker network ID")
     
     server_id = fields.Many2one('docker.server', string='Server', required=True,
-                              ondelete='cascade', tracking=True,
+                              ondelete='cascade',
                               help="Server where this network exists")
     
-    active = fields.Boolean(default=True, tracking=True)
+    active = fields.Boolean(default=True)
     
     # Network details
     driver = fields.Char(string='Driver', readonly=True,

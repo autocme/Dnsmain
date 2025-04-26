@@ -8,16 +8,17 @@ class DockerTask(models.Model):
     _name = 'docker.task'
     _description = 'Docker Task'
     _order = 'sequence, id'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    # Commenting out inheritance until mail module is properly loaded
+    # _inherit = ['mail.thread', 'mail.activity.mixin']
 
-    name = fields.Char(string='Name', required=True, tracking=True,
+    name = fields.Char(string='Name', required=True,
                      help="Name of the Docker task")
     
     server_id = fields.Many2one('docker.server', string='Server', required=True,
-                              ondelete='cascade', tracking=True,
+                              ondelete='cascade',
                               help="Server where this task will run")
     
-    active = fields.Boolean(default=True, tracking=True)
+    active = fields.Boolean(default=True)
     sequence = fields.Integer(string='Sequence', default=10, 
                             help="Order tasks in the scheduled list")
     
