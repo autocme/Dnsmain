@@ -534,3 +534,77 @@
 .terminal-toolbar button:hover {
     background: rgba(255, 255, 255, 0.1);
 }
+
+/* Direct WebSSH Styles */
+#terminal {
+    background-color: #121212;
+    color: #f0f0f0;
+    padding: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow: auto;
+    height: calc(100% - 60px);
+}
+
+.terminal-line {
+    margin-bottom: 2px;
+}
+
+.terminal-info {
+    color: #56a0e3;
+}
+
+.terminal-error {
+    color: #ff6b6b;
+}
+
+.terminal-welcome {
+    color: #ffc107;
+    margin-bottom: 10px;
+}
+
+.terminal-command {
+    color: #56e356;
+}
+
+.input-line {
+    display: flex;
+    margin-top: 5px;
+}
+
+.prompt {
+    color: #56e356;
+    margin-right: 5px;
+}
+
+.input {
+    color: #f0f0f0;
+    outline: none;
+    flex: 1;
+    min-width: 10px;
+}
+
+#connection-status {
+    margin-left: 15px;
+    font-size: 14px;
+}
+
+.status {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.status.connected {
+    background-color: #56e356;
+    box-shadow: 0 0 5px #56e356;
+}
+
+.status.disconnected {
+    background-color: #ff6b6b;
+    box-shadow: 0 0 5px #ff6b6b;
+}
