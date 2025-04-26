@@ -53,11 +53,11 @@ class DockerServer(models.Model):
     memory_usage = fields.Float(string='Memory Usage (%)', readonly=True)
     disk_usage = fields.Float(string='Disk Usage (%)', readonly=True)
     
-    container_count = fields.Integer(string='Containers', compute='_compute_docker_stats', store=False)
-    running_container_count = fields.Integer(string='Running', compute='_compute_docker_stats', store=False)
-    image_count = fields.Integer(string='Images', compute='_compute_docker_stats', store=False)
-    volume_count = fields.Integer(string='Volumes', compute='_compute_docker_stats', store=False)
-    network_count = fields.Integer(string='Networks', compute='_compute_docker_stats', store=False)
+    container_count = fields.Integer(string='Containers', compute='_compute_docker_stats', store=True)
+    running_container_count = fields.Integer(string='Running', compute='_compute_docker_stats', store=True)
+    image_count = fields.Integer(string='Images', compute='_compute_docker_stats', store=True)
+    volume_count = fields.Integer(string='Volumes', compute='_compute_docker_stats', store=True)
+    network_count = fields.Integer(string='Networks', compute='_compute_docker_stats', store=True)
     
     last_check = fields.Datetime(string='Last Check', readonly=True)
     notes = fields.Text(string='Notes')
