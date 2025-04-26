@@ -512,6 +512,7 @@
             
             <script type="text/javascript" src="/web/static/lib/jquery/jquery.js"></script>
             <script type="text/javascript">
+                <![CDATA[
                 document.addEventListener('DOMContentLoaded', function() {
                     // Configuration
                     const clientId = document.getElementById('client-id').value;
@@ -862,6 +863,7 @@
                     // Scroll to bottom of terminal initially
                     scrollToBottom();
                 });
+                ]]>
             </script>
         </t>
     </template>
