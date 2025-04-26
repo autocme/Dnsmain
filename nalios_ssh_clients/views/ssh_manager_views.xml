@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="routine_debug_form_view" model="ir.ui.view">
+        <field name="name">routine.debug.form.view</field>
+        <field name="model">ssh.routine.debug</field>
+        <field name="arch" type="xml">
+            <form>
+                <div>
+                    <field name="debug" readonly="1"/>
+                </div>
+                <footer>
+                    <button special="cancel" string="Ok" class="oe_highlight"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="routine_debug_action" model="ir.actions.act_window">
+        <field name="name">Routine Debug</field>
+        <field name="res_model">ssh.routine.debug</field>
+        <field name="view_mode">form</field>
+    </record>
+
+    <record id="ssh_client_routine_form_view" model="ir.ui.view">
+        <field name="model">ssh.client.routine</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group><field name="name"/></group>
+                    </group>
+                    <group>
+                        <field name="command_ids">
+                            <tree editable="bottom">
+                                <field name="sequence" widget="handle"/>
+                                <field name="name"/>
+                            </tree>
+                        </field>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="ssh_client_tree_view" model="ir.ui.view">
+        <field name="name">ssh.client.tree.view</field>
+        <field name="model">ssh.client</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="host"/>
+                <field name="port" widget="text" sum="False"/>
+                <field name="user"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="ssh_client_form_view" model="ir.ui.view">
+        <field name="name">ssh.client.form.view</field>
+        <field name="model">ssh.client</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="ssh_connect" type="object" class="oe_highlight" string="Connect to SSH"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Name..."/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="host"/>
+                            <field name="port"/>
+                            <field name="user"/>
+                            <field name="ssh_category_id"/>
+                        </group>
+                        <group>
+                            <field name="password" password="True"/>
+                            <span> or </span><br/>
+                            <field name="private_key_filename" invisible="1"/>
+                            <field name="private_key" filename="private_key_filename"/>
+                            <field name="private_key_password" password="True"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group>
+                            <field name="terminal_background" widget="color"/>
+                            <field name="terminal_text_color" widget="color"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Routines">
+                            <field name="ssh_routine_ids">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="command_ids" widget="many2many_tags"/>
+                                    <button name="run_routine" type="object" class="oe_link" string="Run routine"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="ssh_client_search_view" model="ir.ui.view">
+        <field name="model">ssh.client</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <group expand="1" name="group_by">
+                    <filter name="group_by_category_id" context="{'group_by': 'ssh_category_id'}" string="SSH Category"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="ssh_client_main_window" model="ir.actions.client">
+        <field name="name">SSH Client</field>
+        <field name="tag">ssh_client_main_window</field>
+        <field name="target">fullscreen</field>
+    </record>
+
+    <record id="action_ssh_clients" model="ir.actions.act_window">
+        <field name="name">SSH Clients</field>
+        <field name="res_model">ssh.client</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem id="menu_access_ssh_root"
+        name="SSH Manager"
+        sequence="22"
+        web_icon="nalios_ssh_clients,static/src/img/ssh_client_menu.png">
+        <menuitem id="menu_access_ssh_clients"
+                name="SSH Clients"
+                sequence="1"
+                action="action_ssh_clients"/>
+    </menuitem>
+</odoo>

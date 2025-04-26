@@ -1,0 +1,176 @@
+<odoo>
+    <!--
+    Queues mergebot menu: contains various list views inspecting the cron tasks
+    (mostly)
+    -->
+    <record id="action_splits" model="ir.actions.act_window">
+        <field name="name">Splits</field>
+        <field name="res_model">runbot_merge.split</field>
+    </record>
+    <record id="tree_splits" model="ir.ui.view">
+        <field name="name">Splits</field>
+        <field name="model">runbot_merge.split</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="id"/>
+                <field name="target"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_feedback" model="ir.actions.act_window">
+        <field name="name">Feedback</field>
+        <field name="res_model">runbot_merge.pull_requests.feedback</field>
+    </record>
+    <record id="tree_feedback" model="ir.ui.view">
+        <field name="name">Feedback List</field>
+        <field name="model">runbot_merge.pull_requests.feedback</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="repository"/>
+                <field name="pull_request"/>
+                <field name="message"/>
+                <field name="close"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_tagging" model="ir.actions.act_window">
+        <field name="name">Tagging</field>
+        <field name="res_model">runbot_merge.pull_requests.tagging</field>
+    </record>
+    <record id="tree_tagging" model="ir.ui.view">
+        <field name="name">Tagging</field>
+        <field name="model">runbot_merge.pull_requests.tagging</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="repository"/>
+                <field name="pull_request"/>
+                <field name="tags_add"/>
+                <field name="tags_remove"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_fetches" model="ir.actions.act_window">
+        <field name="name">PRs to fetch</field>
+        <field name="res_model">runbot_merge.fetch_job</field>
+        <field name="view_mode">tree</field>
+        <field name="context">{'default_active': True}</field>
+    </record>
+    <record id="search_fetches" model="ir.ui.view">
+        <field name="name">Fetches Search</field>
+        <field name="model">runbot_merge.fetch_job</field>
+        <field name="arch" type="xml">
+            <search>
+                <filter string="Active" name="active"
+                        domain="[('active', '=', True)]"/>
+                <field name="repository"/>
+                <field name="number"/>
+            </search>
+        </field>
+    </record>
+    <record id="tree_fetches" model="ir.ui.view">
+        <field name="name">Fetches Tree</field>
+        <field name="model">runbot_merge.fetch_job</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="repository"/>
+                <field name="number"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_patches" model="ir.actions.act_window">
+        <field name="name">Patches</field>
+        <field name="res_model">runbot_merge.patch</field>
+    </record>
+    <record id="search_patch" model="ir.ui.view">
+        <field name="name">Patches Search</field>
+        <field name="model">runbot_merge.patch</field>
+        <field name="arch" type="xml">
+            <search>
+                <filter string="Inactive" name="active" domain="[('active', '=', False)]"/>
+                <field name="target"/>
+                <field name="repository"/>
+            </search>
+        </field>
+    </record>
+    <record id="tree_patch" model="ir.ui.view">
+        <field name="name">Patches List</field>
+        <field name="model">runbot_merge.patch</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="id"/>
+                <field name="repository"/>
+                <field name="target"/>
+            </tree>
+        </field>
+    </record>
+    <record id="form_patch" model="ir.ui.view">
+        <field name="name">Patches Form</field>
+        <field name="model">runbot_merge.patch</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="repository"/>
+                            <field name="target"/>
+                        </group>
+                        <group>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="commit" invisible="patch and not commit">
+                            <group colspan="4">
+                                <field name="commit"/>
+                            </group>
+                        </page>
+                        <page string="patch" invisible="commit and not patch">
+                            <field name="patch" widget="ace" nolabel="1" colspan="2"/>
+                                <!-- no diff/patch mode support -->
+                                <!-- options="{'mode': 'patch'}"/> -->
+                            <group colspan="4" string="metadata">
+                                <group>
+                                    <field name="format"/>
+                                </group>
+                                <group>
+                                    <field name="author"/>
+                                    <field name="authordate" invisible="not authordate"/>
+                                    <field name="committer" invisible="not committer"/>
+                                    <field name="commitdate" invisible="not commitdate"/>
+                                </group>
+                                <separator string="message" cols="4"/>
+                                <field name="message" nolabel="1"/>
+                                <field name="file_ids" nolabel="1">
+                                    <tree>
+                                        <field name="display_name" string="File Name"/>
+                                    </tree>
+                                </field>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids" widget="mail_followers"/>
+                    <field name="message_ids" widget="mail_thread"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <menuitem name="Queues" id="menu_queues" parent="runbot_merge_menu">
+        <menuitem name="Splits" id="menu_queues_splits"
+                  action="action_splits"/>
+        <menuitem name="Feedback" id="menu_queues_feedback"
+                  action="action_feedback"/>
+        <menuitem name="Tagging" id="menu_queues_tagging"
+                  action="action_tagging"/>
+        <menuitem name="Fetches" id="menu_fetches"
+                  action="action_fetches"/>
+        <menuitem name="Patches" id="menu_patches"
+                  action="action_patches"/>
+    </menuitem>
+</odoo>

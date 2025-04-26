@@ -1,0 +1,659 @@
+<odoo>
+    <function model="website.page" name="write">
+        <value eval="ref('website.homepage_page')"/>
+        <value eval="{'active': False}"/>
+    </function>
+
+    <template id="link-pr" name="create a link to `pr`">
+        <t t-set="title"
+           t-value="pr.message.split('\n', 1)[0] if pr.repository.group_id &lt;= env.user.groups_id else ''"/>
+        <t t-set="title">
+          <t t-if="title and pr.blocked" >
+            <t t-out="title"/>: <t t-out="pr.blocked"/>
+          </t>
+          <t t-else="">
+            <t t-out="pr.blocked or title"/>
+          </t>
+        </t>
+        <a t-attf-href="https://github.com/{{ pr.repository.name }}/pull/{{ pr.number }}"
+           t-att-title="title.strip()"
+           t-att-target="target or None"
+           t-att-class="classes or None"
+        ><t t-out="pr.display_name"/></a>
+    </template>
+
+    <template id="staging-statuses" name="dropdown statuses list of stagings">
+        <div class="dropdown" t-if="staging.heads">
+            <button class="btn btn-link dropdown-toggle"
+                    type="button"
+                    aria-haspopup="true"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                    t-attf-title="Staged at {{staging.staged_at}}Z for {{round(staging.staging_duration)}}s"
+            >
+                <t t-out="0"/>
+                <span class="caret"></span>
+            </button>
+            <div class="dropdown-menu staging-statuses">
+                <a groups="runbot_merge.group_admin"
+                   class="dropdown-item" role="menuitem"
+                   t-attf-href="/web#id={{staging.id}}&amp;view_type=form&amp;model=runbot_merge.stagings"
+                   target="new">
+                    Open Staging
+                </a>
+                <t t-set="statuses" t-value="{(r, c): (s, t) for r, c, s, t in staging.statuses}"/>
+                <t t-foreach="repo_statuses._for_staging(staging)" t-as="req">
+                    <t t-set="st" t-value="statuses.get((req.repo_id.name, req.context)) or (None, None)"/>
+                    <a t-att-href="st[1]" target="new" role="menuitem" t-attf-class="
+                        dropdown-item
+                            {{'bg-success' if st[0] == 'success'
+                       else 'bg-danger' if st[0] in ('error', 'failure')
+                       else 'bg-info' if st[0]
+                       else 'bg-light'}}">
+                        <t t-esc="req.repo_id.name"/>: <t t-esc="req.context"/>
+                    </a>
+                </t>
+            </div>
+        </div>
+    </template>
+
+    <template id="alerts">
+        <div id="alerts" class="row text-center">
+            <div class="alert alert-light col-md-12 h6 mb-0">
+                <a href="/runbot_merge/changelog">Changelog</a>
+            </div>
+            <t t-set="stagingcron" t-value="env(user=1).ref('runbot_merge.staging_cron')"/>
+            <div t-if="not stagingcron.active" class="alert alert-warning col-12 mb-0" role="alert">
+                Staging is disabled, "ready" pull requests will not be staged.
+            </div>
+            <t t-set="mergecron" t-value="env(user=1).ref('runbot_merge.merge_cron')"/>
+            <div t-if="not mergecron.active" class="alert alert-warning col-12 mb-0" role="alert">
+                Merging is disabled, stagings will not be integrated.
+            </div>
+        </div>
+    </template>
+
+    <template id="dashboard" name="mergebot dashboard">
+        <t t-call="website.layout">
+            <div id="wrap"><div class="container-fluid">
+                <t t-call="runbot_merge.alerts"/>
+                <ul class="nav justify-content-center mt-3">
+                    <li t-foreach="projects" t-as="project"
+                        class="nav-item">
+                        <a t-attf-href="#project-{{project.id}}" class="nav-link">
+                            <t t-out="project.name"/>
+                        </a>
+                    </li>
+                </ul>
+                <section
+                    t-foreach="projects" t-as="project"
+                    class="row" t-attf-id="project-{{project.id}}"
+                >
+                    <h1 class="col-md-12"><t t-out="project.name"/></h1>
+                    <div class="col-md-12">
+                        key:
+                        <ul class="list-inline">
+                            <li class="bg-success">success (hopefully merged)</li>
+                            <li class="bg-info">ongoing</li>
+                            <li class="bg-danger">failure</li>
+                            <li class="bg-gray-lighter">cancelled</li>
+                        </ul>
+                    </div>
+                    <section t-foreach="project.branch_ids" t-as="branch" t-if="branch.active" class="col-md-12">
+                        <h2>
+                            <a t-attf-href="/runbot_merge/{{branch.id}}">
+                                <t t-out="branch.name"/>
+                            </a>
+                        </h2>
+                        <t t-call="runbot_merge.stagings"/>
+                        <t t-set="splits" t-value="branch.split_ids"/>
+                        <t t-set="ready_unstaged" t-value="
+                            project.env['runbot_merge.pull_requests'].search([
+                                ('target', '=', branch.id),
+                                ('state', '=', 'ready'),
+                                ('staging_id', '=', False),
+                            ]) - splits.mapped('batch_ids.prs')
+                        "/>
+                        <t t-set="ready" t-value="ready_unstaged.filtered(lambda p: not p.blocked)"/>
+                        <t t-set="blocked" t-value="ready_unstaged.filtered(lambda p: p.blocked)"/>
+                        <div t-if="splits" class="splits bg-warning pr-awaiting">
+                            <h5>
+                                Splits
+                                <small class="text-muted">will be staged next</small>
+                            </h5>
+                            <ul>
+                                <li t-foreach="splits" t-as="split">
+                                    <ul class="pr-listing list-inline list-unstyled mb0">
+                                        <li t-foreach="split.mapped('batch_ids.prs')" t-as="pr">
+                                            <t t-call="runbot_merge.link-pr"/>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                        <div t-if="ready" class="pr-listing pr-awaiting bg-warning">
+                            <h5>Awaiting</h5>
+                            <ul class="list-inline">
+                                <li t-foreach="ready" t-as="pr">
+                                    <t t-call="runbot_merge.link-pr"/>
+                                </li>
+                            </ul>
+                        </div>
+                        <div t-if="blocked" class="pr-listing pr-blocked bg-info">
+                            <h5>Blocked</h5>
+                            <ul class="list-inline">
+                                <li t-foreach="blocked" t-as="pr">
+                                    <t t-call="runbot_merge.link-pr"/>
+                                </li>
+                            </ul>
+                        </div>
+                        <t t-set="failed" t-value="
+                            project.env['runbot_merge.pull_requests'].search([
+                                ('target', '=', branch.id),
+                                ('state', '=', 'error'),
+                                ('staging_id', '=', False),
+                            ])
+                        "/>
+                        <div t-if="failed" class="pr-listing pr-failed bg-danger">
+                            <h5>Failed</h5>
+                            <ul class="list-inline">
+                                <li t-foreach="failed" t-as="pr">
+                                    <t t-call="runbot_merge.link-pr"/>
+                                </li>
+                            </ul>
+                        </div>
+                    </section>
+                </section>
+            </div></div>
+        </t>
+    </template>
+    <template id="stagings" name="mergebot branch stagings">
+        <t t-set="repo_statuses" t-value="branch.project_id.repo_ids.having_branch(branch).status_ids"/>
+        <ul class="list-unstyled stagings">
+            <t t-foreach="stagings_map[branch]" t-as="staging">
+                <t t-set="success" t-value="staging.state == 'success'"/>
+                <t t-set="failure" t-value="staging.state == 'failure'"/>
+                <t t-set="pending" t-value="staging.active and (not staging.state or staging.state == 'pending')"/>
+                <t t-set="stateclass">
+                    <t t-if="success">bg-success <t t-if="staging.active">bg-unmerged</t></t>
+                    <t t-if="failure">bg-danger</t>
+                    <t t-if="pending">bg-info</t>
+                    <t t-if="not (success or failure or pending)">bg-gray-lighter</t>
+                </t>
+                <t t-set="decorationclass" >
+                    <t t-if="4 > staging_index >= 2">d-none d-md-block</t>
+                    <t t-if="staging_index >= 4">d-none d-lg-block</t>
+                </t>
+                <t t-set="title">
+                    <t t-if="staging.state == 'success'"/>
+                    <t t-else="">
+                        <t t-if="staging.state == 'pending'">last status</t
+                        ><t t-elif="staging.state == 'ff_failed'">fast forward failed (<t t-out="(staging.reason or '').replace('\'', '')"/>)</t
+                        ><t t-else="" t-out="(staging.reason or '').replace('\'', '')"
+                        /> at <t t-out="(staging.staging_end or staging.write_date).replace(microsecond=0)"/>Z
+                    </t>
+                </t>
+                <li t-attf-class="staging {{stateclass.strip()}} {{decorationclass.strip()}}" t-att-title="title.strip() or None">
+                    <ul class="list-unstyled">
+                        <li t-foreach="staging.snapshot" t-as="batch" class="batch">
+                            <t t-out="batch['name']"/>
+                            <t t-foreach="staging.env['runbot_merge.pull_requests'].browse(batch['prs'])" t-as="pr">
+                                <t t-call="runbot_merge.link-pr"/>
+                            </t>
+                        </li>
+                    </ul>
+                    <t t-call="runbot_merge.staging-statuses">
+                        Staged <span t-field="staging.staged_at" t-options="{'widget': 'relative'}"/>
+                        (duration <span t-field="staging.staging_duration" t-options="{
+                            'widget': 'duration',
+                            'format': 'short',
+                            'round': 'minute'
+                        }"/>)
+                    </t>
+                </li>
+            </t>
+        </ul>
+    </template>
+    <template id="branch_stagings" name="mergebot stagings page">
+        <t t-set="repo_statuses" t-value="branch.project_id.repo_ids.having_branch(branch).status_ids"/>
+        <t t-call="website.layout">
+            <div id="wrap"><div class="container-fluid">
+                <section class="row">
+                    <h1 class="col-md-12"><t t-esc="branch.project_id.name"/>: <t t-esc="branch.name"/></h1>
+                </section>
+                <form method="get">
+                    <label for="until">Staged before:</label>
+                    <input type="datetime-local" name="until" t-att-value="until"/>
+                    (UTC)
+                    <label for="state">State:</label>
+                    <select name="state">
+                        <option t-att-selected="'selected' if not state else None"/>
+                        <option t-att-selected="'selected' if state == 'success' else None" value="success">Success</option>
+                        <option t-att-selected="'selected' if state == 'failure' else None" value="failure">Failure</option>
+                    </select>
+                    <button type="submit">Apply</button>
+                </form>
+                <table>
+                    <t t-foreach="stagings" t-as="staging">
+                        <t t-set="success"
+                           t-value="staging.state == 'success'"/>
+                        <t t-set="failure"
+                           t-value="staging.state == 'failure'"/>
+                        <t t-set="pending"
+                           t-value="staging.active and (not staging.state or staging.state == 'pending')"/>
+                        <t t-set="stateclass">
+                            <t t-if="success">bg-success</t>
+                            <t t-if="failure">bg-danger</t>
+                            <t t-if="pending">bg-info</t>
+                            <t t-if="not (success or failure or pending)">
+                                bg-gray-lighter
+                            </t>
+                        </t>
+                        <t t-set="title">
+                            <t t-if="staging.state == 'ff_failed'">
+                                Fast Forward Failed
+                            </t>
+                            <t t-elif="staging.state == 'canceled'">
+                                Cancelled<t t-if="staging.reason">: <t t-out="staging.reason.replace('\'', '')"/></t>
+                            </t>
+                            <t t-else="">
+                                <t t-out="(staging.reason or '').replace('\'', '')"/>
+                            </t>
+                        </t>
+                        <tr t-att-class="stateclass"
+                            style="border-bottom: 1px solid gainsboro; vertical-align: top">
+                            <th t-att-title="title.strip() or None">
+                                <t t-if="not staging.heads">
+                                    <span t-field="staging.staged_at"
+                                          t-options="{'format': 'yyyy-MM-dd\'T\'HH:mm:ssZ'}"/>
+                                </t>
+                                <t t-call="runbot_merge.staging-statuses">
+                                    <span t-field="staging.staged_at"
+                                          t-options="{'format': 'yyyy-MM-dd\'T\'HH:mm:ssZ'}"/>
+                                    in <span t-field="staging.staging_duration" t-options="{
+                                        'widget': 'duration',
+                                        'format': 'narrow',
+                                        'round': 'minute'
+                                    }"/>
+                                </t>
+                            </th>
+                            <td>
+                                <ul class="list-inline list-unstyled mb0">
+                                    <t t-foreach="staging.batch_ids"
+                                       t-as="batch">
+                                        <t t-set="first_pr"
+                                           t-value="batch.prs[-1:]"/>
+                                        <li class="dropdown" t-if="first_pr">
+                                            <button class="btn btn-link dropdown-toggle"
+                                                    type="button"
+                                                    aria-haspopup="true"
+                                                    data-bs-toggle="dropdown"
+                                                    aria-expanded="false"
+                                            >
+                                                <t t-esc="first_pr.label"/>
+                                                <span class="caret"></span>
+                                            </button>
+                                            <div class="dropdown-menu">
+                                                <t t-foreach="batch.prs" t-as="pr">
+                                                    <t t-call="runbot_merge.link-pr">
+                                                        <t t-set="target">new</t>
+                                                        <t t-set="classes">dropdown-item</t>
+                                                    </t>
+                                                </t>
+                                            </div>
+                                        </li>
+                                    </t>
+                                </ul>
+                            </td>
+                        </tr>
+                    </t>
+                </table>
+                <t t-if="next">
+                    <a t-attf-href="/runbot_merge/{{branch.id}}?until={{next}}&amp;state={{state}}">
+                        Next >
+                    </a>
+                </t>
+            </div></div>
+        </t>
+    </template>
+    <template id="changelog" name="mergebot changelog">
+        <t t-call="website.layout">
+            <div id="wrap"><div class="container-fluid">
+                <h1>Changelog</h1>
+                <section t-foreach="entries" t-as="entry">
+                    <h3 t-if="not entry_first" t-esc="entry"/>
+                    <ul>
+                        <li t-foreach="sorted(entry_value)" t-as="item">
+                            <t t-out="item"/>
+                        </li>
+                    </ul>
+                </section>
+            </div></div>
+        </t>
+    </template>
+
+    <template id="view_pull_request_info_merged">
+        <div class="alert alert-success">
+            Merged
+            <t t-if="merged_head">
+                at <a t-attf-href="https://github.com/{{pr.repository.name}}/commit/{{merged_head}}"><t t-esc="merged_head"/></a>
+            </t>
+            <p>Statuses:</p>
+            <ul>
+                <t t-foreach="pr.repository.status_ids._for_pr(pr)" t-as="ci">
+                    <t t-set="st" t-value="statuses.get(ci.context.strip())"/>
+                    <li t-if="st">
+                        <a t-att-href="st.get('target_url') if st else None"><t t-esc="ci.context.strip()"/></a><t t-if="st and st.get('description')">: <t t-esc="st['description']"/></t>
+                    </li>
+                </t>
+            </ul>
+
+            <t t-set="linked_prs" t-value="pr._linked_prs"/>
+            <div t-if="linked_prs">
+                Linked pull requests
+                <ul>
+                    <li t-foreach="linked_prs" t-as="linked">
+                        <a t-att-href="linked.url" t-field="linked.display_name"/>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </template>
+    <template id="view_pull_request_info_closed">
+        <div class="alert alert-light">
+            Closed
+        </div>
+    </template>
+    <template id="view_pull_request_info_error">
+        <div class="alert alert-danger">
+            Error:
+            <span t-esc="pr.with_context(active_test=False).batch_id.staging_ids[-1:].reason">
+                Unable to stage PR
+            </span>
+        </div>
+    </template>
+    <template id="view_pull_request_info_staging">
+        <div class="alert alert-primary">
+            Staged <span t-field="pr.staging_id.staged_at" t-options="{'widget': 'relative'}"/>.
+
+            <t t-set="linked_prs" t-value="pr._linked_prs"/>
+            <div t-if="linked_prs">
+                Linked pull requests
+                <ul>
+                    <li t-foreach="linked_prs" t-as="linked">
+                        <a t-att-href="linked.url" t-field="linked.display_name"/>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </template>
+    <template id="view_pull_request_info_open">
+        <!-- nb: replicates `blocked`, maybe that should be split into various criteria? -->
+        <div class="alert alert-info">
+        <p t-if="pr.blocked" class="alert-danger">Blocked</p>
+        <p t-else="" class="alert-success">Ready (waiting for staging)</p>
+        <ul class="todo">
+            <li t-att-class="'ok' if pr.squash or pr.merge_method else 'fail'">
+                Merge method
+            </li>
+            <li t-att-class="'ok' if pr._approved else 'fail'">
+                Review
+            </li>
+            <li t-att-class="'ok' if pr.state not in ('opened', 'approved') else ''">
+                CI
+                <ul class="todo">
+                    <t t-foreach="pr.repository.status_ids._for_pr(pr)" t-as="ci">
+                        <t t-set="st" t-value="statuses.get(ci.context.strip())"/>
+                        <t t-set="result">
+                            <t t-if="not st or st['state'] == 'pending'"></t>
+                            <t t-elif="st['state'] in ('error', 'failure')">fail</t>
+                            <t t-else="">ok</t>
+                        </t>
+                        <li t-if="ci.prs == 'required' or st" t-att-class="result">
+                            <a t-att-href="st.get('target_url') if st else None"><t t-esc="ci.context.strip()"/></a><t t-if="st and st.get('description')">: <t t-esc="st['description']"/></t>
+                        </li>
+                    </t>
+                </ul>
+            </li>
+            <t t-set="linked_prs" t-value="pr._linked_prs"/>
+            <li t-if="linked_prs" t-att-class="'ok' if all(l._ready for l in linked_prs) else 'fail'">
+                Linked pull requests
+                <ul class="todo">
+                    <t t-foreach="linked_prs" t-as="linked">
+                        <li t-att-class="'ok' if linked._ready else 'fail'">
+                            <a t-att-href="linked.url" t-field="linked.display_name"/>
+                        </li>
+                    </t>
+                </ul>
+            </li>
+        </ul>
+        </div>
+    </template>
+
+    <template id="view_pull_request">
+        <t t-call="website.layout">
+            <div id="wrap"><div class="container-fluid">
+                <t t-call="runbot_merge.alerts"/>
+                <h1>
+                    <a t-att-href="pr.github_url" t-field="pr.display_name">
+                    </a>
+                    <a t-attf-href="/web#view_type=form&amp;model=runbot_merge.pull_requests&amp;id={{pr.id}}"
+                        class="btn btn-sm btn-secondary align-top float-end"
+                        groups="runbot_merge.group_admin">View in backend</a>
+                </h1>
+                <h6>Created by <span t-field="pr.author.display_name"/></h6>
+                <t t-set="tmpl">
+                    <t t-if="pr.state in ('merged', 'closed', 'error')"><t t-esc="pr.state"/></t>
+                    <t t-elif="pr.staging_id">staging</t>
+                    <t t-else="">open</t>
+                </t>
+                <t t-call="runbot_merge.view_pull_request_info_{{tmpl.strip()}}"/>
+                <dl class="runbot-merge-fields">
+                    <dt>label</dt>
+                    <dd><span t-field="pr.label"/></dd>
+                    <dt>head</dt>
+                    <dd><a t-attf-href="{{pr.github_url}}/commits/{{pr.head}}"><span t-field="pr.head"/></a></dd>
+                </dl>
+                <t t-call="runbot_merge.dashboard-table"/>
+                <p t-field="pr.message_html"/>
+            </div></div>
+        </t>
+    </template>
+
+    <record id="dashboard-pre" model="ir.actions.server">
+        <field name="name">Preparation for the preparation of the PR dashboard content</field>
+        <field name="state">code</field>
+        <field name="model_id" ref="base.model_ir_qweb"/>
+        <field name="code"><![CDATA[
+project = pr.repository.project_id
+genealogy = pr.batch_id.genealogy_ids
+repos = project.repo_ids & genealogy.all_prs.repository
+targets = genealogy.all_prs.target
+if not genealogy:
+    # if a PR is closed, it may not have a batch to get a genealogy from,
+    # in which case it's just a sole soul drifting in the deep dark
+    branches = pr.target
+    repos = pr.repository
+elif all(p.closed for p in genealogy[-1].all_prs):
+    branches = (project.branch_ids & targets)[::-1]
+elif pr.batch_id.fw_policy == 'no':
+    branches = pr.target
+else:
+    # if the tip of the genealogy is not closed, extend to the furthest limit,
+    # keeping branches which are active or have an associated batch / PR
+    limit = min(genealogy.prs.limit_id, key=lambda b: (b.sequence, b.name), default=None)
+    limit_high = project.branch_ids.ids.index(limit.id) if limit else None
+
+    limit = max(targets, key=lambda b: (b.sequence, b.name))
+    limit_low = project.branch_ids.ids.index(limit.id)
+
+    branches = project.branch_ids[limit_high:limit_low+1].filtered(lambda b: b.active or b in targets)[::-1]
+
+action = (project, repos, branches, genealogy)
+        ]]></field>
+    </record>
+
+    <record id="dashboard-prep" model="ir.actions.server">
+        <field name="name">Preparation of the PR dashboard content</field>
+        <field name="state">code</field>
+        <field name="model_id" ref="base.model_ir_qweb"/>
+        <field name="code"><![CDATA[
+batches = {}
+for branch in [*branches, branches.browse(())]:
+    if genealogy:
+        prs_batch = genealogy.filtered(lambda b: b.target == branch).all_prs
+        if not (branch or prs_batch):
+            continue
+    else:
+        prs_batch = pr
+    for repo in repos:
+        prs = prs_batch.filtered(lambda p: p.repository == repo)
+        st = 0
+        detached = False
+        pr_fmt = []
+        for p in prs:
+            st |= (bool(p.error) << 2 | (p.state == 'merged') << 1 | bool(p.blocked) << 0)
+
+            done = p.state in ('closed', 'merged')
+            # this will hide the detachment signal when the PRs are merged/closed, cleaner but less correct?
+            detached = detached or bool(p.source_id and not p.parent_id and not done)
+            label = p.state
+            if p.blocked:
+                label = "%s, %s" % (label, p.blocked)
+            pr_fmt.append({
+                'pr': p,
+                'number': p.number,
+                'label': label,
+                'closed': p.closed,
+                'backend_url': "/web#view_type=form&model=runbot_merge.pull_requests&id=%d" % p.id,
+                'github_url': p.github_url,
+                'checked': done or p.status == 'success',
+                'reviewed': done or bool(p.reviewed_by),
+                'attached': done or p.parent_id or not p.source_id,
+                'merge_date': p.merge_date or '',
+            })
+        state = None
+        for i, s in zip(range(2, -1, -1), ['danger', 'success', 'warning']):
+            if st & (1 << i):
+                state = s
+                break
+
+        batches[repo, branch] = {
+            'active': pr in prs,
+            'detached': detached,
+            'state': state,
+            'prs': pr_fmt,
+            'pr_ids': prs,
+        }
+
+action = batches
+        ]]></field>
+    </record>
+    <template id="dashboard-table">
+        <t t-set="pre" t-value="pr.env.ref('runbot_merge.dashboard-pre').sudo()._run_action_code_multi({'pr': pr})"/>
+        <t t-set="repos" t-value="pre[1]"/>
+        <t t-set="branches" t-value="pre[2]"/>
+        <t t-set="batches" t-value="env.ref('runbot_merge.dashboard-prep').sudo()._run_action_code_multi({
+            'pr': pr,
+            'repos': repos,
+            'branches': branches,
+            'genealogy': pre[3],
+        })"/>
+        <div t-if="not pr.batch_id.target" class="alert alert-danger">
+<p>Inconsistent targets:</p>
+<ul><li t-foreach="pr.batch_id.prs" t-as="p">
+<a t-att-href="p.url"><t t-out="p.display_name"/></a> has target '<t t-out="p.target.name"/>'</li></ul>
+        </div>
+        <table t-else="" class="table table-bordered table-sm">
+            <colgroup>
+                <col/>
+                <col t-foreach="repos" t-as="repo"
+                     t-att-class="'bg-info' if repo == pr.repository else None"
+                />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th/>
+                    <th t-foreach="repos" t-as="repo">
+                        <t t-out="repo.name"/>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <!--
+                table-info looks like shit (possibly because no odoo styling so use bg-info
+                text-muted doesn't do anything, so set some opacity
+                -->
+                <tr t-foreach="branches" t-as="branch"
+                    t-att-title="None if branch.active else 'branch is disabled'"
+                    t-attf-class="{{
+                        'bg-info' if branch == pr.target else ''
+                    }} {{
+                        'inactive' if not branch.active else ''
+                    }}">
+                    <td t-out="branch.name or ''"/>
+                    <t t-foreach="repos" t-as="repo">
+                        <t t-set="ps" t-value="batches[repo, branch]"/>
+                        <t t-set="stateclass" t-value="ps['state'] and 'table-'+ps['state']"/>
+                        <t t-set="detached" t-value="ps['detached']"/>
+                        <td t-if="ps['prs']"
+                            t-att-title="'detached' if detached else None"
+                            t-attf-class="{{
+                                'table-active' if ps['active'] else ''
+                            }} {{
+                                'detached' if detached else ''
+                            }}{{stateclass}}">
+                            <!--
+                            there should be only one PR per (repo, target) but
+                            that's not always the case
+                            -->
+                            <span t-foreach="ps['prs']" t-as="p"
+                                  t-att-title="p['label'] + (p['merge_date'] and (f' at ' + str(p['merge_date'])))"
+                                  t-att-class="'closed' if p['closed'] else None">
+                                <a t-attf-href="/{{repo.name}}/pull/{{p['number']}}">#<t t-out="p['number']"/></a>
+                                <sup t-if="p['merge_date'] and request.session.debug" t-out="p['merge_date']"/>
+                                <a t-attf-class="fa fa-brands fa-github"
+                                   title="Open on Github"
+                                   t-att-href="p['github_url']"
+                                />
+                                <a groups="runbot_merge.group_admin"
+                                   title="Open in Backend"
+                                   t-attf-class="fa fa-external-link"
+                                   t-att-href="p['backend_url']"
+                                />
+                                <sup t-if="not p['checked']" class="text-danger">missing statuses</sup>
+                                <sup t-if="not p['reviewed']" class="text-danger">missing r+</sup>
+                                <sup t-if="not p['attached']"
+                                     t-attf-title="detached: {{p['pr'].detach_reason}}"
+                                     class="text-warning fa fa-unlink"/>
+                                <sup t-if="p['pr'].staging_id" class="text-success">
+                                    staged
+                                </sup>
+                                <sup t-elif="p['pr']._ready" class="text-success">
+                                    ready
+                                </sup>
+                            </span>
+                        </td>
+                        <td t-else=""/>
+                    </t>
+                </tr>
+            </tbody>
+        </table>
+    </template>
+    <template id="theme-script" inherit_id="website.layout">
+        <xpath expr="//head" position="inside">
+            <script type="text/javascript"
+                    src="/runbot_merge/static/src/js/runbot_merge.js"
+                    async="async"/>
+        </xpath>
+    </template>
+    <template id="theme-toggle" inherit_id="website.placeholder_header_call_to_action">
+        <xpath expr="." position="inside">
+            <div class="btn-group btn-group-toggle theme-toggle">
+                <button class="btn btn-outline-secondary fa fa-sun-o"/>
+                <button class="btn btn-outline-secondary fa fa-moon-o"/>
+                <button class="btn btn-outline-secondary fa fa-ban active"/>
+            </div>
+        </xpath>
+    </template>
+</odoo>

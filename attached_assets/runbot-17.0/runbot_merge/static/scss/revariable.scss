@@ -1,0 +1,123 @@
+// resets a bunch of CSS rules to either `inherit` color or use CSS variables,
+// such that they properly follow CSS variables
+:root, :root.light {
+  color-scheme: light dark;
+
+  // dunno why it's not global
+  --bg-opacity: 1;
+  --link-color: var(--primary);
+  --link-hover-color: color-mix(in oklch, var(--link-color), var(--dark));
+
+  @each $color, $value in $theme-colors {
+    --#{$variable-prefix}#{$color}-bg-rgb: #{to-rgb(hsl(
+      hue($value),
+      max(saturation($value) - 16%, 0%),
+      90%,
+    ))};
+  }
+  // the adjusted danger is too saturated and a bit odd, rather than bother with
+  // adjusting the conversion just set the value we want
+  --danger-bg-rgb: 242, 222, 222;
+}
+
+@function invlight($value) {
+  @return hsl(hue($value), saturation($value), 100% - lightness($value));
+}
+@mixin darkrules {
+    $ibc: invlight($body-color);
+    --body-color: #{$ibc};
+    --body-color-rgb: #{to-rgb($ibc)};
+    $ibg: $gray-900;
+    --body-bg: #{$ibg};
+    --body-bg-rgb: #{to-rgb($ibg)};
+
+    @each $color, $value in $theme-colors {
+      $value: invlight($value);
+
+      --#{$color}: #{$value};
+      --#{$color}-rgb: #{to_rgb($value)};
+      --#{$color}-bg-rgb: #{to-rgb(hsl(
+        hue($value),
+        min(saturation($value) + 16%, 100%),
+        15%,
+      ))};
+    }
+    --success-bg-rgb: 17, 68, 28;
+    --danger-bg-rgb: 96, 32, 32;
+}
+
+:root.dark {
+  @include darkrules;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    @include darkrules;
+  }
+}
+
+body {
+  font-family: inherit;
+}
+h1, h2, h3, h4, h5, h6{
+  color: inherit;
+  margin-top: 0.66em !important;
+  margin-bottom: 0.33em !important;
+}
+
+a, .nav-link {
+  color: var(--link-color);
+  &:hover, &:focus {
+    color: var(--link-hover-color);
+  }
+}
+
+.table-success, .table-info, .table-warning, .table-danger {
+  color: inherit;
+}
+
+.navbar-light {
+  background-color: var(--body-bg);
+  color: inherit;
+}
+
+// reset the table and alert bg rules so they use the generic (rg)bg variables
+@each $category, $_ in $theme-colors {
+  .alert-#{$category} {
+    // inline alert-variant as it can't handle ~~the truth~~ CSS variables
+    background-color: rgba(var(--#{$category}-bg-rgb), var(--bg-opacity));
+    border-color: color-mix(in srgb, var(--#{$category}) #{-$alert-border-scale}, var(--light));
+    color: color-mix(in srgb, var(--#{$category}) #{$alert-color-scale}, var(--dark));
+    a {
+      color: color-mix(
+        in srgb,
+        color-mix(
+          in srgb,
+          var(--#{$category}) #{$alert-color-scale},
+          var(--dark)
+        ) 80%,
+        var(--dark)
+      );
+    }
+  }
+  .table-#{$category} {
+    $c: rgba(var(--#{$category}-bg-rgb), var(--bg-opacity));
+    --table-bg: #{$c};
+    --table-accent-bg: transparent;
+    &.table-active {
+      --table-bg: color-mix(in oklch, #{$c} 85%, var(--#{$category}));
+    }
+  }
+}
+
+.dropdown-menu {
+  color: var(--body-color);
+  background-color: var(--body-bg);
+}
+.dropdown-item {
+  color: color-mix(in srgb, var(--link-color) 85%, var(--light));
+  &:hover, &:focus {
+    color: color-mix(in srgb, var(--link-color), var(--dark));
+    // TODO: doesn't work for statuses (doesn't combine with .bg-{category}
+    background-color: oklch(from var(--dark) l c h / 0.1);
+  }
+}

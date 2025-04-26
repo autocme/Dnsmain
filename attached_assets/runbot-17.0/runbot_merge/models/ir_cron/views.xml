@@ -1,0 +1,15 @@
+<odoo>
+    <record id="ir_cron_view_form" model="ir.ui.view">
+        <field name="name">replace "run manually" by "trigger"</field>
+        <field name="model">ir.cron</field>
+        <field name="inherit_id" ref="base.ir_cron_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='method_direct_trigger']" position="after">
+                <button name="trigger" type="object" string="Trigger" class="oe_highlight" invisible="state != 'code'"/>
+            </xpath>
+            <xpath expr="//button[@name='method_direct_trigger']" position="attributes">
+                <attribute name="class"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

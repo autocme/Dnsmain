@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="res_config_settings_view_form" model="ir.ui.view">
+            <field name="name">res.config.settings.view.form.inherit.runbot</field>
+            <field name="model">res.config.settings</field>
+            <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+            <field name="arch" type="xml">
+              <xpath expr="//form" position="inside">
+                <app string="Runbot" name="runbot">
+
+                  <block title="Runbot Frontend Warning">
+                    <setting class="col-lg-12">
+                        <field name="runbot_message" class="w-100"/>
+                    </setting>
+                  </block>
+
+                  <block title="Runbot Builders">
+                    <setting>
+                      <field name="runbot_workers"/>
+                    </setting>
+                    <setting>
+                      <field name="runbot_running_max"/>
+                    </setting>
+                    <setting>
+                      <field name="runbot_starting_port"/>
+                    </setting>
+                    <setting>
+                      <field name="runbot_template"/>
+                    </setting>
+                    <setting>
+                      <field name="runbot_logdb_name"/>
+                    </setting>
+                    <setting>
+                      <field name="runbot_use_ssl"/>
+                    </setting>
+                    <setting>
+                      <field name="runbot_disable_host_on_fetch_failure"/>
+                    </setting>
+                    <setting>
+                      <field name="runbot_dockerfile_public_by_default"/>
+                    </setting>
+                  </block>
+
+                  <block title="Limits">
+                    <setting>
+                      <field name="runbot_timeout"/>
+                    </setting>
+                    <setting>
+                      <field name="runbot_containers_memory"/>
+                      <field name="runbot_memory_bytes" readonly='1' class="text-muted"/>
+                    </setting>
+                    <setting>
+                      <field name="runbot_containers_cpus"/>
+                    </setting>
+                  </block>
+
+                  <block title="GC">
+                    <setting>
+                      <field name="runbot_db_gc_days"/>
+                    </setting>
+                    <setting>
+                      <field name="runbot_db_gc_days_child"/>
+                    </setting>
+                    <setting>
+                      <field name="runbot_full_gc_days"/>
+                    </setting>
+                  </block>
+
+                  <block title="Runbot Leader">
+                    <setting>
+                      <field name="runbot_max_age"/>
+                    </setting>
+                    <setting>
+                      <field name="runbot_is_base_regex"/>
+                    </setting>
+                    <setting>
+                      <field name="runbot_forwardport_author"/>
+                    </setting>
+                    <setting>
+                      <field name="runbot_organisation"/>
+                    </setting>
+                  </block>
+
+                  <block title="Builds Default odoo.rc">
+                    <setting class="col-lg-12">
+                       <field name="runbot_default_odoorc" class="w-100"/>
+                    </setting>
+                  </block>
+
+                  <block title="Upgrade Exceptions Message">
+                    <setting class="col-lg-12">
+                      <field name="runbot_upgrade_exception_message" class="w-100"/>
+                    </setting>
+                  </block>
+                  <block title="Docker Registry Settings">
+                    <setting>
+                      <field name="runbot_docker_registry_host_id"/>
+                    </setting>
+                  </block>
+                </app>
+              </xpath>
+            </field>
+        </record>
+
+        <record id="action_runbot_configuration" model="ir.actions.act_window">
+            <field name="name">Settings</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">res.config.settings</field>
+            <field name="view_mode">form</field>
+            <field name="target">inline</field>
+            <field name="context">{'module' : 'runbot'}</field>
+        </record>
+
+
+    </data>
+</odoo>

@@ -1,0 +1,262 @@
+<odoo>
+  <data>
+
+   <record id="view_runbot_project" model="ir.ui.view">
+        <field name="model">runbot.project</field>
+        <field name="arch" type="xml">
+            <form string="Projects">
+                <group>
+                    <field name="name"/>
+                    <field name="keep_sticky_running"/>
+                    <field name="always_use_foreign"/>
+                    <field name="dockerfile_id"/>
+                    <field name="group_ids"/>
+                    <field name="trigger_ids"/>
+                    <field name="sequence"/>
+                    <field name="token" password="True"/>
+                    <field name="hidden"/>
+                    <field name="active"/>
+                    <field name="process_delay"/>
+                </group>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_runbot_project_tree" model="ir.ui.view">
+        <field name="model">runbot.project</field>
+        <field name="arch" type="xml">
+            <tree string="Projects">
+                <field name="name"/>
+                <field name="keep_sticky_running"/>
+                <field name="dockerfile_id"/>
+                <field name="group_ids"/>
+                <field name="trigger_ids"/>
+                <field name="sequence"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_runbot_bundle" model="ir.ui.view">
+        <field name="model">runbot.bundle</field>
+        <field name="arch" type="xml">
+            <form string="Bundles">
+                <header>
+                    <button name="action_generate_custom_trigger_multi_action" string="New custom multi" type="object" class="oe_highlight"/>
+                    <button name="action_generate_custom_trigger_restore_action" string="New custom restore" type="object" class="oe_highlight"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Base options">
+                            <field name="name" widget="char_frontend_url"/>
+                            <field name="project_id"/>
+                            <field name="sticky" readonly="0"/>
+                            <field name="to_upgrade" readonly="0"/>
+                            <field name="to_upgrade_from" readonly="0"/>
+                            <field name="is_base"/>
+                            <field name="base_id"/>
+                            <field name="defined_base_id"/>
+                            <field name="version_id"/>
+                            <field name="for_next_freeze"/>
+                            <field name="has_pr"/>
+                        </group>
+                        <group string="Testing options">
+                            <field name="no_build"/>
+                            <field name="no_auto_run"/>
+                            <field name="priority"/>
+                            <field name="build_all"/>
+                            <field name="always_use_foreign"/>
+                            <field name="dockerfile_id"/>
+                            <field name="host_id" readonly="0"/>
+                            <field name="commit_limit"/>
+                            <field name="file_limit"/>
+                            <field name="disable_codeowner"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Trigger customisation">
+                            <field name="trigger_custom_ids" nolabel="1">
+                                <tree editable="bottom">
+                                    <field name="start_mode"/>
+                                    <field name="trigger_id" domain="[('project_id', '=', parent.project_id)]"/>
+                                    <field name="config_id"/>
+                                    <field name="extra_params"/>
+                                    <field name="config_data" widget="runbotjsonb"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="branches">
+                            <field name="branch_ids" nolabel="1">
+                                <tree>
+                                    <field name="dname"/>
+                                    <field name="remote_id"/>
+                                    <field name="pull_head_name"/>
+                                    <field name="target_branch_name"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Last batchs">
+                            <field name="last_batchs" nolabel="1">
+                                <tree>
+                                    <field name="id" widget="char_frontend_url"/>
+                                    <field name="state"/>
+                                    <field name="commit_link_ids"/>
+                                    <field name="slot_ids"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_runbot_custom_trigger_tree" model="ir.ui.view">
+        <field name="model">runbot.bundle.trigger.custom</field>
+        <field name="arch" type="xml">
+            <tree string="Bundle">
+                <field name="bundle_id"/>
+                <field name="trigger_id"/>
+                <field name="config_id"/>
+                <field name="extra_params"/>
+                <field name="config_data" widget="runbotjsonb"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_runbot_custom_trigger_form" model="ir.ui.view">
+        <field name="model">runbot.bundle.trigger.custom</field>
+        <field name="arch" type="xml">
+            <form string="Bundle">
+                <group>
+                    <field name="bundle_id"/>
+                    <field name="trigger_id"/>
+                    <field name="config_id"/>
+                    <field name="extra_params"/>
+                    <field name="config_data"/>
+                </group>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_runbot_bundle_tree" model="ir.ui.view">
+        <field name="model">runbot.bundle</field>
+        <field name="arch" type="xml">
+            <tree string="Bundle">
+                <field name="project_id"/>
+                <field name="name" widget="char_frontend_url"/>
+                <field name="version_number"/>
+                <field name="is_base"/>
+                <field name="sticky"/>
+                <field name="to_upgrade"/>
+                <field name="to_upgrade_from"/>
+                <field name="no_build"/>
+                <field name="branch_ids"/>
+                <field name="version_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="runbot_bundle_search_view" model="ir.ui.view">
+        <field name="name">runbot.bundle.filter</field>
+        <field name="model">runbot.bundle</field>
+        <field name="arch" type="xml">
+          <search string="Search bundle">
+            <field name="name"/>
+            <field name="version_id"/>
+            <separator/>
+            <filter string="For next freeze" name="for_next_freeze" domain="[('for_next_freeze', '=', True)]"/>
+            <filter string="Has open pr" name="has_pr" domain="[('has_pr', '=', True)]"/>
+            <filter string="No pr" name="no_pr" domain="[('branch_ids', '!=', []), '!', ('branch_ids', 'any', [('is_pr', '=', True)])]"/>
+            <filter string="Is base" name="is_base" domain="[('is_base', '=', True)]"/>
+            <filter string="Is sticky" name="is_sticky" domain="[('sticky', '=', True)]"/>
+            <separator/>
+            <searchpanel>
+                <field name="project_id" select="multi" string="Projects" icon="fa-folder" enable_counters="1"/>
+            </searchpanel>
+          </search>
+        </field>
+      </record>
+
+    <record id="view_runbot_batch" model="ir.ui.view">
+        <field name="model">runbot.batch</field>
+        <field name="arch" type="xml">
+            <form string="Batch">
+                <group>
+                    <field name="last_update"/>
+                    <field name="bundle_id"/>
+                    <field name="state"/>
+                    <field name="commit_link_ids">
+                        <tree>
+                            <field name="commit_id"/>
+                            <field name="match_type"/>
+                        </tree>
+                    </field>
+                    <field name="slot_ids">
+                        <tree>
+                            <field name="trigger_id"/>
+                            <field name="build_id"/>
+                            <field name="link_type"/>
+                        </tree>
+                    </field>
+                </group>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_runbot_batch_tree" model="ir.ui.view">
+        <field name="model">runbot.batch</field>
+        <field name="arch" type="xml">
+            <tree string="Batchs">
+                <field name="bundle_id"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_runbot_version_tree" model="ir.ui.view">
+        <field name="model">runbot.version</field>
+        <field name="arch" type="xml">
+            <tree string="Version">
+                <field name="name"/>
+                <field name="number"/>
+                <field name="is_major"/>
+                <field name="dockerfile_id"/>
+            </tree>
+        </field>
+    </record>
+    <record id="action_bundle_custom_trigger" model="ir.actions.act_window">
+        <field name="name">Custom triggers</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">runbot.bundle.trigger.custom</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+    <record id="action_bundle" model="ir.actions.act_window">
+        <field name="name">Bundles</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">runbot.bundle</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+    <record id="action_bundle_project" model="ir.actions.act_window">
+        <field name="name">Projects</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">runbot.project</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+    <record id="action_bundle_version" model="ir.actions.act_window">
+        <field name="name">Versions</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">runbot.version</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+    <record id="action_bundle_batch" model="ir.actions.act_window">
+        <field name="name">Batches</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">runbot.batch</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+  </data>
+</odoo>

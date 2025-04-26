@@ -1,0 +1,33 @@
+#ssh_client_container{
+    width: 100%;
+    height: 100vh;
+    background: #0c0c3d;
+    & .o_exit{
+        color: white!important;
+    }
+    & h1{
+        color: white;
+        padding: 10px;
+    }
+    & #ssh_client_terminal{
+        width: 100%;
+        height: 100%;
+
+        & pre{
+            color: unset!important;
+        }
+
+        & #terminal_window{
+            padding: 20px;
+            border: 1px white solid;
+            overflow-y: auto;
+            height: 80vh;
+            max-height: 80vh;
+        }
+
+        & #inputCommand{
+            padding: 5px;
+            color: black!important;
+        }
+    }
+}
