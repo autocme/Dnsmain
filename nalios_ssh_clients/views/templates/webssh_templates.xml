@@ -3,7 +3,7 @@
     <!-- Template for WebSSH Client Interface -->
     <template id="webssh_client" name="WebSSH Client">
         <t t-call="web.layout">
-            <t t-set="title">WebSSH Terminal - <t t-esc="ssh_client.name"/></t>
+            <t t-set="title">SSH Terminal - <t t-esc="ssh_client.name"/></t>
             <t t-set="head">
                 <t t-call-assets="web.assets_common" t-js="false"/>
                 <t t-call-assets="web.assets_backend" t-js="false"/>
@@ -11,7 +11,7 @@
                     body {
                         margin: 0;
                         padding: 0;
-                        height: 100vh;
+                        min-height: 100vh;
                         display: flex;
                         flex-direction: column;
                         background-color: #232f3e; /* AWS Console-like dark blue */
@@ -33,23 +33,41 @@
                         display: flex;
                         align-items: center;
                     }
-                    .ssh-header .connection-info {
+                    .connection-status {
                         display: flex;
                         align-items: center;
+                        margin-left: 15px;
                         font-size: 0.9rem;
                     }
-                    .terminal-container {
+                    .connection-status .status-indicator {
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 50%;
+                        margin-right: 5px;
+                    }
+                    .connection-status .connected {
+                        background-color: #56e356;
+                    }
+                    .connection-status .disconnected {
+                        background-color: #ff6b6b;
+                    }
+                    .main-container {
                         flex: 1;
                         display: flex;
                         flex-direction: column;
                         padding: 15px;
+                        max-width: 1200px;
+                        margin: 0 auto;
+                        width: 100%;
                     }
-                    #terminal-iframe {
-                        flex: 1;
-                        border: 1px solid #394b61;
+                    .terminal-section {
+                        background-color: #121212;
                         border-radius: 6px;
-                        background-color: #1b2431;
-                        box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.4);
+                        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+                        overflow: hidden;
+                        display: flex;
+                        flex-direction: column;
+                        margin-bottom: 15px;
                     }
                     .terminal-toolbar {
                         display: flex;
@@ -58,164 +76,277 @@
                         border-bottom: 1px solid #394b61;
                     }
                     .terminal-toolbar button {
-                        color: #f0f0f0;
                         background: rgba(255, 255, 255, 0.05);
                         border: none;
                         border-radius: 4px;
                         padding: 5px 10px;
                         margin-right: 10px;
                         cursor: pointer;
+                        color: #f0f0f0;
                         transition: all 0.2s;
+                        display: flex;
+                        align-items: center;
+                    }
+                    .terminal-toolbar button i {
+                        margin-right: 5px;
                     }
                     .terminal-toolbar button:hover {
                         background: rgba(255, 255, 255, 0.1);
                     }
-                    .controls {
+                    .terminal-content {
+                        padding: 15px;
+                        max-height: 70vh;
+                        overflow-y: auto;
+                        background-color: #121212;
+                        color: #f0f0f0;
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 14px;
+                        line-height: 1.5;
+                        white-space: pre-wrap;
+                    }
+                    .terminal-welcome {
+                        color: #ffc107;
+                        margin-bottom: 15px;
+                        padding: 10px;
+                        background-color: rgba(0, 0, 0, 0.2);
+                        border-radius: 5px;
+                    }
+                    .terminal-warning {
+                        color: #ffc107;
+                        padding: 5px 10px;
+                        background-color: rgba(255, 193, 7, 0.1);
+                        border-left: 3px solid #ffc107;
+                        margin: 10px 0;
+                    }
+                    .terminal-error {
+                        color: #ff6b6b;
+                        padding: 5px 10px;
+                        background-color: rgba(255, 107, 107, 0.1);
+                        border-left: 3px solid #ff6b6b;
+                        margin: 10px 0;
+                    }
+                    .terminal-command {
+                        color: #56e356;
+                        margin: 15px 0 5px 0;
+                        font-weight: bold;
+                    }
+                    .terminal-output {
+                        margin-bottom: 15px;
+                    }
+                    .command-form {
+                        background-color: #1b2431;
+                        padding: 10px 15px;
+                        border-top: 1px solid #394b61;
+                    }
+                    .input-group {
+                        display: flex;
+                        width: 100%;
+                    }
+                    .input-group-text {
+                        background-color: #232f3e;
+                        color: #56e356;
+                        border: 1px solid #394b61;
+                        border-right: none;
+                        padding: 8px 12px;
+                        border-top-left-radius: 4px;
+                        border-bottom-left-radius: 4px;
+                    }
+                    .command-input {
+                        flex: 1;
+                        background-color: #232f3e;
+                        color: #f0f0f0;
+                        border: 1px solid #394b61;
+                        padding: 8px 12px;
+                        border-radius: 0;
+                        outline: none;
+                    }
+                    .execute-btn {
+                        background-color: #ff9900;
+                        color: #232f3e;
+                        border: 1px solid #ff9900;
+                        padding: 8px 15px;
+                        border-top-right-radius: 4px;
+                        border-bottom-right-radius: 4px;
+                        cursor: pointer;
+                        font-weight: bold;
+                    }
+                    .execute-btn:hover {
+                        background-color: #ffac33;
+                    }
+                    .bottom-controls {
                         display: flex;
                         justify-content: space-between;
                         margin-top: 15px;
                     }
-                    .controls button {
-                        background-color: #ff9900;
-                        color: #232f3e;
+                    .back-button {
+                        background-color: #394b61;
+                        color: white;
                         border: none;
                         border-radius: 4px;
                         padding: 8px 15px;
                         cursor: pointer;
+                        text-decoration: none;
+                        display: inline-flex;
+                        align-items: center;
+                    }
+                    .back-button i {
+                        margin-right: 5px;
+                    }
+                    .back-button:hover {
+                        background-color: #4d657d;
+                        text-decoration: none;
+                        color: white;
+                    }
+                    .command-history {
+                        background-color: #1b2431;
+                        margin-top: 20px;
+                        border-radius: 6px;
+                        overflow: hidden;
+                    }
+                    .history-header {
+                        background-color: #232f3e;
+                        color: white;
+                        padding: 10px 15px;
+                        border-bottom: 1px solid #394b61;
+                        font-weight: bold;
+                    }
+                    .history-list {
+                        max-height: 200px;
+                        overflow-y: auto;
+                    }
+                    .history-item {
+                        padding: 8px 15px;
+                        border-bottom: 1px solid #394b61;
+                        color: #f0f0f0;
+                        cursor: pointer;
                         transition: all 0.2s;
                     }
-                    .controls button:hover {
-                        background-color: #ffac33;
-                    }
-                    .controls .back-button {
+                    .history-item:hover {
                         background-color: #394b61;
-                        color: white;
                     }
-                    .loading {
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        bottom: 0;
-                        background-color: rgba(35, 47, 62, 0.8);
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        align-items: center;
-                        color: white;
-                        z-index: 1000;
+                    .history-item:last-child {
+                        border-bottom: none;
                     }
-                    .loading .spinner {
-                        border: 4px solid rgba(255, 255, 255, 0.3);
-                        border-radius: 50%;
-                        border-top: 4px solid #ff9900;
-                        width: 40px;
-                        height: 40px;
-                        animation: spin 1s linear infinite;
-                        margin-bottom: 15px;
-                    }
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
+                    .no-history {
+                        padding: 15px;
+                        color: #999;
+                        text-align: center;
+                        font-style: italic;
                     }
                 </style>
             </t>
+            
+            <!-- Header -->
             <div class="ssh-header">
                 <h1>
                     <i class="fa fa-terminal mr-2"></i>
-                    <span t-esc="ssh_client.name"/> - WebSSH Terminal
+                    <span t-esc="ssh_client.name"/> - SSH Terminal
                 </h1>
                 <div class="connection-info">
                     <span t-esc="ssh_client.username"/>@<span t-esc="ssh_client.hostname"/>:<span t-esc="ssh_client.port"/>
+                    <div class="connection-status">
+                        <span class="status-indicator" t-att-class="is_connected and 'connected' or 'disconnected'"></span>
+                        <span t-if="is_connected">Connected</span>
+                        <span t-else="">Disconnected</span>
+                    </div>
                 </div>
             </div>
             
-            <div class="terminal-container">
-                <div class="terminal-toolbar">
-                    <button id="disconnect-btn" title="Disconnect">
-                        <i class="fa fa-power-off mr-1"></i> Disconnect
-                    </button>
-                    <button id="fullscreen-btn" title="Toggle Fullscreen">
-                        <i class="fa fa-expand mr-1"></i> Fullscreen
-                    </button>
-                    <button id="copy-btn" title="Copy to Clipboard">
-                        <i class="fa fa-copy mr-1"></i> Copy
-                    </button>
-                    <button id="clear-btn" title="Clear Terminal">
-                        <i class="fa fa-eraser mr-1"></i> Clear
-                    </button>
+            <!-- Main Container -->
+            <div class="main-container">
+                <!-- Terminal Section -->
+                <div class="terminal-section">
+                    <!-- Terminal Toolbar -->
+                    <div class="terminal-toolbar">
+                        <button id="clear-btn" title="Clear Terminal" onclick="window.location.href='/webssh/?client_id=' + document.querySelector('input[name=client_id]').value">
+                            <i class="fa fa-eraser"></i> Clear
+                        </button>
+                        <button id="disconnect-btn" title="Disconnect" onclick="if(confirm('Are you sure you want to disconnect?')) window.location.href='/web'">
+                            <i class="fa fa-power-off"></i> Disconnect
+                        </button>
+                    </div>
+                    
+                    <!-- Terminal Content -->
+                    <div class="terminal-content" id="terminal-content">
+                        <!-- Welcome message -->
+                        <div class="terminal-welcome">
+                            Connected to <strong><t t-esc="ssh_client.username"/>@<t t-esc="ssh_client.hostname"/></strong>
+                            <div>Type commands below and press Execute or hit Enter.</div>
+                        </div>
+                        
+                        <!-- Display command output if any -->
+                        <t t-if="command">
+                            <div class="terminal-command">$ <t t-esc="command"/></div>
+                            <t t-if="command_output">
+                                <div class="terminal-output" t-raw="command_output"></div>
+                            </t>
+                        </t>
+                    </div>
+                    
+                    <!-- Command Input Form -->
+                    <form method="GET" action="/webssh/" class="command-form">
+                        <input type="hidden" name="client_id" t-att-value="client_id"/>
+                        <input type="hidden" name="history" t-att-value="command_history_json"/>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="text" name="command" class="command-input" id="command-input" autocomplete="off" autofocus="autofocus"/>
+                            <button type="submit" class="execute-btn">Execute</button>
+                        </div>
+                    </form>
                 </div>
                 
-                <div id="terminal" class="terminal-content"></div>
-                <div id="ssh-info" style="display:none;" t-att-data-ssh-info="ssh_info"></div>
+                <!-- Command History Section -->
+                <div class="command-history" t-if="command_history">
+                    <div class="history-header">
+                        <i class="fa fa-history mr-2"></i> Command History
+                    </div>
+                    <div class="history-list">
+                        <t t-if="command_history">
+                            <t t-foreach="command_history" t-as="history_cmd">
+                                <div class="history-item" onclick="document.getElementById('command-input').value = this.textContent.trim();">
+                                    <t t-esc="history_cmd"/>
+                                </div>
+                            </t>
+                        </t>
+                        <t t-else="">
+                            <div class="no-history">No command history yet</div>
+                        </t>
+                    </div>
+                </div>
                 
-                <div class="controls">
-                    <button class="back-button" id="back-btn">
-                        <i class="fa fa-arrow-left mr-1"></i> Back to Odoo
-                    </button>
-                    <button id="reconnect-btn">
-                        <i class="fa fa-refresh mr-1"></i> Reconnect
-                    </button>
+                <!-- Bottom Controls -->
+                <div class="bottom-controls">
+                    <a href="/web" class="back-button">
+                        <i class="fa fa-arrow-left"></i> Back to Odoo
+                    </a>
                 </div>
             </div>
             
-            <div id="loading" class="loading">
-                <div class="spinner"></div>
-                <p>Connecting to SSH server...</p>
-            </div>
-            
-            <script type="text/javascript" src="/web/static/lib/jquery/jquery.js"></script>
-            <script type="text/javascript" src="/nalios_ssh_clients/static/src/js/direct_webssh.js"></script>
             <script type="text/javascript">
                 document.addEventListener('DOMContentLoaded', function() {
-                    // Back button
-                    document.getElementById('back-btn').addEventListener('click', function() {
-                        window.location.href = '/web';
-                    });
+                    // Focus command input
+                    document.getElementById('command-input').focus();
                     
-                    // Add connection status display
-                    const header = document.querySelector('.ssh-header .connection-info');
-                    if (header) {
-                        const statusEl = document.createElement('div');
-                        statusEl.id = 'connection-status';
-                        statusEl.innerHTML = '<span class="status disconnected"></span> Connecting...';
-                        header.appendChild(statusEl);
-                    }
-                    
-                    // Add terminal styling
-                    const terminalEl = document.getElementById('terminal');
-                    if (terminalEl) {
-                        terminalEl.style.height = '100%';
-                        terminalEl.style.padding = '10px';
-                        terminalEl.style.overflow = 'auto';
-                        terminalEl.style.fontFamily = "'JetBrains Mono', monospace";
-                        terminalEl.style.whiteSpace = 'pre-wrap';
-                        terminalEl.style.fontSize = '14px';
-                        terminalEl.style.lineHeight = '1.5';
-                    }
-                    
-                    // Fullscreen button
-                    document.getElementById('fullscreen-btn').addEventListener('click', function() {
-                        const terminal = document.getElementById('terminal');
-                        if (terminal.requestFullscreen) {
-                            terminal.requestFullscreen();
-                        } else if (terminal.mozRequestFullScreen) {
-                            terminal.mozRequestFullScreen();
-                        } else if (terminal.webkitRequestFullscreen) {
-                            terminal.webkitRequestFullscreen();
-                        } else if (terminal.msRequestFullscreen) {
-                            terminal.msRequestFullscreen();
+                    // Add keyboard event listener for auto submit on Enter key
+                    document.getElementById('command-input').addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            document.querySelector('form.command-form').submit();
                         }
                     });
+                    
+                    // Scroll to bottom of terminal
+                    const terminal = document.getElementById('terminal-content');
+                    terminal.scrollTop = terminal.scrollHeight;
                 });
             </script>
         </t>
     </template>
     
     <!-- Template for WebSSH Error -->
-    <template id="webssh_error" name="WebSSH Error">
+    <template id="webssh_error" name="SSH Terminal Error">
         <t t-call="web.layout">
-            <t t-set="title">WebSSH Error</t>
+            <t t-set="title">SSH Connection Error</t>
             <t t-set="head">
                 <t t-call-assets="web.assets_common" t-js="false"/>
                 <t t-call-assets="web.assets_backend" t-js="false"/>
@@ -223,12 +354,28 @@
                     body {
                         margin: 0;
                         padding: 0;
-                        height: 100vh;
+                        min-height: 100vh;
                         display: flex;
                         flex-direction: column;
                         background-color: #232f3e;
                         color: white;
-                        font-family: 'Helvetica Neue', Arial, sans-serif;
+                        font-family: 'SF Mono', 'Monaco', 'Menlo', 'Courier New', monospace;
+                    }
+                    .ssh-header {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 10px 20px;
+                        background-color: #232f3e;
+                        color: white;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                        border-bottom: 2px solid #ff6b6b;
+                    }
+                    .ssh-header h1 {
+                        margin: 0;
+                        font-size: 1.5rem;
+                        display: flex;
+                        align-items: center;
                     }
                     .error-container {
                         flex: 1;
@@ -237,20 +384,37 @@
                         justify-content: center;
                         align-items: center;
                         padding: 20px;
+                        max-width: 800px;
+                        margin: 0 auto;
                         text-align: center;
+                    }
+                    .error-box {
+                        background-color: #1b2431;
+                        border-radius: 6px;
+                        border-left: 4px solid #ff6b6b;
+                        padding: 20px;
+                        margin-bottom: 30px;
+                        width: 100%;
+                        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
                     }
                     .error-icon {
                         font-size: 48px;
                         color: #ff6b6b;
                         margin-bottom: 20px;
                     }
+                    .error-title {
+                        color: #ff6b6b;
+                        font-size: 24px;
+                        margin-bottom: 15px;
+                    }
                     .error-message {
                         background-color: rgba(255, 107, 107, 0.1);
                         padding: 15px;
                         border-radius: 6px;
-                        border-left: 3px solid #ff6b6b;
-                        max-width: 500px;
-                        margin-bottom: 30px;
+                        text-align: left;
+                        color: #f0f0f0;
+                        margin-bottom: 20px;
+                        font-family: 'JetBrains Mono', monospace;
                     }
                     .back-button {
                         background-color: #394b61;
@@ -261,23 +425,73 @@
                         cursor: pointer;
                         font-size: 16px;
                         transition: all 0.2s;
+                        display: inline-flex;
+                        align-items: center;
+                        text-decoration: none;
+                    }
+                    .back-button i {
+                        margin-right: 10px;
                     }
                     .back-button:hover {
                         background-color: #4d657d;
+                        text-decoration: none;
+                        color: white;
+                    }
+                    .troubleshooting {
+                        max-width: 600px;
+                        margin-top: 30px;
+                        background-color: rgba(255, 255, 255, 0.05);
+                        padding: 20px;
+                        border-radius: 6px;
+                        text-align: left;
+                    }
+                    .troubleshooting h3 {
+                        color: #ffc107;
+                        margin-top: 0;
+                        margin-bottom: 15px;
+                    }
+                    .troubleshooting ul {
+                        padding-left: 20px;
+                        color: #f0f0f0;
+                    }
+                    .troubleshooting li {
+                        margin-bottom: 8px;
                     }
                 </style>
             </t>
+            
+            <!-- Header -->
+            <div class="ssh-header">
+                <h1>
+                    <i class="fa fa-terminal mr-2"></i>
+                    SSH Terminal - Connection Error
+                </h1>
+            </div>
+            
             <div class="error-container">
-                <div class="error-icon">
-                    <i class="fa fa-exclamation-triangle"></i>
+                <div class="error-box">
+                    <div class="error-icon">
+                        <i class="fa fa-exclamation-triangle"></i>
+                    </div>
+                    <h2 class="error-title">Connection Error</h2>
+                    <div class="error-message">
+                        <p t-esc="error"></p>
+                    </div>
+                    <a href="/web" class="back-button">
+                        <i class="fa fa-arrow-left"></i> Back to Odoo
+                    </a>
                 </div>
-                <h1>Connection Error</h1>
-                <div class="error-message">
-                    <p t-esc="error"></p>
+                
+                <div class="troubleshooting">
+                    <h3>Troubleshooting Tips</h3>
+                    <ul>
+                        <li>Check that the SSH server is running and accessible from this Odoo server.</li>
+                        <li>Verify hostname, port, username, and authentication credentials.</li>
+                        <li>Ensure the private key format is valid (PEM or PPK).</li>
+                        <li>If using password authentication, ensure it's correct and enabled on the server.</li>
+                        <li>Check SSH server logs for more information.</li>
+                    </ul>
                 </div>
-                <button class="back-button" onclick="window.location.href='/web'">
-                    <i class="fa fa-arrow-left mr-2"></i> Back to Odoo
-                </button>
             </div>
         </t>
     </template>

@@ -92,8 +92,11 @@ class WebSSHController(http.Controller):
     
     @http.route('/webssh/', type='http', auth='user')
     def webssh_client(self, **kw):
-        """Render the WebSSH client interface"""
+        """Render the WebSSH client interface with a simple command form"""
         client_id = kw.get('client_id')
+        command = kw.get('command')
+        history = kw.get('history', '')  # Command history
+        
         if not client_id:
             return request.render('nalios_ssh_clients.webssh_error', {
                 'error': 'No SSH client specified'
@@ -107,21 +110,46 @@ class WebSSHController(http.Controller):
                     'error': 'SSH client not found'
                 })
             
-            # Prepare the SSH connection information as JSON
-            ssh_info = {
-                'id': ssh_client.id,
-                'host': ssh_client.hostname,
-                'port': ssh_client.port, 
-                'username': ssh_client.username,
-                'password': ssh_client.password if ssh_client.auth_method == 'password' else '',
-                'privateKey': '' if not ssh_client.private_key else base64.b64encode(ssh_client.private_key).decode('utf-8'),
-                'passphrase': ssh_client.private_key_password or ''
-            }
+            # Execute command if provided and append to history
+            output = None
+            command_history = []
             
-            # Render the template with the SSH information
+            if history:
+                # Parse the history from the hidden field
+                try:
+                    command_history = json.loads(history)
+                except:
+                    command_history = []
+            
+            if command:
+                # Execute the command
+                output = ssh_client.exec_command(command)
+                
+                # Add command to history (max 20 commands)
+                if command not in command_history:
+                    command_history.insert(0, command)
+                    if len(command_history) > 20:
+                        command_history.pop()
+            
+            # Check if connection is working with a simple test command
+            is_connected = True
+            if not command:
+                try:
+                    test_output = ssh_client.test_connection()
+                    if not test_output or 'error' in test_output.lower():
+                        is_connected = False
+                except:
+                    is_connected = False
+            
+            # Render the template with the SSH information and command output
             return request.render('nalios_ssh_clients.webssh_client', {
                 'ssh_client': ssh_client,
-                'ssh_info': json.dumps(ssh_info)
+                'client_id': client_id,
+                'command_output': output,
+                'command': command,
+                'command_history': command_history,
+                'command_history_json': json.dumps(command_history),
+                'is_connected': is_connected
             })
             
         except Exception as e:
