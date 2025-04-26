@@ -4,6 +4,7 @@ import re
 import paramiko
 import base64 as b64
 import logging
+import time
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
@@ -262,19 +263,137 @@ class SshClient(models.Model):
         return ssh_connection
 
     def exec_command(self, command):
+        """
+        Execute a command on the SSH server with improved handling for interactive features
+        """
         self.ensure_one()
         ssh_connection = self.get_ssh_connection()
+        
+        # Send the command with a newline
         ssh_connection.send(command + "\n")
+        
+        # Initial wait for response
         sleep(0.5)
-        while not ssh_connection.recv_ready():
-            sleep(0.5)
-        alldata = ssh_connection.recv(1024)
+        
+        # Wait a bit longer for slower servers
+        timeout = 5  # 5 seconds max
+        start_time = time.time()
+        while not ssh_connection.recv_ready() and time.time() - start_time < timeout:
+            sleep(0.2)
+        
+        # If we timed out without receiving data, return a message
+        if not ssh_connection.recv_ready():
+            return '<div class="command-timeout">Command taking longer than expected. It may still be running...</div>'
+        
+        # Collect all the response data
+        alldata = b''
+        buffer_size = 4096  # Larger buffer for more efficient reads
+        
+        # Read initial data
+        alldata += ssh_connection.recv(buffer_size)
+        
+        # Continue reading while there's data available
         while ssh_connection.recv_ready():
-            sleep(0.5)
-            alldata += ssh_connection.recv(1024)
-        alldata = re.sub(b'^'+command.encode('utf-8'), b'', alldata)
+            sleep(0.1)  # Small delay between reads
+            alldata += ssh_connection.recv(buffer_size)
+        
+        # Remove the command echo from the beginning of the response
+        try:
+            alldata = re.sub(b'^' + re.escape(command.encode('utf-8')), b'', alldata)
+        except:
+            # If regex fails, continue with unmodified data
+            pass
+            
+        # Filter out control characters that may cause display issues
+        alldata = alldata.replace(b'\x00', b'')
+        
+        # Handle special terminal codes for better output formatting
+        formatted_data = self._format_terminal_output(alldata)
+        
+        # Convert ANSI escape sequences to HTML
         conv = Ansi2HTMLConverter()
-        return conv.convert(alldata.replace(b'\x00', b'').decode('utf-8')).replace('<pre class="ansi2html-content">\n', '<pre class="ansi2html-content">')
+        html_output = conv.convert(formatted_data).replace(
+            '<pre class="ansi2html-content">\n', 
+            '<pre class="ansi2html-content">'
+        )
+        
+        # Add syntax highlighting for common command outputs
+        html_output = self._add_syntax_highlighting(html_output, command)
+        
+        return html_output
+        
+    def _format_terminal_output(self, raw_data):
+        """
+        Format terminal output for better readability
+        """
+        try:
+            # Decode the binary data
+            text = raw_data.decode('utf-8', errors='replace')
+            
+            # Replace common problematic sequences
+            text = text.replace('\r\n', '\n')  # Normalize line endings
+            
+            # Add proper spacing for command output sections
+            if '|' in text and '-' in text and not '<table' in text:
+                # Looks like a table output (ls -l, ps, etc.)
+                text = self._format_table_output(text)
+                
+            return text
+        except Exception as e:
+            _logger.error(f"Error formatting terminal output: {str(e)}")
+            return raw_data.decode('utf-8', errors='replace')
+            
+    def _format_table_output(self, text):
+        """Format text that appears to be tabular for better display"""
+        lines = text.split('\n')
+        formatted_lines = []
+        
+        for line in lines:
+            if '|' in line and len(line.split('|')) > 2:
+                # This looks like a table row
+                formatted_lines.append(f'<div class="terminal-table-row">{line}</div>')
+            else:
+                formatted_lines.append(line)
+                
+        return '\n'.join(formatted_lines)
+    
+    def _add_syntax_highlighting(self, html_output, command):
+        """
+        Add syntax highlighting for common command outputs
+        """
+        # Check if this is a common command that should get special formatting
+        cmd_base = command.split()[0] if command.split() else ""
+        
+        if cmd_base in ['ls', 'dir']:
+            # Highlight directories and files differently
+            html_output = self._highlight_file_listing(html_output)
+        elif cmd_base in ['docker', 'kubectl', 'aws']:
+            # Add cloud tool highlighting
+            html_output = self._highlight_cloud_tool_output(html_output, cmd_base)
+        elif 'error' in html_output.lower() or 'exception' in html_output.lower():
+            # Highlight errors
+            html_output = html_output.replace(
+                '<pre class="ansi2html-content">',
+                '<pre class="ansi2html-content terminal-error-output">'
+            )
+            
+        return html_output
+        
+    def _highlight_file_listing(self, html_output):
+        """Add highlighting for file listings (ls command output)"""
+        # This would require more complex DOM manipulation that's better done in JS
+        # Just add a marker class for the frontend to handle
+        return html_output.replace(
+            '<pre class="ansi2html-content">',
+            '<pre class="ansi2html-content file-listing-output">'
+        )
+        
+    def _highlight_cloud_tool_output(self, html_output, tool):
+        """Add highlighting for cloud tool outputs"""
+        return html_output.replace(
+            '<pre class="ansi2html-content">',
+            f'<pre class="ansi2html-content cloud-tool-output {tool}-output">'
+        )
 
     def get_client_name(self):
         self.ensure_one()
