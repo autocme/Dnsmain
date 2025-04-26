@@ -34,7 +34,8 @@ class DockerVolume(models.Model):
     used_by_containers = fields.Text(string='Used By Containers', readonly=True)
     
     used_by_container_count = fields.Integer(string='Used By Containers', 
-                                           compute='_compute_used_by_containers')
+                                           compute='_compute_used_by_containers',
+                                           store=True)
     
     size = fields.Char(string='Size', readonly=True,
                      help="Size of the volume (if available)")
@@ -54,6 +55,7 @@ class DockerVolume(models.Model):
     # -------------------------------------------------------------------------
     # Compute methods
     # -------------------------------------------------------------------------
+    @api.depends('used_by_containers')
     def _compute_used_by_containers(self):
         for volume in self:
             count = 0
