@@ -12,7 +12,7 @@ from io import StringIO
 from ansi2html import Ansi2HTMLConverter
 from paramiko import ssh_exception
 
-from .ssh_utils import convert_private_key_if_needed
+from .ssh_utils import is_ppk_format, convert_ppk_to_pem
 
 _logger = logging.getLogger(__name__)
 
@@ -70,6 +70,12 @@ class SshClient(models.Model):
     private_key = fields.Binary()
     private_key_filename = fields.Char()
     private_key_password = fields.Char()
+    auto_convert_ppk = fields.Boolean(
+        string="Auto-convert PPK Keys", 
+        default=False, 
+        help="Enable to automatically convert PuTTY PPK format keys to PEM format. "
+             "Disable to use the key as provided without conversion."
+    )
     ssh_category_id = fields.Many2one('ssh.client.category', 'Category')
     # Terminal options
     terminal_background = fields.Char(default='#000000')
@@ -115,12 +121,18 @@ class SshClient(models.Model):
                     first_line = private_key_string.split('\n')[0] if '\n' in private_key_string else private_key_string[:20]
                     _logger.info(f"Key starts with: {first_line}...")
                     
-                    # Check if the key is in PPK format and convert it if needed
-                    _logger.info("Checking if key needs conversion from PPK to PEM")
-                    private_key_string = convert_private_key_if_needed(
-                        private_key_string, 
-                        passphrase=self.private_key_password
-                    )
+                    # Check if the key is in PPK format and convert it if auto-convert is enabled
+                    if self.auto_convert_ppk and is_ppk_format(private_key_string):
+                        _logger.info("Auto-convert PPK enabled: Converting PPK to PEM format")
+                        converted_key = convert_ppk_to_pem(private_key_string, passphrase=self.private_key_password)
+                        if converted_key:
+                            _logger.info("PPK to PEM conversion successful")
+                            private_key_string = converted_key
+                        else:
+                            _logger.warning("PPK to PEM conversion failed, using original key")
+                    else:
+                        if is_ppk_format(private_key_string):
+                            _logger.info("Key appears to be in PPK format but auto-convert is disabled. Using as-is.")
                     
                     # Create a StringIO object to use with paramiko
                     private_key_fakefile = StringIO(private_key_string)
@@ -263,6 +275,17 @@ class SshClient(models.Model):
     def get_client_name(self):
         self.ensure_one()
         return self.name
+        
+    def get_connection_details(self):
+        """Get connection details for display in the UI"""
+        self.ensure_one()
+        return {
+            'id': self.id,
+            'name': self.name,
+            'host': self.host,
+            'port': self.port,
+            'user': self.user,
+        }
 
     def disconnect_client(self):
         self.ensure_one()

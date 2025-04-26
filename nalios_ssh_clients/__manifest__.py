@@ -30,7 +30,7 @@
     ],
     'assets': {
         'web.assets_backend': [
-            'nalios_ssh_clients/static/src/scss/ssh_manager.scss',
+            'nalios_ssh_clients/static/src/css/ssh_manager.css',
             'nalios_ssh_clients/static/src/js/ssh_manager.js',
             'nalios_ssh_clients/static/src/xml/ssh_manager.xml',
         ],

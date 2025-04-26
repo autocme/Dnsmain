@@ -1,22 +1,64 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
     <div t-name="nalios_ssh_clients.ssh_manager" id="ssh_client_container">
-        <h1>
-            <button t-on-click="exit" class="o_exit btn nav-link me-4">
-                <i class="fa fa-chevron-left"/> Go back
+        <!-- Header with connection info and controls -->
+        <div class="ssh-header">
+            <h1>
+                <button t-on-click="exit" class="btn btn-outline-light me-3">
+                    <i class="fa fa-chevron-left"/> Go back
+                </button>
+                <i class="fa fa-terminal me-2"></i> SSH Client: <span t-ref="clientName" class="ms-2 fw-bold"></span>
+            </h1>
+            <div class="connection-info">
+                <span class="status connected"></span>
+                <span t-ref="connectionStatus">Connected</span>
+                <span class="ms-3" t-ref="hostInfo"></span>
+            </div>
+        </div>
+        
+        <!-- Toolbar with common actions -->
+        <div class="terminal-toolbar">
+            <button t-on-click="clearTerminal" title="Clear terminal output">
+                <i class="fa fa-eraser"></i> Clear
             </button>
-        SSH Client <span t-ref="clientName"/>
-        </h1>
+            <button t-on-click="toggleCommandHistory" title="Toggle command history">
+                <i class="fa fa-history"></i> History
+            </button>
+            <button t-on-click="copyToClipboard" title="Copy terminal content">
+                <i class="fa fa-copy"></i> Copy
+            </button>
+            <button t-on-click="toggleFullscreen" title="Toggle fullscreen mode">
+                <i class="fa fa-expand"></i> Fullscreen
+            </button>
+        </div>
+        
+        <!-- Main terminal container -->
         <div id="ssh_client_terminal">
             <div id="terminal_window" class="m-2" t-ref="terminal"></div>
-
-            <div class="d-flex justify-content-between">
-                <div class="w-75 m-2">
-                    <input class="form-control" id="inputCommand" placeholder="Enter command here ..." t-on-keydown="inputKeydownSendCommand" type="text" t-ref="cmdline"/>
+            
+            <!-- Command history panel (hidden by default) -->
+            <div class="command-history-panel" t-ref="historyPanel">
+                <div t-foreach="state.commandHistory" t-as="command" t-key="command_index" 
+                     class="command-history-item" t-on-click="() => this.useHistoryCommand(command)">
+                    <i class="fa fa-angle-right me-2"></i><span t-esc="command"></span>
                 </div>
-                <div class="w-25 m-2">
-                    <button class="btn btn-primary w-100" t-on-click="sendCmd">Send command (Enter)</button>
+            </div>
+            
+            <!-- Command input bar -->
+            <div class="terminal-command-bar">
+                <div class="command-input-wrapper">
+                    <span class="command-prompt">$</span>
+                    <input class="form-control" id="inputCommand" placeholder="Enter command here..." 
+                           t-on-keydown="handleCommandInput" type="text" t-ref="cmdline"/>
                 </div>
+                <button class="btn btn-primary" t-on-click="sendCmd">
+                    <i class="fa fa-paper-plane me-1"></i> Send
+                </button>
+            </div>
+            
+            <!-- Keyboard shortcut hint -->
+            <div class="keyboard-hint">
+                Press Up/Down for history • Ctrl+L to clear • Esc to cancel
             </div>
         </div>
     </div>

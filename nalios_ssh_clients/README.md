@@ -13,13 +13,18 @@ connect to remote servers, and execute commands directly within Odoo.
 - Terminal emulation with ANSI color support
 
 ## PPK to PEM Key Conversion
-The module includes automatic detection and conversion of PuTTY's PPK keys to the OpenSSH PEM format
-required by Paramiko. This allows users to directly upload PPK format keys without manual conversion.
+The module includes optional conversion of PuTTY's PPK keys to the OpenSSH PEM format
+required by Paramiko. Users can enable or disable this feature using the "Auto-convert PPK Keys"
+option on the SSH client form.
 
 ### Supported PPK Formats
 - PuTTY-User-Key-File-2: ssh-rsa (Standard PPK v2)
 - PuTTY-User-Key-File: 2 (Alternate PPK v2 format)
 - PuTTY-User-Key-File-3: ssh-rsa (PPK v3)
+
+### PPK Conversion Options
+- **Enabled**: PPK keys will be automatically detected and converted to PEM format before connecting
+- **Disabled**: PPK keys will be used as provided, without any conversion
 
 ### Supported Key Types
 - RSA (ssh-rsa)
@@ -40,8 +45,11 @@ required by Paramiko. This allows users to directly upload PPK format keys witho
 2. Enter the hostname, port, and username
 3. Upload a private key file (PEM or PPK format)
 4. If the key is password-protected, enter the key password
-5. Click "Connect" to establish the connection
-6. Use the terminal to execute commands
+5. Enable/disable "Auto-convert PPK Keys" option as needed:
+   - Enable if you're using a PPK format key
+   - Disable if you prefer to use the key without conversion
+6. Click "Connect" to establish the connection
+7. Use the terminal to execute commands
 
 ### Creating and Running Command Routines
 1. Open an SSH Client record
