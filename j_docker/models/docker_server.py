@@ -104,10 +104,23 @@ class DockerServer(models.Model):
     # -------------------------------------------------------------------------
     @api.model_create_multi
     def create(self, vals_list):
+        # First create the records normally
         records = super(DockerServer, self).create(vals_list)
-        for record in records:
-            record._check_connection()
+        
+        # Schedule a check connection after the transaction is completed
+        # to avoid _unknown object errors during creation
+        self.env.cr.after_commit.add(lambda: self._post_creation_check(records))
+        
         return records
+        
+    def _post_creation_check(self, records):
+        """Run connection check after the record has been fully created and committed"""
+        try:
+            for record in records:
+                if record.exists():  # Only check if the record still exists
+                    record._check_connection()
+        except Exception as e:
+            _logger.error("Failed to run post-creation connection check: %s", str(e))
         
     def write(self, vals):
         result = super(DockerServer, self).write(vals)
@@ -781,12 +794,20 @@ class DockerServer(models.Model):
         """Create a log entry for the server"""
         self.ensure_one()
         
-        self.env['docker.logs'].create({
-            'server_id': self.id,
-            'level': level,
-            'name': message,
-            'user_id': self.env.user.id,
-        })
+        # Only create log entries if the record has an ID (has been saved to DB)
+        if not self.id:
+            _logger.info("Cannot create log entry for unsaved record: %s - %s", level, message)
+            return
+            
+        try:
+            self.env['docker.logs'].create({
+                'server_id': self.id,
+                'level': level,
+                'name': message,
+                'user_id': self.env.user.id,
+            })
+        except Exception as e:
+            _logger.error("Failed to create log entry: %s", str(e))
     
     def _parse_container_status(self, status_text):
         """Parse the container status text and return a status code"""
