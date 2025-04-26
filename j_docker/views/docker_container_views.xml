@@ -250,21 +250,7 @@
         </field>
     </record>
     
-    <!-- Pivot View -->
-    <record id="view_docker_container_pivot" model="ir.ui.view">
-        <field name="name">docker.container.pivot</field>
-        <field name="model">docker.container</field>
-        <field name="arch" type="xml">
-            <pivot string="Container Analysis">
-                <field name="server_id" type="row"/>
-                <field name="status" type="col"/>
-                <field name="__count__" type="measure"/>
-                <field name="cpu_usage" type="measure"/>
-                <field name="memory_usage" type="measure"/>
-            </pivot>
-        </field>
-    </record>
-    
+
     <!-- Graph View -->
     <record id="view_docker_container_graph" model="ir.ui.view">
         <field name="name">docker.container.graph</field>
@@ -283,7 +269,7 @@
     <record id="action_docker_container" model="ir.actions.act_window">
         <field name="name">Containers</field>
         <field name="res_model">docker.container</field>
-        <field name="view_mode">kanban,tree,form,pivot,graph,calendar</field>
+        <field name="view_mode">kanban,tree,form,graph,calendar</field>
         <field name="context">{'search_default_running': 0}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
@@ -299,7 +285,7 @@
     <record id="action_docker_container_running" model="ir.actions.act_window">
         <field name="name">Running Containers</field>
         <field name="res_model">docker.container</field>
-        <field name="view_mode">kanban,tree,form,pivot,graph,calendar</field>
+        <field name="view_mode">kanban,tree,form,graph,calendar</field>
         <field name="domain">[('status', '=', 'running')]</field>
         <field name="context">{'search_default_running': 1}</field>
         <field name="help" type="html">
