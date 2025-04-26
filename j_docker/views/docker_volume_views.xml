@@ -92,9 +92,6 @@
                 <field name="mountpoint"/>
                 <field name="server_id"/>
                 <separator/>
-                <filter string="In Use" name="in_use" domain="[('used_by_container_count', '>', 0)]"/>
-                <filter string="Unused" name="unused" domain="[('used_by_container_count', '=', 0)]"/>
-                <separator/>
                 <filter string="Local Driver" name="local_driver" domain="[('driver', '=', 'local')]"/>
                 <filter string="NFS Driver" name="nfs_driver" domain="[('driver', '=', 'nfs')]"/>
                 <separator/>
