@@ -261,22 +261,6 @@
         </field>
     </record>
     
-    <!-- Pivot View -->
-    <record id="view_docker_server_pivot" model="ir.ui.view">
-        <field name="name">docker.server.pivot</field>
-        <field name="model">docker.server</field>
-        <field name="arch" type="xml">
-            <pivot string="Server Analysis">
-                <field name="server_status" type="row"/>
-                <field name="container_count" type="measure"/>
-                <field name="running_container_count" type="measure"/>
-                <field name="image_count" type="measure"/>
-                <field name="cpu_usage" type="measure"/>
-                <field name="memory_usage" type="measure"/>
-                <field name="disk_usage" type="measure"/>
-            </pivot>
-        </field>
-    </record>
     
     <!-- Graph View -->
     <record id="view_docker_server_graph" model="ir.ui.view">
@@ -296,7 +280,7 @@
     <record id="action_docker_server" model="ir.actions.act_window">
         <field name="name">Docker Servers</field>
         <field name="res_model">docker.server</field>
-        <field name="view_mode">kanban,tree,form,pivot,graph,calendar</field>
+        <field name="view_mode">kanban,tree,form,graph,calendar</field>
         <field name="context">{'search_default_online': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
