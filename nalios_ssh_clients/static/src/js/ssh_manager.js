@@ -16,6 +16,16 @@ const MODIFIERS = new Set(["alt", "control", "shift"]);
 const AUTHORIZED_KEYS = new Set([...ALPHANUM_KEYS, ...NAV_KEYS, ...SPECIAL_KEYS, " "]);
 
 export class SshManager extends Component {
+    static props = {
+        action: { type: Object },
+        // Include other props that might be passed but are not used directly
+        actionId: { type: Number, optional: true },
+        className: { type: String, optional: true },
+        removeAction: { type: Function, optional: true },
+        // Any other props we should accept
+        "*": { type: Object, optional: true }
+    };
+    
     setup() {
         this.client_id = this.props.action.context.active_id;
         this.orm = useService('orm');
@@ -647,10 +657,7 @@ export class SshManager extends Component {
     }
 }
 
-// In OWL 2.0, we set the template directly in the component definition
-SshManager.props = {
-    action: { type: Object }
-};
+// Set the template for our component
 SshManager.template = 'nalios_ssh_clients.ssh_manager';
 
 // Register the component as a client action
