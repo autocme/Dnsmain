@@ -3,12 +3,18 @@
 import re
 import paramiko
 import base64 as b64
+import logging
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 from time import sleep
 from io import StringIO
 from ansi2html import Ansi2HTMLConverter
+from paramiko import ssh_exception
+
+from .ssh_utils import convert_private_key_if_needed
+
+_logger = logging.getLogger(__name__)
 
 SSH_CONN_CACHE = {}
 
@@ -99,27 +105,74 @@ class SshClient(models.Model):
             ssh_connection = paramiko.SSHClient()
             ssh_connection.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             if not self.password and self.private_key:
-                private_key_string = b64.decodebytes(self.private_key).decode('utf-8')
-                private_key_fakefile = StringIO(private_key_string)
-                if self.private_key_password:
-                    private_key = paramiko.RSAKey.from_private_key(private_key_fakefile, self.private_key_password)
-                else:
-                    private_key = paramiko.RSAKey.from_private_key(private_key_fakefile)
-                private_key_fakefile.close()
-                ssh_connection.connect(
-                    hostname=self.host,
-                    port=self.port,
-                    username=self.user,
-                    pkey=private_key
-                )
+                try:
+                    # Decode the binary private key to a string
+                    private_key_string = b64.decodebytes(self.private_key).decode('utf-8')
+                    
+                    # Check if the key is in PPK format and convert it if needed
+                    _logger.info("Checking if key needs conversion from PPK to PEM")
+                    private_key_string = convert_private_key_if_needed(
+                        private_key_string, 
+                        passphrase=self.private_key_password
+                    )
+                    
+                    # Create a StringIO object to use with paramiko
+                    private_key_fakefile = StringIO(private_key_string)
+                    
+                    # Load the private key with paramiko
+                    try:
+                        if self.private_key_password:
+                            private_key = paramiko.RSAKey.from_private_key(
+                                private_key_fakefile, 
+                                self.private_key_password
+                            )
+                        else:
+                            private_key = paramiko.RSAKey.from_private_key(private_key_fakefile)
+                    except paramiko.ssh_exception.SSHException as e:
+                        _logger.warning(f"RSA key format failed, trying other key types: {str(e)}")
+                        # Reset the file pointer
+                        private_key_fakefile.seek(0)
+                        
+                        # Try with Ed25519 key if RSA fails
+                        try:
+                            if self.private_key_password:
+                                private_key = paramiko.Ed25519Key.from_private_key(
+                                    private_key_fakefile, 
+                                    self.private_key_password
+                                )
+                            else:
+                                private_key = paramiko.Ed25519Key.from_private_key(private_key_fakefile)
+                        except Exception as e2:
+                            _logger.error(f"Failed to load key as Ed25519: {str(e2)}")
+                            raise UserError(_("Could not load the private key. Please check the key format and password."))
+                    
+                    private_key_fakefile.close()
+                    
+                    # Connect with the key
+                    ssh_connection.connect(
+                        hostname=self.host,
+                        port=self.port,
+                        username=self.user,
+                        pkey=private_key
+                    )
+                except Exception as e:
+                    _logger.error(f"Error connecting with private key: {str(e)}")
+                    raise UserError(_("Failed to connect with private key: %s") % str(e))
             elif self.password and not self.private_key:
-                ssh_connection.connect(
-                    hostname=self.host,
-                    port=self.port,
-                    username=self.user,
-                    password=self.password,
-                    allow_agent=False,
-                )
+                try:
+                    ssh_connection.connect(
+                        hostname=self.host,
+                        port=self.port,
+                        username=self.user,
+                        password=self.password,
+                        allow_agent=False,
+                    )
+                except Exception as e:
+                    _logger.error(f"Error connecting with password: {str(e)}")
+                    raise UserError(_("Failed to connect with password: %s") % str(e))
+            else:
+                raise UserError(_("You must provide either a password or a private key."))
+                
             SSH_CONN_CACHE[self.id] = ssh_connection.invoke_shell()
             sleep(0.5)
             while not SSH_CONN_CACHE.get(self.id).recv_ready():
