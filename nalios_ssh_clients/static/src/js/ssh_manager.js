@@ -242,16 +242,29 @@ export class SshManager extends Component {
             // Establish SSH connection
             const connectionOutput = await this.orm.call('ssh.client', 'get_ssh_connection', [this.client_id]);
             
-            // Add welcome message and connection info
+            // Load common commands for this server type for auto-completion
+            await this.loadCommonCommands();
+            
+            // Add welcome message and connection info with enhanced styling
             this.terminal.el.innerHTML = `<div class="terminal-output">
                 <div class="terminal-welcome">
                     <strong>🔐 SSH connection established to ${clientName}</strong>
-                    <br/>Type commands below and press Enter to execute
+                    <div class="welcome-details">
+                        <p>Type commands below and press Enter to execute</p>
+                        <ul class="terminal-tips">
+                            <li>Use <kbd>Tab</kbd> for command completion</li>
+                            <li>Press <kbd>↑</kbd>/<kbd>↓</kbd> to navigate command history</li>
+                            <li>Type <code>help</code> to see common commands</li>
+                        </ul>
+                    </div>
                 </div>
             </div>`;
             
             // Add the actual connection output
             this.terminal.el.innerHTML += `<div class="terminal-response">${connectionOutput}</div>`;
+            
+            // Initialize auto-completion
+            this.setupAutoCompletion();
             
             // Update connection status
             this.state.isConnected = true;
@@ -265,6 +278,145 @@ export class SshManager extends Component {
             this.connectionStatus.el.previousElementSibling.classList.add('disconnected');
             this.state.isConnected = false;
         }
+    }
+    
+    async loadCommonCommands() {
+        // Common Unix/Linux commands for auto-completion
+        this.state.commonCommands = [
+            // File operations
+            'ls', 'cd', 'pwd', 'mkdir', 'touch', 'rm', 'cp', 'mv', 'cat', 'less', 'head', 'tail',
+            // System info
+            'uname', 'whoami', 'ps', 'top', 'htop', 'free', 'df', 'du', 'ifconfig', 'ip',
+            // Text processing
+            'grep', 'sed', 'awk', 'sort', 'uniq', 'wc', 'cut',
+            // Network
+            'ping', 'ssh', 'scp', 'curl', 'wget', 'netstat', 'traceroute', 'nslookup', 'dig',
+            // Package management
+            'apt', 'apt-get', 'yum', 'dnf', 'pacman', 'snap', 'dpkg',
+            // Process management
+            'kill', 'pkill', 'killall', 'nohup', 'bg', 'fg', 'jobs', 'screen', 'tmux',
+            // AWS specific
+            'aws', 'eb', 's3cmd', 'aws-shell',
+            // Docker
+            'docker', 'docker-compose', 'podman',
+            // Git
+            'git', 'gh',
+            // Common user commands
+            'sudo', 'su', 'passwd', 'who', 'w', 'last', 'id',
+            // Help
+            'man', 'info', 'help',
+            // Compression 
+            'tar', 'gzip', 'zip', 'unzip', 'bzip2',
+            // Shell
+            'echo', 'export', 'env', 'history',
+        ];
+        
+        // Common command suffixes/options
+        this.state.commonOptions = [
+            '-a', '-l', '-h', '--help', '-v', '--version',
+            '-r', '-f', '-d', '-p', '-i', '-o', '-n', '-s',
+            '-u', '-g', '-m', '-t', '-c', '-x', '-z', '-b',
+        ];
+        
+        // Try to get recent commands for this specific server
+        try {
+            const recentCommands = await this.orm.call(
+                'ssh.saved.command',
+                'search_read',
+                [
+                    [['ssh_client_id', '=', this.client_id]],
+                    ['command']
+                ],
+                { limit: 20, order: 'last_used DESC' }
+            );
+            
+            // Add these commands to our common commands list for auto-completion
+            if (recentCommands && recentCommands.length) {
+                recentCommands.forEach(cmd => {
+                    const baseCommand = cmd.command.split(' ')[0];
+                    if (baseCommand && !this.state.commonCommands.includes(baseCommand)) {
+                        this.state.commonCommands.push(baseCommand);
+                    }
+                });
+            }
+        } catch (error) {
+            console.error("Failed to load recent commands:", error);
+        }
+    }
+    
+    setupAutoCompletion() {
+        this.cmdline.el.addEventListener('keydown', (event) => {
+            // Tab key for auto-completion
+            if (event.key === 'Tab') {
+                event.preventDefault();
+                this.handleTabCompletion();
+            }
+        });
+    }
+    
+    handleTabCompletion() {
+        const currentInput = this.cmdline.el.value.trim();
+        
+        if (!currentInput) return;
+        
+        const lastWord = currentInput.split(' ').pop();
+        const prefix = currentInput.substring(0, currentInput.length - lastWord.length);
+        
+        // Find matching commands
+        let matches = [];
+        
+        if (currentInput.includes(' ')) {
+            // We're completing an option or argument
+            matches = this.state.commonOptions.filter(opt => 
+                opt.startsWith(lastWord)
+            );
+        } else {
+            // We're completing a command
+            matches = this.state.commonCommands.filter(cmd => 
+                cmd.startsWith(lastWord)
+            );
+        }
+        
+        if (matches.length === 1) {
+            // One match - complete it
+            this.cmdline.el.value = prefix + matches[0] + ' ';
+        } else if (matches.length > 1) {
+            // Multiple matches - show options
+            const commonPrefix = this.findCommonPrefix(matches);
+            
+            if (commonPrefix.length > lastWord.length) {
+                // We can complete partially
+                this.cmdline.el.value = prefix + commonPrefix;
+            } else {
+                // Show all options
+                const matchesHtml = matches.map(m => `<span class="completion-option">${m}</span>`).join(' ');
+                this.terminal.el.innerHTML += `
+                    <div class="terminal-output completion-suggestions">
+                        <div class="completion-header">Tab completion options:</div>
+                        <div class="completion-list">${matchesHtml}</div>
+                    </div>
+                `;
+                this.terminal.el.scrollTo(0, this.terminal.el.scrollHeight);
+            }
+        }
+    }
+    
+    findCommonPrefix(strings) {
+        if (!strings.length) return '';
+        
+        const firstStr = strings[0];
+        let prefix = '';
+        
+        for (let i = 0; i < firstStr.length; i++) {
+            const char = firstStr[i];
+            if (strings.every(str => str[i] === char)) {
+                prefix += char;
+            } else {
+                break;
+            }
+        }
+        
+        return prefix;
     }
 
     async exit(ev) {
