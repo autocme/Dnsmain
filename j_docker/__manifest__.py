@@ -66,14 +66,7 @@
         'views/docker_menu.xml',
         'data/docker_data.xml',
     ],
-    'assets': {
-        'web.assets_backend': [
-            'j_docker/static/src/css/docker_dashboard.css',
-        ],
-        'web.assets_qweb': [
-            'j_docker/static/src/xml/docker_dashboard.xml',
-        ],
-    },
+    # Removed assets section to eliminate JS dependencies
     'demo': [
         'data/docker_demo.xml',
     ],
