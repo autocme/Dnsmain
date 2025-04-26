@@ -205,7 +205,7 @@
                                             <span><t t-esc="record.server_id.value[1]"/></span>
                                         </div>
                                     </div>
-                                    <div t-if="record.status.raw_value == 'running'" class="mt-2">
+                                    <div t-att-class="record.status.raw_value == 'running' ? 'mt-2' : 'd-none'">
                                         <div class="progress">
                                             <div class="progress-bar bg-info" role="progressbar" t-attf-style="width: #{record.cpu_usage.value}%;" 
                                                  t-attf-aria-valuenow="#{record.cpu_usage.value}" aria-valuemin="0" aria-valuemax="100" 
