@@ -7,6 +7,7 @@ dependencies = [
     "ansi2html>=1.9.2",
     "boto3>=1.37.34",
     "cryptography>=44.0.2",
+    "gevent-websocket>=0.10.1",
     "paramiko>=3.5.1",
     "validator-collection>=1.5.0",
     "webssh>=1.6.2",

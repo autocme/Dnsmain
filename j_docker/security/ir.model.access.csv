@@ -1,0 +1,15 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+j_docker_server_user,docker server user,model_docker_server,j_docker.group_docker_user,1,0,0,0
+j_docker_server_manager,docker server manager,model_docker_server,j_docker.group_docker_manager,1,1,1,1
+j_docker_container_user,docker container user,model_docker_container,j_docker.group_docker_user,1,0,0,0
+j_docker_container_manager,docker container manager,model_docker_container,j_docker.group_docker_manager,1,1,1,1
+j_docker_image_user,docker image user,model_docker_image,j_docker.group_docker_user,1,0,0,0
+j_docker_image_manager,docker image manager,model_docker_image,j_docker.group_docker_manager,1,1,1,1
+j_docker_network_user,docker network user,model_docker_network,j_docker.group_docker_user,1,0,0,0
+j_docker_network_manager,docker network manager,model_docker_network,j_docker.group_docker_manager,1,1,1,1
+j_docker_volume_user,docker volume user,model_docker_volume,j_docker.group_docker_user,1,0,0,0
+j_docker_volume_manager,docker volume manager,model_docker_volume,j_docker.group_docker_manager,1,1,1,1
+j_docker_task_user,docker task user,model_docker_task,j_docker.group_docker_user,1,0,0,0
+j_docker_task_manager,docker task manager,model_docker_task,j_docker.group_docker_manager,1,1,1,1
+j_docker_logs_user,docker logs user,model_docker_logs,j_docker.group_docker_user,1,0,0,0
+j_docker_logs_manager,docker logs manager,model_docker_logs,j_docker.group_docker_manager,1,1,1,1

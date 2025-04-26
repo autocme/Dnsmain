@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_docker_network_tree" model="ir.ui.view">
+        <field name="name">docker.network.tree</field>
+        <field name="model">docker.network</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="docker_id"/>
+                <field name="driver"/>
+                <field name="subnet"/>
+                <field name="gateway"/>
+                <field name="scope"/>
+                <field name="connected_container_count"/>
+                <field name="internal"/>
+                <field name="attachable"/>
+                <field name="server_id"/>
+                <field name="last_updated"/>
+                <field name="active" invisible="1"/>
+            </tree>
+        </field>
+    </record>
+    
+    <!-- Form View -->
+    <record id="view_docker_network_form" model="ir.ui.view">
+        <field name="name">docker.network.form</field>
+        <field name="model">docker.network</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_remove" string="Remove" type="object" 
+                            class="btn-danger" 
+                            confirm="Are you sure you want to remove this network?"
+                            attrs="{'invisible': ['|', ('connected_container_count', '>', 0), ('name', 'in', ['bridge', 'host', 'none'])]}"/>
+                    <button name="action_inspect" string="Inspect" type="object" class="btn-secondary"/>
+                    <button name="action_create_container" string="Create Container" type="object" class="btn-success"/>
+                    <button name="action_connect_container" string="Connect Container" type="object" class="btn-primary"/>
+                    <button name="action_disconnect_container" string="Disconnect Container" type="object" class="btn-warning"/>
+                    <button name="action_refresh" string="Refresh" type="object" class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Network Name"/>
+                        </h1>
+                        <div class="o_row">
+                            <field name="scope" class="oe_inline" readonly="1"/> network
+                        </div>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="server_id" options="{'no_create': True, 'no_open': False}"/>
+                            <field name="docker_id"/>
+                            <field name="driver"/>
+                            <field name="subnet"/>
+                            <field name="gateway"/>
+                        </group>
+                        <group>
+                            <field name="connected_container_count"/>
+                            <field name="internal" widget="boolean_toggle"/>
+                            <field name="attachable" widget="boolean_toggle"/>
+                            <field name="ipv6" widget="boolean_toggle"/>
+                            <field name="ingress" widget="boolean_toggle"/>
+                            <field name="last_updated"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Connected Containers" name="containers">
+                            <field name="containers" widget="ace" options="{'mode': 'text'}" placeholder="No connected containers"/>
+                        </page>
+                        <page string="Options" name="options">
+                            <field name="options" widget="ace" options="{'mode': 'text'}" placeholder="No options"/>
+                        </page>
+                        <page string="Notes" name="notes">
+                            <field name="notes" placeholder="Add your notes here..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Search View -->
+    <record id="view_docker_network_search" model="ir.ui.view">
+        <field name="name">docker.network.search</field>
+        <field name="model">docker.network</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="docker_id"/>
+                <field name="driver"/>
+                <field name="subnet"/>
+                <field name="server_id"/>
+                <separator/>
+                <filter string="With Containers" name="with_containers" domain="[('connected_container_count', '>', 0)]"/>
+                <filter string="Empty Networks" name="empty_networks" domain="[('connected_container_count', '=', 0)]"/>
+                <filter string="User Networks" name="user_networks" domain="[('name', 'not in', ['bridge', 'host', 'none'])]"/>
+                <filter string="Default Networks" name="default_networks" domain="[('name', 'in', ['bridge', 'host', 'none'])]"/>
+                <separator/>
+                <filter string="Bridge Networks" name="bridge_networks" domain="[('driver', '=', 'bridge')]"/>
+                <filter string="Overlay Networks" name="overlay_networks" domain="[('driver', '=', 'overlay')]"/>
+                <filter string="Macvlan Networks" name="macvlan_networks" domain="[('driver', '=', 'macvlan')]"/>
+                <separator/>
+                <filter string="IPv6 Enabled" name="ipv6_enabled" domain="[('ipv6', '=', True)]"/>
+                <filter string="Internal" name="internal" domain="[('internal', '=', True)]"/>
+                <filter string="Attachable" name="attachable" domain="[('attachable', '=', True)]"/>
+                <separator/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Driver" name="group_by_driver" context="{'group_by': 'driver'}"/>
+                    <filter string="Server" name="group_by_server" context="{'group_by': 'server_id'}"/>
+                    <filter string="Scope" name="group_by_scope" context="{'group_by': 'scope'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    
+    <!-- Kanban View -->
+    <record id="view_docker_network_kanban" model="ir.ui.view">
+        <field name="name">docker.network.kanban</field>
+        <field name="model">docker.network</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile">
+                <field name="id"/>
+                <field name="name"/>
+                <field name="docker_id"/>
+                <field name="driver"/>
+                <field name="subnet"/>
+                <field name="gateway"/>
+                <field name="scope"/>
+                <field name="connected_container_count"/>
+                <field name="server_id"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_global_click">
+                            <div class="o_kanban_record_top mb-0">
+                                <div class="o_kanban_record_headings">
+                                    <strong class="o_kanban_record_title">
+                                        <field name="name"/>
+                                    </strong>
+                                    <span class="float-right">
+                                        <span class="badge badge-secondary"><t t-esc="record.driver.value"/></span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="o_kanban_record_body">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>ID:</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <span><t t-esc="record.docker_id.value ? record.docker_id.value.substring(0, 12) : ''"/></span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Subnet:</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <span><t t-esc="record.subnet.value || 'Not defined'"/></span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Server:</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <span><t t-esc="record.server_id.value[1]"/></span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Containers:</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <span><t t-esc="record.connected_container_count.value"/></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="o_kanban_record_bottom">
+                                <div class="oe_kanban_bottom_left">
+                                    <span><t t-esc="record.scope.value"/> scope</span>
+                                </div>
+                                <div class="oe_kanban_bottom_right">
+                                    <span class="oe_kanban_avatar">
+                                        <i class="fa fa-sitemap" t-attf-style="color: #{record.connected_container_count.raw_value > 0 ? '#28a745' : '#6c757d'};"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+    
+    <!-- Pivot View -->
+    <record id="view_docker_network_pivot" model="ir.ui.view">
+        <field name="name">docker.network.pivot</field>
+        <field name="model">docker.network</field>
+        <field name="arch" type="xml">
+            <pivot string="Network Analysis">
+                <field name="server_id" type="row"/>
+                <field name="driver" type="row"/>
+                <field name="scope" type="col"/>
+                <field name="__count" type="measure"/>
+                <field name="connected_container_count" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    
+    <!-- Graph View -->
+    <record id="view_docker_network_graph" model="ir.ui.view">
+        <field name="name">docker.network.graph</field>
+        <field name="model">docker.network</field>
+        <field name="arch" type="xml">
+            <graph string="Network Analysis" type="bar">
+                <field name="server_id"/>
+                <field name="driver"/>
+                <field name="connected_container_count" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    
+    <!-- Action Window -->
+    <record id="action_docker_network" model="ir.actions.act_window">
+        <field name="name">Networks</field>
+        <field name="res_model">docker.network</field>
+        <field name="view_mode">kanban,tree,form,pivot,graph</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No networks found
+            </p>
+            <p>
+                Create networks or scan your Docker servers to find existing networks.
+            </p>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_docker_task_tree" model="ir.ui.view">
+        <field name="name">docker.task.tree</field>
+        <field name="model">docker.task</field>
+        <field name="arch" type="xml">
+            <tree decoration-success="last_status == 'success'" 
+                  decoration-warning="last_status == 'running'" 
+                  decoration-danger="last_status == 'failure'" 
+                  decoration-muted="last_status == 'none'">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="server_id"/>
+                <field name="task_type"/>
+                <field name="schedule_type"/>
+                <field name="last_status"/>
+                <field name="last_run"/>
+                <field name="next_run"/>
+                <field name="last_duration"/>
+                <field name="success_count"/>
+                <field name="failure_count"/>
+                <field name="active" invisible="1"/>
+            </tree>
+        </field>
+    </record>
+    
+    <!-- Form View -->
+    <record id="view_docker_task_form" model="ir.ui.view">
+        <field name="name">docker.task.form</field>
+        <field name="model">docker.task</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_run_task" string="Run Now" type="object" class="btn-primary"/>
+                    <button name="action_view_output" string="View Output" type="object" 
+                            attrs="{'invisible': [('last_status', '=', 'none')]}"/>
+                    <button name="action_view_logs" string="View Logs" type="object"/>
+                    <button name="action_schedule_task" string="Schedule" type="object" 
+                            attrs="{'invisible': [('schedule_type', '!=', 'manual')]}"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_logs" type="object" class="oe_stat_button" icon="fa-list-alt">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">View Logs</span>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Task Name"/>
+                        </h1>
+                        <div>
+                            <field name="last_status" widget="badge" 
+                                   decoration-success="last_status == 'success'" 
+                                   decoration-warning="last_status == 'running'" 
+                                   decoration-danger="last_status == 'failure'" 
+                                   decoration-info="last_status == 'none'"/>
+                        </div>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="server_id" options="{'no_create': True, 'no_open': False}"/>
+                            <field name="task_type"/>
+                            <field name="container_id" 
+                                   attrs="{'invisible': [('task_type', '!=', 'container_action')], 'required': [('task_type', '=', 'container_action')]}"
+                                   options="{'no_create': True}"/>
+                            <field name="image_id" 
+                                   attrs="{'invisible': [('task_type', '!=', 'image_action')], 'required': [('task_type', '=', 'image_action')]}"
+                                   options="{'no_create': True}"/>
+                            <field name="network_id" 
+                                   attrs="{'invisible': [('task_type', '!=', 'network_action')], 'required': [('task_type', '=', 'network_action')]}"
+                                   options="{'no_create': True}"/>
+                            <field name="volume_id" 
+                                   attrs="{'invisible': [('task_type', '!=', 'volume_action')], 'required': [('task_type', '=', 'volume_action')]}"
+                                   options="{'no_create': True}"/>
+                            <field name="sequence" widget="handle"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                        <group>
+                            <field name="schedule_type"/>
+                            <field name="cron_expr" 
+                                   attrs="{'invisible': [('schedule_type', '!=', 'cron')], 'required': [('schedule_type', '=', 'cron')]}"
+                                   placeholder="e.g. 0 5 * * * (run at 5:00 AM every day)"/>
+                            <field name="event_trigger" 
+                                   attrs="{'invisible': [('schedule_type', '!=', 'event')], 'required': [('schedule_type', '=', 'event')]}"/>
+                            <field name="cron_id" invisible="1"/>
+                            <field name="next_run" readonly="1" 
+                                   attrs="{'invisible': [('schedule_type', '!=', 'cron')]}"/>
+                            <field name="timeout"/>
+                            <field name="fail_action"/>
+                            <field name="retry_count" 
+                                   attrs="{'invisible': [('fail_action', '!=', 'retry')], 'required': [('fail_action', '=', 'retry')]}"/>
+                            <field name="retry_delay" 
+                                   attrs="{'invisible': [('fail_action', '!=', 'retry')], 'required': [('fail_action', '=', 'retry')]}"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Command" name="command">
+                            <field name="command" widget="ace" options="{'mode': 'sh'}" placeholder="Enter command to execute..."/>
+                        </page>
+                        <page string="Description" name="description">
+                            <field name="description" placeholder="Describe what this task does..."/>
+                        </page>
+                        <page string="Execution Details" name="execution_details" 
+                              attrs="{'invisible': [('last_status', '=', 'none')]}">
+                            <group>
+                                <group>
+                                    <field name="last_run" readonly="1"/>
+                                    <field name="last_duration" readonly="1" widget="float_time"/>
+                                    <field name="success_count" readonly="1"/>
+                                    <field name="failure_count" readonly="1"/>
+                                </group>
+                                <group>
+                                    <!-- Empty group for layout purposes -->
+                                </group>
+                            </group>
+                            <field name="last_output" widget="ace" options="{'mode': 'text'}" readonly="1" placeholder="No output yet"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Search View -->
+    <record id="view_docker_task_search" model="ir.ui.view">
+        <field name="name">docker.task.search</field>
+        <field name="model">docker.task</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="server_id"/>
+                <field name="task_type"/>
+                <field name="schedule_type"/>
+                <separator/>
+                <filter string="Success" name="success" domain="[('last_status', '=', 'success')]"/>
+                <filter string="Failed" name="failed" domain="[('last_status', '=', 'failure')]"/>
+                <filter string="Running" name="running" domain="[('last_status', '=', 'running')]"/>
+                <filter string="Not Run" name="not_run" domain="[('last_status', '=', 'none')]"/>
+                <separator/>
+                <filter string="Manual Tasks" name="manual" domain="[('schedule_type', '=', 'manual')]"/>
+                <filter string="Scheduled Tasks" name="scheduled" domain="[('schedule_type', '=', 'cron')]"/>
+                <filter string="Event Triggered" name="event" domain="[('schedule_type', '=', 'event')]"/>
+                <separator/>
+                <filter string="Docker Commands" name="docker_command" domain="[('task_type', '=', 'docker_command')]"/>
+                <filter string="System Commands" name="system_command" domain="[('task_type', '=', 'system_command')]"/>
+                <filter string="Container Actions" name="container_action" domain="[('task_type', '=', 'container_action')]"/>
+                <filter string="Image Actions" name="image_action" domain="[('task_type', '=', 'image_action')]"/>
+                <filter string="Network Actions" name="network_action" domain="[('task_type', '=', 'network_action')]"/>
+                <filter string="Volume Actions" name="volume_action" domain="[('task_type', '=', 'volume_action')]"/>
+                <filter string="Prune Actions" name="prune_action" domain="[('task_type', '=', 'prune_action')]"/>
+                <separator/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Server" name="group_by_server" context="{'group_by': 'server_id'}"/>
+                    <filter string="Task Type" name="group_by_task_type" context="{'group_by': 'task_type'}"/>
+                    <filter string="Schedule Type" name="group_by_schedule_type" context="{'group_by': 'schedule_type'}"/>
+                    <filter string="Last Status" name="group_by_last_status" context="{'group_by': 'last_status'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    
+    <!-- Kanban View -->
+    <record id="view_docker_task_kanban" model="ir.ui.view">
+        <field name="name">docker.task.kanban</field>
+        <field name="model">docker.task</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile" default_group_by="last_status">
+                <field name="id"/>
+                <field name="name"/>
+                <field name="server_id"/>
+                <field name="task_type"/>
+                <field name="schedule_type"/>
+                <field name="last_status"/>
+                <field name="last_run"/>
+                <field name="next_run"/>
+                <field name="last_duration"/>
+                <field name="success_count"/>
+                <field name="failure_count"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_global_click">
+                            <div class="o_kanban_record_top mb-0">
+                                <div class="o_kanban_record_headings">
+                                    <strong class="o_kanban_record_title">
+                                        <field name="name"/>
+                                    </strong>
+                                    <span class="float-right">
+                                        <field name="last_status" widget="label_selection" 
+                                               options="{'classes': {'success': 'success', 'failure': 'danger', 'running': 'warning', 'none': 'secondary'}}"/>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="o_kanban_record_body">
+                                <div class="row">
+                                    <div class="col-5">
+                                        <strong>Server:</strong>
+                                    </div>
+                                    <div class="col-7">
+                                        <span><t t-esc="record.server_id.value[1]"/></span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-5">
+                                        <strong>Type:</strong>
+                                    </div>
+                                    <div class="col-7">
+                                        <span><t t-esc="record.task_type.value"/></span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-5">
+                                        <strong>Schedule:</strong>
+                                    </div>
+                                    <div class="col-7">
+                                        <span><t t-esc="record.schedule_type.value"/></span>
+                                    </div>
+                                </div>
+                                <div class="row" t-if="record.last_run.value">
+                                    <div class="col-5">
+                                        <strong>Last Run:</strong>
+                                    </div>
+                                    <div class="col-7">
+                                        <span><t t-esc="record.last_run.value"/></span>
+                                    </div>
+                                </div>
+                                <div class="row" t-if="record.next_run.value">
+                                    <div class="col-5">
+                                        <strong>Next Run:</strong>
+                                    </div>
+                                    <div class="col-7">
+                                        <span><t t-esc="record.next_run.value"/></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="o_kanban_record_bottom">
+                                <div class="oe_kanban_bottom_left">
+                                    <span t-if="record.success_count.raw_value > 0 || record.failure_count.raw_value > 0">
+                                        <t t-esc="record.success_count.value"/> / <t t-esc="record.success_count.value + record.failure_count.value"/>
+                                    </span>
+                                </div>
+                                <div class="oe_kanban_bottom_right">
+                                    <span class="oe_kanban_avatar">
+                                        <i class="fa fa-tasks" t-attf-style="color: #{record.last_status.raw_value == 'success' ? '#28a745' : (record.last_status.raw_value == 'failure' ? '#dc3545' : (record.last_status.raw_value == 'running' ? '#ffc107' : '#6c757d'))};"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+    
+    <!-- Calendar View -->
+    <record id="view_docker_task_calendar" model="ir.ui.view">
+        <field name="name">docker.task.calendar</field>
+        <field name="model">docker.task</field>
+        <field name="arch" type="xml">
+            <calendar string="Tasks" date_start="last_run" date_stop="next_run" color="last_status" mode="month">
+                <field name="name"/>
+                <field name="server_id"/>
+                <field name="task_type"/>
+                <field name="last_status"/>
+            </calendar>
+        </field>
+    </record>
+    
+    <!-- Pivot View -->
+    <record id="view_docker_task_pivot" model="ir.ui.view">
+        <field name="name">docker.task.pivot</field>
+        <field name="model">docker.task</field>
+        <field name="arch" type="xml">
+            <pivot string="Task Analysis">
+                <field name="server_id" type="row"/>
+                <field name="task_type" type="row"/>
+                <field name="last_status" type="col"/>
+                <field name="__count" type="measure"/>
+                <field name="success_count" type="measure"/>
+                <field name="failure_count" type="measure"/>
+                <field name="last_duration" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    
+    <!-- Graph View -->
+    <record id="view_docker_task_graph" model="ir.ui.view">
+        <field name="name">docker.task.graph</field>
+        <field name="model">docker.task</field>
+        <field name="arch" type="xml">
+            <graph string="Task Analysis" type="bar">
+                <field name="server_id"/>
+                <field name="task_type"/>
+                <field name="last_status"/>
+                <field name="success_count" type="measure"/>
+                <field name="failure_count" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    
+    <!-- Action Window for All Tasks -->
+    <record id="action_docker_task" model="ir.actions.act_window">
+        <field name="name">Tasks</field>
+        <field name="res_model">docker.task</field>
+        <field name="view_mode">kanban,tree,form,calendar,pivot,graph</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No tasks found
+            </p>
+            <p>
+                Create Docker tasks to automate operations on your servers.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Action Window for Scheduled Tasks -->
+    <record id="action_docker_task_scheduled" model="ir.actions.act_window">
+        <field name="name">Scheduled Tasks</field>
+        <field name="res_model">docker.task</field>
+        <field name="view_mode">kanban,tree,form,calendar</field>
+        <field name="domain">[('schedule_type', '=', 'cron')]</field>
+        <field name="context">{'search_default_scheduled': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No scheduled tasks found
+            </p>
+            <p>
+                Create scheduled tasks to automate operations at specific times.
+            </p>
+        </field>
+    </record>
+</odoo>

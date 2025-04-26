@@ -61,13 +61,14 @@
                         width: 100%;
                     }
                     .terminal-section {
-                        background-color: #121212;
+                        background-color: #1b2431;
                         border-radius: 6px;
                         box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
                         overflow: hidden;
                         display: flex;
                         flex-direction: column;
                         margin-bottom: 15px;
+                        border: 1px solid #394b61;
                     }
                     .terminal-toolbar {
                         display: flex;
@@ -97,12 +98,27 @@
                         padding: 15px;
                         max-height: 70vh;
                         overflow-y: auto;
-                        background-color: #121212;
+                        background-color: #232F3E;
                         color: #f0f0f0;
-                        font-family: 'JetBrains Mono', monospace;
+                        font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
                         font-size: 14px;
                         line-height: 1.5;
                         white-space: pre-wrap;
+                        position: relative;
+                        border: 1px solid #394b61;
+                        border-top: none;
+                    }
+                    .terminal-content:before {
+                        content: "SSH Terminal";
+                        position: absolute;
+                        top: -10px;
+                        left: 15px;
+                        background-color: #232F3E;
+                        padding: 0 8px;
+                        font-size: 11px;
+                        color: #ff9900;
+                        border-radius: 2px;
+                        z-index: 1;
                     }
                     .terminal-welcome {
                         color: #ffc107;
@@ -233,6 +249,162 @@
                         text-align: center;
                         font-style: italic;
                     }
+                    .websocket-status {
+                        margin-top: 10px;
+                        font-size: 0.85rem;
+                        color: #999;
+                        display: flex;
+                        align-items: center;
+                    }
+                    .websocket-status .status-indicator {
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 50%;
+                        margin-right: 6px;
+                    }
+                    .websocket-status .connected {
+                        background-color: #56e356;
+                    }
+                    .websocket-status .disconnected {
+                        background-color: #ff6b6b;
+                    }
+                    .websocket-status .connecting {
+                        background-color: #ffc107;
+                        animation: blink 1s infinite;
+                    }
+                    .websocket-status .error {
+                        background-color: #ff6b6b;
+                    }
+                    @keyframes blink {
+                        0% { opacity: 0.4; }
+                        50% { opacity: 1; }
+                        100% { opacity: 0.4; }
+                    }
+                    #websocket-output {
+                        margin-top: 15px;
+                    }
+                    .terminal-line {
+                        margin-bottom: 5px;
+                        line-height: 1.4;
+                    }
+                    .terminal-command {
+                        color: #56e356;
+                        font-weight: bold;
+                    }
+                    .terminal-info {
+                        color: #56a0e3;
+                    }
+                    .terminal-error {
+                        color: #ff6b6b;
+                    }
+                    .terminal-suggestions {
+                        color: #868e96;
+                        font-style: italic;
+                        white-space: pre-wrap;
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 8px;
+                    }
+                    .terminal-output {
+                        white-space: pre-wrap;
+                        font-family: 'SF Mono', 'Monaco', 'Menlo', 'Courier New', monospace;
+                        line-height: 1.4;
+                    }
+                    .terminal-table-row {
+                        display: table-row;
+                        white-space: pre;
+                    }
+                    .cloud-tool-output {
+                        white-space: pre-wrap;
+                        padding: 8px;
+                        border-radius: 4px;
+                        background-color: rgba(0, 0, 0, 0.2);
+                    }
+                    /* Syntax highlighting for directories and files in ls output */
+                    .directory {
+                        color: #4dabf7;
+                        font-weight: bold;
+                    }
+                    .executable {
+                        color: #51cf66;
+                    }
+                    .symlink {
+                        color: #fcc419;
+                    }
+                    .hidden-file {
+                        color: #868e96;
+                    }
+                    .image-file {
+                        color: #e599f7;
+                    }
+                    .archive-file {
+                        color: #ffa94d;
+                    }
+                    /* AWS-like elements */
+                    .aws-resource {
+                        color: #ff9900;
+                        font-weight: bold;
+                    }
+                    .aws-region {
+                        color: #569AE3;
+                    }
+                    .aws-service {
+                        color: #E56717;
+                        font-weight: bold;
+                    }
+                    .aws-tag {
+                        color: #56e356;
+                    }
+                    /* AWS status indicators */
+                    .aws-status-running, .status-running, .status-up {
+                        color: #56e356;
+                        font-weight: bold;
+                    }
+                    .aws-status-pending, .status-created {
+                        color: #ffc107;
+                        font-weight: bold;
+                    }
+                    .aws-status-warning {
+                        color: #ffc107;
+                        font-weight: bold;
+                    }
+                    .aws-status-stopped, .status-exited {
+                        color: #818181;
+                        font-weight: bold;
+                    }
+                    .aws-status-terminated {
+                        color: #ff6b6b;
+                        font-weight: bold;
+                    }
+                    .aws-status-error {
+                        color: #ff6b6b;
+                        font-weight: bold;
+                    }
+                    /* Docker elements */
+                    .docker-container {
+                        color: #0db7ed;
+                        font-weight: bold;
+                    }
+                    .docker-image {
+                        color: #384d54;
+                        font-weight: bold;
+                    }
+                    .file-listing-output {
+                        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                    }
+                    /* Cloud tool outputs */
+                    .cloud-tool-output {
+                        background-color: #1b2431;
+                        border-radius: 4px;
+                        padding: 8px;
+                        margin: 5px 0;
+                    }
+                    .aws-output {
+                        border-left: 3px solid #ff9900;
+                    }
+                    .docker-output {
+                        border-left: 3px solid #0db7ed;
+                    }
                 </style>
             </t>
             
@@ -258,10 +430,10 @@
                 <div class="terminal-section">
                     <!-- Terminal Toolbar -->
                     <div class="terminal-toolbar">
-                        <button id="clear-btn" title="Clear Terminal" onclick="window.location.href='/webssh/?client_id=' + document.querySelector('input[name=client_id]').value">
+                        <button id="clear-btn" title="Clear Terminal" onclick="document.getElementById('websocket-output').innerHTML = ''; return false;">
                             <i class="fa fa-eraser"></i> Clear
                         </button>
-                        <button id="disconnect-btn" title="Disconnect" onclick="if(confirm('Are you sure you want to disconnect?')) window.location.href='/web'">
+                        <button id="disconnect-btn" title="Disconnect">
                             <i class="fa fa-power-off"></i> Disconnect
                         </button>
                     </div>
@@ -270,29 +442,45 @@
                     <div class="terminal-content" id="terminal-content">
                         <!-- Welcome message -->
                         <div class="terminal-welcome">
-                            Connected to <strong><t t-esc="ssh_client.username"/>@<t t-esc="ssh_client.hostname"/></strong>
-                            <div>Type commands below and press Execute or hit Enter.</div>
+                            <div style="color: #ff9900; margin-bottom: 10px;">
+                                <strong>AWS Console SSH Terminal</strong>
+                            </div>
+                            <div>Connected to <strong><t t-esc="ssh_client.username"/>@<t t-esc="ssh_client.hostname"/></strong></div>
+                            <div style="margin-top: 5px;">Type commands below and press Enter or Execute to run.</div>
+                            <div style="margin-top: 5px; font-style: italic; font-size: 12px;">
+                                <i class="fa fa-lightbulb-o" style="color: #ffc107;"></i> Tips:
+                                <ul style="margin-top: 3px; margin-bottom: 0;">
+                                    <li>Use <kbd style="background: #394b61; padding: 1px 4px; border-radius: 2px;">Tab</kbd> key for command auto-completion</li>
+                                    <li>Press <kbd style="background: #394b61; padding: 1px 4px; border-radius: 2px;">↑</kbd> <kbd style="background: #394b61; padding: 1px 4px; border-radius: 2px;">↓</kbd> to navigate command history</li>
+                                </ul>
+                            </div>
                         </div>
                         
-                        <!-- Display command output if any -->
+                        <!-- Display initial command output if any -->
                         <t t-if="command">
                             <div class="terminal-command">$ <t t-esc="command"/></div>
                             <t t-if="command_output">
                                 <div class="terminal-output" t-raw="command_output"></div>
                             </t>
                         </t>
+                        
+                        <!-- WebSocket Output Area -->
+                        <div id="websocket-output"></div>
                     </div>
                     
-                    <!-- Command Input Form -->
-                    <form method="GET" action="/webssh/" class="command-form">
-                        <input type="hidden" name="client_id" t-att-value="client_id"/>
-                        <input type="hidden" name="history" t-att-value="command_history_json"/>
+                    <!-- Command Input -->
+                    <div class="command-form">
+                        <input type="hidden" id="client-id" t-att-value="client_id"/>
+                        <input type="hidden" id="history-json" t-att-value="command_history_json"/>
                         <div class="input-group">
                             <span class="input-group-text">$</span>
-                            <input type="text" name="command" class="command-input" id="command-input" autocomplete="off" autofocus="autofocus"/>
-                            <button type="submit" class="execute-btn">Execute</button>
+                            <input type="text" class="command-input" id="command-input" autocomplete="off" autofocus="autofocus"/>
+                            <button type="button" id="execute-btn" class="execute-btn">Execute</button>
                         </div>
-                    </form>
+                        <div id="connection-status" class="websocket-status">
+                            <span class="status-indicator disconnected"></span> Connecting...
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Command History Section -->
@@ -322,22 +510,357 @@
                 </div>
             </div>
             
+            <script type="text/javascript" src="/web/static/lib/jquery/jquery.js"></script>
             <script type="text/javascript">
                 document.addEventListener('DOMContentLoaded', function() {
-                    // Focus command input
-                    document.getElementById('command-input').focus();
+                    // Configuration
+                    const clientId = document.getElementById('client-id').value;
+                    let sessionId = null;
+                    let socket = null;
+                    let connected = false;
+                    let commandHistory = [];
+                    let historyIndex = -1;
+                    let currentInput = '';
                     
-                    // Add keyboard event listener for auto submit on Enter key
-                    document.getElementById('command-input').addEventListener('keydown', function(e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            document.querySelector('form.command-form').submit();
+                    // Load command history if available
+                    try {
+                        const historyJson = document.getElementById('history-json').value;
+                        if (historyJson) {
+                            commandHistory = JSON.parse(historyJson);
+                        }
+                    } catch(e) {
+                        console.error("Error parsing command history:", e);
+                    }
+                    
+                    // Get elements
+                    const terminal = document.getElementById('terminal-content');
+                    const wsOutput = document.getElementById('websocket-output');
+                    const commandInput = document.getElementById('command-input');
+                    const executeBtn = document.getElementById('execute-btn');
+                    const statusElement = document.getElementById('connection-status');
+                    
+                    // Focus input
+                    commandInput.focus();
+                    
+                    // Initialize WebSocket connection
+                    initializeWebSocket();
+                    
+                    // Set up event listeners
+                    commandInput.addEventListener('keydown', handleKeyDown);
+                    executeBtn.addEventListener('click', executeCommand);
+                    document.getElementById('disconnect-btn').addEventListener('click', function() {
+                        if (confirm('Are you sure you want to disconnect?')) {
+                            if (socket && socket.readyState === WebSocket.OPEN) {
+                                // Send a disconnect message
+                                socket.send(JSON.stringify({type: 'disconnect'}));
+                                // Close WebSocket
+                                socket.close();
+                            }
+                            // Navigate back to Odoo
+                            window.location.href = '/web';
                         }
                     });
                     
-                    // Scroll to bottom of terminal
-                    const terminal = document.getElementById('terminal-content');
-                    terminal.scrollTop = terminal.scrollHeight;
+                    // Functions
+                    function initializeWebSocket() {
+                        updateStatus('connecting', 'Initializing connection...');
+                        
+                        // Initialize WebSocket session
+                        $.ajax({
+                            url: '/webssh/ws_initialize',
+                            type: 'POST',
+                            dataType: 'json',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                jsonrpc: "2.0",
+                                method: "call",
+                                params: {
+                                    client_id: clientId
+                                },
+                                id: Math.floor(Math.random() * 1000000)
+                            }),
+                            success: function(response) {
+                                if (response.error) {
+                                    appendToTerminal('Error initializing WebSocket: ' + response.error.data.message, 'error');
+                                    updateStatus('error', 'Connection failed');
+                                    return;
+                                }
+                                
+                                if (response.result && response.result.success) {
+                                    sessionId = response.result.session_id;
+                                    connectWebSocket(sessionId);
+                                } else {
+                                    appendToTerminal('Error initializing WebSocket: Unknown error', 'error');
+                                    updateStatus('error', 'Connection failed');
+                                }
+                            },
+                            error: function(jqXHR, textStatus, errorThrown) {
+                                appendToTerminal('Error initializing WebSocket: ' + textStatus, 'error');
+                                updateStatus('error', 'Connection failed');
+                            }
+                        });
+                    }
+                    
+                    function connectWebSocket(sessionId) {
+                        if (!sessionId) {
+                            appendToTerminal('Error: No session ID available', 'error');
+                            updateStatus('error', 'Connection failed');
+                            return;
+                        }
+                        
+                        updateStatus('connecting', 'Connecting...');
+                        
+                        // Determine WebSocket protocol (ws or wss)
+                        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                        const wsUrl = `${protocol}//${window.location.host}/webssh/socket/${sessionId}`;
+                        
+                        try {
+                            // Close existing socket if any
+                            if (socket) {
+                                socket.close();
+                            }
+                            
+                            // Create new WebSocket
+                            socket = new WebSocket(wsUrl);
+                            
+                            // Socket event handlers
+                            socket.onopen = function() {
+                                console.log('WebSocket connection established');
+                                // No immediate action needed, wait for server's connected message
+                            };
+                            
+                            socket.onmessage = function(event) {
+                                const data = JSON.parse(event.data);
+                                
+                                // Handle different message types
+                                if (data.status === 'connected') {
+                                    connected = true;
+                                    updateStatus('connected', 'Connected');
+                                    appendToTerminal(data.message, 'info');
+                                } else if (data.type === 'output') {
+                                    appendToTerminal(data.data, 'output');
+                                } else if (data.type === 'error') {
+                                    appendToTerminal(data.error, 'error');
+                                    updateStatus('error', 'Error');
+                                }
+                                
+                                // Scroll to bottom
+                                scrollToBottom();
+                            };
+                            
+                            socket.onclose = function() {
+                                connected = false;
+                                updateStatus('disconnected', 'Disconnected');
+                                appendToTerminal('Connection closed', 'error');
+                            };
+                            
+                            socket.onerror = function(error) {
+                                connected = false;
+                                updateStatus('error', 'WebSocket error');
+                                appendToTerminal('WebSocket error: ' + error.message, 'error');
+                                console.error('WebSocket error:', error);
+                            };
+                            
+                            // Set up ping interval to keep connection alive
+                            const pingInterval = setInterval(function() {
+                                if (socket && socket.readyState === WebSocket.OPEN) {
+                                    socket.send(JSON.stringify({type: 'ping'}));
+                                } else {
+                                    clearInterval(pingInterval);
+                                }
+                            }, 30000); // 30 seconds
+                            
+                        } catch(error) {
+                            appendToTerminal('Error creating WebSocket: ' + error.message, 'error');
+                            updateStatus('error', 'Connection failed');
+                        }
+                    }
+                    
+                    function executeCommand() {
+                        const command = commandInput.value.trim();
+                        if (!command) return;
+                        
+                        // Add to command history
+                        if (!commandHistory.length || commandHistory[0] !== command) {
+                            commandHistory.unshift(command);
+                            if (commandHistory.length > 20) {
+                                commandHistory.pop();
+                            }
+                        }
+                        historyIndex = -1;
+                        
+                        // Clear input
+                        commandInput.value = '';
+                        
+                        // Display command
+                        appendToTerminal('$ ' + command, 'command');
+                        
+                        // Send command via WebSocket
+                        if (socket && socket.readyState === WebSocket.OPEN) {
+                            socket.send(JSON.stringify({
+                                type: 'command',
+                                data: command
+                            }));
+                        } else {
+                            appendToTerminal('Not connected to server. Reconnecting...', 'error');
+                            initializeWebSocket();
+                        }
+                    }
+                    
+                    function handleKeyDown(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            executeCommand();
+                            return;
+                        }
+                        
+                        // Tab key for auto-completion
+                        if (e.key === 'Tab') {
+                            e.preventDefault();
+                            tryAutoComplete();
+                            return;
+                        }
+                        
+                        // History navigation with arrow keys
+                        if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            
+                            if (!commandHistory.length) return;
+                            
+                            // Save current input if starting navigation
+                            if (historyIndex === -1) {
+                                currentInput = commandInput.value;
+                            }
+                            
+                            historyIndex++;
+                            if (historyIndex >= commandHistory.length) {
+                                historyIndex = commandHistory.length - 1;
+                            }
+                            
+                            commandInput.value = commandHistory[historyIndex];
+                            moveCursorToEnd(commandInput);
+                            
+                        } else if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            
+                            if (historyIndex === -1) return;
+                            
+                            historyIndex--;
+                            
+                            if (historyIndex === -1) {
+                                commandInput.value = currentInput;
+                            } else {
+                                commandInput.value = commandHistory[historyIndex];
+                            }
+                            
+                            moveCursorToEnd(commandInput);
+                        }
+                    }
+                    
+                    // Common commands for auto-completion
+                    const commonCommands = [
+                        'ls', 'ls -l', 'ls -la', 'cd', 'cat', 'grep', 'ps', 'ps aux',
+                        'top', 'df', 'df -h', 'du', 'du -h', 'free', 'free -m',
+                        'netstat', 'ifconfig', 'ping', 'ssh', 'scp', 'chmod', 'chown',
+                        'mkdir', 'rm', 'rm -rf', 'mv', 'cp', 'find', 'whereis',
+                        'aws', 'aws s3', 'aws ec2', 'aws route53', 
+                        'apt', 'apt-get', 'yum', 'dnf', 'systemctl', 'service',
+                        'docker', 'docker ps', 'docker images', 'docker-compose',
+                        'git', 'git clone', 'git pull', 'git push', 'git status'
+                    ];
+                    
+                    function tryAutoComplete() {
+                        const input = commandInput.value;
+                        if (!input) return;
+                        
+                        // Auto-complete from common commands
+                        const matchingCommands = commonCommands.filter(cmd => 
+                            cmd.startsWith(input) && cmd !== input
+                        );
+                        
+                        if (matchingCommands.length === 1) {
+                            // Single match - fill in the command
+                            commandInput.value = matchingCommands[0];
+                            moveCursorToEnd(commandInput);
+                        } else if (matchingCommands.length > 1) {
+                            // Multiple matches - show options
+                            appendToTerminal('$ ' + input, 'command');
+                            
+                            let suggestions = '';
+                            matchingCommands.forEach(cmd => {
+                                suggestions += cmd + '  ';
+                            });
+                            
+                            appendToTerminal(suggestions, 'suggestions');
+                        }
+                    }
+                    
+                    function appendToTerminal(text, type) {
+                        if (!text) return;
+                        
+                        const output = document.createElement('div');
+                        output.className = 'terminal-line';
+                        
+                        if (type) {
+                            output.classList.add(`terminal-${type}`);
+                        }
+                        
+                        // For command and info, use textContent
+                        if (type === 'command' || type === 'info') {
+                            output.textContent = text;
+                        } else {
+                            // For other types, could be HTML from server
+                            output.innerHTML = text;
+                        }
+                        
+                        wsOutput.appendChild(output);
+                        scrollToBottom();
+                    }
+                    
+                    function scrollToBottom() {
+                        terminal.scrollTop = terminal.scrollHeight;
+                    }
+                    
+                    function updateStatus(state, message) {
+                        if (!statusElement) return;
+                        
+                        const stateClasses = {
+                            'connected': 'connected',
+                            'disconnected': 'disconnected',
+                            'connecting': 'connecting',
+                            'error': 'error'
+                        };
+                        
+                        // Remove all state classes
+                        Object.values(stateClasses).forEach(cls => {
+                            statusElement.querySelector('.status-indicator').classList.remove(cls);
+                        });
+                        
+                        // Add current state class
+                        if (stateClasses[state]) {
+                            statusElement.querySelector('.status-indicator').classList.add(stateClasses[state]);
+                        }
+                        
+                        // Update text
+                        statusElement.innerHTML = statusElement.innerHTML.replace(
+                            />.+<\/span>$/,
+                            `>${message}</span>`
+                        );
+                    }
+                    
+                    function moveCursorToEnd(el) {
+                        if (typeof el.selectionStart == "number") {
+                            el.selectionStart = el.selectionEnd = el.value.length;
+                        } else if (typeof el.createTextRange != "undefined") {
+                            el.focus();
+                            var range = el.createTextRange();
+                            range.collapse(false);
+                            range.select();
+                        }
+                    }
+                    
+                    // Scroll to bottom of terminal initially
+                    scrollToBottom();
                 });
             </script>
         </t>

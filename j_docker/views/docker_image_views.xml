@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_docker_image_tree" model="ir.ui.view">
+        <field name="name">docker.image.tree</field>
+        <field name="model">docker.image</field>
+        <field name="arch" type="xml">
+            <tree decoration-warning="dangling == True">
+                <field name="name"/>
+                <field name="docker_id"/>
+                <field name="repository"/>
+                <field name="tag"/>
+                <field name="size"/>
+                <field name="used_by_containers"/>
+                <field name="dangling"/>
+                <field name="created_at"/>
+                <field name="server_id"/>
+                <field name="last_updated"/>
+                <field name="active" invisible="1"/>
+            </tree>
+        </field>
+    </record>
+    
+    <!-- Form View -->
+    <record id="view_docker_image_form" model="ir.ui.view">
+        <field name="name">docker.image.form</field>
+        <field name="model">docker.image</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_pull" string="Pull Latest" type="object" class="btn-primary" 
+                            attrs="{'invisible': [('repository', '=', False)]}"/>
+                    <button name="action_remove" string="Remove" type="object" 
+                            class="btn-danger" 
+                            confirm="Are you sure you want to remove this image?"
+                            attrs="{'invisible': [('used_by_containers', '>', 0)]}"/>
+                    <button name="action_inspect" string="Inspect" type="object" class="btn-secondary"/>
+                    <button name="action_view_history" string="View History" type="object" class="btn-info"/>
+                    <button name="action_create_container" string="Create Container" type="object" class="btn-success"/>
+                    <button name="action_refresh" string="Refresh" type="object" class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_history" type="object" class="oe_stat_button" icon="fa-history">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">History</span>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Image Name"/>
+                        </h1>
+                        <div class="o_row">
+                            <span t-if="dangling" class="badge badge-warning">Dangling</span>
+                        </div>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="server_id" options="{'no_create': True, 'no_open': False}"/>
+                            <field name="docker_id"/>
+                            <field name="repository"/>
+                            <field name="tag"/>
+                            <field name="digest"/>
+                            <field name="size"/>
+                            <field name="size_bytes" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="used_by_containers"/>
+                            <field name="dangling"/>
+                            <field name="created_at"/>
+                            <field name="created_date"/>
+                            <field name="architecture"/>
+                            <field name="os"/>
+                            <field name="last_updated"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Labels" name="labels">
+                            <field name="labels" widget="ace" options="{'mode': 'text'}" placeholder="No labels"/>
+                        </page>
+                        <page string="Notes" name="notes">
+                            <field name="notes" placeholder="Add your notes here..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Search View -->
+    <record id="view_docker_image_search" model="ir.ui.view">
+        <field name="name">docker.image.search</field>
+        <field name="model">docker.image</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="docker_id"/>
+                <field name="repository"/>
+                <field name="tag"/>
+                <field name="server_id"/>
+                <separator/>
+                <filter string="In Use" name="in_use" domain="[('used_by_containers', '>', 0)]"/>
+                <filter string="Unused" name="unused" domain="[('used_by_containers', '=', 0)]"/>
+                <filter string="Dangling" name="dangling" domain="[('dangling', '=', True)]"/>
+                <separator/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Repository" name="group_by_repository" context="{'group_by': 'repository'}"/>
+                    <filter string="Server" name="group_by_server" context="{'group_by': 'server_id'}"/>
+                    <filter string="Architecture" name="group_by_architecture" context="{'group_by': 'architecture'}"/>
+                    <filter string="OS" name="group_by_os" context="{'group_by': 'os'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    
+    <!-- Kanban View -->
+    <record id="view_docker_image_kanban" model="ir.ui.view">
+        <field name="name">docker.image.kanban</field>
+        <field name="model">docker.image</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile">
+                <field name="id"/>
+                <field name="name"/>
+                <field name="docker_id"/>
+                <field name="repository"/>
+                <field name="tag"/>
+                <field name="size"/>
+                <field name="used_by_containers"/>
+                <field name="dangling"/>
+                <field name="server_id"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_global_click">
+                            <div class="o_kanban_record_top mb-0">
+                                <div class="o_kanban_record_headings">
+                                    <strong class="o_kanban_record_title">
+                                        <field name="name"/>
+                                    </strong>
+                                    <span class="float-right">
+                                        <span t-if="record.dangling.raw_value" class="badge badge-warning">Dangling</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="o_kanban_record_body">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>ID:</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <span><t t-esc="record.docker_id.value ? record.docker_id.value.substring(0, 12) : ''"/></span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Size:</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <span><t t-esc="record.size.value"/></span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Server:</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <span><t t-esc="record.server_id.value[1]"/></span>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Used By:</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <span><t t-esc="record.used_by_containers.value"/> container(s)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="o_kanban_record_bottom">
+                                <div class="oe_kanban_bottom_left">
+                                    <span><t t-esc="record.repository.value"/>:<t t-esc="record.tag.value"/></span>
+                                </div>
+                                <div class="oe_kanban_bottom_right">
+                                    <span class="oe_kanban_avatar">
+                                        <i class="fa fa-cube" t-attf-style="color: #{record.used_by_containers.raw_value > 0 ? '#28a745' : (record.dangling.raw_value ? '#ffc107' : '#6c757d')};"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+    
+    <!-- Pivot View -->
+    <record id="view_docker_image_pivot" model="ir.ui.view">
+        <field name="name">docker.image.pivot</field>
+        <field name="model">docker.image</field>
+        <field name="arch" type="xml">
+            <pivot string="Image Analysis">
+                <field name="server_id" type="row"/>
+                <field name="repository" type="row"/>
+                <field name="__count" type="measure"/>
+                <field name="used_by_containers" type="measure"/>
+                <field name="size_bytes" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    
+    <!-- Graph View -->
+    <record id="view_docker_image_graph" model="ir.ui.view">
+        <field name="name">docker.image.graph</field>
+        <field name="model">docker.image</field>
+        <field name="arch" type="xml">
+            <graph string="Image Analysis" type="bar">
+                <field name="server_id"/>
+                <field name="repository"/>
+                <field name="used_by_containers" type="measure"/>
+                <field name="size_bytes" type="measure"/>
+            </graph>
+        </field>
+    </record>
+    
+    <!-- Action Window for All Images -->
+    <record id="action_docker_image" model="ir.actions.act_window">
+        <field name="name">Images</field>
+        <field name="res_model">docker.image</field>
+        <field name="view_mode">kanban,tree,form,pivot,graph</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No images found
+            </p>
+            <p>
+                Pull images or scan your Docker servers to find existing images.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Action Window for Dangling Images -->
+    <record id="action_docker_image_dangling" model="ir.actions.act_window">
+        <field name="name">Dangling Images</field>
+        <field name="res_model">docker.image</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="domain">[('dangling', '=', True)]</field>
+        <field name="context">{'search_default_dangling': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No dangling images found
+            </p>
+            <p>
+                Dangling images are images that don't have a tag and aren't used by any container.
+            </p>
+        </field>
+    </record>
+</odoo>
