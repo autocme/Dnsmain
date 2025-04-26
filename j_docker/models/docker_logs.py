@@ -78,20 +78,57 @@ class DockerLogs(models.Model):
             'user_id': self.env.user.id,
         }
         
-        if server_id:
+        # Skip invalid IDs that could cause issues
+        if server_id and isinstance(server_id, int) and server_id > 0:
             vals['server_id'] = server_id
-        if container_id:
+        if container_id and isinstance(container_id, int) and container_id > 0:
             vals['container_id'] = container_id
-        if image_id:
+        if image_id and isinstance(image_id, int) and image_id > 0:
             vals['image_id'] = image_id
-        if network_id:
+        if network_id and isinstance(network_id, int) and network_id > 0:
             vals['network_id'] = network_id
-        if volume_id:
+        if volume_id and isinstance(volume_id, int) and volume_id > 0:
             vals['volume_id'] = volume_id
-        if task_id:
+        if task_id and isinstance(task_id, int) and task_id > 0:
             vals['task_id'] = task_id
+        
+        try:    
+            return self.create(vals)
+        except Exception as e:
+            _logger.error("Failed to create log entry: %s", str(e))
+            return False
             
-        return self.create(vals)
+    @api.model
+    def log_safely(self, level, message, server=None, container=None,
+              image=None, network=None, volume=None, task=None,
+              details=None):
+        """Safely create a log entry, checking for valid records first"""
+        try:
+            vals = {
+                'name': message,
+                'level': level,
+                'details': details,
+                'user_id': self.env.user.id,
+            }
+            
+            # Only add relations for valid, saved records
+            if server and server.exists() and server.id:
+                vals['server_id'] = server.id
+            if container and container.exists() and container.id:
+                vals['container_id'] = container.id
+            if image and image.exists() and image.id:
+                vals['image_id'] = image.id
+            if network and network.exists() and network.id:
+                vals['network_id'] = network.id
+            if volume and volume.exists() and volume.id:
+                vals['volume_id'] = volume.id
+            if task and task.exists() and task.id:
+                vals['task_id'] = task.id
+                
+            return self.create(vals)
+        except Exception as e:
+            _logger.error("Failed to safely create log entry: %s", str(e))
+            return False
     
     # -------------------------------------------------------------------------
     # Action methods
