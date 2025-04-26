@@ -612,7 +612,7 @@
                         
                         // Determine WebSocket protocol (ws or wss)
                         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                        const wsUrl = `${protocol}//${window.location.host}/webssh/socket/${sessionId}`;
+                        const wsUrl = protocol + '//' + window.location.host + '/webssh/socket/' + sessionId;
                         
                         try {
                             // Close existing socket if any
@@ -802,7 +802,7 @@
                         output.className = 'terminal-line';
                         
                         if (type) {
-                            output.classList.add(`terminal-${type}`);
+                            output.classList.add('terminal-' + type);
                         }
                         
                         // For command and info, use textContent
@@ -843,8 +843,8 @@
                         
                         // Update text
                         statusElement.innerHTML = statusElement.innerHTML.replace(
-                            />.+<\/span>$/,
-                            `>${message}</span>`
+                            />[^<]*<\/span>$/,
+                            ">" + message + "</span>"
                         );
                     }
                     
