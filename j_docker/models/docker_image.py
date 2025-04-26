@@ -54,6 +54,7 @@ class DockerImage(models.Model):
     
     dangling = fields.Boolean(string='Dangling', 
                             compute='_compute_dangling',
+                            store=True,
                             help="Image is not tagged and not used by any container")
     
     last_updated = fields.Datetime(string='Last Updated', readonly=True)
@@ -96,6 +97,7 @@ class DockerImage(models.Model):
             ])
             image.used_by_containers = containers
     
+    @api.depends('tag', 'used_by_containers')
     def _compute_dangling(self):
         for image in self:
             image.dangling = (not image.tag or image.tag == '<none>') and image.used_by_containers == 0
