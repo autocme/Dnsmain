@@ -29,11 +29,11 @@
             <form>
                 <header>
                     <button name="action_pull" string="Pull Latest" type="object" class="btn-primary" 
-                            attrs="{'invisible': [('repository', '=', False)]}"/>
+                            invisible="not repository"/>
                     <button name="action_remove" string="Remove" type="object" 
                             class="btn-danger" 
                             confirm="Are you sure you want to remove this image?"
-                            attrs="{'invisible': [('used_by_containers', '>', 0)]}"/>
+                            invisible="used_by_containers > 0"/>
                     <button name="action_inspect" string="Inspect" type="object" class="btn-secondary"/>
                     <button name="action_view_history" string="View History" type="object" class="btn-info"/>
                     <button name="action_create_container" string="Create Container" type="object" class="btn-success"/>

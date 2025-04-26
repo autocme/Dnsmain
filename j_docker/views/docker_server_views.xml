@@ -89,7 +89,7 @@
                             <field name="os_info"/>
                         </group>
                         <group>
-                            <field name="docker_cert_path" attrs="{'invisible': [('tls_verify', '=', False)]}"/>
+                            <field name="docker_cert_path" invisible="tls_verify == False"/>
                             <field name="tls_verify"/>
                             <field name="timeout"/>
                             <field name="retries"/>

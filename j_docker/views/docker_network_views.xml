@@ -32,7 +32,7 @@
                     <button name="action_remove" string="Remove" type="object" 
                             class="btn-danger" 
                             confirm="Are you sure you want to remove this network?"
-                            attrs="{'invisible': ['|', ('connected_container_count', '>', 0), ('name', 'in', ['bridge', 'host', 'none'])]}"/>
+                            invisible="connected_container_count > 0 or name in ('bridge', 'host', 'none')"/>
                     <button name="action_inspect" string="Inspect" type="object" class="btn-secondary"/>
                     <button name="action_create_container" string="Create Container" type="object" class="btn-success"/>
                     <button name="action_connect_container" string="Connect Container" type="object" class="btn-primary"/>

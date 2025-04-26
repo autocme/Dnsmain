@@ -33,16 +33,16 @@
             <form>
                 <header>
                     <button name="action_start" string="Start" type="object" 
-                            attrs="{'invisible': [('status', 'in', ['running', 'paused'])]}" 
+                            invisible="status in ('running', 'paused')" 
                             class="btn-success"/>
                     <button name="action_stop" string="Stop" type="object" 
-                            attrs="{'invisible': [('status', 'not in', ['running', 'paused'])]}" 
+                            invisible="status not in ('running', 'paused')" 
                             class="btn-danger"/>
                     <button name="action_restart" string="Restart" type="object" 
-                            attrs="{'invisible': [('status', 'not in', ['running', 'paused'])]}" 
+                            invisible="status not in ('running', 'paused')" 
                             class="btn-warning"/>
                     <button name="action_remove" string="Remove" type="object" 
-                            attrs="{'invisible': [('status', '=', 'running')]}" 
+                            invisible="status == 'running'" 
                             class="btn-danger" 
                             confirm="Are you sure you want to remove this container?"/>
                     <button name="action_view_logs" string="Logs" type="object" class="btn-info"/>
