@@ -34,10 +34,10 @@
                 <header>
                     <button name="action_run_task" string="Run Now" type="object" class="btn-primary"/>
                     <button name="action_view_output" string="View Output" type="object" 
-                            attrs="{'invisible': [('last_status', '=', 'none')]}"/>
+                            invisible="last_status == 'none'"/>
                     <button name="action_view_logs" string="View Logs" type="object"/>
                     <button name="action_schedule_task" string="Schedule" type="object" 
-                            attrs="{'invisible': [('schedule_type', '!=', 'manual')]}"/>
+                            invisible="schedule_type != 'manual'"/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
@@ -64,16 +64,20 @@
                             <field name="server_id" options="{'no_create': True, 'no_open': False}"/>
                             <field name="task_type"/>
                             <field name="container_id" 
-                                   attrs="{'invisible': [('task_type', '!=', 'container_action')], 'required': [('task_type', '=', 'container_action')]}"
+                                   invisible="task_type != 'container_action'"
+                                   required="task_type == 'container_action'"
                                    options="{'no_create': True}"/>
                             <field name="image_id" 
-                                   attrs="{'invisible': [('task_type', '!=', 'image_action')], 'required': [('task_type', '=', 'image_action')]}"
+                                   invisible="task_type != 'image_action'"
+                                   required="task_type == 'image_action'"
                                    options="{'no_create': True}"/>
                             <field name="network_id" 
-                                   attrs="{'invisible': [('task_type', '!=', 'network_action')], 'required': [('task_type', '=', 'network_action')]}"
+                                   invisible="task_type != 'network_action'"
+                                   required="task_type == 'network_action'"
                                    options="{'no_create': True}"/>
                             <field name="volume_id" 
-                                   attrs="{'invisible': [('task_type', '!=', 'volume_action')], 'required': [('task_type', '=', 'volume_action')]}"
+                                   invisible="task_type != 'volume_action'"
+                                   required="task_type == 'volume_action'"
                                    options="{'no_create': True}"/>
                             <field name="sequence" widget="handle"/>
                             <field name="active" widget="boolean_toggle"/>
@@ -81,19 +85,23 @@
                         <group>
                             <field name="schedule_type"/>
                             <field name="cron_expr" 
-                                   attrs="{'invisible': [('schedule_type', '!=', 'cron')], 'required': [('schedule_type', '=', 'cron')]}"
+                                   invisible="schedule_type != 'cron'"
+                                   required="schedule_type == 'cron'"
                                    placeholder="e.g. 0 5 * * * (run at 5:00 AM every day)"/>
                             <field name="event_trigger" 
-                                   attrs="{'invisible': [('schedule_type', '!=', 'event')], 'required': [('schedule_type', '=', 'event')]}"/>
+                                   invisible="schedule_type != 'event'"
+                                   required="schedule_type == 'event'"/>
                             <field name="cron_id" invisible="1"/>
                             <field name="next_run" readonly="1" 
-                                   attrs="{'invisible': [('schedule_type', '!=', 'cron')]}"/>
+                                   invisible="schedule_type != 'cron'"/>
                             <field name="timeout"/>
                             <field name="fail_action"/>
                             <field name="retry_count" 
-                                   attrs="{'invisible': [('fail_action', '!=', 'retry')], 'required': [('fail_action', '=', 'retry')]}"/>
+                                   invisible="fail_action != 'retry'"
+                                   required="fail_action == 'retry'"/>
                             <field name="retry_delay" 
-                                   attrs="{'invisible': [('fail_action', '!=', 'retry')], 'required': [('fail_action', '=', 'retry')]}"/>
+                                   invisible="fail_action != 'retry'"
+                                   required="fail_action == 'retry'"/>
                         </group>
                     </group>
                     <notebook>
@@ -104,7 +112,7 @@
                             <field name="description" placeholder="Describe what this task does..."/>
                         </page>
                         <page string="Execution Details" name="execution_details" 
-                              attrs="{'invisible': [('last_status', '=', 'none')]}">
+                              invisible="last_status == 'none'">
                             <group>
                                 <group>
                                     <field name="last_run" readonly="1"/>

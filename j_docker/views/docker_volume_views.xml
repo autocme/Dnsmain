@@ -29,7 +29,7 @@
                     <button name="action_remove" string="Remove" type="object" 
                             class="btn-danger" 
                             confirm="Are you sure you want to remove this volume?"
-                            attrs="{'invisible': [('used_by_container_count', '>', 0)]}"/>
+                            invisible="used_by_container_count > 0"/>
                     <button name="action_inspect" string="Inspect" type="object" class="btn-secondary"/>
                     <button name="action_create_container" string="Create Container" type="object" class="btn-success"/>
                     <button name="action_browse_volume" string="Browse Contents" type="object" class="btn-primary"/>
