@@ -126,6 +126,10 @@ class DockerServer(models.Model):
     # -------------------------------------------------------------------------
     @api.model_create_multi
     def create(self, vals_list):
+        # Flag to tell other methods we're in creation mode to avoid
+        # any potentially problematic operations
+        self = self.with_context(creating_docker_server=True)
+        
         # Explicitly set server_status to 'unknown' in all vals dictionaries
         # to avoid any automatic status checks after creation
         for vals in vals_list:
@@ -821,29 +825,22 @@ class DockerServer(models.Model):
     def _create_log_entry(self, level, message):
         """Create a log entry for the server"""
         try:
-            # Skip if called on a new/invalid record
-            if not self or not self.exists() or not self.id:
-                _logger.info("Cannot create log entry for invalid record: %s - %s", level, message)
+            # Skip log creation entirely during server creation
+            if self.env.context.get('creating_docker_server'):
+                _logger.info("Skipping log creation during server creation: %s - %s", level, message)
                 return
                 
-            # Additional protection to ensure valid ID
-            server_id = self.id
-            if not isinstance(server_id, int) or server_id <= 0:
-                _logger.info("Invalid server ID for log entry: %s", server_id)
+            # Skip if there's no valid ID yet
+            if not self.id or not isinstance(self.id, int) or self.id <= 0:
+                _logger.info("Skipping log for record without valid ID: %s - %s", level, message)
                 return
                 
-            # Check if docker.logs model exists
-            if 'docker.logs' not in self.env:
-                _logger.warning("docker.logs model not found in environment")
-                return
-                
-            # Create the log entry with error handling
-            self.env['docker.logs'].create({
-                'server_id': server_id,
-                'level': level,
-                'name': message,
-                'user_id': self.env.user.id,
-            })
+            # Use the new log_safely method instead of direct create
+            # This will properly handle new records and avoid ID issues
+            if 'docker.logs' in self.env:
+                self.env['docker.logs'].log_safely(level, message, server=self)
+            else:
+                _logger.info("Cannot create log: %s - %s", level, message)
         except Exception as e:
             _logger.error("Failed to create log entry: %s", str(e))
     
