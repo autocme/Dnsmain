@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Template for WebSSH Client Interface -->
+    <template id="webssh_client" name="WebSSH Client">
+        <t t-call="web.layout">
+            <t t-set="title">WebSSH Terminal - <t t-esc="ssh_client.name"/></t>
+            <t t-set="head">
+                <t t-call-assets="web.assets_common" t-js="false"/>
+                <t t-call-assets="web.assets_backend" t-js="false"/>
+                <style>
+                    body {
+                        margin: 0;
+                        padding: 0;
+                        height: 100vh;
+                        display: flex;
+                        flex-direction: column;
+                        background-color: #232f3e; /* AWS Console-like dark blue */
+                        font-family: 'SF Mono', 'Monaco', 'Menlo', 'Courier New', monospace;
+                    }
+                    .ssh-header {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 10px 20px;
+                        background-color: #232f3e; /* AWS Console blue */
+                        color: white;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                        border-bottom: 2px solid #ff9900; /* AWS orange accent */
+                    }
+                    .ssh-header h1 {
+                        margin: 0;
+                        font-size: 1.5rem;
+                        display: flex;
+                        align-items: center;
+                    }
+                    .ssh-header .connection-info {
+                        display: flex;
+                        align-items: center;
+                        font-size: 0.9rem;
+                    }
+                    .terminal-container {
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        padding: 15px;
+                    }
+                    #terminal-iframe {
+                        flex: 1;
+                        border: 1px solid #394b61;
+                        border-radius: 6px;
+                        background-color: #1b2431;
+                        box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.4);
+                    }
+                    .terminal-toolbar {
+                        display: flex;
+                        background-color: #1b2431;
+                        padding: 8px 15px;
+                        border-bottom: 1px solid #394b61;
+                    }
+                    .terminal-toolbar button {
+                        color: #f0f0f0;
+                        background: rgba(255, 255, 255, 0.05);
+                        border: none;
+                        border-radius: 4px;
+                        padding: 5px 10px;
+                        margin-right: 10px;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    }
+                    .terminal-toolbar button:hover {
+                        background: rgba(255, 255, 255, 0.1);
+                    }
+                    .controls {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-top: 15px;
+                    }
+                    .controls button {
+                        background-color: #ff9900;
+                        color: #232f3e;
+                        border: none;
+                        border-radius: 4px;
+                        padding: 8px 15px;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    }
+                    .controls button:hover {
+                        background-color: #ffac33;
+                    }
+                    .controls .back-button {
+                        background-color: #394b61;
+                        color: white;
+                    }
+                    .loading {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background-color: rgba(35, 47, 62, 0.8);
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        color: white;
+                        z-index: 1000;
+                    }
+                    .loading .spinner {
+                        border: 4px solid rgba(255, 255, 255, 0.3);
+                        border-radius: 50%;
+                        border-top: 4px solid #ff9900;
+                        width: 40px;
+                        height: 40px;
+                        animation: spin 1s linear infinite;
+                        margin-bottom: 15px;
+                    }
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            </t>
+            <div class="ssh-header">
+                <h1>
+                    <i class="fa fa-terminal mr-2"></i>
+                    <span t-esc="ssh_client.name"/> - WebSSH Terminal
+                </h1>
+                <div class="connection-info">
+                    <span t-esc="ssh_client.username"/>@<span t-esc="ssh_client.hostname"/>:<span t-esc="ssh_client.port"/>
+                </div>
+            </div>
+            
+            <div class="terminal-container">
+                <div class="terminal-toolbar">
+                    <button id="disconnect-btn" title="Disconnect">
+                        <i class="fa fa-power-off mr-1"></i> Disconnect
+                    </button>
+                    <button id="fullscreen-btn" title="Toggle Fullscreen">
+                        <i class="fa fa-expand mr-1"></i> Fullscreen
+                    </button>
+                    <button id="copy-btn" title="Copy to Clipboard">
+                        <i class="fa fa-copy mr-1"></i> Copy
+                    </button>
+                    <button id="clear-btn" title="Clear Terminal">
+                        <i class="fa fa-eraser mr-1"></i> Clear
+                    </button>
+                </div>
+                
+                <div id="terminal" class="terminal-content"></div>
+                <div id="websocket-url" style="display:none;" t-att-data-url="webssh_url"></div>
+                
+                <div class="controls">
+                    <button class="back-button" id="back-btn">
+                        <i class="fa fa-arrow-left mr-1"></i> Back to Odoo
+                    </button>
+                    <button id="reconnect-btn">
+                        <i class="fa fa-refresh mr-1"></i> Reconnect
+                    </button>
+                </div>
+            </div>
+            
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Connecting to SSH server...</p>
+            </div>
+            
+            <script type="text/javascript" src="/nalios_ssh_clients/static/src/js/webssh_client.js"></script>
+            <script type="text/javascript">
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Back button
+                    document.getElementById('back-btn').addEventListener('click', function() {
+                        window.location.href = '/web';
+                    });
+                    
+                    // Add connection status display
+                    const header = document.querySelector('.ssh-header .connection-info');
+                    if (header) {
+                        const statusEl = document.createElement('div');
+                        statusEl.id = 'connection-status';
+                        statusEl.innerHTML = '<span class="status disconnected"></span> Connecting...';
+                        header.appendChild(statusEl);
+                    }
+                    
+                    // Add terminal styling
+                    const terminalEl = document.getElementById('terminal');
+                    if (terminalEl) {
+                        terminalEl.style.height = '100%';
+                        terminalEl.style.padding = '10px';
+                        terminalEl.style.overflow = 'auto';
+                        terminalEl.style.fontFamily = "'JetBrains Mono', monospace";
+                        terminalEl.style.whiteSpace = 'pre-wrap';
+                        terminalEl.style.fontSize = '14px';
+                        terminalEl.style.lineHeight = '1.5';
+                    }
+                    
+                    // Fullscreen button
+                    document.getElementById('fullscreen-btn').addEventListener('click', function() {
+                        const terminal = document.getElementById('terminal');
+                        if (terminal.requestFullscreen) {
+                            terminal.requestFullscreen();
+                        } else if (terminal.mozRequestFullScreen) {
+                            terminal.mozRequestFullScreen();
+                        } else if (terminal.webkitRequestFullscreen) {
+                            terminal.webkitRequestFullscreen();
+                        } else if (terminal.msRequestFullscreen) {
+                            terminal.msRequestFullscreen();
+                        }
+                    });
+                });
+            </script>
+        </t>
+    </template>
+    
+    <!-- Template for WebSSH Error -->
+    <template id="webssh_error" name="WebSSH Error">
+        <t t-call="web.layout">
+            <t t-set="title">WebSSH Error</t>
+            <t t-set="head">
+                <t t-call-assets="web.assets_common" t-js="false"/>
+                <t t-call-assets="web.assets_backend" t-js="false"/>
+                <style>
+                    body {
+                        margin: 0;
+                        padding: 0;
+                        height: 100vh;
+                        display: flex;
+                        flex-direction: column;
+                        background-color: #232f3e;
+                        color: white;
+                        font-family: 'Helvetica Neue', Arial, sans-serif;
+                    }
+                    .error-container {
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        padding: 20px;
+                        text-align: center;
+                    }
+                    .error-icon {
+                        font-size: 48px;
+                        color: #ff6b6b;
+                        margin-bottom: 20px;
+                    }
+                    .error-message {
+                        background-color: rgba(255, 107, 107, 0.1);
+                        padding: 15px;
+                        border-radius: 6px;
+                        border-left: 3px solid #ff6b6b;
+                        max-width: 500px;
+                        margin-bottom: 30px;
+                    }
+                    .back-button {
+                        background-color: #394b61;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        padding: 10px 20px;
+                        cursor: pointer;
+                        font-size: 16px;
+                        transition: all 0.2s;
+                    }
+                    .back-button:hover {
+                        background-color: #4d657d;
+                    }
+                </style>
+            </t>
+            <div class="error-container">
+                <div class="error-icon">
+                    <i class="fa fa-exclamation-triangle"></i>
+                </div>
+                <h1>Connection Error</h1>
+                <div class="error-message">
+                    <p t-esc="error"></p>
+                </div>
+                <button class="back-button" onclick="window.location.href='/web'">
+                    <i class="fa fa-arrow-left mr-2"></i> Back to Odoo
+                </button>
+            </div>
+        </t>
+    </template>
+</odoo>

@@ -87,6 +87,24 @@ class SshClient(models.Model):
     terminal_text_color = fields.Char(default='#FFFFFF')
     # Routines
     ssh_routine_ids = fields.One2many('ssh.client.routine', 'ssh_client_id', 'Routines')
+    
+    # WebSSH Integration
+    use_webssh = fields.Boolean(
+        string="Use WebSSH Terminal", 
+        default=True,
+        help="Use the interactive WebSSH terminal interface which provides better experience with key handling, "
+             "output formatting, and command-line features."
+    )
+    webssh_url = fields.Char(string="WebSSH URL", compute="_compute_webssh_url", store=False)
+    
+    # Helper properties for consistent access
+    @property
+    def hostname(self):
+        return self.host
+    
+    @property
+    def username(self):
+        return self.user
 
     @api.constrains('password', 'private_key')
     def _password_or_private_key(self):
@@ -99,6 +117,20 @@ class SshClient(models.Model):
             'tag': 'ssh_client_main_window',
             'target': 'fullscreen',
         }
+        
+    def webssh_connect(self):
+        """Connect using the WebSSH interface"""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/webssh/?client_id={self.id}',
+            'target': 'self',
+        }
+        
+    def _compute_webssh_url(self):
+        """Compute the WebSSH URL for this client - implemented in webssh_integration.py"""
+        for client in self:
+            client.webssh_url = ""
 
     def get_colors(self):
         self.ensure_one()

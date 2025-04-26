@@ -21,18 +21,23 @@
     'support': 'lop@nalios.be',
     'depends': ['base'],
     'external_dependencies': {'python': [
-        'paramiko'
+        'paramiko',
+        'webssh',
+        'tornado',
+        'ansi2html'
     ]},
     'data': [
         'security/res_groups.xml',
         'security/ir.model.access.csv',
         'views/ssh_manager_views.xml',
         'views/ssh_saved_command_views.xml',
+        'views/templates/webssh_templates.xml',
     ],
     'assets': {
         'web.assets_backend': [
             'nalios_ssh_clients/static/src/css/ssh_manager.css',
             'nalios_ssh_clients/static/src/js/ssh_manager.js',
+            'nalios_ssh_clients/static/src/js/webssh_client.js',
             'nalios_ssh_clients/static/src/xml/ssh_manager.xml',
         ],
     }
