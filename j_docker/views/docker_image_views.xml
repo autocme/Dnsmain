@@ -106,8 +106,6 @@
                 <field name="tag"/>
                 <field name="server_id"/>
                 <separator/>
-                <filter string="In Use" name="in_use" domain="[('used_by_containers', '>', 0)]"/>
-                <filter string="Unused" name="unused" domain="[('used_by_containers', '=', 0)]"/>
                 <filter string="Dangling" name="dangling" domain="[('dangling', '=', True)]"/>
                 <separator/>
                 <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
