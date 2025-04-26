@@ -50,9 +50,13 @@ class WebSSHServer:
             (r"/ws", WsockHandler, dict(loop=None, policy=None, host_keys_settings=None))
         ]
         
-        # Initialize Tornado application
+        # Initialize Tornado application with more compatible settings
         app = tornado.web.Application(handlers, **settings)
-        self.server = app.listen(self.port, address='0.0.0.0')
+        # Create server with explicit parameters to avoid 'wpintvl' error
+        import socket
+        from tornado.httpserver import HTTPServer
+        self.server = HTTPServer(app)
+        self.server.listen(self.port, address='0.0.0.0')
         self.ioloop = tornado.ioloop.IOLoop.current()
         
         # Start the server in a separate thread

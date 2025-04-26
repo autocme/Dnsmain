@@ -107,14 +107,20 @@ class WebSSHController(http.Controller):
                     'error': 'SSH client not found'
                 })
             
-            # Get WebSSH connection info
-            connection_info = ssh_client.get_webssh_connection()
+            # Prepare the SSH connection information as JSON
+            ssh_info = {
+                'host': ssh_client.hostname,
+                'port': ssh_client.port, 
+                'username': ssh_client.username,
+                'password': ssh_client.password if ssh_client.auth_method == 'password' else '',
+                'privateKey': '' if not ssh_client.private_key else base64.b64encode(ssh_client.private_key).decode('utf-8'),
+                'passphrase': ssh_client.private_key_password or ''
+            }
             
-            # Render the template
+            # Render the template with the SSH information
             return request.render('nalios_ssh_clients.webssh_client', {
                 'ssh_client': ssh_client,
-                'webssh_url': connection_info.get('url'),
-                'webssh_port': connection_info.get('port')
+                'ssh_info': json.dumps(ssh_info)
             })
             
         except Exception as e:
@@ -122,3 +128,11 @@ class WebSSHController(http.Controller):
             return request.render('nalios_ssh_clients.webssh_error', {
                 'error': str(e)
             })
+    
+    @http.route('/webssh/socket', type='http', auth='none')
+    def webssh_socket(self, **kw):
+        """WebSocket endpoint for SSH connections
+        This is a placeholder - in a production environment, this would be handled
+        by a WebSocket server like Tornado or WebSockets in ASGI/WSGI middleware
+        """
+        return "WebSocket endpoint - should be upgraded to WebSocket protocol"

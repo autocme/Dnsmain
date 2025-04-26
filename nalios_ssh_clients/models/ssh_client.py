@@ -105,6 +105,16 @@ class SshClient(models.Model):
     @property
     def username(self):
         return self.user
+        
+    @property
+    def auth_method(self):
+        """Return the authentication method based on credentials provided"""
+        if self.private_key:
+            return 'key'
+        elif self.password:
+            return 'password'
+        else:
+            return 'unknown'
 
     @api.constrains('password', 'private_key')
     def _password_or_private_key(self):

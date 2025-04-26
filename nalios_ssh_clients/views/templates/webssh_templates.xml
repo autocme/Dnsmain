@@ -147,7 +147,7 @@
                 </div>
                 
                 <div id="terminal" class="terminal-content"></div>
-                <div id="websocket-url" style="display:none;" t-att-data-url="webssh_url"></div>
+                <div id="ssh-info" style="display:none;" t-att-data-ssh-info="ssh_info"></div>
                 
                 <div class="controls">
                     <button class="back-button" id="back-btn">
@@ -164,7 +164,7 @@
                 <p>Connecting to SSH server...</p>
             </div>
             
-            <script type="text/javascript" src="/nalios_ssh_clients/static/src/js/webssh_client.js"></script>
+            <script type="text/javascript" src="/nalios_ssh_clients/static/src/js/direct_webssh.js"></script>
             <script type="text/javascript">
                 document.addEventListener('DOMContentLoaded', function() {
                     // Back button
