@@ -109,6 +109,7 @@ class WebSSHController(http.Controller):
             
             # Prepare the SSH connection information as JSON
             ssh_info = {
+                'id': ssh_client.id,
                 'host': ssh_client.hostname,
                 'port': ssh_client.port, 
                 'username': ssh_client.username,
@@ -129,10 +130,30 @@ class WebSSHController(http.Controller):
                 'error': str(e)
             })
     
-    @http.route('/webssh/socket', type='http', auth='none')
-    def webssh_socket(self, **kw):
-        """WebSocket endpoint for SSH connections
-        This is a placeholder - in a production environment, this would be handled
-        by a WebSocket server like Tornado or WebSockets in ASGI/WSGI middleware
+    @http.route('/webssh/execute', type='json', auth='user')
+    def webssh_execute(self, client_id=None, command=None, **kw):
+        """Execute a command on the SSH client directly
+        
+        This is a simpler alternative to WebSockets for command execution
         """
-        return "WebSocket endpoint - should be upgraded to WebSocket protocol"
+        if not client_id or not command:
+            return {'error': 'Missing client_id or command'}
+        
+        try:
+            # Get the SSH client
+            ssh_client = request.env['ssh.client'].browse(int(client_id))
+            if not ssh_client.exists():
+                return {'error': 'SSH client not found'}
+            
+            # Execute the command
+            result = ssh_client.exec_command(command)
+            
+            # Return the result
+            return {
+                'success': True,
+                'result': result
+            }
+            
+        except Exception as e:
+            _logger.error(f"WebSSH command execution error: {e}")
+            return {'error': str(e)}
