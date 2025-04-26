@@ -28,6 +28,7 @@ export class SshManager extends Component {
         this.connectionStatus = useRef('connectionStatus');
         this.hostInfo = useRef('hostInfo');
         this.historyPanel = useRef('historyPanel');
+        this.savedCommandsPanel = useRef('savedCommandsPanel');
         
         // State for reactive UI
         this.state = useState({
@@ -36,7 +37,10 @@ export class SshManager extends Component {
             isConnected: false,
             isFullscreen: false,
             currentCommand: '',
-            showHistory: false
+            showHistory: false,
+            showSavedCommands: false,
+            savedCommands: [],
+            currentCategory: 'all'
         });
         
         this.MAX_HISTORY = 50; // Maximum items in command history
@@ -297,6 +301,10 @@ export class SshManager extends Component {
     }
     
     toggleCommandHistory() {
+        if (this.state.showSavedCommands) {
+            this.toggleSavedCommands(); // Close saved commands panel if open
+        }
+        
         this.state.showHistory = !this.state.showHistory;
         if (this.state.showHistory) {
             this.historyPanel.el.classList.add('visible');
@@ -336,6 +344,153 @@ export class SshManager extends Component {
                 document.exitFullscreen();
                 this.state.isFullscreen = false;
             }
+        }
+    }
+    
+    // Saved Commands functionality
+    
+    async toggleSavedCommands() {
+        if (this.state.showHistory) {
+            this.toggleCommandHistory(); // Close history panel if open
+        }
+        
+        this.state.showSavedCommands = !this.state.showSavedCommands;
+        const savedCommandsPanel = this.savedCommandsPanel?.el;
+        
+        if (this.state.showSavedCommands) {
+            if (savedCommandsPanel) {
+                savedCommandsPanel.classList.add('visible');
+            }
+            
+            // Load saved commands if needed
+            if (!this.state.savedCommands.length) {
+                await this.loadSavedCommands();
+            }
+            
+        } else if (savedCommandsPanel) {
+            savedCommandsPanel.classList.remove('visible');
+        }
+    }
+    
+    async loadSavedCommands() {
+        try {
+            const commands = await this.orm.call(
+                'ssh.saved.command', 
+                'search_read', 
+                [
+                    [['ssh_client_id', '=', this.client_id]],
+                    ['id', 'name', 'command', 'description', 'category', 'is_favorite', 'use_count', 'last_used']
+                ],
+                { order: 'name' }
+            );
+            
+            this.state.savedCommands = commands || [];
+        } catch (error) {
+            console.error('Error loading saved commands:', error);
+            this.notification.add("Failed to load saved commands", {
+                type: 'warning',
+            });
+        }
+    }
+    
+    async useSavedCommand(cmd) {
+        // Set the command to the input field
+        this.cmdline.el.value = cmd.command;
+        
+        // Toggle the panel
+        this.toggleSavedCommands();
+        
+        // Focus the command line
+        this.cmdline.el.focus();
+        
+        // Update usage statistics
+        try {
+            await this.orm.call('ssh.saved.command', 'execute_command', [cmd.id]);
+            
+            // Update local state
+            const index = this.state.savedCommands.findIndex(c => c.id === cmd.id);
+            if (index !== -1) {
+                this.state.savedCommands[index].use_count += 1;
+                this.state.savedCommands[index].last_used = new Date().toISOString();
+            }
+        } catch (error) {
+            console.error('Error updating saved command usage:', error);
+        }
+    }
+    
+    async createSavedCommand(ev) {
+        ev.stopPropagation();
+        
+        // Get current command if any
+        const currentCommand = this.cmdline.el.value.trim();
+        
+        const action = {
+            type: 'ir.actions.act_window',
+            res_model: 'ssh.saved.command',
+            view_mode: 'form',
+            views: [[false, 'form']],
+            target: 'new',
+            context: {
+                default_ssh_client_id: this.client_id,
+                default_command: currentCommand,
+            },
+        };
+        
+        const result = await this.orm.call(
+            'ir.actions.act_window',
+            'read',
+            [action.id || false],
+            { context: action.context }
+        );
+        
+        // After creating, reload saved commands
+        await this.loadSavedCommands();
+    }
+    
+    async editSavedCommand(ev, cmd) {
+        ev.stopPropagation();
+        
+        const action = {
+            type: 'ir.actions.act_window',
+            res_model: 'ssh.saved.command',
+            res_id: cmd.id,
+            view_mode: 'form',
+            views: [[false, 'form']],
+            target: 'new',
+        };
+        
+        const result = await this.orm.call(
+            'ir.actions.act_window',
+            'read',
+            [action.id || false]
+        );
+        
+        // After editing, reload saved commands
+        await this.loadSavedCommands();
+    }
+    
+    async deleteSavedCommand(ev, cmd) {
+        ev.stopPropagation();
+        
+        // Confirm deletion
+        if (!confirm(`Are you sure you want to delete the saved command "${cmd.name}"?`)) {
+            return;
+        }
+        
+        try {
+            await this.orm.unlink('ssh.saved.command', [cmd.id]);
+            
+            // Update local state
+            this.state.savedCommands = this.state.savedCommands.filter(c => c.id !== cmd.id);
+            
+            this.notification.add(`Command "${cmd.name}" deleted`, {
+                type: 'info',
+            });
+        } catch (error) {
+            console.error('Error deleting saved command:', error);
+            this.notification.add("Failed to delete command", {
+                type: 'warning',
+            });
         }
     }
 }
