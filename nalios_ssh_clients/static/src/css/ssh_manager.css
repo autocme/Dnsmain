@@ -3,6 +3,9 @@
     flex-direction: column;
     height: 100vh;
     background-color: #f8f9fa;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto; /* Center the terminal */
 }
 
 .ssh-header {
@@ -55,14 +58,16 @@
 #terminal_window {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 15px;
     font-family: 'JetBrains Mono', 'Courier New', monospace;
     font-size: 14px;
     line-height: 1.5;
     white-space: pre-wrap;
-    word-break: break-all;
+    word-break: break-word;
     margin: 0;
     border-radius: 4px;
+    max-width: 100%;
 }
 
 .terminal-command-bar {
@@ -176,15 +181,50 @@
 /* Styles for terminal content */
 .terminal-output {
     margin-bottom: 10px;
+    max-width: 100%;
+    display: block;
 }
 
 .terminal-command {
     color: #2e86de;
     font-weight: bold;
+    display: block;
+    word-break: break-word;
 }
 
 .terminal-response {
     color: inherit;
+    display: block;
+    max-width: 100%;
+    overflow-wrap: break-word;
+}
+
+/* Handle pre tags in terminal output */
+.terminal-response pre, 
+#terminal_window pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Handle ANSI output formatting */
+.ansi2html-content {
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.terminal-formatted, .terminal-content {
+    max-width: 100%;
+    box-sizing: border-box;
+    display: block;
+    border-radius: 4px;
+    padding: 8px;
+    margin: 5px 0;
+    width: auto !important;
+    overflow-x: hidden !important;
 }
 
 /* Keyboard shortcut hint */

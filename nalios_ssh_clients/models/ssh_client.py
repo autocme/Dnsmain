@@ -268,9 +268,24 @@ class SshClient(models.Model):
         while ssh_connection.recv_ready():
             sleep(0.5)
             alldata += ssh_connection.recv(1024)
+        
+        # Remove the command echo from the beginning of the output
         alldata = re.sub(b'^'+command.encode('utf-8'), b'', alldata)
-        conv = Ansi2HTMLConverter()
-        return conv.convert(alldata.replace(b'\x00', b'').decode('utf-8')).replace('<pre class="ansi2html-content">\n', '<pre class="ansi2html-content">')
+        
+        # Clean the data
+        clean_data = alldata.replace(b'\x00', b'')
+        
+        # Add line wrap hints for very long lines (especially important for commands like 'ls -la')
+        decoded_data = clean_data.decode('utf-8')
+        
+        # Convert ANSI colors to HTML
+        conv = Ansi2HTMLConverter(inline=True)
+        html_data = conv.convert(decoded_data)
+        
+        # Add additional CSS class to improve formatting
+        html_data = html_data.replace('<pre class="ansi2html-content">\n', '<pre class="ansi2html-content terminal-content">')
+        
+        return html_data
 
     def get_client_name(self):
         self.ensure_one()
