@@ -51,7 +51,8 @@ class DockerNetwork(models.Model):
     containers = fields.Text(string='Connected Containers', readonly=True)
     
     connected_container_count = fields.Integer(string='Connected Containers', 
-                                             compute='_compute_connected_containers')
+                                             compute='_compute_connected_containers',
+                                             store=True)
     
     options = fields.Text(string='Options', readonly=True,
                         help="Network driver options")
@@ -65,6 +66,7 @@ class DockerNetwork(models.Model):
     # -------------------------------------------------------------------------
     # Compute methods
     # -------------------------------------------------------------------------
+    @api.depends('containers')
     def _compute_connected_containers(self):
         for network in self:
             count = 0
