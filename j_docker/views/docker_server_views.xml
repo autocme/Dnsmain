@@ -91,6 +91,8 @@
                         <group>
                             <field name="docker_cert_path" invisible="tls_verify == False"/>
                             <field name="tls_verify"/>
+                            <field name="use_sudo"/>
+                            <field name="sudo_requires_password" attrs="{'invisible': [('use_sudo', '=', False)]}"/>
                             <field name="timeout"/>
                             <field name="retries"/>
                             <field name="company_id" groups="base.group_multi_company"/>
@@ -151,6 +153,9 @@
                 <filter string="Offline" name="offline" domain="[('server_status', '=', 'offline')]"/>
                 <filter string="Error" name="error" domain="[('server_status', '=', 'error')]"/>
                 <filter string="Unknown" name="unknown" domain="[('server_status', '=', 'unknown')]"/>
+                <separator/>
+                <filter string="Using Sudo" name="using_sudo" domain="[('use_sudo', '=', True)]"/>
+                <filter string="Sudo Password Required" name="sudo_password" domain="[('sudo_requires_password', '=', True)]"/>
                 <separator/>
                 <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
                 <group expand="0" string="Group By">

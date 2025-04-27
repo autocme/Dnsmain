@@ -53,12 +53,61 @@ class DockerCommandWizard(models.TransientModel):
             # Execute the command
             result = ssh_client.exec_command(cmd)
             
+            # Check if the response contains HTML, which may indicate a sudo password prompt
+            if '<!DOCTYPE' in result or '<html' in result:
+                if 'sudo' in result.lower() and ('password' in result.lower() or 'authentication' in result.lower()):
+                    # This is likely a sudo password prompt
+                    error_message = 'Command failed: sudo requires password. Configure sudo with NOPASSWD or set sudo_requires_password flag.'
+                    _logger.error(error_message)
+                    self.server_id._create_log_entry('error', error_message)
+                    
+                    # Auto-update the server config if needed
+                    if not self.server_id.sudo_requires_password:
+                        self.server_id.sudo_requires_password = True
+                        
+                    # Set a clear error result
+                    cleaned_result = "ERROR: Sudo password prompt detected. The server requires password authentication for sudo.\n\n" + \
+                                    "Solutions:\n" + \
+                                    "1. Configure the server with 'NOPASSWD' in sudoers file\n" + \
+                                    "2. Set 'Sudo Requires Password' to True in server settings\n" + \
+                                    "3. Disable 'Use Sudo' if not needed"
+                    
+                    self.write({
+                        'result': cleaned_result,
+                        'is_executed': True,
+                    })
+                    
+                    return {
+                        'type': 'ir.actions.act_window',
+                        'res_model': self._name,
+                        'view_mode': 'form',
+                        'res_id': self.id,
+                        'target': 'new',
+                        'context': self._context,
+                    }
+            
             # Clean the output to remove ANSI codes, HTML tags, etc.
             cleaned_result = clean_ssh_output(result)
             
+            # Check if the clean_ssh_output function detected a sudo password issue
+            if cleaned_result == '{"error": "sudo_requires_password"}':
+                error_message = 'Command failed: sudo requires password authentication'
+                _logger.error(error_message)
+                
+                # Auto-update the server config if needed
+                if not self.server_id.sudo_requires_password:
+                    self.server_id.sudo_requires_password = True
+                
+                # Set a clear error result
+                cleaned_result = "ERROR: Sudo password prompt detected. The server requires password authentication for sudo.\n\n" + \
+                                "Solutions:\n" + \
+                                "1. Configure the server with 'NOPASSWD' in sudoers file\n" + \
+                                "2. Set 'Sudo Requires Password' to True in server settings\n" + \
+                                "3. Disable 'Use Sudo' if not needed"
+            
             # For Docker info and similar commands that are expected to return JSON,
             # we might want to pretty-print the JSON for better readability
-            if cmd.strip().endswith('json .}}\'') or ' --format ' in cmd and ' json' in cmd:
+            elif cmd.strip().endswith('json .}}\'') or ' --format ' in cmd and ' json' in cmd:
                 try:
                     # Try to parse as JSON and pretty-print
                     json_data = json.loads(cleaned_result)
