@@ -440,34 +440,66 @@ class DockerServer(models.Model):
             cmd = "docker info --format '{{json .}}'"
             result = ssh_client.exec_command(cmd)
             
+            # Pre-validation: Check if the result contains HTML, which indicates a problem
+            if '<!DOCTYPE' in result or '<html' in result:
+                self.server_status = 'error'
+                self._create_log_entry('error', f'Docker connection failed: received HTML instead of valid output')
+                return False
+                
             # Clean the output to remove ANSI codes, HTML tags, etc.
             cleaned_result = clean_ssh_output(result)
             
+            # Validate the cleaned result looks like JSON before trying to parse
+            if not (cleaned_result.startswith('{') and cleaned_result.endswith('}')):
+                _logger.warning(f"Docker info result doesn't appear to be valid JSON after cleaning: {cleaned_result[:100]}...")
+                
+                # Try to extract JSON from the mess as a last resort
+                json_match = re.search(r'({[^{]*"ServerVersion".*?})', cleaned_result, re.DOTALL)
+                if not json_match:
+                    self.server_status = 'error'
+                    self._create_log_entry('error', f'Docker connection failed: output is not in valid JSON format')
+                    return False
+                cleaned_result = json_match.group(1)
+                _logger.info(f"Extracted potential JSON: {cleaned_result[:100]}...")
+                
             try:
+                # Try to parse the cleaned result as JSON
                 docker_info = json.loads(cleaned_result)
+                
+                # Verify that essential fields are present (further validation)
+                if 'ServerVersion' not in docker_info:
+                    self.server_status = 'error'
+                    self._create_log_entry('error', f'Docker connection failed: response missing ServerVersion field')
+                    return False
+                    
+                # Connection successful, update record
                 self.docker_version = docker_info.get('ServerVersion', 'Unknown')
                 self.server_status = 'online'
                 self.last_check = fields.Datetime.now()
                 self._create_log_entry('info', 'Connection successful')
                 return True
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
                 # If clean_ssh_output couldn't extract valid JSON, try legacy approach with regex
-                json_match = re.search(r'({.*})', result, re.DOTALL)
+                json_match = re.search(r'({.*?ServerVersion.*?})', result, re.DOTALL)
                 if json_match:
                     try:
-                        docker_info = json.loads(json_match.group(1))
-                        self.docker_version = docker_info.get('ServerVersion', 'Unknown')
-                        self.server_status = 'online'
-                        self.last_check = fields.Datetime.now()
-                        self._create_log_entry('info', 'Connection successful (fallback parsing)')
-                        return True
+                        potential_json = json_match.group(1)
+                        # Validate the extracted JSON text
+                        if '{' in potential_json and '}' in potential_json:
+                            docker_info = json.loads(potential_json)
+                            if 'ServerVersion' in docker_info:
+                                self.docker_version = docker_info.get('ServerVersion', 'Unknown')
+                                self.server_status = 'online'
+                                self.last_check = fields.Datetime.now()
+                                self._create_log_entry('info', 'Connection successful (using regex extraction)')
+                                return True
                     except json.JSONDecodeError:
                         pass
-                        
+                
+                # Both attempts failed, log the specific JSON error
                 self.server_status = 'error'
-                self._create_log_entry('error', f'Docker connection failed, invalid response: {result}')
-                self.server_status = 'error'
-                self._create_log_entry('error', f'Failed to parse Docker info: {result}')
+                self._create_log_entry('error', f'Docker connection failed, JSON parse error: {str(e)}')
+                self._create_log_entry('error', f'Raw output preview: {result[:200]}...')
                 return False
                 
         except Exception as e:
@@ -488,23 +520,49 @@ class DockerServer(models.Model):
             cmd = "docker info --format '{{json .}}'"
             result = ssh_client.exec_command(cmd)
             
+            # Pre-validation: Check if the result contains HTML, which indicates a problem
+            if '<!DOCTYPE' in result or '<html' in result:
+                _logger.error(f'Docker info returned HTML content instead of valid output')
+                return False
+                
             # Clean the output to remove ANSI codes, HTML tags, etc.
             cleaned_result = clean_ssh_output(result)
             
+            # Validate the cleaned result looks like JSON before trying to parse
+            if not (cleaned_result.startswith('{') and cleaned_result.endswith('}')):
+                # Try to extract JSON from the mess as a last resort
+                json_match = re.search(r'({[^{]*"ServerVersion".*?})', cleaned_result, re.DOTALL)
+                if json_match:
+                    cleaned_result = json_match.group(1)
+                    _logger.info(f"Extracted potential JSON from malformed output")
+            
             try:
                 docker_info = json.loads(cleaned_result)
+                
+                # Verify that essential fields are present
+                if 'ServerVersion' not in docker_info:
+                    _logger.warning(f"Docker info response missing ServerVersion field")
+                    return False
+                    
+                # Format and store the information
                 self.docker_api_info = json.dumps(docker_info, indent=2)
                 self.os_info = f"{docker_info.get('OperatingSystem', 'Unknown')} ({docker_info.get('KernelVersion', 'Unknown')})"
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
                 # If clean_ssh_output couldn't extract valid JSON, try legacy approach with regex
-                json_match = re.search(r'({.*})', result, re.DOTALL)
+                json_match = re.search(r'({.*?ServerVersion.*?})', result, re.DOTALL)
                 if json_match:
                     try:
-                        docker_info = json.loads(json_match.group(1))
+                        potential_json = json_match.group(1)
+                        docker_info = json.loads(potential_json)
                         self.docker_api_info = json.dumps(docker_info, indent=2)
                         self.os_info = f"{docker_info.get('OperatingSystem', 'Unknown')} ({docker_info.get('KernelVersion', 'Unknown')})"
                     except json.JSONDecodeError:
-                        _logger.warning(f"Failed to parse Docker info: {result}")
+                        _logger.warning(f"Failed to parse Docker info: {str(e)}")
+                        _logger.debug(f"Raw output preview: {result[:200]}...")
+                        return False
+                else:
+                    _logger.warning(f"Failed to parse Docker info: {str(e)}")
+                    return False
                 
             # Get system resource usage
             cmd = "top -bn1 | grep 'Cpu(s)' | awk '{print $2}' && free -m | grep Mem | awk '{print $3/$2 * 100}' && df -h / | grep / | awk '{print $5}' | tr -d '%'"
