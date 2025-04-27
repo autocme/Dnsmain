@@ -21,6 +21,10 @@ def clean_ssh_output(text):
     # Check if the output is a complete HTML document (begins with <!DOCTYPE or <html>)
     if re.match(r'^\s*(?:<!DOCTYPE|<html)', text, re.IGNORECASE):
         _logger.warning("Received HTML document instead of expected JSON or text output")
+        # Check if this is a sudo password prompt HTML response
+        if 'sudo' in text.lower() and ('password' in text.lower() or 'authentication' in text.lower()):
+            _logger.error("Sudo password prompt detected. Configure sudo with NOPASSWD or set sudo_requires_password=True")
+            return '{"error": "sudo_requires_password"}'
         return "{}"  # Return empty JSON object for HTML documents
         
     # Remove ANSI escape sequences
@@ -30,6 +34,11 @@ def clean_ssh_output(text):
     # Remove terminal control sequences like [?2004l
     terminal_control = re.compile(r'\[\?\d+[a-zA-Z]')
     text = terminal_control.sub('', text)
+    
+    # Check for sudo password prompt in plain text
+    if '[sudo]' in text and 'password' in text.lower():
+        _logger.error("Sudo password prompt detected in plain text. Configure sudo with NOPASSWD or set sudo_requires_password=True")
+        return '{"error": "sudo_requires_password"}'
     
     # Check for <div class="terminal-output"> which indicates web terminal output
     if '<div class="terminal-output">' in text:
@@ -104,6 +113,8 @@ class DockerServer(models.Model):
                               help="Verify TLS certificates when connecting")
     use_sudo = fields.Boolean(string='Use Sudo', default=True, 
                              help="Run Docker commands with sudo privileges")
+    sudo_requires_password = fields.Boolean(string='Sudo Requires Password', default=False,
+                                         help="Enable if sudo requires a password on this server, which will cause commands to fail")
     
     # Status fields
     server_status = fields.Selection([
@@ -528,7 +539,15 @@ class DockerServer(models.Model):
             
             # Pre-validation: Check if the result contains HTML, which indicates a problem
             if '<!DOCTYPE' in result or '<html' in result:
-                _logger.error(f'Docker info returned HTML content instead of valid output')
+                if 'sudo' in result.lower() and ('password' in result.lower() or 'authentication' in result.lower()):
+                    # This is likely a sudo password prompt
+                    _logger.error(f'Docker info returned sudo password prompt. Configure sudo with NOPASSWD or set sudo_requires_password=True')
+                    self.server_status = 'error'
+                    self._create_log_entry('error', 'Operation failed: sudo requires password. Either configure the server with NOPASSWD or set sudo_requires_password to True.')
+                    if not self.sudo_requires_password:
+                        self.sudo_requires_password = True
+                else:
+                    _logger.error(f'Docker info returned HTML content instead of valid output')
                 return False
                 
             # Clean the output to remove ANSI codes, HTML tags, etc.
@@ -1024,10 +1043,21 @@ class DockerServer(models.Model):
             
         Returns:
             str: The prepared command with sudo if necessary
+            
+        Raises:
+            UserError: If sudo requires password which will cause commands to fail
         """
-        if self.use_sudo and cmd.strip().startswith('docker'):
-            return f"sudo {cmd}"
-        return cmd
+        if not self.use_sudo or not cmd.strip().startswith('docker'):
+            return cmd
+            
+        # Check if sudo requires password which will cause commands to fail
+        if self.sudo_requires_password:
+            self._create_log_entry('warning', 'Attempting sudo command but sudo requires password on this server')
+            _logger.warning("Server %s (ID: %s) has sudo enabled but requires password, commands may fail", 
+                          self.name, self.id)
+
+        # For commands with sudo, run with -n (non-interactive) to prevent password prompts
+        return f"sudo -n {cmd}"
         
     def _parse_container_status(self, status_text):
         """Parse the container status text and return a status code"""
