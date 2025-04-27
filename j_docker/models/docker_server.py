@@ -209,23 +209,69 @@ class DockerServer(models.Model):
             
     @api.depends('docker_api_version')
     def _compute_api_features(self):
-        """Compute API features based on selected API version"""
+        """Compute API features based on selected API version and generate HTML output"""
         for server in self:
             try:
                 # Skip computation if no API version set
                 if not server.docker_api_version:
                     server.docker_api_features = ''
                     continue
-                    
-                # Use API version utility to get the features
-                features = self.env['docker.api.version'].get_features_for_api(server.docker_api_version)
+                
+                api_version = server.docker_api_version
+                api_version_model = self.env['docker.api.version']
+                
+                # Get the engine version corresponding to this API version
+                engine_version = api_version_model.get_engine_version_for_api(api_version)
+                
+                # Start building HTML output
+                html = []
+                html.append('<div class="mt-3">')
+                
+                # Engine version information
+                html.append('<div class="alert alert-info" role="alert">')
+                html.append(f'<strong>Docker Engine Version:</strong> {engine_version or "Unknown"} (API {api_version})')
+                html.append('</div>')
+                
+                # API Features section
+                features = api_version_model.get_features_for_api(api_version)
+                html.append('<h4 class="mt-4">API Features</h4>')
+                
                 if features:
-                    server.docker_api_features = '\n'.join([f"• {feature}" for feature in features])
+                    html.append('<ul>')
+                    for feature in features:
+                        html.append(f'<li>{feature}</li>')
+                    html.append('</ul>')
                 else:
-                    server.docker_api_features = 'No specific features documented for this API version.'
+                    html.append('<p class="text-muted">No specific features documented for this API version.</p>')
+                
+                # Compatibility Notes section
+                compatibility = api_version_model.get_compatibility_notes(api_version)
+                html.append('<h4 class="mt-4">Compatibility Notes</h4>')
+                
+                if compatibility:
+                    html.append(f'<p>{compatibility}</p>')
+                else:
+                    html.append('<p class="text-muted">No specific compatibility notes for this API version.</p>')
+                
+                # Example Commands section
+                commands = api_version_model.get_commands_for_api(api_version)
+                html.append('<h4 class="mt-4">Example Commands</h4>')
+                
+                if commands:
+                    for cmd_name, cmd in commands.items():
+                        html.append(f'<div class="mb-3"><strong>{cmd_name}:</strong>')
+                        html.append(f'<pre class="bg-light p-2 mt-1"><code>{cmd}</code></pre></div>')
+                else:
+                    html.append('<p class="text-muted">No example commands documented for this API version.</p>')
+                
+                html.append('</div>')  # Close main div
+                
+                # Set the HTML content for the field
+                server.docker_api_features = '\n'.join(html)
+                
             except Exception as e:
                 _logger.error("Error computing API features: %s", str(e))
-                server.docker_api_features = f"Error retrieving API features: {str(e)}"
+                server.docker_api_features = f'<div class="alert alert-danger">Error retrieving API features: {str(e)}</div>'
     
     # -------------------------------------------------------------------------
     # CRUD methods
@@ -481,8 +527,12 @@ class DockerServer(models.Model):
                     }
                 }
                 
+            # Format the version string correctly removing any 'v' prefix
+            if api_version.startswith('v'):
+                api_version = api_version[1:]
+                
             # Check if detected version is valid and in our selection options
-            valid_versions = dict(self._fields['docker_api_version'].selection)
+            valid_versions = [v[0] for v in self._fields['docker_api_version'].selection]
             if api_version not in valid_versions:
                 # Found a version not in our list, notify but don't update
                 return {
@@ -491,7 +541,7 @@ class DockerServer(models.Model):
                     'params': {
                         'title': _('Unknown API Version'),
                         'message': _('Detected API version %s on %s, but this version is not supported. Supported versions: %s') % 
-                            (api_version, self.name, ', '.join(valid_versions.keys())),
+                            (api_version, self.name, ', '.join(valid_versions)),
                         'type': 'warning',
                         'sticky': False,
                     }
