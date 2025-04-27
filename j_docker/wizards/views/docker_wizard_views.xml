@@ -12,7 +12,7 @@
                         <field name="command" placeholder="Enter Docker command (e.g., 'ps -a' or 'images')" />
                         <field name="is_executed" invisible="1" />
                     </group>
-                    <group string="Result" attrs="{'invisible': [('is_executed', '=', False)]}">
+                    <group string="Result" invisible="not is_executed">
                         <field name="result" nolabel="1" readonly="1" widget="code" options="{'language': 'text'}" class="text-monospace" />
                     </group>
                 </sheet>
