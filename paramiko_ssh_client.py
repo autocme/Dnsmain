@@ -23,9 +23,9 @@ from io import StringIO
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Import the PPK to PEM conversion if available
+# Import the PPK to PEM conversion from our utility module
 try:
-    from standalone_ppk_test import is_ppk_format, convert_ppk_to_pem
+    from ssh_key_utils import is_ppk_format, convert_ppk_to_pem
     ppk_support = True
 except ImportError:
     logger.warning("PPK conversion module not found. PPK key format will not be supported.")
@@ -245,8 +245,8 @@ class ParamikoSshClient:
                 
             logger.debug(f"Executing command: {modified_command}")
             
-            # Send the command
-            self.shell.send(modified_command + "\n")
+            # Send the command - ensure it's encoded to bytes
+            self.shell.send((modified_command + "\n").encode('utf-8'))
             
             # Wait a moment for the command to start
             time.sleep(0.5)
