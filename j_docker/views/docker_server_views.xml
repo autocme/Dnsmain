@@ -92,7 +92,7 @@
                             <field name="docker_cert_path" invisible="tls_verify == False"/>
                             <field name="tls_verify"/>
                             <field name="use_sudo"/>
-                            <field name="sudo_requires_password" attrs="{'invisible': [('use_sudo', '=', False)]}"/>
+                            <field name="sudo_requires_password" invisible="use_sudo == False"/>
                             <field name="timeout"/>
                             <field name="retries"/>
                             <field name="company_id" groups="base.group_multi_company"/>
