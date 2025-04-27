@@ -35,6 +35,11 @@ def get_docker_info(ssh_client):
     # Use --format to get JSON output for easier parsing
     output = ssh_client.execute_command("docker info --format '{{json .}}'")
     
+    # Clean the output - find the first occurrence of '{'
+    json_start = output.find('{')
+    if json_start >= 0:
+        output = output[json_start:]
+    
     try:
         # Parse the JSON output
         info = json.loads(output)
@@ -75,8 +80,16 @@ def list_containers(ssh_client):
     # Use --format to get JSON output for easier parsing
     output = ssh_client.execute_command("docker ps -a --format '{{json .}}'")
     
+    # Clean the output - remove any non-JSON content at the beginning of each line
+    clean_output = ""
+    for line in output.split('\n'):
+        # Find the first '{' in the line and keep only from that point forward
+        json_start = line.find('{')
+        if json_start >= 0:
+            clean_output += line[json_start:] + "\n"
+    
     # Split by newline to get each container JSON object
-    container_jsons = [line for line in output.split('\n') if line.strip()]
+    container_jsons = [line for line in clean_output.split('\n') if line.strip()]
     
     if not container_jsons:
         print("No containers found.")
@@ -111,8 +124,16 @@ def list_images(ssh_client):
     # Use --format to get JSON output for easier parsing
     output = ssh_client.execute_command("docker images --format '{{json .}}'")
     
+    # Clean the output - remove any non-JSON content at the beginning of each line
+    clean_output = ""
+    for line in output.split('\n'):
+        # Find the first '{' in the line and keep only from that point forward
+        json_start = line.find('{')
+        if json_start >= 0:
+            clean_output += line[json_start:] + "\n"
+    
     # Split by newline to get each image JSON object
-    image_jsons = [line for line in output.split('\n') if line.strip()]
+    image_jsons = [line for line in clean_output.split('\n') if line.strip()]
     
     if not image_jsons:
         print("No images found.")
@@ -148,8 +169,16 @@ def get_docker_stats(ssh_client):
     # And --format for JSON output
     output = ssh_client.execute_command("docker stats --no-stream --format '{{json .}}'")
     
+    # Clean the output - remove any non-JSON content at the beginning of each line
+    clean_output = ""
+    for line in output.split('\n'):
+        # Find the first '{' in the line and keep only from that point forward
+        json_start = line.find('{')
+        if json_start >= 0:
+            clean_output += line[json_start:] + "\n"
+    
     # Split by newline to get each container stats JSON object
-    stats_jsons = [line for line in output.split('\n') if line.strip()]
+    stats_jsons = [line for line in clean_output.split('\n') if line.strip()]
     
     if not stats_jsons:
         print("No running containers found.")
