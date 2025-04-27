@@ -7,7 +7,6 @@ class DockerLogs(models.Model):
     _name = 'docker.logs'
     _description = 'Docker Logs'
     _order = 'create_date desc'
-    _inherit = ['safe.read.mixin']
     
     name = fields.Char(string='Message', required=True, 
                      help="Log message")

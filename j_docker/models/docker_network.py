@@ -9,9 +9,8 @@ class DockerNetwork(models.Model):
     _name = 'docker.network'
     _description = 'Docker Network'
     _order = 'name'
-    _inherit = ['safe.read.mixin']
-    # Commenting out mail inheritance until mail module is properly loaded
-    # _inherit = ['mail.thread', 'mail.activity.mixin', 'safe.read.mixin']
+    # Commenting out inheritance until mail module is properly loaded
+    # _inherit = ['mail.thread', 'mail.activity.mixin']
 
     name = fields.Char(string='Name', required=True,
                      help="Name of the Docker network")
