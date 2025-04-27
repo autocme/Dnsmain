@@ -308,14 +308,20 @@ class SshClient(models.Model):
         """
         Execute a command on the SSH server with improved handling for interactive features
         and better output formatting for both AJAX and form-based approaches
+        
+        Uses TERM=dumb to prevent ANSI escape sequences and formatting that can break JSON parsing
         """
         self.ensure_one()
         
         try:
             ssh_connection = self.get_ssh_connection()
             
+            # Modify command to use minimal terminal to prevent ANSI escape sequences
+            # This will make the output much cleaner and easier to parse
+            modified_command = f"export TERM=dumb && {command}"
+            
             # Send the command with a newline
-            ssh_connection.send(command + "\n")
+            ssh_connection.send(modified_command + "\n")
             
             # Initial wait for response
             sleep(0.5)

@@ -10,13 +10,18 @@ def clean_ssh_output(text):
     """
     Clean SSH terminal output by:
     1. Removing ANSI escape sequences
-    2. Removing HTML tags
+    2. Removing HTML tags and content
     3. Extracting JSON content
     
     Returns the cleaned text that can be safely parsed as JSON.
     """
     if not text:
         return text
+    
+    # Check if the output is a complete HTML document (begins with <!DOCTYPE or <html>)
+    if re.match(r'^\s*(?:<!DOCTYPE|<html)', text, re.IGNORECASE):
+        _logger.warning("Received HTML document instead of expected JSON or text output")
+        return "{}"  # Return empty JSON object for HTML documents
         
     # Remove ANSI escape sequences
     ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
@@ -26,13 +31,41 @@ def clean_ssh_output(text):
     terminal_control = re.compile(r'\[\?\d+[a-zA-Z]')
     text = terminal_control.sub('', text)
     
+    # Check for <div class="terminal-output"> which indicates web terminal output
+    if '<div class="terminal-output">' in text:
+        # Extract content from <pre> tags if they exist, as they often contain the actual output
+        pre_pattern = re.compile(r'<pre[^>]*>(.*?)</pre>', re.DOTALL)
+        pre_matches = pre_pattern.findall(text)
+        if pre_matches:
+            text = '\n'.join(pre_matches)
+        else:
+            # Remove HTML terminal wrapper
+            text = text.replace('<div class="terminal-output">', '')
+            text = text.replace('</div>', '')
+    
     # Remove HTML tags
     html_tags = re.compile(r'<[^>]+>')
     text = html_tags.sub('', text)
     
+    # Decode HTML entities
+    text = text.replace('&quot;', '"').replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+    
     # Try to extract JSON content - look for an object or array
-    json_pattern = re.compile(r'({[^}]*}|\[[^\]]*\])')
+    # First try to find complete JSON objects with proper nesting
+    json_pattern = re.compile(r'({(?:[^{}]|(?:\{[^{}]*\}))*}|\[(?:[^\[\]]|(?:\[[^\[\]]*\]))*\])')
     match = json_pattern.search(text)
+    if match:
+        potential_json = match.group(0)
+        try:
+            # Validate it's actually valid JSON
+            json.loads(potential_json)
+            return potential_json
+        except json.JSONDecodeError:
+            pass
+    
+    # Fallback to simpler pattern if the more complex one fails
+    simple_json_pattern = re.compile(r'({.*?}|\[.*?\])')
+    match = simple_json_pattern.search(text)
     if match:
         return match.group(0)
         
