@@ -13,3 +13,5 @@ j_docker_task_user,docker task user,model_docker_task,j_docker.group_docker_user
 j_docker_task_manager,docker task manager,model_docker_task,j_docker.group_docker_manager,1,1,1,1
 j_docker_logs_user,docker logs user,model_docker_logs,j_docker.group_docker_user,1,0,0,0
 j_docker_logs_manager,docker logs manager,model_docker_logs,j_docker.group_docker_manager,1,1,1,1
+j_docker_command_wizard_user,docker command wizard user,model_docker_command_wizard,j_docker.group_docker_user,1,1,1,1
+j_docker_command_wizard_manager,docker command wizard manager,model_docker_command_wizard,j_docker.group_docker_manager,1,1,1,1

@@ -64,6 +64,7 @@
         'views/docker_task_views.xml',
         'views/docker_logs_views.xml',
         'views/docker_menu.xml',
+        'wizards/views/docker_wizard_views.xml',
         'data/docker_data.xml',
     ],
     # Removed assets section to eliminate JS dependencies
