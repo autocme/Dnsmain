@@ -287,6 +287,10 @@ class DockerTask(models.Model):
             if not command:
                 raise UserError(_('No command to execute'))
             
+            # Apply sudo if this is a Docker command and sudo is enabled
+            if command.strip().startswith('docker'):
+                command = self.server_id._prepare_docker_command(command)
+            
             # Execute the command on the server
             ssh_client = self.server_id.ssh_client_id
             result = ssh_client.exec_command(command)

@@ -46,6 +46,9 @@ class DockerCommandWizard(models.TransientModel):
             cmd = self.command
             if not cmd.strip().startswith('docker'):
                 cmd = f"docker {cmd}"
+            
+            # Apply sudo if needed
+            cmd = self.server_id._prepare_docker_command(cmd)
                 
             # Execute the command
             result = ssh_client.exec_command(cmd)

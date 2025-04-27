@@ -99,6 +99,7 @@ class DockerContainer(models.Model):
                 raise UserError(_('No SSH client configured for server %s') % server.name)
             
             cmd = f"docker start {self.docker_id}"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             if self.docker_id in result:
@@ -147,6 +148,7 @@ class DockerContainer(models.Model):
                 raise UserError(_('No SSH client configured for server %s') % server.name)
             
             cmd = f"docker stop {self.docker_id}"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             if self.docker_id in result:
@@ -193,6 +195,7 @@ class DockerContainer(models.Model):
                 raise UserError(_('No SSH client configured for server %s') % server.name)
             
             cmd = f"docker restart {self.docker_id}"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             if self.docker_id in result:
@@ -243,6 +246,7 @@ class DockerContainer(models.Model):
                 raise UserError(_('Cannot remove a running container. Stop it first.'))
             
             cmd = f"docker rm {self.docker_id}"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             if self.docker_id in result:
@@ -287,6 +291,7 @@ class DockerContainer(models.Model):
                 raise UserError(_('No SSH client configured for server %s') % server.name)
             
             cmd = f"docker logs --tail 100 {self.docker_id}"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             return {
@@ -316,6 +321,7 @@ class DockerContainer(models.Model):
                 raise UserError(_('No SSH client configured for server %s') % server.name)
             
             cmd = f"docker inspect {self.docker_id}"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             return {
@@ -365,6 +371,7 @@ class DockerContainer(models.Model):
             
             # Get container details
             cmd = f"docker inspect {self.docker_id} --format '{{{{json .}}}}'"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             try:
@@ -496,6 +503,7 @@ class DockerContainer(models.Model):
             
             # Get container stats
             cmd = f"docker stats {self.docker_id} --no-stream --format '{{{{json .}}}}'"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             try:

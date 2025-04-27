@@ -102,6 +102,8 @@ class DockerServer(models.Model):
                                   help="Path to the TLS certificates directory for secure connection")
     tls_verify = fields.Boolean(string='Verify TLS', default=False,
                               help="Verify TLS certificates when connecting")
+    use_sudo = fields.Boolean(string='Use Sudo', default=True, 
+                             help="Run Docker commands with sudo privileges")
     
     # Status fields
     server_status = fields.Selection([
@@ -438,6 +440,9 @@ class DockerServer(models.Model):
                 
             # Now check Docker connection
             cmd = "docker info --format '{{json .}}'"
+            # Add sudo if enabled
+            if self.use_sudo:
+                cmd = f"sudo {cmd}"
             result = ssh_client.exec_command(cmd)
             
             # Pre-validation: Check if the result contains HTML, which indicates a problem
@@ -518,6 +523,7 @@ class DockerServer(models.Model):
             
             # Get Docker info
             cmd = "docker info --format '{{json .}}'"
+            cmd = self._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             # Pre-validation: Check if the result contains HTML, which indicates a problem
@@ -579,6 +585,7 @@ class DockerServer(models.Model):
             
             # Get container counts
             cmd = "docker ps -q | wc -l && docker ps -qa | wc -l && docker images -q | wc -l && docker volume ls -q | wc -l && docker network ls -q | wc -l"
+            cmd = self._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             lines = result.strip().split('\n')
@@ -612,6 +619,7 @@ class DockerServer(models.Model):
             
             # Get container list in JSON format
             cmd = "docker ps -a --format '{{json .}}'"
+            cmd = self._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             # Process each line as a JSON object
@@ -698,6 +706,7 @@ class DockerServer(models.Model):
             
             # Get image list in JSON format
             cmd = "docker images --format '{{json .}}'"
+            cmd = self._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             # Process each line as a JSON object
@@ -788,6 +797,7 @@ class DockerServer(models.Model):
             
             # Get network list in JSON format
             cmd = "docker network ls --format '{{json .}}'"
+            cmd = self._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             # Process each line as a JSON object
@@ -836,6 +846,7 @@ class DockerServer(models.Model):
                     
                     # Get additional network details
                     cmd = f"docker network inspect {network_id} --format '{{{{json .}}}}'"
+                    cmd = self._prepare_docker_command(cmd)
                     detail_result = ssh_client.exec_command(cmd)
                     
                     try:
@@ -895,6 +906,7 @@ class DockerServer(models.Model):
             
             # Get volume list in JSON format
             cmd = "docker volume ls --format '{{json .}}'"
+            cmd = self._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             # Process each line as a JSON object
@@ -937,6 +949,7 @@ class DockerServer(models.Model):
                     
                     # Get additional volume details
                     cmd = f"docker volume inspect {name} --format '{{{{json .}}}}'"
+                    cmd = self._prepare_docker_command(cmd)
                     detail_result = ssh_client.exec_command(cmd)
                     
                     try:
@@ -1002,6 +1015,20 @@ class DockerServer(models.Model):
         except Exception as e:
             _logger.error("Failed to create log entry: %s", str(e))
     
+    def _prepare_docker_command(self, cmd):
+        """
+        Prepare a Docker command with sudo if enabled
+        
+        Args:
+            cmd (str): The Docker command to prepare
+            
+        Returns:
+            str: The prepared command with sudo if necessary
+        """
+        if self.use_sudo and cmd.strip().startswith('docker'):
+            return f"sudo {cmd}"
+        return cmd
+        
     def _parse_container_status(self, status_text):
         """Parse the container status text and return a status code"""
         if not status_text:
@@ -1058,6 +1085,7 @@ class DockerServer(models.Model):
                 
                 # Run docker system prune for unused images
                 cmd = "docker system prune -f --filter 'until=24h'"
+                cmd = server._prepare_docker_command(cmd)
                 result = ssh_client.exec_command(cmd)
                 
                 # Log the result
