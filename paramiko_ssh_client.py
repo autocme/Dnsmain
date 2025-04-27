@@ -12,6 +12,7 @@ This script demonstrates direct usage of Paramiko for SSH connections with:
 import os
 import sys
 import time
+import socket
 import paramiko
 import argparse
 import re
@@ -38,7 +39,8 @@ class ParamikoSshClient:
     """
     def __init__(self, hostname, username, port=22, 
                  password=None, key_file=None, key_data=None, key_password=None,
-                 use_clean_output=False, force_minimal_terminal=True):
+                 use_clean_output=False, force_minimal_terminal=True,
+                 connect_timeout=10, command_timeout=60, retry_count=3, retry_delay=2):
         """
         Initialize SSH client with connection parameters and formatting options
         
@@ -52,6 +54,10 @@ class ParamikoSshClient:
             key_password (str, optional): Password for encrypted private key
             use_clean_output (bool): If True, return raw output without formatting
             force_minimal_terminal (bool): If True, use TERM=dumb to prevent ANSI codes
+            connect_timeout (int): Connection timeout in seconds (default: 10)
+            command_timeout (int): Command execution timeout in seconds (default: 60)
+            retry_count (int): Number of connection retries (default: 3)
+            retry_delay (int): Delay in seconds between retries (default: 2)
         """
         self.hostname = hostname
         self.username = username
@@ -66,11 +72,18 @@ class ParamikoSshClient:
         self.use_clean_output = use_clean_output
         self.force_minimal_terminal = force_minimal_terminal
         
+        # Connection and retry settings
+        self.connect_timeout = connect_timeout
+        self.command_timeout = command_timeout
+        self.retry_count = retry_count
+        self.retry_delay = retry_delay
+        
         # Connection objects
         self.ssh_client = None
         self.shell = None
         
         logger.info(f"Initialized SSH client for {username}@{hostname}:{port}")
+        logger.info(f"Connection settings: timeout={connect_timeout}s, retries={retry_count}, retry_delay={retry_delay}s")
         logger.info(f"Output options: clean_output={use_clean_output}, minimal_terminal={force_minimal_terminal}")
         
     def load_key(self):
@@ -182,118 +195,244 @@ class ParamikoSshClient:
     
     def connect(self):
         """
-        Connect to the SSH server
+        Connect to the SSH server with retry capability
         
         Returns:
             bool: True if connection successful, False otherwise
         """
-        try:
-            # Create a new SSH client
-            self.ssh_client = paramiko.SSHClient()
-            self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        # Load private key if provided (do this once outside retry loop)
+        key = self.load_key() if (self.key_file or self.key_data) else None
+        
+        # Initialize retry counter
+        retry_count = 0
+        last_error = None
+        
+        while retry_count <= self.retry_count:
+            try:
+                if retry_count > 0:
+                    logger.info(f"Retrying connection (attempt {retry_count}/{self.retry_count})...")
+                    time.sleep(self.retry_delay)  # Wait before retry
+                
+                # Create a new SSH client for each attempt
+                if self.ssh_client:
+                    try:
+                        self.ssh_client.close()
+                    except:
+                        pass
+                        
+                self.ssh_client = paramiko.SSHClient()
+                self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                
+                # Connect to the server with timeout
+                logger.info(f"Connecting to {self.hostname}:{self.port} as {self.username}")
+                self.ssh_client.connect(
+                    hostname=self.hostname,
+                    port=self.port,
+                    username=self.username,
+                    password=self.password if not key else None,
+                    pkey=key,
+                    timeout=self.connect_timeout,
+                    banner_timeout=self.connect_timeout,
+                    auth_timeout=self.connect_timeout
+                )
+                
+                # Get an interactive shell
+                self.shell = self.ssh_client.invoke_shell(
+                    width=132,  # Wider terminal to reduce line wrapping
+                    height=50
+                )
+                time.sleep(0.5)  # Wait for shell to initialize
+                
+                # Receive the initial banner
+                if self.shell.recv_ready():
+                    banner = self.shell.recv(4096).decode('utf-8', errors='replace')
+                    logger.debug(f"Received banner: {banner}")
+                
+                # Set terminal environment variable immediately if needed
+                if self.force_minimal_terminal:
+                    self.shell.send("export TERM=dumb\n".encode('utf-8'))
+                    time.sleep(0.2)
+                    # Clear any output from the TERM command
+                    if self.shell.recv_ready():
+                        self.shell.recv(4096)
+                
+                logger.info("Successfully connected to SSH server")
+                return True
+                
+            except socket.timeout:
+                last_error = "Connection timed out"
+                logger.warning(f"Connection timed out (attempt {retry_count+1}/{self.retry_count+1})")
+            except paramiko.ssh_exception.NoValidConnectionsError as e:
+                last_error = str(e)
+                logger.warning(f"No valid connections: {str(e)} (attempt {retry_count+1}/{self.retry_count+1})")
+            except paramiko.ssh_exception.AuthenticationException as e:
+                # Don't retry authentication failures - they won't resolve themselves
+                logger.error(f"Authentication failed: {str(e)}")
+                return False
+            except paramiko.ssh_exception.SSHException as e:
+                last_error = str(e)
+                logger.warning(f"SSH error: {str(e)} (attempt {retry_count+1}/{self.retry_count+1})")
+            except socket.error as e:
+                last_error = str(e)
+                logger.warning(f"Socket error: {str(e)} (attempt {retry_count+1}/{self.retry_count+1})")
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(f"Connection error: {str(e)} (attempt {retry_count+1}/{self.retry_count+1})")
+                import traceback
+                logger.debug(traceback.format_exc())
             
-            # Load private key if provided
-            key = self.load_key() if (self.key_file or self.key_data) else None
-            
-            # Connect to the server
-            logger.info(f"Connecting to {self.hostname}:{self.port} as {self.username}")
-            self.ssh_client.connect(
-                hostname=self.hostname,
-                port=self.port,
-                username=self.username,
-                password=self.password if not key else None,
-                pkey=key
-            )
-            
-            # Get an interactive shell
-            self.shell = self.ssh_client.invoke_shell()
-            time.sleep(0.5)  # Wait for shell to initialize
-            
-            # Receive the initial banner
-            if self.shell.recv_ready():
-                banner = self.shell.recv(4096).decode('utf-8', errors='replace')
-                logger.debug(f"Received banner: {banner}")
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error connecting: {str(e)}")
-            import traceback
-            logger.debug(traceback.format_exc())
-            return False
+            retry_count += 1
+        
+        # All retries failed
+        logger.error(f"Failed to connect after {self.retry_count+1} attempts. Last error: {last_error}")
+        return False
     
-    def execute_command(self, command):
+    def execute_command(self, command, retry_on_failure=True, timeout=None):
         """
-        Execute a command on the SSH server
+        Execute a command on the SSH server with retry capability
         
         Args:
             command (str): Command to execute
+            retry_on_failure (bool): Whether to retry on socket/SSH errors
+            timeout (int): Command-specific timeout in seconds (overrides default)
             
         Returns:
             str: Command output
         """
-        if not self.shell:
+        if not self.ssh_client or not self.shell:
             logger.error("Not connected. Call connect() first.")
-            return "ERROR: Not connected"
+            # Try to auto-reconnect
+            if retry_on_failure and self.connect():
+                logger.info("Auto-reconnected to server")
+            else:
+                return "ERROR: Not connected to SSH server"
         
-        try:
-            # Apply minimal terminal option if enabled
-            if self.force_minimal_terminal:
-                modified_command = f"export TERM=dumb && {command}"
-            else:
-                modified_command = command
+        # Use command timeout or default
+        cmd_timeout = timeout or self.command_timeout
+        
+        # Initialize retry counter
+        retry_count = 0
+        max_retries = self.retry_count if retry_on_failure else 0
+        
+        while retry_count <= max_retries:
+            try:
+                if retry_count > 0:
+                    logger.info(f"Retrying command (attempt {retry_count}/{max_retries})...")
+                    time.sleep(self.retry_delay)  # Wait before retry
+                    
+                    # Check if we need to reconnect
+                    if not self.ssh_client or not self.shell:
+                        if not self.connect():
+                            logger.error("Failed to reconnect for command retry")
+                            return "ERROR: Connection lost and reconnection failed"
                 
-            logger.debug(f"Executing command: {modified_command}")
-            
-            # Send the command - ensure it's encoded to bytes
-            self.shell.send((modified_command + "\n").encode('utf-8'))
-            
-            # Wait a moment for the command to start
-            time.sleep(0.5)
-            
-            # Collect output with timeout
-            output = b""
-            timeout = 10  # seconds
-            start_time = time.time()
-            
-            # Wait for initial data
-            while not self.shell.recv_ready() and time.time() - start_time < timeout:
-                time.sleep(0.1)
-            
-            # Read initial data if available
-            if self.shell.recv_ready():
-                output += self.shell.recv(4096)
-            else:
-                logger.warning("Command timed out waiting for initial response")
-                return "TIMEOUT: Command took too long to respond"
-            
-            # Continue reading while data is available
-            while self.shell.recv_ready() or time.time() - start_time < timeout:
-                if self.shell.recv_ready():
-                    data = self.shell.recv(4096)
-                    if not data:  # Connection closed
-                        break
-                    output += data
-                    # Reset timeout when we receive data
-                    start_time = time.time()
+                # Apply minimal terminal option if enabled
+                if self.force_minimal_terminal:
+                    modified_command = f"export TERM=dumb && {command}"
                 else:
-                    # No data available, wait a bit
+                    modified_command = command
+                    
+                logger.debug(f"Executing command: {modified_command}")
+                
+                # Send the command - ensure it's encoded to bytes
+                self.shell.send((modified_command + "\n").encode('utf-8'))
+                
+                # Wait a moment for the command to start
+                time.sleep(0.1)
+                
+                # Collect output with timeout
+                output = b""
+                start_time = time.time()
+                last_receive_time = start_time
+                
+                # Wait for initial data with timeout
+                initial_timeout = min(5, cmd_timeout / 2)  # At most 5 seconds or half the total timeout
+                while not self.shell.recv_ready() and time.time() - start_time < initial_timeout:
                     time.sleep(0.1)
-                    # Check if we've waited long enough since last data
-                    if time.time() - start_time > 1.0:  # 1 second without new data
-                        break
+                
+                # Read initial data if available
+                if self.shell.recv_ready():
+                    chunk = self.shell.recv(4096)
+                    output += chunk
+                    last_receive_time = time.time()
+                else:
+                    # In some cases, especially with Docker commands, the initial response might be delayed
+                    # so we'll continue waiting for the total timeout
+                    logger.warning(f"No initial response within {initial_timeout}s - continuing to wait")
+                
+                # Continue reading while data is available or we haven't reached timeout
+                keep_reading = True
+                while keep_reading and time.time() - start_time < cmd_timeout:
+                    # Check if data is available
+                    if self.shell.recv_ready():
+                        chunk = self.shell.recv(8192)  # Larger buffer for faster reading
+                        if not chunk:  # Connection closed
+                            logger.warning("Connection closed while reading command output")
+                            keep_reading = False
+                        else:
+                            output += chunk
+                            last_receive_time = time.time()
+                    else:
+                        # No data available, wait a bit
+                        time.sleep(0.1)
+                        
+                        # Check for end of command conditions:
+                        # 1. We've waited 1-2 seconds after last data
+                        # 2. Shell is showing a prompt (look for prompt indicators in output)
+                        
+                        # Time since last data received
+                        idle_time = time.time() - last_receive_time
+                        
+                        # Check for prompt indicators in the last part of output
+                        last_output = output[-50:].decode('utf-8', errors='replace') if output else ""
+                        has_prompt = (
+                            '$' in last_output.split('\n')[-1] or  # Bash
+                            '#' in last_output.split('\n')[-1] or  # Root/sudo
+                            '>' in last_output.split('\n')[-1]      # Some other shells
+                        )
+                        
+                        # End conditions
+                        if idle_time > 1.0 and (has_prompt or idle_time > 2.0):
+                            keep_reading = False
+                
+                # Check if we timed out waiting for complete output
+                if time.time() - start_time >= cmd_timeout:
+                    logger.warning(f"Command execution timed out after {cmd_timeout}s")
+                    output += b"\n[Command timed out - output may be incomplete]"
+                
+                # Decode the output with error handling
+                try:
+                    text_output = output.decode('utf-8', errors='replace')
+                except Exception as e:
+                    logger.error(f"Error decoding command output: {str(e)}")
+                    text_output = output.decode('latin-1', errors='replace')  # Fallback encoding
+                
+                # Process and return the output
+                return self._process_output(text_output, command)
+                
+            except socket.timeout:
+                logger.warning(f"Command timed out (attempt {retry_count+1}/{max_retries+1})")
+                if retry_count == max_retries:
+                    return "ERROR: Command execution timed out"
+            except (paramiko.ssh_exception.SSHException, socket.error) as e:
+                logger.warning(f"SSH/Socket error during command: {str(e)} (attempt {retry_count+1}/{max_retries+1})")
+                if retry_count == max_retries:
+                    return f"ERROR: {str(e)}"
+                
+                # Try to reconnect for next attempt
+                self.connect()
+            except Exception as e:
+                logger.error(f"Error executing command: {str(e)}")
+                import traceback
+                logger.debug(traceback.format_exc())
+                
+                if retry_count == max_retries:
+                    return f"ERROR: {str(e)}"
             
-            # Decode the output
-            text_output = output.decode('utf-8', errors='replace')
-            
-            # Process the output
-            return self._process_output(text_output, command)
-            
-        except Exception as e:
-            logger.error(f"Error executing command: {str(e)}")
-            import traceback
-            logger.debug(traceback.format_exc())
-            return f"ERROR: {str(e)}"
+            retry_count += 1
+        
+        # This should never be reached due to return in the loop, but just in case
+        return "ERROR: Command execution failed after retries"
     
     def _process_output(self, output, command):
         """
