@@ -132,44 +132,11 @@
                         <page string="API Version Info" name="api_version_info">
                             <group>
                                 <div class="alert alert-info" role="alert">
-                                    <strong>API Version:</strong> <field name="docker_api_version" readonly="1" class="oe_inline"/> -
-                                    <strong>Engine Version:</strong> <span t-esc="env.ref('docker.api.version').get_engine_version_for_api(record.docker_api_version)"/>
+                                    <strong>API Version:</strong> <field name="docker_api_version" readonly="1" class="oe_inline"/> 
                                     <button name="action_detect_api_version" string="Detect API Version" type="object" class="btn btn-sm btn-secondary float-right"/>
                                 </div>
                             </group>
-                            <group>
-                                <field name="docker_api_features" invisible="1"/>
-                                <group string="API Features">
-                                    <div t-if="record.docker_api_version">
-                                        <ul>
-                                            <li t-foreach="env.ref('docker.api.version').get_features_for_api(record.docker_api_version)" t-as="feature" t-esc="feature"/>
-                                        </ul>
-                                        <div t-if="!env.ref('docker.api.version').get_features_for_api(record.docker_api_version)" class="text-muted">
-                                            No specific features documented for this API version.
-                                        </div>
-                                    </div>
-                                </group>
-                                <group string="Compatibility Notes">
-                                    <div t-if="record.docker_api_version">
-                                        <p t-esc="env.ref('docker.api.version').get_compatibility_notes(record.docker_api_version)"/>
-                                        <div t-if="!env.ref('docker.api.version').get_compatibility_notes(record.docker_api_version)" class="text-muted">
-                                            No specific compatibility notes for this API version.
-                                        </div>
-                                    </div>
-                                </group>
-                            </group>
-                            <group string="Example Commands">
-                                <div t-if="record.docker_api_version">
-                                    <div class="o_horizontal_separator">Commands for API Version <t t-esc="record.docker_api_version"/></div>
-                                    <div t-foreach="env.ref('docker.api.version').get_commands_for_api(record.docker_api_version)" t-as="cmd" class="mb-3">
-                                        <strong t-esc="cmd"/>:
-                                        <pre class="bg-light p-2 mt-2"><code t-esc="env.ref('docker.api.version').get_commands_for_api(record.docker_api_version)[cmd]"/></pre>
-                                    </div>
-                                    <div t-if="!env.ref('docker.api.version').get_commands_for_api(record.docker_api_version)" class="text-muted">
-                                        No example commands documented for this API version.
-                                    </div>
-                                </div>
-                            </group>
+                            <field name="docker_api_features" widget="html" options="{'safe': true}"/>
                         </page>
                         <page string="Notes" name="notes">
                             <field name="notes" placeholder="Add your notes here..."/>
