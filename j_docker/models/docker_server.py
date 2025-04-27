@@ -104,7 +104,14 @@ class DockerServer(models.Model):
     docker_api_version = fields.Selection([
         ('1.40', 'API v1.40 (Docker 19.x)'),
         ('1.41', 'API v1.41 (Docker 20.x)'),
-        ('1.42', 'API v1.42 (Docker 23.x)')
+        ('1.42', 'API v1.42 (Docker 23.x)'),
+        ('1.43', 'API v1.43 (Docker 23.x)'),
+        ('1.44', 'API v1.44 (Docker 24.x alpha)'),
+        ('1.45', 'API v1.45 (Docker 23.0.0-beta.x)'), 
+        ('1.46', 'API v1.46 (Docker 23.0.0-rc.x)'),
+        ('1.47', 'API v1.47 (Docker 23.0.x)'),
+        ('1.48', 'API v1.48 (Docker 24.0.x)'), 
+        ('1.49', 'API v1.49 (Docker 25.0.x)')
     ], string='API Version', default='1.41', required=True)
     
     docker_cert_path = fields.Char(string='TLS Certificates Path',
@@ -126,6 +133,7 @@ class DockerServer(models.Model):
     
     docker_version = fields.Char(string='Docker Version', readonly=True)
     docker_api_info = fields.Text(string='Docker API Info', readonly=True)
+    docker_api_features = fields.Text(string='API Features', compute='_compute_api_features', store=False)
     os_info = fields.Char(string='OS Info', readonly=True)
     
     cpu_usage = fields.Float(string='CPU Usage (%)', readonly=True)
@@ -198,6 +206,26 @@ class DockerServer(models.Model):
                 self.name = self.ssh_client_id.name
         except Exception as e:
             _logger.error("Error in onchange ssh client: %s", str(e))
+            
+    @api.depends('docker_api_version')
+    def _compute_api_features(self):
+        """Compute API features based on selected API version"""
+        for server in self:
+            try:
+                # Skip computation if no API version set
+                if not server.docker_api_version:
+                    server.docker_api_features = ''
+                    continue
+                    
+                # Use API version utility to get the features
+                features = self.env['docker.api.version'].get_features_for_api(server.docker_api_version)
+                if features:
+                    server.docker_api_features = '\n'.join([f"• {feature}" for feature in features])
+                else:
+                    server.docker_api_features = 'No specific features documented for this API version.'
+            except Exception as e:
+                _logger.error("Error computing API features: %s", str(e))
+                server.docker_api_features = f"Error retrieving API features: {str(e)}"
     
     # -------------------------------------------------------------------------
     # CRUD methods
@@ -416,6 +444,94 @@ class DockerServer(models.Model):
             'type': 'ir.actions.act_window',
             'context': {'default_server_id': self.id},
         }
+        
+    def action_detect_api_version(self):
+        """
+        Detect Docker API version on the remote server and update the server record.
+        This can be used to ensure the correct API version is used for compatibility.
+        """
+        self.ensure_one()
+        
+        # Create a notification for the user
+        if not self.ssh_client_id:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('API Version Detection Failed'),
+                    'message': _('No SSH Client configured for this server.'),
+                    'type': 'warning',
+                    'sticky': False,
+                }
+            }
+            
+        try:
+            # Use the API version utility to detect the version
+            api_version = self.env['docker.api.version'].detect_api_version(self.id)
+            
+            if not api_version:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('API Version Detection Failed'),
+                        'message': _('Could not detect Docker API version on %s') % self.name,
+                        'type': 'warning',
+                        'sticky': False,
+                    }
+                }
+                
+            # Check if detected version is valid and in our selection options
+            valid_versions = dict(self._fields['docker_api_version'].selection)
+            if api_version not in valid_versions:
+                # Found a version not in our list, notify but don't update
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Unknown API Version'),
+                        'message': _('Detected API version %s on %s, but this version is not supported. Supported versions: %s') % 
+                            (api_version, self.name, ', '.join(valid_versions.keys())),
+                        'type': 'warning',
+                        'sticky': False,
+                    }
+                }
+                
+            # Update the server's API version
+            old_version = self.docker_api_version
+            self.write({'docker_api_version': api_version})
+            
+            # Get engine version for better user feedback
+            engine_version = self.env['docker.api.version'].get_engine_version_for_api(api_version)
+            
+            # Log this action
+            self._create_log_entry('info', _('API version detected and updated from %s to %s (Docker %s)') % 
+                                  (old_version, api_version, engine_version or 'unknown'))
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('API Version Detected'),
+                    'message': _('Docker API version %s (Docker %s) detected and configured for %s') % 
+                        (api_version, engine_version or 'unknown', self.name),
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }
+            
+        except Exception as e:
+            _logger.error("Error detecting Docker API version: %s", str(e))
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('API Version Detection Error'),
+                    'message': _('Error detecting Docker API version: %s') % str(e),
+                    'type': 'danger',
+                    'sticky': False,
+                }
+            }
     
     def action_execute_command(self):
         self.ensure_one()
