@@ -21,9 +21,9 @@ class DockerServer(models.Model):
                                 default=lambda self: self.env.company)
     
     # Docker connection details
-    # ssh_client_id = fields.Many2one('nalios.ssh.client', string='SSH Client', 
-    #                                required=True,
-    #                                help="SSH Connection used to communicate with this Docker server")
+    ssh_client_id = fields.Many2one('ssh.client', string='SSH Client', 
+                                   required=True,
+                                   help="SSH Connection used to communicate with this Docker server")
     
     docker_host = fields.Char(string='Docker Host', default='unix:///var/run/docker.sock',
                              help="Docker daemon socket to connect to")
