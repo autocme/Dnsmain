@@ -113,6 +113,7 @@ class DockerNetwork(models.Model):
                 raise UserError(_('Cannot remove default Docker network %s') % self.name)
             
             cmd = f"docker network rm {self.docker_id if self.docker_id else self.name}"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             if self.docker_id in result or self.name in result:
@@ -158,6 +159,7 @@ class DockerNetwork(models.Model):
             
             network_reference = self.docker_id if self.docker_id else self.name
             cmd = f"docker network inspect {network_reference}"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             return {
@@ -253,6 +255,7 @@ class DockerNetwork(models.Model):
             # Get network details
             network_reference = self.docker_id if self.docker_id else self.name
             cmd = f"docker network inspect {network_reference} --format '{{{{json .}}}}'"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             try:

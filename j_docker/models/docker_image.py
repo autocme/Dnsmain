@@ -141,6 +141,7 @@ class DockerImage(models.Model):
             img_reference = self.docker_id if self.docker_id else self.name
             
             cmd = f"docker rmi {img_reference}"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             # Check if the command was successful (usually returns the image ID/name that was removed)
@@ -202,6 +203,7 @@ class DockerImage(models.Model):
             
             img_reference = self.docker_id if self.docker_id else self.name
             cmd = f"docker inspect {img_reference}"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             return {
@@ -248,6 +250,7 @@ class DockerImage(models.Model):
             
             img_reference = self.docker_id if self.docker_id else self.name
             cmd = f"docker history {img_reference} --no-trunc --format '{{{{json .}}}}'"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             # Format the history output
@@ -304,6 +307,7 @@ class DockerImage(models.Model):
             # Get image details
             img_reference = self.docker_id if self.docker_id else self.name
             cmd = f"docker inspect {img_reference} --format '{{{{json .}}}}'"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             try:

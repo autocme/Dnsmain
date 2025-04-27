@@ -197,6 +197,11 @@ class DockerController(http.Controller):
                 
             # Execute the command
             ssh_client = server.ssh_client_id
+            
+            # Apply sudo if this is a Docker command and sudo is enabled
+            if command.strip().startswith('docker'):
+                command = server._prepare_docker_command(command)
+                
             result = ssh_client.exec_command(command)
             
             # Log the command execution

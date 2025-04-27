@@ -97,6 +97,7 @@ class DockerVolume(models.Model):
                 raise UserError(_('No SSH client configured for server %s') % server.name)
             
             cmd = f"docker volume rm {self.name}"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             if self.name in result:
@@ -141,6 +142,7 @@ class DockerVolume(models.Model):
                 raise UserError(_('No SSH client configured for server %s') % server.name)
             
             cmd = f"docker volume inspect {self.name}"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             return {
@@ -242,6 +244,7 @@ class DockerVolume(models.Model):
             
             # Get volume details
             cmd = f"docker volume inspect {self.name} --format '{{{{json .}}}}'"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             try:
@@ -307,6 +310,7 @@ class DockerVolume(models.Model):
             
             # Find containers that use this volume
             cmd = f"docker ps -a --filter volume={self.name} --format '{{{{.Names}}}} ({{{{.ID}}}}): {{{{.Status}}}}'"
+            cmd = server._prepare_docker_command(cmd)
             result = ssh_client.exec_command(cmd)
             
             if result.strip():
