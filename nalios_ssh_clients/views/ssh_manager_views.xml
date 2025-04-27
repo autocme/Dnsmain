@@ -89,6 +89,8 @@
                             <field name="terminal_background" widget="color"/>
                             <field name="terminal_text_color" widget="color"/>
                             <field name="use_webssh"/>
+                            <field name="use_clean_ssh"/>
+                            <field name="force_minimal_terminal"/>
                         </group>
                     </group>
                     <notebook>

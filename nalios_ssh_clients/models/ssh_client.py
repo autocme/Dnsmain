@@ -95,6 +95,17 @@ class SshClient(models.Model):
         help="Use the interactive WebSSH terminal interface which provides better experience with key handling, "
              "output formatting, and command-line features."
     )
+    use_clean_ssh = fields.Boolean(
+        string="Use Clean SSH Client", 
+        default=False,
+        help="Use a clean, non-web SSH client that avoids web-specific formatting and provides raw terminal output."
+    )
+    force_minimal_terminal = fields.Boolean(
+        string="Force Minimal Terminal Mode", 
+        default=True,
+        help="Force minimal terminal mode (export TERM=dumb) to prevent ANSI escape sequences and other terminal "
+             "formatting that can break output parsing."
+    )
     webssh_url = fields.Char(string="WebSSH URL", compute="_compute_webssh_url", store=False)
     
     # Helper properties for consistent access
@@ -309,16 +320,20 @@ class SshClient(models.Model):
         Execute a command on the SSH server with improved handling for interactive features
         and better output formatting for both AJAX and form-based approaches
         
-        Uses TERM=dumb to prevent ANSI escape sequences and formatting that can break JSON parsing
+        Can use TERM=dumb to prevent ANSI escape sequences and formatting that can break JSON parsing
+        based on configuration.
         """
         self.ensure_one()
         
         try:
             ssh_connection = self.get_ssh_connection()
             
-            # Modify command to use minimal terminal to prevent ANSI escape sequences
-            # This will make the output much cleaner and easier to parse
-            modified_command = f"export TERM=dumb && {command}"
+            # Original command
+            modified_command = command
+            
+            # Apply terminal mode configuration if enabled
+            if self.force_minimal_terminal:
+                modified_command = f"export TERM=dumb && {command}"
             
             # Send the command with a newline
             ssh_connection.send(modified_command + "\n")
@@ -373,12 +388,24 @@ class SshClient(models.Model):
             # Add syntax highlighting for common command outputs
             html_output = self._add_syntax_highlighting(html_output, command)
             
-            # Wrap in a terminal-output div for styling
-            return f'<div class="terminal-output">{html_output}</div>'
+            # If clean SSH is requested, return plain text without HTML formatting
+            if self.use_clean_ssh:
+                # Use the pre-formatted text without HTML conversion
+                try:
+                    return formatted_data
+                except:
+                    # Fallback to the original output
+                    return alldata.decode('utf-8', errors='replace')
+            else:
+                # Wrap in a terminal-output div for styling
+                return f'<div class="terminal-output">{html_output}</div>'
             
         except Exception as e:
             _logger.error(f"Command execution error: {str(e)}")
-            return f'<div class="terminal-error">Error executing command: {str(e)}</div>'
+            if self.use_clean_ssh:
+                return f"Error executing command: {str(e)}"
+            else:
+                return f'<div class="terminal-error">Error executing command: {str(e)}</div>'
         
     def _format_terminal_output(self, raw_data):
         """
@@ -403,6 +430,10 @@ class SshClient(models.Model):
             
     def _format_table_output(self, text):
         """Format text that appears to be tabular for better display"""
+        # If clean SSH is requested, return the text as-is without HTML
+        if self.use_clean_ssh:
+            return text
+            
         lines = text.split('\n')
         formatted_lines = []
         
@@ -419,6 +450,10 @@ class SshClient(models.Model):
         """
         Add syntax highlighting for common command outputs
         """
+        # If clean SSH is requested, return the output as-is without HTML highlighting
+        if self.use_clean_ssh:
+            return html_output
+            
         # Check if this is a common command that should get special formatting
         cmd_base = command.split()[0] if command.split() else ""
         
@@ -441,6 +476,10 @@ class SshClient(models.Model):
         """Add highlighting for file listings (ls command output)"""
         import re
         
+        # If clean SSH is requested, return the output as-is without HTML highlighting
+        if self.use_clean_ssh:
+            return html_output
+            
         # First add the marker class
         html_output = html_output.replace(
             '<pre class="ansi2html-content">',
@@ -517,6 +556,10 @@ class SshClient(models.Model):
         """Add highlighting for cloud tool outputs"""
         import re
         
+        # If clean SSH is requested, return the output as-is without HTML highlighting
+        if self.use_clean_ssh:
+            return html_output
+            
         # First add the marker class
         html_output = html_output.replace(
             '<pre class="ansi2html-content">',
@@ -600,7 +643,10 @@ class SshClient(models.Model):
             return self.exec_command('echo "Connection successful"')
         except Exception as e:
             _logger.error(f"SSH connection test failed: {str(e)}")
-            return f'<div class="terminal-error">Connection test failed: {str(e)}</div>'
+            if self.use_clean_ssh:
+                return f"Connection test failed: {str(e)}"
+            else:
+                return f'<div class="terminal-error">Connection test failed: {str(e)}</div>'
 
     def get_client_name(self):
         self.ensure_one()
