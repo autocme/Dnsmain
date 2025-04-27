@@ -6,6 +6,38 @@ from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
+def clean_ssh_output(text):
+    """
+    Clean SSH terminal output by:
+    1. Removing ANSI escape sequences
+    2. Removing HTML tags
+    3. Extracting JSON content
+    
+    Returns the cleaned text that can be safely parsed as JSON.
+    """
+    if not text:
+        return text
+        
+    # Remove ANSI escape sequences
+    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+    text = ansi_escape.sub('', text)
+    
+    # Remove terminal control sequences like [?2004l
+    terminal_control = re.compile(r'\[\?\d+[a-zA-Z]')
+    text = terminal_control.sub('', text)
+    
+    # Remove HTML tags
+    html_tags = re.compile(r'<[^>]+>')
+    text = html_tags.sub('', text)
+    
+    # Try to extract JSON content - look for an object or array
+    json_pattern = re.compile(r'({[^}]*}|\[[^\]]*\])')
+    match = json_pattern.search(text)
+    if match:
+        return match.group(0)
+        
+    return text
+
 class DockerServer(models.Model):
     _name = 'docker.server'
     _description = 'Docker Server'
@@ -375,21 +407,32 @@ class DockerServer(models.Model):
             cmd = "docker info --format '{{json .}}'"
             result = ssh_client.exec_command(cmd)
             
-            # Look for JSON output in the result
-            json_match = re.search(r'({.*})', result, re.DOTALL)
-            if not json_match:
-                self.server_status = 'error'
-                self._create_log_entry('error', f'Docker connection failed, invalid response: {result}')
-                return False
-                
+            # Clean the output to remove ANSI codes, HTML tags, etc.
+            cleaned_result = clean_ssh_output(result)
+            
             try:
-                docker_info = json.loads(json_match.group(1))
+                docker_info = json.loads(cleaned_result)
                 self.docker_version = docker_info.get('ServerVersion', 'Unknown')
                 self.server_status = 'online'
                 self.last_check = fields.Datetime.now()
                 self._create_log_entry('info', 'Connection successful')
                 return True
             except json.JSONDecodeError:
+                # If clean_ssh_output couldn't extract valid JSON, try legacy approach with regex
+                json_match = re.search(r'({.*})', result, re.DOTALL)
+                if json_match:
+                    try:
+                        docker_info = json.loads(json_match.group(1))
+                        self.docker_version = docker_info.get('ServerVersion', 'Unknown')
+                        self.server_status = 'online'
+                        self.last_check = fields.Datetime.now()
+                        self._create_log_entry('info', 'Connection successful (fallback parsing)')
+                        return True
+                    except json.JSONDecodeError:
+                        pass
+                        
+                self.server_status = 'error'
+                self._create_log_entry('error', f'Docker connection failed, invalid response: {result}')
                 self.server_status = 'error'
                 self._create_log_entry('error', f'Failed to parse Docker info: {result}')
                 return False
@@ -412,11 +455,23 @@ class DockerServer(models.Model):
             cmd = "docker info --format '{{json .}}'"
             result = ssh_client.exec_command(cmd)
             
-            json_match = re.search(r'({.*})', result, re.DOTALL)
-            if json_match:
-                docker_info = json.loads(json_match.group(1))
+            # Clean the output to remove ANSI codes, HTML tags, etc.
+            cleaned_result = clean_ssh_output(result)
+            
+            try:
+                docker_info = json.loads(cleaned_result)
                 self.docker_api_info = json.dumps(docker_info, indent=2)
                 self.os_info = f"{docker_info.get('OperatingSystem', 'Unknown')} ({docker_info.get('KernelVersion', 'Unknown')})"
+            except json.JSONDecodeError:
+                # If clean_ssh_output couldn't extract valid JSON, try legacy approach with regex
+                json_match = re.search(r'({.*})', result, re.DOTALL)
+                if json_match:
+                    try:
+                        docker_info = json.loads(json_match.group(1))
+                        self.docker_api_info = json.dumps(docker_info, indent=2)
+                        self.os_info = f"{docker_info.get('OperatingSystem', 'Unknown')} ({docker_info.get('KernelVersion', 'Unknown')})"
+                    except json.JSONDecodeError:
+                        _logger.warning(f"Failed to parse Docker info: {result}")
                 
             # Get system resource usage
             cmd = "top -bn1 | grep 'Cpu(s)' | awk '{print $2}' && free -m | grep Mem | awk '{print $3/$2 * 100}' && df -h / | grep / | awk '{print $5}' | tr -d '%'"
@@ -475,7 +530,9 @@ class DockerServer(models.Model):
                     continue
                     
                 try:
-                    container_data = json.loads(line)
+                    # Clean the output to remove ANSI codes, HTML tags, etc.
+                    cleaned_line = clean_ssh_output(line)
+                    container_data = json.loads(cleaned_line)
                     container_id = container_data.get('ID')
                     if not container_id:
                         continue
@@ -559,7 +616,9 @@ class DockerServer(models.Model):
                     continue
                     
                 try:
-                    image_data = json.loads(line)
+                    # Clean the output to remove ANSI codes, HTML tags, etc.
+                    cleaned_line = clean_ssh_output(line)
+                    image_data = json.loads(cleaned_line)
                     repository = image_data.get('Repository', '')
                     tag = image_data.get('Tag', '')
                     image_id = image_data.get('ID', '')
@@ -647,7 +706,9 @@ class DockerServer(models.Model):
                     continue
                     
                 try:
-                    network_data = json.loads(line)
+                    # Clean the output to remove ANSI codes, HTML tags, etc.
+                    cleaned_line = clean_ssh_output(line)
+                    network_data = json.loads(cleaned_line)
                     network_id = network_data.get('ID', '')
                     
                     if not network_id:
@@ -687,8 +748,10 @@ class DockerServer(models.Model):
                     detail_result = ssh_client.exec_command(cmd)
                     
                     try:
-                        if detail_result and '{' in detail_result:
-                            network_details = json.loads(detail_result)
+                        if detail_result:
+                            # Clean the output to remove ANSI codes, HTML tags, etc.
+                            cleaned_detail = clean_ssh_output(detail_result)
+                            network_details = json.loads(cleaned_detail)
                             if isinstance(network_details, list) and network_details:
                                 network_detail = network_details[0]
                                 
@@ -750,7 +813,9 @@ class DockerServer(models.Model):
                     continue
                     
                 try:
-                    volume_data = json.loads(line)
+                    # Clean the output to remove ANSI codes, HTML tags, etc.
+                    cleaned_line = clean_ssh_output(line)
+                    volume_data = json.loads(cleaned_line)
                     name = volume_data.get('Name', '')
                     
                     if not name:
@@ -784,8 +849,10 @@ class DockerServer(models.Model):
                     detail_result = ssh_client.exec_command(cmd)
                     
                     try:
-                        if detail_result and '{' in detail_result:
-                            volume_details = json.loads(detail_result)
+                        if detail_result:
+                            # Clean the output to remove ANSI codes, HTML tags, etc.
+                            cleaned_detail = clean_ssh_output(detail_result)
+                            volume_details = json.loads(cleaned_detail)
                             if isinstance(volume_details, list) and volume_details:
                                 volume_detail = volume_details[0]
                                 
