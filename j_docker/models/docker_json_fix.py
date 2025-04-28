@@ -1,125 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import re
 import json
+import re
 import logging
 
 _logger = logging.getLogger(__name__)
 
-def fix_json_command_output(output, command=None):
-    """
-    Fix JSON command output by removing command echo and other non-JSON content
+def clean_docker_output(output):
+    """Clean SSH output from Docker commands
     
     Args:
-        output (str): Raw command output
-        command (str, optional): Command that was executed
-        
-    Returns:
-        str: Cleaned JSON string
-    """
-    if not output:
-        return ""
-    
-    # Remove leading whitespace
-    cleaned = output.strip()
-    
-    # Handle command echo in the output
-    if command:
-        # Remove the command if it's at the start of the output
-        if cleaned.startswith(command):
-            cleaned = cleaned[len(command):].strip()
-        
-        # Look for common patterns of command echo
-        cmd_patterns = [
-            r'^.*?\$ ' + re.escape(command),  # bash prompt with $
-            r'^.*?# ' + re.escape(command),   # root prompt with #
-            r'^.*?> ' + re.escape(command),   # other prompts with >
-            r'^.*?<.*?> ' + re.escape(command),  # custom prompt with <>
-            r'^<?(TERM=dumb && )?' + re.escape(command)  # TERM environment setting
-        ]
-        
-        for pattern in cmd_patterns:
-            match = re.match(pattern, cleaned)
-            if match:
-                cleaned = cleaned[match.end():].strip()
-                break
-    
-    # Find the first JSON opening character
-    json_start = None
-    for i, char in enumerate(cleaned):
-        if char in '{[':
-            json_start = i
-            break
-    
-    if json_start is not None:
-        cleaned = cleaned[json_start:]
-    
-    # Remove any trailing non-JSON content
-    # Find matching closing brackets/braces for complete JSON
-    if cleaned.startswith('{'):
-        brace_count = 0
-        for i, char in enumerate(cleaned):
-            if char == '{':
-                brace_count += 1
-            elif char == '}':
-                brace_count -= 1
-                if brace_count == 0 and i < len(cleaned) - 1:
-                    # Found closing brace, truncate any following content
-                    cleaned = cleaned[:i+1]
-                    break
-    
-    # Ensure it's valid JSON
-    try:
-        json.loads(cleaned)
-        return cleaned
-    except json.JSONDecodeError as e:
-        _logger.warning(f"JSON still invalid after cleaning: {str(e)}")
-        
-        # Try to find any JSON-like structure
-        json_pattern = r'(\{.*\}|\[.*\])'
-        matches = re.findall(json_pattern, cleaned, re.DOTALL)
-        
-        for match in matches:
-            try:
-                json.loads(match)
-                _logger.info("Found valid JSON after pattern matching")
-                return match
-            except json.JSONDecodeError:
-                continue
-        
-        _logger.error("Could not fix JSON output, returning original cleaned string")
-        return cleaned
-
-def parse_docker_json(output, command=None):
-    """
-    Parse Docker JSON output with enhanced error handling
-    
-    Args:
-        output (str): Raw command output
-        command (str, optional): Command that was executed
-        
-    Returns:
-        dict or list: Parsed JSON data
-    """
-    # Clean and fix the output
-    cleaned_output = fix_json_command_output(output, command)
-    
-    try:
-        result = json.loads(cleaned_output)
-        return result
-    except json.JSONDecodeError as e:
-        _logger.error(f"Failed to parse JSON after cleaning: {str(e)}")
-        _logger.error(f"Cleaned output preview: {cleaned_output[:100]}...")
-        raise ValueError(f"Failed to parse Docker JSON response: {str(e)}")
-
-def clean_docker_output(output, command=None):
-    """
-    Clean Docker command output to prepare for processing
-    
-    Args:
-        output (str): Raw command output
-        command (str, optional): The command that was used to generate the output
+        output (str): Raw SSH output
         
     Returns:
         str: Cleaned output
@@ -127,47 +19,100 @@ def clean_docker_output(output, command=None):
     if not output:
         return ""
     
-    # Remove ANSI escape sequences
-    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-    cleaned = ansi_escape.sub('', output)
+    # Remove terminal color codes
+    output = re.sub(r'\x1B\[[0-9;]*[mK]', '', output)
     
-    # Normalize line endings
-    cleaned = cleaned.replace('\r\n', '\n').replace('\r', '\n')
-    
-    # Remove command echo if present
-    if command:
-        lines = cleaned.split('\n')
-        filtered_lines = []
-        skip_next = False
+    # Remove common patterns that appear in SSH output
+    patterns = [
+        # Commands and line continuation prompts
+        r'^.*\$ .*docker.*$',  # Command being echoed
+        r'^\> .*$',            # Line continuation in bash
         
-        for line in lines:
-            # Skip empty lines at the beginning
-            if not filtered_lines and not line.strip():
-                continue
-                
-            # Skip the line with the command echo
-            if command in line:
-                skip_next = True  # Sometimes the echo spans multiple lines
-                continue
-                
-            # Skip continuation lines of the command
-            if skip_next and line.startswith('+'):
-                skip_next = False
-                continue
-                
-            filtered_lines.append(line)
+        # Shell environment text
+        r'^.*Last login:.*$',
+        r'^.*Welcome to.*$',
+        r'^.*Linux.*$',
+        
+        # Common shell error messages
+        r'^bash: .*$',
+        r'^-bash: .*$',
+        r'^sh: .*$',
+        
+        # Sudo patterns 
+        r'^\[sudo\].*$',
+        r'^.*password for.*:.*$',
+    ]
+    
+    # Apply patterns line by line
+    lines = output.split('\n')
+    cleaned_lines = []
+    
+    for line in lines:
+        skip = False
+        for pattern in patterns:
+            if re.match(pattern, line):
+                skip = True
+                break
+        
+        if not skip:
+            cleaned_lines.append(line)
             
-        cleaned = '\n'.join(filtered_lines)
+    return '\n'.join(cleaned_lines)
+
+def fix_json_command_output(output):
+    """Fix common issues with JSON output from SSH commands
     
-    # Remove warning lines that often precede Docker JSON output
-    warning_pattern = re.compile(r'^WARNING:.*$', re.MULTILINE)
-    cleaned = warning_pattern.sub('', cleaned)
+    Args:
+        output (str): Raw SSH JSON output
+        
+    Returns:
+        str: Fixed JSON string ready for parsing
+    """
+    if not output:
+        return "{}"
     
-    # Remove header lines like "name,id,status" that might precede table output
-    header_pattern = re.compile(r'^[A-Z]+[A-Z_,]+$', re.MULTILINE)
-    cleaned = header_pattern.sub('', cleaned)
+    # First clean the output
+    output = clean_docker_output(output)
     
-    # Trim whitespace
-    cleaned = cleaned.strip()
+    # Remove any tracing or debug output before the JSON data
+    # This matches everything before the first '{' or '['
+    match = re.search(r'[\[\{]', output)
+    if match:
+        start_index = match.start()
+        output = output[start_index:]
     
-    return cleaned
+    # Remove any trailing output after the JSON data
+    # Find the position of the last '}' or ']'
+    match = re.search(r'[\]\}][^\]\}]*$', output)
+    if match:
+        # Keep the last '}' or ']' but remove anything after it
+        end_index = match.start() + 1
+        output = output[:end_index]
+    
+    # Handle special case where we get multiple JSON objects
+    # For example, docker ps returns one JSON object per line
+    if output.strip() and not (output.strip().startswith('{') or output.strip().startswith('[')):
+        # Return as-is, will be processed line by line
+        return output
+    
+    # Fix unescaped quotes in strings
+    output = re.sub(r'(?<!\\)"(.*?)(?<!\\)"', lambda m: f'"{m.group(1).replace(\'"\\"\', \'\\"\')}"', output)
+    
+    # Fix missing quotes around keys
+    output = re.sub(r'(\s*)(\w+)(\s*):(\s*)', r'\1"\2"\3:\4', output)
+    
+    # Fix trailing commas in arrays and objects
+    output = re.sub(r',(\s*[\}\]])', r'\1', output)
+    
+    # Fix control characters
+    output = re.sub(r'[\x00-\x1F\x7F]', '', output)
+    
+    # Validate the JSON
+    try:
+        json.loads(output)
+        return output
+    except json.JSONDecodeError as e:
+        _logger.error(f"Failed to parse JSON: {e}")
+        _logger.debug(f"Problem JSON: {output}")
+        # Return an empty object for invalid JSON
+        return "{}"
