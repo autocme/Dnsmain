@@ -17,6 +17,8 @@ _logger = logging.getLogger(__name__)
 class DockerServer(models.Model):
     _name = 'j_docker.docker_server'
     _description = 'Docker Server'
+    # Uncomment the following line to add mail support
+    # _inherit = ['mail.thread', 'mail.activity.mixin']
     
     name = fields.Char('Name', required=True)
     host = fields.Char('Host', required=True, 

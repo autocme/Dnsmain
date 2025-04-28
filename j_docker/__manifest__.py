@@ -20,7 +20,7 @@
     """,
     'author': 'Your Company',
     'category': 'Administration',
-    'depends': ['base'],
+    'depends': ['base'], # Add 'mail' to dependencies if mail support is needed
     'data': [
         'security/docker_security.xml',
         'security/ir.model.access.csv',
