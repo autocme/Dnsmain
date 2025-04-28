@@ -1,69 +1,201 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data>
-        <!-- Docker Security Groups -->
-        <record id="module_docker_category" model="ir.module.category">
-            <field name="name">Docker Management</field>
-            <field name="description">Docker Management Access Rights</field>
-            <field name="sequence">20</field>
-        </record>
-
-        <record id="group_docker_user" model="res.groups">
-            <field name="name">User</field>
-            <field name="category_id" ref="module_docker_category"/>
-            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
-            <field name="comment">Docker management users with read-only access</field>
-        </record>
-
-        <record id="group_docker_manager" model="res.groups">
-            <field name="name">Manager</field>
-            <field name="category_id" ref="module_docker_category"/>
-            <field name="implied_ids" eval="[(4, ref('group_docker_user'))]"/>
-            <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
-            <field name="comment">Docker management administrators with full control</field>
-        </record>
-
-        <!-- Record Rules -->
-        <record id="docker_server_comp_rule" model="ir.rule">
-            <field name="name">Docker Server: Multi-company rule</field>
-            <field name="model_id" ref="model_docker_server"/>
-            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
-        </record>
-
-        <record id="docker_container_comp_rule" model="ir.rule">
-            <field name="name">Docker Container: Multi-company rule</field>
-            <field name="model_id" ref="model_docker_container"/>
-            <field name="domain_force">['|', ('server_id.company_id', '=', False), ('server_id.company_id', 'in', company_ids)]</field>
-        </record>
-
-        <record id="docker_image_comp_rule" model="ir.rule">
-            <field name="name">Docker Image: Multi-company rule</field>
-            <field name="model_id" ref="model_docker_image"/>
-            <field name="domain_force">['|', ('server_id.company_id', '=', False), ('server_id.company_id', 'in', company_ids)]</field>
-        </record>
-
-        <record id="docker_network_comp_rule" model="ir.rule">
-            <field name="name">Docker Network: Multi-company rule</field>
-            <field name="model_id" ref="model_docker_network"/>
-            <field name="domain_force">['|', ('server_id.company_id', '=', False), ('server_id.company_id', 'in', company_ids)]</field>
-        </record>
-
-        <record id="docker_volume_comp_rule" model="ir.rule">
-            <field name="name">Docker Volume: Multi-company rule</field>
-            <field name="model_id" ref="model_docker_volume"/>
-            <field name="domain_force">['|', ('server_id.company_id', '=', False), ('server_id.company_id', 'in', company_ids)]</field>
-        </record>
-
-        <record id="docker_task_comp_rule" model="ir.rule">
-            <field name="name">Docker Task: Multi-company rule</field>
-            <field name="model_id" ref="model_docker_task"/>
-            <field name="domain_force">['|', ('server_id.company_id', '=', False), ('server_id.company_id', 'in', company_ids)]</field>
-        </record>
-
-        <record id="docker_logs_comp_rule" model="ir.rule">
-            <field name="name">Docker Logs: Multi-company rule</field>
-            <field name="model_id" ref="model_docker_logs"/>
-            <field name="domain_force">['|', ('server_id.company_id', '=', False), ('server_id.company_id', 'in', company_ids)]</field>
-        </record>
-    </data>
+    <!-- Docker Security Groups -->
+    
+    <!-- Docker User group - can view Docker resources but not modify them -->
+    <record id="group_docker_user" model="res.groups">
+        <field name="name">Docker User</field>
+        <field name="category_id" ref="base.module_category_hidden"/>
+        <field name="comment">Users in this group can view Docker servers, containers, images, etc. but cannot modify or create them.</field>
+    </record>
+    
+    <!-- Docker Manager group - can create/modify Docker resources -->
+    <record id="group_docker_manager" model="res.groups">
+        <field name="name">Docker Manager</field>
+        <field name="category_id" ref="base.module_category_hidden"/>
+        <field name="comment">Users in this group can create, modify, and delete Docker servers and resources.</field>
+        <field name="implied_ids" eval="[(4, ref('group_docker_user'))]"/>
+    </record>
+    
+    <!-- Docker Admin group - has full access to all Docker functionality, including sensitive operations -->
+    <record id="group_docker_admin" model="res.groups">
+        <field name="name">Docker Administrator</field>
+        <field name="category_id" ref="base.module_category_hidden"/>
+        <field name="comment">Administrators have full access to all Docker servers and can perform sensitive operations like pruning.</field>
+        <field name="implied_ids" eval="[(4, ref('group_docker_manager'))]"/>
+        <field name="users" eval="[(4, ref('base.user_admin'))]"/>
+    </record>
+    
+    <!-- Rules -->
+    
+    <!-- Server access rules -->
+    <record id="rule_docker_server_admin" model="ir.rule">
+        <field name="name">Docker Server: Admin Access</field>
+        <field name="model_id" ref="model_j_docker_docker_server"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_admin'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    
+    <record id="rule_docker_server_manager" model="ir.rule">
+        <field name="name">Docker Server: Manager Access</field>
+        <field name="model_id" ref="model_j_docker_docker_server"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_manager'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    
+    <record id="rule_docker_server_user" model="ir.rule">
+        <field name="name">Docker Server: User Access</field>
+        <field name="model_id" ref="model_j_docker_docker_server"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_user'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    
+    <!-- Container access rules -->
+    <record id="rule_docker_container_admin" model="ir.rule">
+        <field name="name">Docker Container: Admin Access</field>
+        <field name="model_id" ref="model_j_docker_docker_container"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_admin'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    
+    <record id="rule_docker_container_manager" model="ir.rule">
+        <field name="name">Docker Container: Manager Access</field>
+        <field name="model_id" ref="model_j_docker_docker_container"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_manager'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    
+    <record id="rule_docker_container_user" model="ir.rule">
+        <field name="name">Docker Container: User Access</field>
+        <field name="model_id" ref="model_j_docker_docker_container"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_user'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    
+    <!-- Image access rules -->
+    <record id="rule_docker_image_admin" model="ir.rule">
+        <field name="name">Docker Image: Admin Access</field>
+        <field name="model_id" ref="model_j_docker_docker_image"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_admin'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    
+    <record id="rule_docker_image_manager" model="ir.rule">
+        <field name="name">Docker Image: Manager Access</field>
+        <field name="model_id" ref="model_j_docker_docker_image"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_manager'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    
+    <record id="rule_docker_image_user" model="ir.rule">
+        <field name="name">Docker Image: User Access</field>
+        <field name="model_id" ref="model_j_docker_docker_image"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_user'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    
+    <!-- Volume access rules -->
+    <record id="rule_docker_volume_admin" model="ir.rule">
+        <field name="name">Docker Volume: Admin Access</field>
+        <field name="model_id" ref="model_j_docker_docker_volume"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_admin'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    
+    <record id="rule_docker_volume_manager" model="ir.rule">
+        <field name="name">Docker Volume: Manager Access</field>
+        <field name="model_id" ref="model_j_docker_docker_volume"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_manager'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    
+    <record id="rule_docker_volume_user" model="ir.rule">
+        <field name="name">Docker Volume: User Access</field>
+        <field name="model_id" ref="model_j_docker_docker_volume"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_user'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    
+    <!-- Network access rules -->
+    <record id="rule_docker_network_admin" model="ir.rule">
+        <field name="name">Docker Network: Admin Access</field>
+        <field name="model_id" ref="model_j_docker_docker_network"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_admin'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    
+    <record id="rule_docker_network_manager" model="ir.rule">
+        <field name="name">Docker Network: Manager Access</field>
+        <field name="model_id" ref="model_j_docker_docker_network"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_manager'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+    
+    <record id="rule_docker_network_user" model="ir.rule">
+        <field name="name">Docker Network: User Access</field>
+        <field name="model_id" ref="model_j_docker_docker_network"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_docker_user'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    
 </odoo>
