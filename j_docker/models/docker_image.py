@@ -85,3 +85,38 @@ class DockerImage(models.Model):
         except Exception as e:
             _logger.error(f"Failed to pull image {self.repository}: {str(e)}")
             raise UserError(_("Failed to pull image: %s") % str(e))
+    
+    @api.model
+    def pull_from_docker_hub(self, server_id, image_name, tag='latest'):
+        """Pull an image from Docker Hub by name and tag
+        
+        Args:
+            server_id: ID of the Docker server to use
+            image_name: Name of the image (e.g., nginx, ubuntu)
+            tag: Tag of the image (e.g., latest, alpine)
+            
+        Returns:
+            bool: True if successful
+            
+        Raises:
+            UserError: If pull fails
+        """
+        try:
+            # Get server
+            server = self.env['j_docker.docker_server'].browse(server_id)
+            if not server:
+                raise UserError(_("Server not found"))
+                
+            # Construct full image name
+            full_image_name = f"{image_name}:{tag}" if tag else f"{image_name}:latest"
+            
+            # Pull the image
+            server.run_docker_command(f"image pull {full_image_name}", as_json=False)
+            
+            # Refresh the server images
+            server.refresh_images()
+            
+            return True
+        except Exception as e:
+            _logger.error(f"Failed to pull image {image_name}:{tag}: {str(e)}")
+            raise UserError(_("Failed to pull image: %s") % str(e))
