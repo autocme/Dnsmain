@@ -88,7 +88,7 @@ class DockerServer(models.Model):
             self._cr.commit()  # Commit the transaction to update the UI
             
             # Create SSH client
-            import paramiko_ssh_client
+            from . import paramiko_ssh_client
             client = paramiko_ssh_client.ParamikoSSHClient(
                 host=self.host,
                 port=self.port,
@@ -221,7 +221,7 @@ class DockerServer(models.Model):
             raise UserError(_("No command provided"))
             
         # Create SSH client
-        import paramiko_ssh_client
+        from . import paramiko_ssh_client
         client = paramiko_ssh_client.ParamikoSSHClient(
             host=self.host,
             port=self.port,
