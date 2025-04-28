@@ -21,3 +21,6 @@ access_docker_network_user,docker.network.user,model_j_docker_docker_network,j_d
 
 access_docker_command_wizard_admin,docker.command.wizard.admin,model_j_docker_command_wizard,j_docker.group_docker_admin,1,1,1,1
 access_docker_command_wizard_manager,docker.command.wizard.manager,model_j_docker_command_wizard,j_docker.group_docker_manager,1,1,1,1
+
+access_docker_image_pull_wizard_admin,docker.image.pull.wizard.admin,model_j_docker_image_pull_wizard,j_docker.group_docker_admin,1,1,1,1
+access_docker_image_pull_wizard_manager,docker.image.pull.wizard.manager,model_j_docker_image_pull_wizard,j_docker.group_docker_manager,1,1,1,1

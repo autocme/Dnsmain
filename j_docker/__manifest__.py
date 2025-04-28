@@ -31,6 +31,7 @@
         'views/docker_network_views.xml',
         'views/menu_views.xml',
         'wizards/docker_command_wizard_views.xml',
+        'wizards/docker_image_pull_wizard_views.xml',
     ],
     'demo': [],
     'installable': True,
