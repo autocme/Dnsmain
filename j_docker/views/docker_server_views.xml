@@ -48,16 +48,16 @@
                             <field name="port"/>
                             <field name="username"/>
                             <field name="auth_method" widget="radio"/>
-                            <field name="password" password="True" attrs="{'invisible': [('auth_method', '!=', 'password')], 'required': [('auth_method', '=', 'password')]}"/>
-                            <field name="private_key" attrs="{'invisible': [('auth_method', '!=', 'key')], 'required': [('auth_method', '=', 'key')]}" 
+                            <field name="password" password="True" invisible="auth_method != 'password'" required="auth_method == 'password'"/>
+                            <field name="private_key" invisible="auth_method != 'key'" required="auth_method == 'key'" 
                                    widget="ace" options="{'mode': 'text'}" placeholder="Paste your private key here"/>
-                            <field name="private_key_password" password="True" attrs="{'invisible': [('auth_method', '!=', 'key')]}"/>
+                            <field name="private_key_password" password="True" invisible="auth_method != 'key'"/>
                         </group>
                         <group>
                             <field name="docker_socket"/>
                             <field name="use_sudo"/>
                             <field name="last_check"/>
-                            <field name="error_message" attrs="{'invisible': [('status', '!=', 'error')]}"/>
+                            <field name="error_message" invisible="status != 'error'"/>
                         </group>
                     </group>
                     
@@ -93,11 +93,11 @@
                                     <field name="created"/>
                                     <field name="command"/>
                                     <button name="start" string="Start" type="object" icon="fa-play" 
-                                            attrs="{'invisible': [('state', 'in', ['running', 'paused'])]}"/>
+                                            invisible="state in ['running', 'paused']"/>
                                     <button name="stop" string="Stop" type="object" icon="fa-stop" 
-                                            attrs="{'invisible': [('state', 'not in', ['running', 'paused'])]}"/>
+                                            invisible="state not in ['running', 'paused']"/>
                                     <button name="restart" string="Restart" type="object" icon="fa-refresh" 
-                                            attrs="{'invisible': [('state', 'not in', ['running', 'paused'])]}"/>
+                                            invisible="state not in ['running', 'paused']"/>
                                     <button name="remove" string="Remove" type="object" icon="fa-trash" 
                                             confirm="Are you sure you want to remove this container?"/>
                                     <button name="inspect" string="Inspect" type="object" icon="fa-info-circle"/>
@@ -115,7 +115,7 @@
                                     <field name="created"/>
                                     <field name="size"/>
                                     <button name="pull" string="Pull" type="object" icon="fa-cloud-download" 
-                                            attrs="{'invisible': [('repository', '=', False)]}"/>
+                                            invisible="repository == False"/>
                                     <button name="remove" string="Remove" type="object" icon="fa-trash" 
                                             confirm="Are you sure you want to remove this image?"/>
                                     <button name="inspect" string="Inspect" type="object" icon="fa-info-circle"/>

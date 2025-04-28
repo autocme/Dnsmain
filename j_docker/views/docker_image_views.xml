@@ -13,7 +13,7 @@
                 <field name="created"/>
                 <field name="size"/>
                 <button name="pull" string="Pull" type="object" icon="fa-cloud-download" 
-                        attrs="{'invisible': [('repository', '=', False)]}"/>
+                        invisible="repository == False"/>
                 <button name="remove" string="Remove" type="object" icon="fa-trash" 
                         confirm="Are you sure you want to remove this image?"/>
                 <button name="inspect" string="Inspect" type="object" icon="fa-info-circle"/>
@@ -29,7 +29,7 @@
             <form>
                 <header>
                     <button name="pull" string="Pull Update" type="object" class="oe_highlight" 
-                            attrs="{'invisible': [('repository', '=', False)]}"/>
+                            invisible="repository == False"/>
                     <button name="remove" string="Remove" type="object" class="btn-danger"
                             confirm="Are you sure you want to remove this image? This operation cannot be undone."/>
                 </header>
