@@ -15,11 +15,11 @@
                 <field name="status"/>
                 <field name="created"/>
                 <button name="start" string="Start" type="object" icon="fa-play" 
-                        attrs="{'invisible': [('state', 'in', ['running', 'paused'])]}"/>
+                        invisible="state == 'running' or state == 'paused'"/>
                 <button name="stop" string="Stop" type="object" icon="fa-stop" 
-                        attrs="{'invisible': [('state', 'not in', ['running', 'paused'])]}"/>
+                        invisible="state != 'running' and state != 'paused'"/>
                 <button name="restart" string="Restart" type="object" icon="fa-refresh" 
-                        attrs="{'invisible': [('state', 'not in', ['running', 'paused'])]}"/>
+                        invisible="state != 'running' and state != 'paused'"/>
                 <button name="inspect" string="Inspect" type="object" icon="fa-info-circle"/>
                 <button name="get_logs" string="Logs" type="object" icon="fa-file-text-o"/>
             </tree>
@@ -34,11 +34,11 @@
             <form>
                 <header>
                     <button name="start" string="Start" type="object" class="oe_highlight"
-                            attrs="{'invisible': [('state', 'in', ['running', 'paused'])]}"/>
+                            invisible="state == 'running' or state == 'paused'"/>
                     <button name="stop" string="Stop" type="object" class="btn-danger"
-                            attrs="{'invisible': [('state', 'not in', ['running', 'paused'])]}"/>
+                            invisible="state != 'running' and state != 'paused'"/>
                     <button name="restart" string="Restart" type="object" 
-                            attrs="{'invisible': [('state', 'not in', ['running', 'paused'])]}"/>
+                            invisible="state != 'running' and state != 'paused'"/>
                     <button name="remove" string="Remove" type="object" class="btn-danger"
                             confirm="Are you sure you want to remove this container? This operation cannot be undone."/>
                     <button name="get_logs" string="View Logs" type="object" />
