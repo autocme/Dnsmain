@@ -135,8 +135,7 @@
                                     <button name="inspect" string="Inspect" type="object" icon="fa-info-circle"/>
                                 </tree>
                             </field>
-                            <button name="prune" string="Prune Unused Volumes" type="object" class="btn-danger"
-                                    confirm="This will remove all unused volumes. This operation cannot be undone. Are you sure?"/>
+                            <!-- Volume management buttons are in the volume model -->
                         </page>
                         
                         <page string="Networks" name="networks">
@@ -152,8 +151,7 @@
                                     <button name="inspect" string="Inspect" type="object" icon="fa-info-circle"/>
                                 </tree>
                             </field>
-                            <button name="prune" string="Prune Unused Networks" type="object" class="btn-danger"
-                                    confirm="This will remove all unused networks. This operation cannot be undone. Are you sure?"/>
+                            <!-- Network management buttons are in the network model -->
                         </page>
                         
                         <page string="API Version Info" name="api_version_info">
