@@ -95,9 +95,6 @@ def fix_json_command_output(output):
         # Return as-is, will be processed line by line
         return output
     
-    # Fix unescaped quotes in strings
-    output = re.sub(r'(?<!\\)"(.*?)(?<!\\)"', lambda m: f'"{m.group(1).replace(\'"\\"\', \'\\"\')}"', output)
-    
     # Fix missing quotes around keys
     output = re.sub(r'(\s*)(\w+)(\s*):(\s*)', r'\1"\2"\3:\4', output)
     
