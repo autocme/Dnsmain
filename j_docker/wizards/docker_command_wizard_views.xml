@@ -13,15 +13,15 @@
                         <field name="is_json"/>
                     </group>
                 </group>
-                <div attrs="{'invisible': [('result', '=', False)]}">
+                <div invisible="result == False">
                     <h3>Result:</h3>
-                    <field name="result" readonly="1" widget="ace" options="{'mode': 'json'}" attrs="{'invisible': [('is_json', '=', False)]}"/>
-                    <field name="result" readonly="1" attrs="{'invisible': [('is_json', '=', True)]}"/>
+                    <field name="result" readonly="1" widget="ace" options="{'mode': 'json'}" invisible="is_json == False"/>
+                    <field name="result" readonly="1" invisible="is_json == True"/>
                 </div>
                 <footer>
                     <button name="execute_command" string="Execute" type="object" class="btn-primary"/>
                     <button name="save_command" string="Save Command" type="object" class="btn-secondary" 
-                            attrs="{'invisible': [('command', '=', False)]}"/>
+                            invisible="command == False or command == ''"/>
                     <button string="Close" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
