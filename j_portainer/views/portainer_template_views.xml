@@ -28,7 +28,8 @@
                         <group>
                             <field name="image" readonly="1"/>
                             <field name="platform" readonly="1"/>
-                            <field name="categories" readonly="1" widget="many2many_tags"/>
+                            <field name="category_ids" readonly="1" widget="many2many_tags"/>
+                            <field name="categories" invisible="1"/>
                             <field name="registry" readonly="1"/>
                         </group>
                     </group>
@@ -71,7 +72,8 @@
                 <field name="template_type"/>
                 <field name="is_custom"/>
                 <field name="server_id"/>
-                <field name="categories" widget="many2many_tags"/>
+                <field name="category_ids" widget="many2many_tags"/>
+                <field name="categories" invisible="1"/>
                 <button name="action_deploy" string="Deploy" type="object" 
                         icon="fa-rocket"/>
             </tree>
@@ -87,7 +89,8 @@
                 <field name="title"/>
                 <field name="image"/>
                 <field name="server_id"/>
-                <field name="categories"/>
+                <field name="category_ids"/>
+                <field name="categories" invisible="1"/>
                 <separator/>
                 <filter string="Custom Templates" name="custom" domain="[('is_custom', '=', True)]"/>
                 <filter string="Official Templates" name="official" domain="[('is_custom', '=', False)]"/>
