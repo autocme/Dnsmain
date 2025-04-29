@@ -115,6 +115,10 @@ class PortainerVolume(models.Model):
             _logger.error(f"Error removing volume {self.name}: {str(e)}")
             raise UserError(_("Error removing volume: %s") % str(e))
     
+    def action_remove(self):
+        """Action to remove the volume from the UI"""
+        return self.remove()
+        
     def action_refresh(self):
         """Refresh volume information"""
         self.ensure_one()
