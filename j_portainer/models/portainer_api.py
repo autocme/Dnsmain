@@ -149,6 +149,36 @@ class PortainerAPI(models.AbstractModel):
             return response.status_code in [200, 201, 204]
             
         return False
+        
+    def prune_images(self, server_id, environment_id, filters=None):
+        """Prune unused images
+        
+        Args:
+            server_id (int): ID of the Portainer server
+            environment_id (int): ID of the environment
+            filters (dict, optional): Filters to apply
+            
+        Returns:
+            dict: Pruning results including ImagesDeleted and SpaceReclaimed
+        """
+        server = self.env['j_portainer.server'].browse(server_id)
+        if not server:
+            return False
+            
+        endpoint = f'/api/endpoints/{environment_id}/docker/images/prune'
+        params = {}
+        if filters:
+            params['filters'] = filters
+            
+        response = server._make_api_request(endpoint, 'POST', params=params)
+        
+        if response.status_code in [200, 201, 204]:
+            try:
+                return response.json()
+            except Exception as e:
+                return {'error': str(e)}
+        
+        return False
     
     def stack_action(self, server_id, stack_id, action, data=None):
         """Perform action on a stack

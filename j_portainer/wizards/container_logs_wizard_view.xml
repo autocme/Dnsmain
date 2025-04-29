@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_container_logs_wizard_form" model="ir.ui.view">
+        <field name="name">j_portainer.container.logs.wizard.form</field>
+        <field name="model">j_portainer.container.logs.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Container Logs">
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" class="oe_inline" placeholder="Container"/></h1>
+                    </div>
+                    <group>
+                        <field name="container_id" invisible="1"/>
+                        <field name="server_id"/>
+                        <field name="environment_id" invisible="1"/>
+                        <field name="lines"/>
+                    </group>
+                    <div class="alert alert-info" role="alert" attrs="{'invisible': [('logs', '!=', False)]}">
+                        <span class="fa fa-info-circle"/> Click the "Refresh Logs" button to fetch container logs.
+                    </div>
+                    <group string="Container Logs" colspan="4">
+                        <field name="logs" nolabel="1" colspan="4" widget="ace" options="{'mode': 'text', 'theme': 'monokai'}" style="min-height: 500px; font-family: 'Courier New', monospace;"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="refresh_logs" string="Refresh Logs" type="object" class="btn-primary"/>
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    
+    <record id="action_container_logs_wizard" model="ir.actions.act_window">
+        <field name="name">View Logs</field>
+        <field name="res_model">j_portainer.container.logs.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>
