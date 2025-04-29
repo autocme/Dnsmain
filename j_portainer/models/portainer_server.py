@@ -203,7 +203,7 @@ class PortainerServer(models.Model):
                     'public_url': env.get('PublicURL', ''),
                     'group_id': env.get('GroupId'),
                     'group_name': env.get('GroupName', ''),
-                    'tags': ','.join(env.get('Tags', [])),
+                    'tags': ','.join(env.get('Tags', [])) if isinstance(env.get('Tags', []), list) else '',
                     'details': json.dumps(details, indent=2) if details else '',
                 })
             
@@ -601,7 +601,7 @@ class PortainerServer(models.Model):
                     'registry': template.get('registry', ''),
                     'image': template.get('image', ''),
                     'repository': template.get('repository', {}),
-                    'categories': ','.join(template.get('categories', [])),
+                    'categories': ','.join(template.get('categories', [])) if isinstance(template.get('categories', []), list) else '',
                     'env': json.dumps(template.get('env', [])),
                     'volumes': json.dumps(template.get('volumes', [])),
                     'ports': json.dumps(template.get('ports', [])),
@@ -627,7 +627,7 @@ class PortainerServer(models.Model):
                         'logo': template.get('logo', ''),
                         'image': template.get('image', ''),
                         'repository': template.get('repository', {}),
-                        'categories': ','.join(template.get('categories', [])),
+                        'categories': ','.join(template.get('categories', [])) if isinstance(template.get('categories', []), list) else '',
                         'env': json.dumps(template.get('env', [])),
                         'volumes': json.dumps(template.get('volumes', [])),
                         'ports': json.dumps(template.get('ports', [])),
