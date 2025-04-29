@@ -157,7 +157,7 @@ class PortainerServer(models.Model):
             })
             raise UserError(_("Connection error: %s") % str(e))
     
-    def _make_api_request(self, endpoint, method='GET', data=None, params=None):
+    def _make_api_request(self, endpoint, method='GET', data=None, params=None, headers=None):
         """Make a request to the Portainer API
         
         Args:
@@ -165,32 +165,43 @@ class PortainerServer(models.Model):
             method (str): HTTP method (GET, POST, PUT, DELETE)
             data (dict, optional): Request payload for POST/PUT
             params (dict, optional): URL parameters
+            headers (dict, optional): Additional headers to include with the request
             
         Returns:
             requests.Response: API response
         """
         url = self.url.rstrip('/') + endpoint
-        headers = {
+        
+        # Default headers
+        request_headers = {
             'X-API-Key': self.api_key,
             'Content-Type': 'application/json'
         }
         
+        # Update with any additional headers
+        if headers:
+            request_headers.update(headers)
+            
         try:
+            _logger.debug(f"Making {method} request to {url}")
+            
             if method == 'GET':
-                response = requests.get(url, headers=headers, params=params, 
-                                      verify=self.verify_ssl, timeout=10)
+                response = requests.get(url, headers=request_headers, params=params, 
+                                      verify=self.verify_ssl, timeout=15)
             elif method == 'POST':
-                response = requests.post(url, headers=headers, json=data,
-                                       verify=self.verify_ssl, timeout=10)
+                _logger.debug(f"POST request data: {json.dumps(data, indent=2) if data else None}")
+                response = requests.post(url, headers=request_headers, json=data,
+                                       verify=self.verify_ssl, timeout=15)
             elif method == 'PUT':
-                response = requests.put(url, headers=headers, json=data,
-                                      verify=self.verify_ssl, timeout=10)
+                response = requests.put(url, headers=request_headers, json=data,
+                                      verify=self.verify_ssl, timeout=15)
             elif method == 'DELETE':
-                response = requests.delete(url, headers=headers,
-                                        verify=self.verify_ssl, timeout=10)
+                response = requests.delete(url, headers=request_headers, params=params,
+                                        verify=self.verify_ssl, timeout=15)
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
                 
+            _logger.debug(f"API response status: {response.status_code}")
             return response
             
         except requests.exceptions.ConnectionError as e:
@@ -732,7 +743,24 @@ class PortainerServer(models.Model):
             if response.status_code != 200:
                 raise UserError(_("Failed to get templates: %s") % response.text)
                 
-            templates = response.json()
+            # Parse the response - it could be a dict with 'templates' key or a direct array
+            response_data = response.json()
+            templates = []
+            
+            if isinstance(response_data, dict) and 'templates' in response_data:
+                # New API format: {"version": "2", "templates": [...]}
+                templates = response_data.get('templates', [])
+                _logger.info(f"Using template list from 'templates' key, found {len(templates)} templates")
+            elif isinstance(response_data, list):
+                # Old API format: direct array of templates
+                templates = response_data
+                _logger.info(f"Using direct template list, found {len(templates)} templates")
+            else:
+                _logger.warning(f"Unexpected template response format: {type(response_data)}")
+                if isinstance(response_data, dict):
+                    _logger.warning(f"Template response keys: {list(response_data.keys())}")
+                templates = []
+            
             template_count = 0
             updated_count = 0
             created_count = 0
