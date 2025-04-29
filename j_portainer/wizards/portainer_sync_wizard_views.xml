@@ -95,4 +95,11 @@
             </xpath>
         </field>
     </record>
+    
+    <!-- Menu Item -->
+    <menuitem id="menu_j_portainer_sync_wizard" 
+              name="Synchronize" 
+              parent="menu_j_portainer_root" 
+              action="action_portainer_sync_wizard"
+              sequence="5"/>
 </odoo>
