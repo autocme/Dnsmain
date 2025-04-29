@@ -151,10 +151,4 @@
         </field>
     </record>
     
-    <!-- Menu Item -->
-    <menuitem id="menu_j_portainer_containers" 
-              name="Containers" 
-              parent="menu_j_portainer_resources" 
-              action="action_portainer_container"
-              sequence="10"/>
 </odoo>

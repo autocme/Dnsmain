@@ -12,5 +12,59 @@
               parent="menu_j_portainer_root" 
               sequence="30"/>
     
-    <!-- Actions for resources will be defined in their respective view files -->
+    <!-- Servers Menu -->
+    <menuitem id="menu_j_portainer_servers" 
+              name="Servers" 
+              parent="menu_j_portainer_root" 
+              action="action_portainer_server"
+              sequence="10"/>
+              
+    <!-- Environments Menu -->
+    <menuitem id="menu_j_portainer_environments" 
+              name="Environments" 
+              parent="menu_j_portainer_resources" 
+              action="action_portainer_environment"
+              sequence="10"/>
+              
+    <!-- Containers Menu -->
+    <menuitem id="menu_j_portainer_containers" 
+              name="Containers" 
+              parent="menu_j_portainer_resources" 
+              action="action_portainer_container"
+              sequence="20"/>
+              
+    <!-- Images Menu -->
+    <menuitem id="menu_j_portainer_images" 
+              name="Images" 
+              parent="menu_j_portainer_resources" 
+              action="action_portainer_image"
+              sequence="30"/>
+              
+    <!-- Volumes Menu -->
+    <menuitem id="menu_j_portainer_volumes" 
+              name="Volumes" 
+              parent="menu_j_portainer_resources" 
+              action="action_portainer_volume"
+              sequence="40"/>
+              
+    <!-- Networks Menu -->
+    <menuitem id="menu_j_portainer_networks" 
+              name="Networks" 
+              parent="menu_j_portainer_resources" 
+              action="action_portainer_network"
+              sequence="50"/>
+              
+    <!-- Templates Menu -->
+    <menuitem id="menu_j_portainer_templates" 
+              name="Templates" 
+              parent="menu_j_portainer_resources" 
+              action="action_portainer_template"
+              sequence="60"/>
+              
+    <!-- Stacks Menu -->
+    <menuitem id="menu_j_portainer_stacks" 
+              name="Stacks" 
+              parent="menu_j_portainer_resources" 
+              action="action_portainer_stack"
+              sequence="70"/>
 </odoo>

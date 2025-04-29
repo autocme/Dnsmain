@@ -108,10 +108,4 @@
         </field>
     </record>
     
-    <!-- Menu Item -->
-    <menuitem id="menu_j_portainer_images" 
-              name="Images" 
-              parent="menu_j_portainer_resources" 
-              action="action_portainer_image"
-              sequence="20"/>
 </odoo>

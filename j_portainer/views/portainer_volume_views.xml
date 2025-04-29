@@ -108,10 +108,4 @@
         </field>
     </record>
     
-    <!-- Menu Item -->
-    <menuitem id="menu_j_portainer_volumes" 
-              name="Volumes" 
-              parent="menu_j_portainer_resources" 
-              action="action_portainer_volume"
-              sequence="30"/>
 </odoo>
