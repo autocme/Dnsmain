@@ -27,7 +27,7 @@ class PortainerTemplate(models.Model):
     image = fields.Char('Image')
     repository = fields.Text('Repository')
     categories = fields.Char('Categories')
-    env = fields.Text('Environment Variables')
+    environment_vars = fields.Text('Environment Variables')
     volumes = fields.Text('Volumes')
     ports = fields.Text('Ports')
     note = fields.Text('Note')
@@ -42,11 +42,11 @@ class PortainerTemplate(models.Model):
     def get_formatted_env(self):
         """Get formatted environment variables"""
         self.ensure_one()
-        if not self.env:
+        if not self.environment_vars:
             return ''
             
         try:
-            env_data = json.loads(self.env)
+            env_data = json.loads(self.environment_vars)
             result = []
             
             for var in env_data:
@@ -67,7 +67,7 @@ class PortainerTemplate(models.Model):
             return '\n'.join(result)
         except Exception as e:
             _logger.error(f"Error formatting environment variables: {str(e)}")
-            return self.env
+            return self.environment_vars
             
     def get_formatted_volumes(self):
         """Get formatted volumes"""
