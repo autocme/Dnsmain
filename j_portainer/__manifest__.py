@@ -26,7 +26,6 @@
     'data': [
         'security/portainer_security.xml',
         'security/ir.model.access.csv',
-        'views/menu_views.xml',
         'views/portainer_server_views.xml',
         'views/portainer_environment_views.xml',
         'views/portainer_container_views.xml',
@@ -36,6 +35,7 @@
         'views/portainer_template_views.xml',
         'views/portainer_stack_views.xml',
         'wizards/portainer_sync_wizard_views.xml',
+        'views/menu_views.xml',
     ],
     'demo': [],
     'installable': True,
