@@ -47,6 +47,13 @@
               action="action_portainer_template"
               sequence="40"/>
               
+    <!-- Custom Templates Menu -->
+    <menuitem id="menu_j_portainer_custom_templates" 
+              name="Custom Templates" 
+              parent="menu_j_portainer_resources" 
+              action="action_portainer_custom_template"
+              sequence="45"/>
+              
     <!-- Stacks Menu -->
     <menuitem id="menu_j_portainer_stacks" 
               name="Stacks" 
@@ -80,4 +87,11 @@
               parent="menu_j_portainer_configuration" 
               action="action_portainer_sync_wizard"
               sequence="20"/>
+              
+    <!-- Git Credentials Menu -->
+    <menuitem id="menu_j_portainer_git_credentials" 
+              name="Git Credentials" 
+              parent="menu_j_portainer_configuration" 
+              action="action_portainer_git_credentials"
+              sequence="30"/>
 </odoo>

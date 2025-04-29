@@ -20,7 +20,10 @@ class PortainerTemplateNew(models.Model):
         ('2', 'Stack'),
         ('3', 'App Template')
     ], string='Type', default='1', required=True)
-    platform = fields.Char('Platform', default='linux')
+    platform = fields.Selection([
+        ('linux', 'Linux'),
+        ('windows', 'Windows')
+    ], string='Platform', default='linux', required=True)
     template_id = fields.Integer('Template ID')
     logo = fields.Char('Logo URL')
     registry = fields.Char('Registry')
@@ -34,6 +37,25 @@ class PortainerTemplateNew(models.Model):
     note = fields.Text('Note')
     details = fields.Text('Details', help="Additional details about the template")
     is_custom = fields.Boolean('Custom Template', default=False)
+    
+    # Custom template fields
+    build_method = fields.Selection([
+        ('editor', 'Web Editor'),
+        ('repository', 'Git Repository')
+    ], string='Build Method', default='editor')
+    compose_file = fields.Text('Compose File', help="Docker Compose file content for the template")
+    
+    # Git repository fields
+    git_authentication = fields.Boolean('Git Authentication', default=False)
+    git_credentials_id = fields.Many2one('j_portainer.git.credentials', string='Git Credentials')
+    git_username = fields.Char('Git Username')
+    git_token = fields.Char('Git Token/Password')
+    git_save_credential = fields.Boolean('Save Git Credentials', default=False)
+    git_credential_name = fields.Char('Git Credential Name')
+    git_repository_url = fields.Char('Git Repository URL')
+    git_repository_reference = fields.Char('Git Repository Reference', help="Branch or tag name")
+    git_compose_path = fields.Char('Git Compose Path', help="Path to the compose file in the repository")
+    git_skip_tls = fields.Boolean('Skip TLS Verification', default=False)
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     
@@ -262,3 +284,110 @@ class PortainerTemplateNew(models.Model):
         except Exception as e:
             _logger.error(f"Error refreshing templates: {str(e)}")
             raise UserError(_("Error refreshing templates: %s") % str(e))
+            
+    @api.model
+    def create(self, vals):
+        """Override create to handle custom templates creation in Portainer"""
+        if vals.get('is_custom'):
+            # This is a custom template, create it in Portainer
+            server_id = vals.get('server_id')
+            if not server_id:
+                raise UserError(_("Server is required for custom templates"))
+                
+            # Prepare template data for Portainer API
+            template_data = self._prepare_template_data(vals)
+            
+            # Create template in Portainer
+            try:
+                api = self.env['j_portainer.api']
+                server = self.env['j_portainer.server'].browse(server_id)
+                
+                response = api.create_template(server_id, template_data)
+                
+                if response and 'Id' in response:
+                    # Template created successfully, set template_id
+                    vals['template_id'] = response['Id']
+                else:
+                    raise UserError(_("Failed to create template in Portainer"))
+                    
+            except Exception as e:
+                _logger.error(f"Error creating template in Portainer: {str(e)}")
+                raise UserError(_("Error creating template in Portainer: %s") % str(e))
+                
+        # Create the record
+        return super(PortainerTemplateNew, self).create(vals)
+        
+    def _prepare_template_data(self, vals):
+        """Prepare template data for Portainer API"""
+        template_data = {
+            'type': int(vals.get('template_type', 1)),
+            'title': vals.get('title', ''),
+            'description': vals.get('description', ''),
+            'note': vals.get('note', ''),
+            'platform': vals.get('platform', 'linux'),
+            'categories': vals.get('categories', '').split(',') if vals.get('categories') else []
+        }
+        
+        # Handle build method
+        if vals.get('build_method') == 'editor':
+            # Web editor method
+            template_data['composeFileContent'] = vals.get('compose_file', '')
+        elif vals.get('build_method') == 'repository':
+            # Git repository method
+            git_data = {
+                'url': vals.get('git_repository_url', ''),
+                'referenceName': vals.get('git_repository_reference', 'master'),
+                'composeFilePath': vals.get('git_compose_path', 'docker-compose.yml'),
+                'skipTLSVerify': vals.get('git_skip_tls', False)
+            }
+            
+            # Handle authentication
+            if vals.get('git_authentication'):
+                # Use credentials if provided
+                if vals.get('git_credentials_id'):
+                    credentials = self.env['j_portainer.git.credentials'].browse(vals.get('git_credentials_id'))
+                    git_data['authentication'] = {
+                        'username': credentials.username,
+                        'password': credentials.token
+                    }
+                else:
+                    # Use provided username/token
+                    git_data['authentication'] = {
+                        'username': vals.get('git_username', ''),
+                        'password': vals.get('git_token', '')
+                    }
+                    
+                    # Save credentials if requested
+                    if vals.get('git_save_credential') and vals.get('git_credential_name'):
+                        self._save_git_credentials(
+                            vals.get('server_id'),
+                            vals.get('git_credential_name'),
+                            vals.get('git_username', ''),
+                            vals.get('git_token', '')
+                        )
+                        
+            template_data['repositoryURL'] = git_data['url']
+            template_data['repositoryReferenceName'] = git_data['referenceName']
+            template_data['composeFilePath'] = git_data['composeFilePath']
+            template_data['repositoryAuthentication'] = bool(vals.get('git_authentication'))
+            
+            if template_data['repositoryAuthentication'] and 'authentication' in git_data:
+                template_data['repositoryUsername'] = git_data['authentication']['username']
+                template_data['repositoryPassword'] = git_data['authentication']['password']
+                
+            template_data['skipTLSVerify'] = git_data['skipTLSVerify']
+            
+        return template_data
+        
+    def _save_git_credentials(self, server_id, name, username, token):
+        """Save Git credentials for future use"""
+        try:
+            self.env['j_portainer.git.credentials'].create({
+                'name': name,
+                'username': username,
+                'token': token,
+                'server_id': server_id
+            })
+        except Exception as e:
+            _logger.error(f"Error saving Git credentials: {str(e)}")
+            # Don't raise exception, just log the error
