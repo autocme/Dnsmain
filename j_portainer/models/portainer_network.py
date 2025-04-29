@@ -21,6 +21,8 @@ class PortainerNetwork(models.Model):
     containers = fields.Text('Containers')
     labels = fields.Text('Labels')
     details = fields.Text('Details')
+    is_default_network = fields.Boolean('Default Network', default=False, 
+                                       help="Default networks like 'bridge' and 'host' cannot be removed")
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
@@ -165,6 +167,10 @@ class PortainerNetwork(models.Model):
         except Exception as e:
             _logger.error(f"Error removing network {self.name}: {str(e)}")
             raise UserError(_("Error removing network: %s") % str(e))
+    
+    def action_remove(self):
+        """Action to remove the network from the UI"""
+        return self.remove()
     
     def action_refresh(self):
         """Refresh network information"""
