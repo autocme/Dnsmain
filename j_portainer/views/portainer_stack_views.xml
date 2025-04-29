@@ -123,10 +123,4 @@
         </field>
     </record>
     
-    <!-- Menu Item -->
-    <menuitem id="menu_j_portainer_stacks" 
-              name="Stacks" 
-              parent="menu_j_portainer_resources" 
-              action="action_portainer_stack"
-              sequence="60"/>
 </odoo>

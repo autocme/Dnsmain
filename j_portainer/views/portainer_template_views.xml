@@ -118,10 +118,4 @@
         </field>
     </record>
     
-    <!-- Menu Item -->
-    <menuitem id="menu_j_portainer_templates" 
-              name="Templates" 
-              parent="menu_j_portainer_resources" 
-              action="action_portainer_template"
-              sequence="50"/>
 </odoo>

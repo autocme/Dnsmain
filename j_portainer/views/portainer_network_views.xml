@@ -115,10 +115,4 @@
         </field>
     </record>
     
-    <!-- Menu Item -->
-    <menuitem id="menu_j_portainer_networks" 
-              name="Networks" 
-              parent="menu_j_portainer_resources" 
-              action="action_portainer_network"
-              sequence="40"/>
 </odoo>

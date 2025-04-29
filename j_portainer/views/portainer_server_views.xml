@@ -211,10 +211,4 @@
         </field>
     </record>
     
-    <!-- Servers Menu -->
-    <menuitem id="menu_j_portainer_servers" 
-              name="Servers" 
-              parent="menu_j_portainer_root" 
-              action="action_portainer_server"
-              sequence="10"/>
 </odoo>

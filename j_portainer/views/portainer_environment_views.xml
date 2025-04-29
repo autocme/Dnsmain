@@ -161,10 +161,4 @@
         </field>
     </record>
     
-    <!-- Environments Menu -->
-    <menuitem id="menu_j_portainer_environments" 
-              name="Environments" 
-              parent="menu_j_portainer_root" 
-              action="action_portainer_environment"
-              sequence="20"/>
 </odoo>
