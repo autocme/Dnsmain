@@ -765,13 +765,14 @@ class PortainerServer(models.Model):
                     'logo': template.get('logo', ''),
                     'registry': template.get('registry', ''),
                     'image': template.get('image', ''),
-                    'repository': template.get('repository', {}),
+                    'repository': json.dumps(template.get('repository', {})) if isinstance(template.get('repository', {}), dict) else '',
                     'categories': ','.join(template.get('categories', [])) if isinstance(template.get('categories', []), list) else '',
                     'environment_variables': json.dumps(template.get('env', [])),
                     'volumes': json.dumps(template.get('volumes', [])),
                     'ports': json.dumps(template.get('ports', [])),
                     'note': template.get('note', ''),
                     'is_custom': False,
+                    'details': json.dumps(template, indent=2),
                 }
                 
                 if existing_template:
@@ -820,14 +821,27 @@ class PortainerServer(models.Model):
                         'template_id': template_id,
                         'logo': template.get('logo', ''),
                         'image': template.get('image', ''),
-                        'repository': template.get('repository', {}),
+                        'repository': json.dumps(template.get('repository', {})) if isinstance(template.get('repository', {}), dict) else '',
                         'categories': ','.join(template.get('categories', [])) if isinstance(template.get('categories', []), list) else '',
                         'environment_variables': json.dumps(template.get('env', [])),
                         'volumes': json.dumps(template.get('volumes', [])),
                         'ports': json.dumps(template.get('ports', [])),
                         'note': template.get('note', ''),
                         'is_custom': True,
+                        'details': json.dumps(template, indent=2),
                     }
+                    
+                    # Add Git repository information if available
+                    if 'repositoryURL' in template:
+                        template_data['build_method'] = 'repository'
+                        template_data['git_repository_url'] = template.get('repositoryURL', '')
+                        template_data['git_repository_reference'] = template.get('repositoryReferenceName', '')
+                        template_data['git_compose_path'] = template.get('composeFilePath', '')
+                        template_data['git_skip_tls'] = template.get('skipTLSVerify', False)
+                        template_data['git_authentication'] = template.get('repositoryAuthentication', False)
+                    elif 'composeFileContent' in template:
+                        template_data['build_method'] = 'editor'
+                        template_data['compose_file'] = template.get('composeFileContent', '')
                     
                     if existing_template:
                         # Update existing custom template
