@@ -784,8 +784,8 @@ class PortainerServer(models.Model):
                     self.env['j_portainer.template'].create(template_data)
                     created_count += 1
                 
-                if template_id:
-                    synced_template_ids.append(('standard', template_id))
+                if isinstance(template_id, (int, str)) and str(template_id).isdigit():
+                    synced_template_ids.append(('standard', int(template_id)))
                 template_count += 1
             
             # Get custom templates
@@ -852,12 +852,31 @@ class PortainerServer(models.Model):
                         self.env['j_portainer.template'].create(template_data)
                         created_count += 1
                     
-                    if template_id:
-                        synced_template_ids.append(('custom', template_id))
+                    if isinstance(template_id, (int, str)) and str(template_id).isdigit():
+                        synced_template_ids.append(('custom', int(template_id)))
                     template_count += 1
             
+            # Clean up templates that no longer exist in Portainer
+            # Get all templates for this server
+            all_templates = self.env['j_portainer.template'].search([
+                ('server_id', '=', self.id)
+            ])
+            
+            # Templates to remove - those not in synced_template_ids
+            templates_to_remove = all_templates.filtered(
+                lambda t: (('standard' if not t.is_custom else 'custom'), t.template_id) not in synced_template_ids
+            )
+            
+            # Remove obsolete templates
+            if templates_to_remove:
+                removed_count = len(templates_to_remove)
+                _logger.info(f"Removing {removed_count} obsolete templates")
+                templates_to_remove.unlink()
+            else:
+                removed_count = 0
+            
             # Log the statistics
-            _logger.info(f"Template sync complete: {template_count} total templates, {created_count} created, {updated_count} updated")
+            _logger.info(f"Template sync complete: {template_count} total templates, {created_count} created, {updated_count} updated, {removed_count} removed")
             
             self.write({'last_sync': fields.Datetime.now()})
             
@@ -866,7 +885,7 @@ class PortainerServer(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Templates Synchronized'),
-                    'message': _('%d templates found') % template_count,
+                    'message': _('%d templates found, %d templates removed') % (template_count, removed_count),
                     'sticky': False,
                     'type': 'success',
                 }
