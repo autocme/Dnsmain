@@ -8,6 +8,7 @@ import logging
 import json
 from datetime import datetime
 import urllib3
+from typing import Optional, Union, Any
 
 # Disable SSL warnings for self-signed certificates
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -18,6 +19,37 @@ class PortainerServer(models.Model):
     _name = 'j_portainer.server'
     _description = 'Portainer Server'
     _inherit = ['mail.thread', 'mail.activity.mixin']
+    
+    def _parse_date_value(self, date_value: Any) -> Optional[datetime]:
+        """Parse date value from API response
+        
+        Handles different date formats from the Portainer API including:
+        - ISO format strings (2022-01-01T00:00:00Z)
+        - Integer timestamps
+        - None values
+        
+        Args:
+            date_value: Date value from API response
+            
+        Returns:
+            datetime object or None if value cannot be parsed
+        """
+        if not date_value:
+            return None
+            
+        try:
+            if isinstance(date_value, str):
+                # Handle ISO format string
+                return datetime.fromisoformat(date_value.replace('Z', '+00:00'))
+            elif isinstance(date_value, int):
+                # Handle timestamp
+                return datetime.fromtimestamp(date_value)
+            else:
+                _logger.warning(f"Unsupported date format: {date_value} ({type(date_value)})")
+                return None
+        except Exception as e:
+            _logger.warning(f"Error parsing date value {date_value}: {str(e)}")
+            return None
     
     name = fields.Char('Name', required=True, tracking=True)
     url = fields.Char('URL', required=True, tracking=True,
@@ -720,10 +752,8 @@ class PortainerServer(models.Model):
                         'name': stack.get('Name', ''),
                         'type': str(stack.get('Type', 1)),
                         'status': str(stack.get('Status', 0)),
-                        'creation_date': datetime.fromisoformat(stack.get('CreationDate').replace('Z', '+00:00')) 
-                                      if stack.get('CreationDate') else datetime.now(),
-                        'update_date': datetime.fromisoformat(stack.get('UpdateDate').replace('Z', '+00:00')) 
-                                    if stack.get('UpdateDate') else None,
+                        'creation_date': self._parse_date_value(stack.get('CreationDate')) or datetime.now(),
+                        'update_date': self._parse_date_value(stack.get('UpdateDate')),
                         'file_content': file_content,
                         'details': json.dumps(stack, indent=2),
                     })

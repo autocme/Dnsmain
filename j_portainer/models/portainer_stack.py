@@ -15,8 +15,15 @@ class PortainerStack(models.Model):
     
     name = fields.Char('Name', required=True)
     stack_id = fields.Integer('Stack ID', required=True)
-    type = fields.Integer('Type', help="1 = Swarm, 2 = Compose")
-    status = fields.Integer('Status', help="1 = Active, 2 = Inactive")
+    type = fields.Selection([
+        ('1', 'Swarm'),
+        ('2', 'Compose')
+    ], string='Type', default='2')
+    status = fields.Selection([
+        ('0', 'Unknown'),
+        ('1', 'Active'),
+        ('2', 'Inactive')
+    ], string='Status', default='0')
     file_content = fields.Text('Stack File')
     content = fields.Text('Content', compute='_compute_content', store=True)
     creation_date = fields.Datetime('Created')
@@ -75,7 +82,7 @@ class PortainerStack(models.Model):
                 
             if result:
                 # Update status
-                self.write({'status': 1})
+                self.write({'status': '1'})
                 
                 return {
                     'type': 'ir.actions.client',
@@ -104,7 +111,7 @@ class PortainerStack(models.Model):
                 
             if result:
                 # Update status
-                self.write({'status': 2})
+                self.write({'status': '2'})
                 
                 return {
                     'type': 'ir.actions.client',
@@ -229,7 +236,7 @@ class PortainerStack(models.Model):
                 'Environment': [],
                 'EndpointId': environment_id,
                 'SwarmID': '',
-                'Type': 2  # Compose
+                'Type': 2  # Compose (API expects integer here)
             }
                 
             # Make API request to create stack
