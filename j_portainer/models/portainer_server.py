@@ -816,73 +816,108 @@ class PortainerServer(models.Model):
                     synced_template_ids.append(('standard', int(template_id)))
                 template_count += 1
             
-            # Get custom templates
-            custom_response = self._make_api_request('/api/custom_templates', 'GET')
+            # Get custom templates - try different API endpoints for different Portainer versions
+            custom_templates = []
+            custom_response = None
             
-            if custom_response.status_code == 200:
-                custom_templates = custom_response.json()
-                
-                for template in custom_templates:
-                    # Skip if template is not a dictionary (sometimes API returns strings)
-                    if not isinstance(template, dict):
-                        _logger.warning(f"Skipping non-dict custom template: {template}")
-                        continue
-                    
-                    template_id = template.get('id')
-                    
-                    # Check if this custom template already exists in Odoo
-                    existing_template = False
-                    if template_id:
-                        existing_template = self.env['j_portainer.template'].search([
-                            ('server_id', '=', self.id),
-                            ('template_id', '=', template_id),
-                            ('is_custom', '=', True)
-                        ], limit=1)
-                    
-                    # Prepare custom template data
-                    template_data = {
-                        'server_id': self.id,
-                        'title': template.get('title', ''),
-                        'description': template.get('description', ''),
-                        'template_type': str(template.get('type', 1)),
-                        'platform': template.get('platform', 'linux'),
-                        'template_id': template_id,
-                        'logo': template.get('logo', ''),
-                        'image': template.get('image', ''),
-                        'repository': json.dumps(template.get('repository', {})) if isinstance(template.get('repository', {}), dict) else '',
-                        'categories': ','.join(template.get('categories', [])) if isinstance(template.get('categories', []), list) else '',
-                        'environment_variables': json.dumps(template.get('env', [])),
-                        'volumes': json.dumps(template.get('volumes', [])),
-                        'ports': json.dumps(template.get('ports', [])),
-                        'note': template.get('note', ''),
-                        'is_custom': True,
-                        'details': json.dumps(template, indent=2),
-                    }
-                    
-                    # Add Git repository information if available
-                    if 'repositoryURL' in template:
-                        template_data['build_method'] = 'repository'
-                        template_data['git_repository_url'] = template.get('repositoryURL', '')
-                        template_data['git_repository_reference'] = template.get('repositoryReferenceName', '')
-                        template_data['git_compose_path'] = template.get('composeFilePath', '')
-                        template_data['git_skip_tls'] = template.get('skipTLSVerify', False)
-                        template_data['git_authentication'] = template.get('repositoryAuthentication', False)
-                    elif 'composeFileContent' in template:
-                        template_data['build_method'] = 'editor'
-                        template_data['compose_file'] = template.get('composeFileContent', '')
-                    
-                    if existing_template:
-                        # Update existing custom template
-                        existing_template.write(template_data)
-                        updated_count += 1
+            # Try primary endpoint for Portainer CE 2.9.0+
+            try:
+                custom_response = self._make_api_request('/api/custom_templates', 'GET')
+                if custom_response.status_code == 200:
+                    data = custom_response.json()
+                    # Handle both array and object with templates array format
+                    if isinstance(data, list):
+                        custom_templates = data
+                    elif isinstance(data, dict) and 'templates' in data:
+                        custom_templates = data['templates']
                     else:
-                        # Create new custom template
-                        self.env['j_portainer.template'].create(template_data)
-                        created_count += 1
-                    
-                    if isinstance(template_id, (int, str)) and str(template_id).isdigit():
-                        synced_template_ids.append(('custom', int(template_id)))
-                    template_count += 1
+                        _logger.info(f"Custom templates data has unexpected format: {data}")
+                elif custom_response.status_code == 404:
+                    _logger.info("Primary custom templates endpoint not found. Trying alternative endpoint.")
+                else:
+                    _logger.warning(f"Failed to get custom templates from primary endpoint: {custom_response.status_code}")
+            except Exception as e:
+                _logger.error(f"Error getting custom templates from primary endpoint: {str(e)}")
+            
+            # If primary endpoint failed, try alternative endpoint for older versions
+            if not custom_templates and (custom_response is None or custom_response.status_code != 200):
+                try:
+                    alt_response = self._make_api_request('/api/templates/custom', 'GET')
+                    if alt_response.status_code == 200:
+                        data = alt_response.json()
+                        # Handle both array and object formats
+                        if isinstance(data, list):
+                            custom_templates = data
+                        elif isinstance(data, dict) and 'templates' in data:
+                            custom_templates = data['templates']
+                    else:
+                        _logger.warning(f"Failed to get custom templates from alternative endpoint: {alt_response.status_code}")
+                except Exception as e:
+                    _logger.error(f"Error getting custom templates from alternative endpoint: {str(e)}")
+            
+            # Process custom templates
+            for template in custom_templates:
+                # Skip if template is not a dictionary (sometimes API returns strings)
+                if not isinstance(template, dict):
+                    _logger.warning(f"Skipping non-dict custom template: {template}")
+                    continue
+                
+                # Handle different ID field names (id or Id)
+                template_id = template.get('id') or template.get('Id')
+                
+                # Check if this custom template already exists in Odoo
+                existing_template = False
+                if template_id:
+                    existing_template = self.env['j_portainer.template'].search([
+                        ('server_id', '=', self.id),
+                        ('template_id', '=', template_id),
+                        ('is_custom', '=', True)
+                    ], limit=1)
+                
+                # Prepare custom template data
+                template_data = {
+                    'server_id': self.id,
+                    'title': template.get('title', ''),
+                    'description': template.get('description', ''),
+                    'template_type': str(template.get('type', 1)),
+                    'platform': template.get('platform', 'linux'),
+                    'template_id': template_id,
+                    'logo': template.get('logo', ''),
+                    'image': template.get('image', ''),
+                    'repository': json.dumps(template.get('repository', {})) if isinstance(template.get('repository', {}), dict) else '',
+                    'categories': ','.join(template.get('categories', [])) if isinstance(template.get('categories', []), list) else '',
+                    'environment_variables': json.dumps(template.get('env', [])),
+                    'volumes': json.dumps(template.get('volumes', [])),
+                    'ports': json.dumps(template.get('ports', [])),
+                    'note': template.get('note', ''),
+                    'is_custom': True,
+                    'details': json.dumps(template, indent=2),
+                }
+                
+                # Add Git repository information if available
+                if 'repositoryURL' in template:
+                    template_data['build_method'] = 'repository'
+                    template_data['git_repository_url'] = template.get('repositoryURL', '')
+                    template_data['git_repository_reference'] = template.get('repositoryReferenceName', '')
+                    template_data['git_compose_path'] = template.get('composeFilePath', '')
+                    template_data['git_skip_tls'] = template.get('skipTLSVerify', False)
+                    template_data['git_authentication'] = template.get('repositoryAuthentication', False)
+                elif 'composeFileContent' in template:
+                    template_data['build_method'] = 'editor'
+                    template_data['compose_file'] = template.get('composeFileContent', '')
+                
+                if existing_template:
+                    # Update existing custom template
+                    existing_template.write(template_data)
+                    updated_count += 1
+                else:
+                    # Create new custom template
+                    self.env['j_portainer.template'].create(template_data)
+                    created_count += 1
+                
+                if isinstance(template_id, (int, str)) and str(template_id).isdigit():
+                    synced_template_ids.append(('custom', int(template_id)))
+                template_count += 1
             
             # Clean up templates that no longer exist in Portainer
             # Get all templates for this server
