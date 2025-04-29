@@ -309,6 +309,12 @@ class PortainerServer(models.Model):
                     state = details.get('State', {})
                     status = state.get('Status', 'unknown')
                     
+                    # Extract volume information from container details
+                    volumes_data = []
+                    mounts = details.get('Mounts', [])
+                    if mounts:
+                        volumes_data = mounts
+                    
                     # Create container record
                     self.env['j_portainer.container'].create({
                         'server_id': self.id,
@@ -324,6 +330,7 @@ class PortainerServer(models.Model):
                         'ports': json.dumps(container.get('Ports', [])),
                         'labels': json.dumps(container.get('Labels', {})),
                         'details': json.dumps(details, indent=2) if details else '',
+                        'volumes': json.dumps(volumes_data),
                     })
                     container_count += 1
             

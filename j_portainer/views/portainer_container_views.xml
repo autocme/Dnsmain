@@ -63,6 +63,11 @@
                             <field name="ports" widget="html" readonly="1"/>
                         </page>
                         
+                        <page string="Volumes" name="volumes">
+                            <field name="volumes" invisible="1"/>
+                            <field name="get_formatted_volumes" widget="html"/>
+                        </page>
+                        
                         <page string="Labels" name="labels">
                             <field name="labels" widget="html" readonly="1"/>
                         </page>
