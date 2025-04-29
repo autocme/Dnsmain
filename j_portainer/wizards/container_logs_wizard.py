@@ -72,26 +72,9 @@ class PortainerContainerLogsWizard(models.TransientModel):
         if response.status_code != 200:
             raise UserError(_("Failed to get container logs: %s") % response.text)
             
-        # Process logs to improve readability
+        # Just return the raw logs without any formatting
+        # Let the ACE editor handle display
         logs = response.text
-        
-        # Add colors based on log level (using ANSI escape codes for ACE editor)
-        if logs:
-            # Color error lines in red
-            logs = logs.replace('[error]', '\u001b[31m[ERROR]\u001b[0m')
-            logs = logs.replace('ERROR:', '\u001b[31mERROR:\u001b[0m')
-            
-            # Color warning lines in yellow
-            logs = logs.replace('[warn]', '\u001b[33m[WARN]\u001b[0m')
-            logs = logs.replace('WARNING:', '\u001b[33mWARNING:\u001b[0m')
-            
-            # Color info lines in blue
-            logs = logs.replace('[info]', '\u001b[34m[INFO]\u001b[0m')
-            logs = logs.replace('INFO:', '\u001b[34mINFO:\u001b[0m')
-            
-            # Format timestamps in green
-            timestamp_pattern = r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})'
-            logs = re.sub(timestamp_pattern, r'\u001b[32m\1\u001b[0m', logs)
         
         return logs
     
