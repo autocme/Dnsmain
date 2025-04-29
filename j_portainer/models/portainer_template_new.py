@@ -26,7 +26,8 @@ class PortainerTemplateNew(models.Model):
     registry = fields.Char('Registry')
     image = fields.Char('Image')
     repository = fields.Text('Repository')
-    categories = fields.Char('Categories')
+    categories = fields.Char('Categories')  # Store raw categories string
+    category_ids = fields.Many2many('j_portainer.template.category', string='Categories Tags', compute='_compute_category_ids', store=True)
     environment_variables = fields.Text('Environment Variables')
     volumes = fields.Text('Volumes')
     ports = fields.Text('Ports')
@@ -35,6 +36,32 @@ class PortainerTemplateNew(models.Model):
     is_custom = fields.Boolean('Custom Template', default=False)
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
+    
+    @api.depends('categories')
+    def _compute_category_ids(self):
+        """Compute category_ids from the categories string field.
+        This handles the conversion from a comma-separated string to a Many2many field.
+        """
+        category_obj = self.env['j_portainer.template.category']
+        
+        for template in self:
+            category_ids = []
+            
+            if template.categories:
+                category_names = template.categories.split(',')
+                for name in category_names:
+                    name = name.strip()
+                    if not name:
+                        continue
+                        
+                    # Try to find existing category or create a new one
+                    category = category_obj.search([('name', '=', name)], limit=1)
+                    if not category:
+                        category = category_obj.create({'name': name})
+                    
+                    category_ids.append(category.id)
+                    
+            template.category_ids = [(6, 0, category_ids)]  # Replace entire collection
     
     def _get_api(self):
         """Get API client"""
