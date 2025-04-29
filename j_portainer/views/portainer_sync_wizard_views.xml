@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Portainer Sync Wizard Form View -->
+    <record id="view_portainer_sync_wizard_form" model="ir.ui.view">
+        <field name="name">j_portainer.sync.wizard.form</field>
+        <field name="model">j_portainer.sync.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Synchronize Portainer Resources">
+                <sheet>
+                    <group>
+                        <field name="server_id" options="{'no_create': True, 'no_open': True}"/>
+                        <field name="environment_id" options="{'no_create': True, 'no_open': True}" 
+                               invisible="not environment_id" readonly="1"/>
+                        <field name="sync_option"/>
+                    </group>
+                    <group attrs="{'invisible': [('sync_option', '!=', 'specific')]}">
+                        <field name="sync_containers" attrs="{'required': [('sync_option', '=', 'specific')]}"/>
+                        <field name="sync_images" attrs="{'required': [('sync_option', '=', 'specific')]}"/>
+                        <field name="sync_volumes" attrs="{'required': [('sync_option', '=', 'specific')]}"/>
+                        <field name="sync_networks" attrs="{'required': [('sync_option', '=', 'specific')]}"/>
+                        <field name="sync_templates" attrs="{'required': [('sync_option', '=', 'specific')], 'invisible': [('environment_id', '!=', False)]}"/>
+                        <field name="sync_stacks" attrs="{'required': [('sync_option', '=', 'specific')]}"/>
+                    </group>
+                    <div name="status_message" invisible="status != 'error'">
+                        <div class="alert alert-danger" role="alert">
+                            <field name="error_message"/>
+                        </div>
+                    </div>
+                    <footer>
+                        <button name="action_sync" string="Synchronize" type="object" class="btn-primary"/>
+                        <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Portainer Sync Wizard Action -->
+    <record id="action_portainer_sync_wizard" model="ir.actions.act_window">
+        <field name="name">Synchronize Portainer</field>
+        <field name="res_model">j_portainer.sync.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+    
+    <!-- Menu Item -->
+    <menuitem id="menu_j_portainer_sync_wizard" 
+              name="Synchronize" 
+              parent="menu_j_portainer_root" 
+              action="action_portainer_sync_wizard"
+              sequence="5"/>
+</odoo>
