@@ -41,6 +41,33 @@ class PortainerContainerLogsWizard(models.TransientModel):
                 
         return res
     
+    def _clean_binary_data(self, data):
+        """Clean binary data to make it suitable for storing in a string field
+        
+        Args:
+            data: Binary data to clean
+            
+        Returns:
+            str: Cleaned data as a string
+        """
+        try:
+            # Try to decode as UTF-8 first
+            if isinstance(data, bytes):
+                text = data.decode('utf-8', errors='replace')
+            else:
+                text = str(data)
+                
+            # Remove NUL characters
+            text = text.replace('\x00', '')
+            
+            # Replace other control characters except newlines and tabs
+            text = re.sub(r'[\x01-\x08\x0b\x0c\x0e-\x1f\x7f]', ' ', text)
+            
+            return text
+        except Exception as e:
+            _logger.error(f"Error cleaning binary data: {str(e)}")
+            return "Error: Unable to process binary log data"
+    
     def _fetch_logs(self, container, lines=100):
         """Fetch logs from container
         
@@ -72,10 +99,19 @@ class PortainerContainerLogsWizard(models.TransientModel):
         if response.status_code != 200:
             raise UserError(_("Failed to get container logs: %s") % response.text)
             
-        # Just return the raw logs without any formatting
-        # Let the ACE editor handle display
-        logs = response.text
-        
+        # Process the logs to remove problematic characters
+        try:
+            # Check if we have a binary response (can happen with some Docker logs)
+            if hasattr(response, 'content') and isinstance(response.content, bytes):
+                logs = self._clean_binary_data(response.content)
+            else:
+                logs = self._clean_binary_data(response.text)
+                
+        except Exception as e:
+            _logger.error(f"Error processing logs: {str(e)}")
+            # If there's any error processing the text, return a safe version
+            logs = "Error processing container logs, received logs contain invalid characters."
+            
         return logs
     
     def refresh_logs(self):
@@ -84,8 +120,33 @@ class PortainerContainerLogsWizard(models.TransientModel):
         
         try:
             logs = self._fetch_logs(self.container_id, lines=self.lines)
+            
+            # Additional safety check before writing to database
+            if logs and isinstance(logs, str):
+                # Final check for NUL bytes that might have been missed
+                logs = logs.replace('\x00', '')
+            
             self.write({'logs': logs})
+        except ValueError as ve:
+            if "NUL" in str(ve):
+                # Specific handling for NUL characters
+                _logger.error(f"NUL character detected in logs: {str(ve)}")
+                error_msg = _("""Error: Container logs contain NUL (0x00) characters that cannot be displayed.
+                
+Suggestions:
+1. Try reducing the number of lines (current: %s)
+2. For binary logs, you may need to use the Portainer UI directly
+3. Check if the container outputs binary data instead of text logs
+""") % self.lines
+                self.write({'logs': error_msg})
+            else:
+                # Other ValueError handling
+                _logger.error(f"ValueError processing logs: {str(ve)}")
+                error_msg = _("Error processing logs: %s") % str(ve)
+                self.write({'logs': error_msg})
         except Exception as e:
+            # General exception handling
+            _logger.error(f"Error fetching logs: {str(e)}")
             error_msg = _("Error fetching logs: %s") % str(e)
             self.write({'logs': error_msg})
             
