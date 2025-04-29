@@ -18,6 +18,7 @@ class PortainerStack(models.Model):
     type = fields.Integer('Type', help="1 = Swarm, 2 = Compose")
     status = fields.Integer('Status', help="1 = Active, 2 = Inactive")
     file_content = fields.Text('Stack File')
+    content = fields.Text('Content', compute='_compute_content', store=True)
     creation_date = fields.Datetime('Created')
     update_date = fields.Datetime('Updated')
     details = fields.Text('Details')
@@ -25,6 +26,12 @@ class PortainerStack(models.Model):
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
     environment_name = fields.Char('Environment', required=True)
+    
+    @api.depends('file_content')
+    def _compute_content(self):
+        """Compute content field from file_content"""
+        for record in self:
+            record.content = record.file_content
     
     def _get_api(self):
         """Get API client"""
