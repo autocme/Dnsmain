@@ -163,6 +163,18 @@ class PortainerStack(models.Model):
             _logger.error(f"Error removing stack {self.name}: {str(e)}")
             raise UserError(_("Error removing stack: %s") % str(e))
     
+    def action_start(self):
+        """Action to start the stack (wrapper for start method)"""
+        return self.start()
+        
+    def action_stop(self):
+        """Action to stop the stack (wrapper for stop method)"""
+        return self.stop()
+        
+    def action_remove(self):
+        """Action to remove the stack (wrapper for remove method)"""
+        return self.remove()
+        
     def action_refresh(self):
         """Refresh stack information"""
         self.ensure_one()
