@@ -31,6 +31,8 @@ class PortainerContainer(models.Model):
     ports = fields.Text('Ports')
     labels = fields.Text('Labels')
     details = fields.Text('Details')
+    volumes = fields.Text('Volumes')
+    get_formatted_volumes = fields.Html('Formatted Volumes', compute='_compute_formatted_volumes')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
@@ -76,6 +78,66 @@ class PortainerContainer(models.Model):
         except Exception as e:
             _logger.error(f"Error formatting labels: {str(e)}")
             return self.labels
+            
+    @api.depends('volumes')
+    def _compute_formatted_volumes(self):
+        """Compute formatted container volumes HTML"""
+        for record in self:
+            if not record.volumes:
+                record.get_formatted_volumes = '<p>No volumes attached to this container</p>'
+                continue
+                
+            try:
+                volumes_data = json.loads(record.volumes)
+                if not volumes_data:
+                    record.get_formatted_volumes = '<p>No volumes attached to this container</p>'
+                    continue
+                    
+                html = ['<table class="table table-sm table-hover">',
+                        '<thead>',
+                        '<tr>',
+                        '<th>Type</th>',
+                        '<th>Name/Source</th>',
+                        '<th>Container Path</th>',
+                        '<th>Mode</th>',
+                        '</tr>',
+                        '</thead>',
+                        '<tbody>']
+                        
+                for volume in volumes_data:
+                    # Determine volume type
+                    source = volume.get('Source', '')
+                    if '/var/lib/docker/volumes/' in source:
+                        # This is a named volume
+                        volume_name = source.split('/var/lib/docker/volumes/')[1].split('/_data')[0]
+                        volume_type = 'Named Volume'
+                    elif source.startswith('/'):
+                        # This is a bind mount
+                        volume_name = source
+                        volume_type = 'Bind Mount'
+                    else:
+                        # This is probably a tmpfs or other type
+                        volume_name = source if source else 'N/A'
+                        volume_type = 'Other'
+                        
+                    destination = volume.get('Destination', 'N/A')
+                    mode = volume.get('Mode', 'N/A')
+                    
+                    # Create a row for this volume
+                    html.append('<tr>')
+                    html.append(f'<td>{volume_type}</td>')
+                    html.append(f'<td>{volume_name}</td>')
+                    html.append(f'<td>{destination}</td>')
+                    html.append(f'<td>{mode}</td>')
+                    html.append('</tr>')
+                    
+                html.append('</tbody>')
+                html.append('</table>')
+                
+                record.get_formatted_volumes = ''.join(html)
+            except Exception as e:
+                _logger.error(f"Error formatting volumes for container {record.name}: {str(e)}")
+                record.get_formatted_volumes = f'<p>Error formatting volumes: {str(e)}</p>'
     
     def get_state_color(self):
         """Get color for container state"""
