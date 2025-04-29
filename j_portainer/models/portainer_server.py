@@ -599,7 +599,7 @@ class PortainerServer(models.Model):
                     'server_id': self.id,
                     'title': template.get('title', ''),
                     'description': template.get('description', ''),
-                    'template_type': template.get('type', 1),  # 1 = container, 2 = stack
+                    'template_type': str(template.get('type', 1)),  # 1 = container, 2 = stack
                     'platform': template.get('platform', 'linux'),
                     'template_id': template.get('id'),
                     'logo': template.get('logo', ''),
@@ -631,7 +631,7 @@ class PortainerServer(models.Model):
                         'server_id': self.id,
                         'title': template.get('title', ''),
                         'description': template.get('description', ''),
-                        'template_type': template.get('type', 1),
+                        'template_type': str(template.get('type', 1)),
                         'platform': template.get('platform', 'linux'),
                         'template_id': template.get('id'),
                         'logo': template.get('logo', ''),
@@ -718,8 +718,8 @@ class PortainerServer(models.Model):
                         'environment_name': env.name,
                         'stack_id': stack_id,
                         'name': stack.get('Name', ''),
-                        'type': stack.get('Type', 1),
-                        'status': stack.get('Status', 0),
+                        'type': str(stack.get('Type', 1)),
+                        'status': str(stack.get('Status', 0)),
                         'creation_date': datetime.fromisoformat(stack.get('CreationDate').replace('Z', '+00:00')) 
                                       if stack.get('CreationDate') else datetime.now(),
                         'update_date': datetime.fromisoformat(stack.get('UpdateDate').replace('Z', '+00:00')) 
