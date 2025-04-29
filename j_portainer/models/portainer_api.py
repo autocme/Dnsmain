@@ -47,11 +47,11 @@ class PortainerAPI(models.AbstractModel):
             volumes (bool): Remove associated volumes
             
         Returns:
-            bool: True if successful
+            dict: Result with 'success' boolean and 'message' string
         """
         server = self.env['j_portainer.server'].browse(server_id)
         if not server:
-            return False
+            return {'success': False, 'message': 'Server not found'}
             
         params = {
             'force': force,
@@ -59,9 +59,24 @@ class PortainerAPI(models.AbstractModel):
         }
         
         endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}'
-        response = server._make_api_request(endpoint, 'DELETE', params=params)
         
-        return response.status_code in [200, 201, 204]
+        try:
+            response = server._make_api_request(endpoint, 'DELETE', params=params)
+            
+            if response.status_code in [200, 201, 204]:
+                return {'success': True, 'message': 'Container removed successfully'}
+            else:
+                # Try to extract error message from response
+                error_msg = 'Failed to remove container'
+                try:
+                    if response.text and len(response.text) > 0:
+                        error_msg = f"{error_msg}: {response.text}"
+                except:
+                    pass
+                    
+                return {'success': False, 'message': error_msg}
+        except Exception as e:
+            return {'success': False, 'message': f'Error removing container: {str(e)}'}
     
     def image_action(self, server_id, environment_id, image_id, action, params=None):
         """Perform action on an image

@@ -271,6 +271,12 @@ class PortainerContainer(models.Model):
         Args:
             force (bool): Force removal
             volumes (bool): Remove volumes associated with the container
+            
+        Returns:
+            dict: Action result
+            
+        Raises:
+            UserError: If container removal fails
         """
         self.ensure_one()
         
@@ -279,11 +285,30 @@ class PortainerContainer(models.Model):
             result = api.remove_container(
                 self.server_id.id, self.environment_id, self.container_id,
                 force=force, volumes=volumes)
-                
-            if result:
-                # Delete the record
+            
+            if isinstance(result, dict) and 'success' in result:
+                if result['success']:
+                    # Delete the record
+                    self.unlink()
+                    
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Container Removed'),
+                            'message': _('Container %s removed successfully') % self.name,
+                            'sticky': False,
+                            'type': 'success',
+                        }
+                    }
+                else:
+                    # API returned failure with message
+                    error_message = result.get('message', _("Failed to remove container"))
+                    _logger.error(f"Failed to remove container {self.name}: {error_message}")
+                    raise UserError(error_message)
+            elif result:
+                # Legacy boolean True result
                 self.unlink()
-                
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
@@ -295,6 +320,7 @@ class PortainerContainer(models.Model):
                     }
                 }
             else:
+                # Legacy boolean False result
                 raise UserError(_("Failed to remove container"))
         except Exception as e:
             _logger.error(f"Error removing container {self.name}: {str(e)}")
