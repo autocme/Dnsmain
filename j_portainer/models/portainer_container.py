@@ -348,9 +348,7 @@ class PortainerContainer(models.Model):
             'view_mode': 'form',
             'target': 'new',
             'context': {
-                'default_server_id': self.server_id.id,
-                'default_environment_id': self.environment_id,
-                'default_container_id': self.container_id,
-                'default_container_name': self.name,
+                'active_id': self.id,
+                'active_model': 'j_portainer.container',
             }
         }
