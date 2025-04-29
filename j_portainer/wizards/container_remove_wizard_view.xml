@@ -9,7 +9,7 @@
                     <div class="alert alert-warning" role="alert">
                         <strong><i class="fa fa-exclamation-triangle"/> Warning!</strong> This action cannot be undone.
                     </div>
-                    <div class="alert alert-info" role="alert" attrs="{'invisible': [('remove_volumes', '=', False)]}">
+                    <div class="alert alert-info" role="alert" invisible="remove_volumes == False">
                         <strong><i class="fa fa-info-circle"/> Note:</strong> All anonymous volumes associated with this container will also be removed.
                     </div>
                     <group>
