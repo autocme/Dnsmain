@@ -31,6 +31,7 @@ class PortainerTemplateNew(models.Model):
     volumes = fields.Text('Volumes')
     ports = fields.Text('Ports')
     note = fields.Text('Note')
+    details = fields.Text('Details', help="Additional details about the template")
     is_custom = fields.Boolean('Custom Template', default=False)
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
@@ -128,6 +129,29 @@ class PortainerTemplateNew(models.Model):
             return ''
             
         return self.categories.replace(',', ', ')
+        
+    def get_formatted_details(self):
+        """Get formatted details for the template"""
+        self.ensure_one()
+        if not self.details:
+            return ''
+            
+        try:
+            # If details is JSON, format it
+            details_data = json.loads(self.details)
+            if isinstance(details_data, dict):
+                result = []
+                for key, value in details_data.items():
+                    if isinstance(value, (dict, list)):
+                        result.append(f"{key}: {json.dumps(value, indent=2)}")
+                    else:
+                        result.append(f"{key}: {value}")
+                return '\n'.join(result)
+            return json.dumps(details_data, indent=2)
+        except Exception as e:
+            # If not JSON, return as is
+            _logger.error(f"Error formatting details: {str(e)}")
+            return self.details
     
     def get_type_name(self):
         """Get type name"""
