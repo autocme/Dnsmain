@@ -3,6 +3,7 @@
 
 from odoo import models
 import logging
+import json
 
 _logger = logging.getLogger(__name__)
 
@@ -301,16 +302,39 @@ class PortainerAPI(models.AbstractModel):
         server = self.env['j_portainer.server'].browse(server_id)
         if not server:
             return None
-            
-        endpoint = '/api/custom_templates'
-        response = server._make_api_request(endpoint, 'POST', data=template_data)
         
-        if response.status_code in [200, 201, 204]:
-            try:
-                return response.json()
-            except Exception as e:
-                _logger.error(f"Error parsing response from Portainer API: {str(e)}")
-                return None
-        else:
-            _logger.error(f"Error creating template: {response.status_code} - {response.text}")
+        # Log the template data for debugging
+        _logger.info(f"Creating template with data: {json.dumps(template_data, indent=2)}")
+            
+        # Try the v2 API endpoint first (Portainer CE 2.9.0+)
+        endpoint = '/api/custom_templates'
+        
+        try:
+            # Properly set Content-Type header
+            headers = {'Content-Type': 'application/json'}
+            response = server._make_api_request(endpoint, 'POST', data=template_data, headers=headers)
+            
+            if response.status_code in [200, 201, 204]:
+                try:
+                    return response.json()
+                except Exception as e:
+                    _logger.error(f"Error parsing response from Portainer API: {str(e)}")
+                    return None
+            else:
+                # If first attempt fails, try alternative endpoint for older Portainer versions
+                _logger.warning(f"Primary endpoint failed: {response.status_code} - {response.text}. Trying alternative endpoint.")
+                alt_endpoint = '/api/templates/custom'
+                alt_response = server._make_api_request(alt_endpoint, 'POST', data=template_data, headers=headers)
+                
+                if alt_response.status_code in [200, 201, 204]:
+                    try:
+                        return alt_response.json()
+                    except Exception as e:
+                        _logger.error(f"Error parsing response from alternative Portainer API: {str(e)}")
+                        return None
+                else:
+                    _logger.error(f"Error creating template on both endpoints: {alt_response.status_code} - {alt_response.text}")
+                    return None
+        except Exception as e:
+            _logger.error(f"Exception during template creation: {str(e)}")
             return None
