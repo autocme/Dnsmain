@@ -590,6 +590,11 @@ class PortainerServer(models.Model):
             template_count = 0
             
             for template in templates:
+                # Skip if template is not a dictionary (sometimes API returns strings)
+                if not isinstance(template, dict):
+                    _logger.warning(f"Skipping non-dict template: {template}")
+                    continue
+                    
                 self.env['j_portainer.template'].create({
                     'server_id': self.id,
                     'title': template.get('title', ''),
@@ -617,6 +622,11 @@ class PortainerServer(models.Model):
                 custom_templates = custom_response.json()
                 
                 for template in custom_templates:
+                    # Skip if template is not a dictionary (sometimes API returns strings)
+                    if not isinstance(template, dict):
+                        _logger.warning(f"Skipping non-dict custom template: {template}")
+                        continue
+                        
                     self.env['j_portainer.template'].create({
                         'server_id': self.id,
                         'title': template.get('title', ''),
