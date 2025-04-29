@@ -22,6 +22,8 @@ class PortainerImage(models.Model):
     virtual_size = fields.Integer('Virtual Size (bytes)')
     labels = fields.Text('Labels')
     details = fields.Text('Details')
+    in_use = fields.Boolean('In Use', default=False, help='Whether this image is being used by any containers')
+    tags = fields.Html('Tags', compute='_compute_tags', store=True)
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
@@ -39,6 +41,20 @@ class PortainerImage(models.Model):
                 image.display_name = f"{image.repository}:{image.tag}"
             else:
                 image.display_name = image.repository
+                
+    @api.depends('repository', 'tag')
+    def _compute_tags(self):
+        """Compute HTML formated tags for this image"""
+        for image in self:
+            if image.repository and image.tag:
+                html = f"""
+                <div class="mt-2">
+                    <span class="badge badge-primary mb-1 mr-1">{image.repository}:{image.tag}</span>
+                </div>
+                """
+                image.tags = html
+            else:
+                image.tags = "<div class='text-muted'>No tags available</div>"
     
     def name_get(self):
         """Override name_get to display repository:tag"""
