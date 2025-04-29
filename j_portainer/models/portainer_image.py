@@ -88,66 +88,72 @@ class PortainerImage(models.Model):
             image_name = f"{self.repository}:{self.tag}" if self.tag else self.repository
             
             result = api.image_action(
-                self.server_id.id, self.environment_id, image_name, 'pull')
+                self.server_id.id, 'pull', 
+                endpoint=f"/endpoints/{self.environment_id}/docker/images/create",
+                params={'fromImage': image_name}
+            )
+            
+            if result.get('error'):
+                raise UserError(_(f"Failed to pull image: {result.get('error')}"))
                 
-            if result:
-                # Refresh the server images
-                self.server_id.sync_images(self.environment_id)
-                
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': _('Image Pulled'),
-                        'message': _('Image %s pulled successfully') % image_name,
-                        'sticky': False,
-                        'type': 'success',
-                    }
-                }
-            else:
-                raise UserError(_("Failed to pull image"))
+            # Refresh image data
+            self.action_refresh()
+            return True
+            
         except Exception as e:
-            _logger.error(f"Error pulling image {self.repository}:{self.tag}: {str(e)}")
-            raise UserError(_("Error pulling image: %s") % str(e))
+            raise UserError(_(f"Failed to pull image: {str(e)}"))
     
-    def remove(self, force=False, no_prune=False):
-        """Remove the image
-        
-        Args:
-            force (bool): Force removal
-            no_prune (bool): Don't delete untagged parent images
-        """
+    def action_remove(self):
+        """Remove this image"""
         self.ensure_one()
         
         try:
             api = self._get_api()
-            params = {
-                'force': force,
-                'noprune': no_prune
-            }
-            
             result = api.image_action(
-                self.server_id.id, self.environment_id, self.image_id, 'delete', params=params)
+                self.server_id.id, 'remove',
+                endpoint=f"/endpoints/{self.environment_id}/docker/images/{self.image_id}",
+                params={'force': True}
+            )
+            
+            if result.get('error'):
+                raise UserError(_(f"Failed to remove image: {result.get('error')}"))
                 
-            if result:
-                # Delete the record
-                self.unlink()
-                
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': _('Image Removed'),
-                        'message': _('Image %s:%s removed successfully') % (self.repository, self.tag),
-                        'sticky': False,
-                        'type': 'success',
-                    }
-                }
-            else:
-                raise UserError(_("Failed to remove image"))
+            # Delete the record
+            self.unlink()
+            return {'type': 'ir.actions.act_window_close'}
+            
         except Exception as e:
-            _logger.error(f"Error removing image {self.repository}:{self.tag}: {str(e)}")
-            raise UserError(_("Error removing image: %s") % str(e))
+            raise UserError(_(f"Failed to remove image: {str(e)}"))
+    
+    def action_refresh(self):
+        """Refresh image data"""
+        self.ensure_one()
+        
+        try:
+            api = self._get_api()
+            image_data = api.image_action(
+                self.server_id.id, 'inspect',
+                endpoint=f"/endpoints/{self.environment_id}/docker/images/{self.image_id}/json"
+            )
+            
+            if image_data.get('error'):
+                raise UserError(_(f"Failed to refresh image: {image_data.get('error')}"))
+                
+            # Update basic fields
+            if 'Created' in image_data:
+                self.created = fields.Datetime.to_datetime(image_data['Created'])
+            if 'Size' in image_data:
+                self.size = image_data['Size']
+            if 'Labels' in image_data:
+                self.labels = json.dumps(image_data['Labels']) if image_data['Labels'] else '{}'
+            
+            # Store complete details
+            self.details = json.dumps(image_data, indent=2)
+            
+            return True
+            
+        except Exception as e:
+            raise UserError(_(f"Failed to refresh image: {str(e)}"))
     
     def action_remove_with_options(self):
         """Action to show image removal options"""
@@ -183,13 +189,16 @@ class PortainerImage(models.Model):
             image_name = f"{repository}:{tag}" if tag else repository
             
             result = api.image_action(
-                server_id, environment_id, image_name, 'pull')
+                server_id, 
+                'pull',
+                endpoint=f"/endpoints/{environment_id}/docker/images/create",
+                params={'fromImage': image_name}
+            )
                 
-            if result:
+            if not result.get('error'):
                 # Refresh the server images
                 server = self.env['j_portainer.server'].browse(server_id)
                 server.sync_images(environment_id)
-                
                 return True
             else:
                 return False
