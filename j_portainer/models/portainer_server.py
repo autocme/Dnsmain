@@ -269,18 +269,18 @@ class PortainerServer(models.Model):
         self.ensure_one()
         
         try:
-            # Clear existing containers for the given environment or all environments
+            # Keep track of synced container IDs to mark missing ones as inactive
+            synced_container_ids = []
+            
+            # Get environments to sync
             if environment_id:
-                self.env['j_portainer.container'].search([
-                    ('server_id', '=', self.id),
-                    ('environment_id', '=', environment_id)
-                ]).unlink()
                 environments = self.environment_ids.filtered(lambda e: e.environment_id == environment_id)
             else:
-                self.container_ids.unlink()
                 environments = self.environment_ids
             
             container_count = 0
+            updated_count = 0
+            created_count = 0
             
             # Sync containers for each environment
             for env in environments:
@@ -298,6 +298,14 @@ class PortainerServer(models.Model):
                 
                 for container in containers:
                     container_id = container.get('Id')
+                    container_name = container.get('Names', ['Unknown'])[0].lstrip('/')
+                    
+                    # Check if container already exists in Odoo
+                    existing_container = self.env['j_portainer.container'].search([
+                        ('server_id', '=', self.id),
+                        ('environment_id', '=', endpoint_id),
+                        ('container_id', '=', container_id)
+                    ], limit=1)
                     
                     # Get container details
                     details_response = self._make_api_request(
@@ -315,13 +323,13 @@ class PortainerServer(models.Model):
                     if mounts:
                         volumes_data = mounts
                     
-                    # Create container record
-                    self.env['j_portainer.container'].create({
+                    # Prepare data for create/update
+                    container_data = {
                         'server_id': self.id,
                         'environment_id': endpoint_id,
                         'environment_name': env.name,
                         'container_id': container_id,
-                        'name': container.get('Names', ['Unknown'])[0].lstrip('/'),
+                        'name': container_name,
                         'image': container.get('Image', ''),
                         'image_id': container.get('ImageID', ''),
                         'created': datetime.fromtimestamp(container.get('Created', 0)),
@@ -331,8 +339,22 @@ class PortainerServer(models.Model):
                         'labels': json.dumps(container.get('Labels', {})),
                         'details': json.dumps(details, indent=2) if details else '',
                         'volumes': json.dumps(volumes_data),
-                    })
+                    }
+                    
+                    if existing_container:
+                        # Update existing container record
+                        existing_container.write(container_data)
+                        updated_count += 1
+                    else:
+                        # Create new container record
+                        self.env['j_portainer.container'].create(container_data)
+                        created_count += 1
+                    
+                    synced_container_ids.append(container_id)
                     container_count += 1
+                    
+            # Log the statistics
+            _logger.info(f"Container sync complete: {container_count} total containers, {created_count} created, {updated_count} updated")
             
             self.write({'last_sync': fields.Datetime.now()})
             
@@ -361,18 +383,18 @@ class PortainerServer(models.Model):
         self.ensure_one()
         
         try:
-            # Clear existing images for the given environment or all environments
+            # Keep track of synced image IDs 
+            synced_image_ids = []
+            
+            # Get environments to sync
             if environment_id:
-                self.env['j_portainer.image'].search([
-                    ('server_id', '=', self.id),
-                    ('environment_id', '=', environment_id)
-                ]).unlink()
                 environments = self.environment_ids.filtered(lambda e: e.environment_id == environment_id)
             else:
-                self.image_ids.unlink()
                 environments = self.environment_ids
             
             image_count = 0
+            updated_count = 0
+            created_count = 0
             
             # Sync images for each environment
             for env in environments:
@@ -399,7 +421,21 @@ class PortainerServer(models.Model):
                     
                     details = details_response.json() if details_response.status_code == 200 else {}
                     
-                    # Create images - one for each repo tag
+                    # Prepare base image data
+                    base_image_data = {
+                        'server_id': self.id,
+                        'environment_id': endpoint_id,
+                        'environment_name': env.name,
+                        'image_id': image_id,
+                        'created': datetime.fromtimestamp(image.get('Created', 0)),
+                        'size': image.get('Size', 0),
+                        'shared_size': image.get('SharedSize', 0),
+                        'virtual_size': image.get('VirtualSize', 0),
+                        'labels': json.dumps(image.get('Labels', {})),
+                        'details': json.dumps(details, indent=2) if details else '',
+                    }
+                    
+                    # Process images - one for each repo tag
                     if repos and repos[0] != '<none>:<none>':
                         for repo in repos:
                             if ':' in repo:
@@ -407,38 +443,65 @@ class PortainerServer(models.Model):
                             else:
                                 repository, tag = repo, 'latest'
                                 
-                            self.env['j_portainer.image'].create({
-                                'server_id': self.id,
-                                'environment_id': endpoint_id,
-                                'environment_name': env.name,
-                                'image_id': image_id,
+                            # Check if this image already exists in Odoo
+                            existing_image = self.env['j_portainer.image'].search([
+                                ('server_id', '=', self.id),
+                                ('environment_id', '=', endpoint_id),
+                                ('image_id', '=', image_id),
+                                ('repository', '=', repository),
+                                ('tag', '=', tag)
+                            ], limit=1)
+                            
+                            # Prepare specific image data with repository and tag
+                            image_data = dict(base_image_data)
+                            image_data.update({
                                 'repository': repository,
-                                'tag': tag,
-                                'created': datetime.fromtimestamp(image.get('Created', 0)),
-                                'size': image.get('Size', 0),
-                                'shared_size': image.get('SharedSize', 0),
-                                'virtual_size': image.get('VirtualSize', 0),
-                                'labels': json.dumps(image.get('Labels', {})),
-                                'details': json.dumps(details, indent=2) if details else '',
+                                'tag': tag
                             })
+                            
+                            if existing_image:
+                                # Update existing image record
+                                existing_image.write(image_data)
+                                updated_count += 1
+                            else:
+                                # Create new image record
+                                self.env['j_portainer.image'].create(image_data)
+                                created_count += 1
+                                
                             image_count += 1
+                            synced_image_ids.append((image_id, repository, tag))
                     else:
                         # Untagged image
-                        self.env['j_portainer.image'].create({
-                            'server_id': self.id,
-                            'environment_id': endpoint_id,
-                            'environment_name': env.name,
-                            'image_id': image_id,
+                        # Check if this untagged image already exists in Odoo
+                        existing_image = self.env['j_portainer.image'].search([
+                            ('server_id', '=', self.id),
+                            ('environment_id', '=', endpoint_id),
+                            ('image_id', '=', image_id),
+                            ('repository', '=', '<none>'),
+                            ('tag', '=', '<none>')
+                        ], limit=1)
+                        
+                        # Prepare untagged image data
+                        image_data = dict(base_image_data)
+                        image_data.update({
                             'repository': '<none>',
-                            'tag': '<none>',
-                            'created': datetime.fromtimestamp(image.get('Created', 0)),
-                            'size': image.get('Size', 0),
-                            'shared_size': image.get('SharedSize', 0),
-                            'virtual_size': image.get('VirtualSize', 0),
-                            'labels': json.dumps(image.get('Labels', {})),
-                            'details': json.dumps(details, indent=2) if details else '',
+                            'tag': '<none>'
                         })
+                        
+                        if existing_image:
+                            # Update existing image record
+                            existing_image.write(image_data)
+                            updated_count += 1
+                        else:
+                            # Create new image record
+                            self.env['j_portainer.image'].create(image_data)
+                            created_count += 1
+                            
                         image_count += 1
+                        synced_image_ids.append((image_id, '<none>', '<none>'))
+            
+            # Log the statistics
+            _logger.info(f"Image sync complete: {image_count} total images, {created_count} created, {updated_count} updated")
             
             self.write({'last_sync': fields.Datetime.now()})
             
@@ -467,18 +530,18 @@ class PortainerServer(models.Model):
         self.ensure_one()
         
         try:
-            # Clear existing volumes for the given environment or all environments
+            # Keep track of synced volumes
+            synced_volume_names = []
+            
+            # Get environments to sync
             if environment_id:
-                self.env['j_portainer.volume'].search([
-                    ('server_id', '=', self.id),
-                    ('environment_id', '=', environment_id)
-                ]).unlink()
                 environments = self.environment_ids.filtered(lambda e: e.environment_id == environment_id)
             else:
-                self.volume_ids.unlink()
                 environments = self.environment_ids
             
             volume_count = 0
+            updated_count = 0
+            created_count = 0
             
             # Sync volumes for each environment
             for env in environments:
@@ -497,25 +560,47 @@ class PortainerServer(models.Model):
                 for volume in volumes:
                     volume_name = volume.get('Name')
                     
+                    # Check if this volume already exists in Odoo
+                    existing_volume = self.env['j_portainer.volume'].search([
+                        ('server_id', '=', self.id),
+                        ('environment_id', '=', endpoint_id),
+                        ('name', '=', volume_name)
+                    ], limit=1)
+                    
                     # Get detailed info for this volume
                     details_response = self._make_api_request(
                         f'/api/endpoints/{endpoint_id}/docker/volumes/{volume_name}', 'GET')
                     
                     details = details_response.json() if details_response.status_code == 200 else {}
                     
-                    self.env['j_portainer.volume'].create({
+                    # Prepare volume data
+                    volume_data = {
                         'server_id': self.id,
                         'environment_id': endpoint_id,
                         'environment_name': env.name,
                         'name': volume_name,
                         'driver': volume.get('Driver', ''),
                         'mountpoint': volume.get('Mountpoint', ''),
-                        'created': datetime.now(),  # Docker volumes don't have created date
                         'scope': volume.get('Scope', 'local'),
                         'labels': json.dumps(volume.get('Labels', {})),
                         'details': json.dumps(details, indent=2) if details else '',
-                    })
+                    }
+                    
+                    if existing_volume:
+                        # Update existing volume - don't update created date for existing records
+                        existing_volume.write(volume_data)
+                        updated_count += 1
+                    else:
+                        # Create new volume record - set created date
+                        volume_data['created'] = datetime.now()  # Docker volumes don't have created date
+                        self.env['j_portainer.volume'].create(volume_data)
+                        created_count += 1
+                    
+                    synced_volume_names.append((endpoint_id, volume_name))
                     volume_count += 1
+            
+            # Log the statistics
+            _logger.info(f"Volume sync complete: {volume_count} total volumes, {created_count} created, {updated_count} updated")
             
             self.write({'last_sync': fields.Datetime.now()})
             
@@ -544,18 +629,18 @@ class PortainerServer(models.Model):
         self.ensure_one()
         
         try:
-            # Clear existing networks for the given environment or all environments
+            # Keep track of synced networks
+            synced_network_ids = []
+            
+            # Get environments to sync
             if environment_id:
-                self.env['j_portainer.network'].search([
-                    ('server_id', '=', self.id),
-                    ('environment_id', '=', environment_id)
-                ]).unlink()
                 environments = self.environment_ids.filtered(lambda e: e.environment_id == environment_id)
             else:
-                self.network_ids.unlink()
                 environments = self.environment_ids
             
             network_count = 0
+            updated_count = 0
+            created_count = 0
             
             # Sync networks for each environment
             for env in environments:
@@ -573,13 +658,21 @@ class PortainerServer(models.Model):
                 for network in networks:
                     network_id = network.get('Id')
                     
+                    # Check if this network already exists in Odoo
+                    existing_network = self.env['j_portainer.network'].search([
+                        ('server_id', '=', self.id),
+                        ('environment_id', '=', endpoint_id),
+                        ('network_id', '=', network_id)
+                    ], limit=1)
+                    
                     # Get detailed info for this network
                     details_response = self._make_api_request(
                         f'/api/endpoints/{endpoint_id}/docker/networks/{network_id}', 'GET')
                     
                     details = details_response.json() if details_response.status_code == 200 else {}
                     
-                    self.env['j_portainer.network'].create({
+                    # Prepare network data
+                    network_data = {
                         'server_id': self.id,
                         'environment_id': endpoint_id,
                         'environment_name': env.name,
@@ -591,8 +684,22 @@ class PortainerServer(models.Model):
                         'labels': json.dumps(network.get('Labels', {})),
                         'containers': json.dumps(network.get('Containers', {})),
                         'details': json.dumps(details, indent=2) if details else '',
-                    })
+                    }
+                    
+                    if existing_network:
+                        # Update existing network record
+                        existing_network.write(network_data)
+                        updated_count += 1
+                    else:
+                        # Create new network record
+                        self.env['j_portainer.network'].create(network_data)
+                        created_count += 1
+                    
+                    synced_network_ids.append((endpoint_id, network_id))
                     network_count += 1
+            
+            # Log the statistics
+            _logger.info(f"Network sync complete: {network_count} total networks, {created_count} created, {updated_count} updated")
             
             self.write({'last_sync': fields.Datetime.now()})
             
@@ -616,8 +723,8 @@ class PortainerServer(models.Model):
         self.ensure_one()
         
         try:
-            # Clear existing templates
-            self.template_ids.unlink()
+            # Keep track of synced templates
+            synced_template_ids = []
             
             # Get templates
             response = self._make_api_request('/api/templates', 'GET')
@@ -627,20 +734,34 @@ class PortainerServer(models.Model):
                 
             templates = response.json()
             template_count = 0
+            updated_count = 0
+            created_count = 0
             
             for template in templates:
                 # Skip if template is not a dictionary (sometimes API returns strings)
                 if not isinstance(template, dict):
                     _logger.warning(f"Skipping non-dict template: {template}")
                     continue
-                    
-                self.env['j_portainer.template'].create({
+                
+                template_id = template.get('id')
+                
+                # Check if this template already exists in Odoo
+                existing_template = False
+                if template_id:
+                    existing_template = self.env['j_portainer.template'].search([
+                        ('server_id', '=', self.id),
+                        ('template_id', '=', template_id),
+                        ('is_custom', '=', False)
+                    ], limit=1)
+                
+                # Prepare template data
+                template_data = {
                     'server_id': self.id,
                     'title': template.get('title', ''),
                     'description': template.get('description', ''),
                     'template_type': str(template.get('type', 1)),  # 1 = container, 2 = stack
                     'platform': template.get('platform', 'linux'),
-                    'template_id': template.get('id'),
+                    'template_id': template_id,
                     'logo': template.get('logo', ''),
                     'registry': template.get('registry', ''),
                     'image': template.get('image', ''),
@@ -651,7 +772,19 @@ class PortainerServer(models.Model):
                     'ports': json.dumps(template.get('ports', [])),
                     'note': template.get('note', ''),
                     'is_custom': False,
-                })
+                }
+                
+                if existing_template:
+                    # Update existing template
+                    existing_template.write(template_data)
+                    updated_count += 1
+                else:
+                    # Create new template
+                    self.env['j_portainer.template'].create(template_data)
+                    created_count += 1
+                
+                if template_id:
+                    synced_template_ids.append(('standard', template_id))
                 template_count += 1
             
             # Get custom templates
@@ -665,14 +798,26 @@ class PortainerServer(models.Model):
                     if not isinstance(template, dict):
                         _logger.warning(f"Skipping non-dict custom template: {template}")
                         continue
-                        
-                    self.env['j_portainer.template'].create({
+                    
+                    template_id = template.get('id')
+                    
+                    # Check if this custom template already exists in Odoo
+                    existing_template = False
+                    if template_id:
+                        existing_template = self.env['j_portainer.template'].search([
+                            ('server_id', '=', self.id),
+                            ('template_id', '=', template_id),
+                            ('is_custom', '=', True)
+                        ], limit=1)
+                    
+                    # Prepare custom template data
+                    template_data = {
                         'server_id': self.id,
                         'title': template.get('title', ''),
                         'description': template.get('description', ''),
                         'template_type': str(template.get('type', 1)),
                         'platform': template.get('platform', 'linux'),
-                        'template_id': template.get('id'),
+                        'template_id': template_id,
                         'logo': template.get('logo', ''),
                         'image': template.get('image', ''),
                         'repository': template.get('repository', {}),
@@ -682,8 +827,23 @@ class PortainerServer(models.Model):
                         'ports': json.dumps(template.get('ports', [])),
                         'note': template.get('note', ''),
                         'is_custom': True,
-                    })
+                    }
+                    
+                    if existing_template:
+                        # Update existing custom template
+                        existing_template.write(template_data)
+                        updated_count += 1
+                    else:
+                        # Create new custom template
+                        self.env['j_portainer.template'].create(template_data)
+                        created_count += 1
+                    
+                    if template_id:
+                        synced_template_ids.append(('custom', template_id))
                     template_count += 1
+            
+            # Log the statistics
+            _logger.info(f"Template sync complete: {template_count} total templates, {created_count} created, {updated_count} updated")
             
             self.write({'last_sync': fields.Datetime.now()})
             
@@ -712,18 +872,18 @@ class PortainerServer(models.Model):
         self.ensure_one()
         
         try:
-            # Clear existing stacks for the given environment or all environments
+            # Keep track of synced stacks
+            synced_stack_ids = []
+            
+            # Get environments to sync
             if environment_id:
-                self.env['j_portainer.stack'].search([
-                    ('server_id', '=', self.id),
-                    ('environment_id', '=', environment_id)
-                ]).unlink()
                 environments = self.environment_ids.filtered(lambda e: e.environment_id == environment_id)
             else:
-                self.stack_ids.unlink()
                 environments = self.environment_ids
             
             stack_count = 0
+            updated_count = 0
+            created_count = 0
             
             # Sync stacks for each environment
             for env in environments:
@@ -744,6 +904,13 @@ class PortainerServer(models.Model):
                 for stack in env_stacks:
                     stack_id = stack.get('Id')
                     
+                    # Check if this stack already exists in Odoo
+                    existing_stack = self.env['j_portainer.stack'].search([
+                        ('server_id', '=', self.id),
+                        ('environment_id', '=', endpoint_id),
+                        ('stack_id', '=', stack_id)
+                    ], limit=1)
+                    
                     # Get stack file content if available
                     file_content = ''
                     file_response = self._make_api_request(f'/api/stacks/{stack_id}/file', 'GET')
@@ -751,7 +918,8 @@ class PortainerServer(models.Model):
                         file_data = file_response.json()
                         file_content = file_data.get('StackFileContent', '')
                     
-                    self.env['j_portainer.stack'].create({
+                    # Prepare stack data
+                    stack_data = {
                         'server_id': self.id,
                         'environment_id': endpoint_id,
                         'environment_name': env.name,
@@ -759,12 +927,26 @@ class PortainerServer(models.Model):
                         'name': stack.get('Name', ''),
                         'type': str(stack.get('Type', 1)),
                         'status': str(stack.get('Status', 0)),
-                        'creation_date': self._parse_date_value(stack.get('CreationDate')) or datetime.now(),
                         'update_date': self._parse_date_value(stack.get('UpdateDate')),
                         'file_content': file_content,
                         'details': json.dumps(stack, indent=2),
-                    })
+                    }
+                    
+                    if existing_stack:
+                        # Update existing stack - don't update creation date for existing records
+                        existing_stack.write(stack_data)
+                        updated_count += 1
+                    else:
+                        # Create new stack record - set creation date
+                        stack_data['creation_date'] = self._parse_date_value(stack.get('CreationDate')) or datetime.now()
+                        self.env['j_portainer.stack'].create(stack_data)
+                        created_count += 1
+                    
+                    synced_stack_ids.append((endpoint_id, stack_id))
                     stack_count += 1
+            
+            # Log the statistics
+            _logger.info(f"Stack sync complete: {stack_count} total stacks, {created_count} created, {updated_count} updated")
             
             self.write({'last_sync': fields.Datetime.now()})
             
