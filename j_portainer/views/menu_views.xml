@@ -6,31 +6,17 @@
               web_icon="j_portainer,static/description/icon.png"
               sequence="75"/>
     
+    <!-- Containers Menu (Main) -->
+    <menuitem id="menu_j_portainer_containers" 
+              name="Containers" 
+              parent="menu_j_portainer_root" 
+              action="action_portainer_container"
+              sequence="10"/>
+
     <!-- Resources Section -->
     <menuitem id="menu_j_portainer_resources" 
               name="Resources" 
               parent="menu_j_portainer_root" 
-              sequence="30"/>
-    
-    <!-- Servers Menu -->
-    <menuitem id="menu_j_portainer_servers" 
-              name="Servers" 
-              parent="menu_j_portainer_root" 
-              action="action_portainer_server"
-              sequence="10"/>
-              
-    <!-- Environments Menu -->
-    <menuitem id="menu_j_portainer_environments" 
-              name="Environments" 
-              parent="menu_j_portainer_resources" 
-              action="action_portainer_environment"
-              sequence="10"/>
-              
-    <!-- Containers Menu -->
-    <menuitem id="menu_j_portainer_containers" 
-              name="Containers" 
-              parent="menu_j_portainer_resources" 
-              action="action_portainer_container"
               sequence="20"/>
               
     <!-- Images Menu -->
@@ -38,40 +24,60 @@
               name="Images" 
               parent="menu_j_portainer_resources" 
               action="action_portainer_image"
-              sequence="30"/>
+              sequence="10"/>
               
     <!-- Volumes Menu -->
     <menuitem id="menu_j_portainer_volumes" 
               name="Volumes" 
               parent="menu_j_portainer_resources" 
               action="action_portainer_volume"
-              sequence="40"/>
+              sequence="20"/>
               
     <!-- Networks Menu -->
     <menuitem id="menu_j_portainer_networks" 
               name="Networks" 
               parent="menu_j_portainer_resources" 
               action="action_portainer_network"
-              sequence="50"/>
+              sequence="30"/>
               
     <!-- Templates Menu -->
     <menuitem id="menu_j_portainer_templates" 
               name="Templates" 
               parent="menu_j_portainer_resources" 
               action="action_portainer_template"
-              sequence="60"/>
+              sequence="40"/>
               
     <!-- Stacks Menu -->
     <menuitem id="menu_j_portainer_stacks" 
               name="Stacks" 
               parent="menu_j_portainer_resources" 
               action="action_portainer_stack"
-              sequence="70"/>
+              sequence="50"/>
+              
+    <!-- Environments Menu -->
+    <menuitem id="menu_j_portainer_environments" 
+              name="Environments" 
+              parent="menu_j_portainer_resources" 
+              action="action_portainer_environment"
+              sequence="60"/>
+
+    <!-- Configuration Section -->
+    <menuitem id="menu_j_portainer_configuration" 
+              name="Configuration" 
+              parent="menu_j_portainer_root"
+              sequence="80"/>
+              
+    <!-- Servers Menu -->
+    <menuitem id="menu_j_portainer_servers" 
+              name="Servers" 
+              parent="menu_j_portainer_configuration" 
+              action="action_portainer_server"
+              sequence="10"/>
               
     <!-- Synchronize Menu -->
     <menuitem id="menu_j_portainer_sync_wizard" 
               name="Synchronize" 
-              parent="menu_j_portainer_root" 
+              parent="menu_j_portainer_configuration" 
               action="action_portainer_sync_wizard"
-              sequence="5"/>
+              sequence="20"/>
 </odoo>
