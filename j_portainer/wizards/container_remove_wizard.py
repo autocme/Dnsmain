@@ -24,19 +24,44 @@ class PortainerContainerRemoveWizard(models.TransientModel):
         self.ensure_one()
         
         try:
+            # If container is running and force is not checked, show a specific message
+            container = self.container_id
+            if container.state == 'running' and not self.force:
+                raise UserError(_(
+                    "Cannot remove running container. Either stop the container first or enable the 'Force' option."
+                ))
+                
             # Call the remove method on the container with the specified options
-            self.container_id.remove(force=self.force, volumes=self.remove_volumes)
+            result = container.remove(force=self.force, volumes=self.remove_volumes)
             
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Container Removed'),
-                    'message': _('Container %s has been removed') % self.container_name,
-                    'sticky': False,
-                    'type': 'success',
-                }
-            }
+            # The container.remove method will handle displaying success messages
+            return result
+        except UserError:
+            # Re-raise UserError directly to preserve the message
+            raise
         except Exception as e:
+            # Log the full error details
             _logger.error(f"Error removing container {self.container_name}: {str(e)}")
-            raise UserError(_("Error removing container: %s") % str(e))
+            
+            # Provide more specific error messages based on common failures
+            error_message = str(e)
+            if "is running" in error_message or "running" in error_message:
+                message = _(
+                    "The container is currently running. Enable the 'Force' option to remove a running container."
+                )
+            elif "has active endpoints" in error_message or "endpoint" in error_message:
+                message = _(
+                    "Container has active network endpoints. Try enabling the 'Force' option."
+                )
+            elif "bind-mounted" in error_message or "mounted" in error_message:
+                message = _(
+                    "Container has mounted volumes. Enable the 'Remove Volumes' option to remove associated volumes."
+                )
+            elif "permission" in error_message or "access" in error_message:
+                message = _(
+                    "Permission denied. The server may not have sufficient permissions to remove this container."
+                )
+            else:
+                message = _("Error removing container: %s") % error_message
+                
+            raise UserError(message)
