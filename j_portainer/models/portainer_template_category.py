@@ -12,6 +12,7 @@ class PortainerTemplateCategory(models.Model):
     _order = 'name'
     
     name = fields.Char('Category Name', required=True)
+    color = fields.Integer('Color Index')
     
     _sql_constraints = [
         ('name_uniq', 'unique(name)', 'Category name must be unique')

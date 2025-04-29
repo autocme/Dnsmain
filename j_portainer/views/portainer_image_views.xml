@@ -38,6 +38,10 @@
                             <field name="tags" widget="html" readonly="1"/>
                         </page>
                         
+                        <page string="Layers" name="layers">
+                            <field name="layers" widget="html" readonly="1"/>
+                        </page>
+                        
                         <page string="Details" name="details">
                             <field name="details" widget="html" readonly="1"/>
                         </page>

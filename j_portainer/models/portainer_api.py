@@ -287,3 +287,30 @@ class PortainerAPI(models.AbstractModel):
             return response.status_code in [200, 201, 204]
             
         return False
+    
+    def create_template(self, server_id, template_data):
+        """Create a custom template in Portainer
+        
+        Args:
+            server_id (int): ID of the Portainer server
+            template_data (dict): Template data
+            
+        Returns:
+            dict: Created template data or None if failed
+        """
+        server = self.env['j_portainer.server'].browse(server_id)
+        if not server:
+            return None
+            
+        endpoint = '/api/custom_templates'
+        response = server._make_api_request(endpoint, 'POST', data=template_data)
+        
+        if response.status_code in [200, 201, 204]:
+            try:
+                return response.json()
+            except Exception as e:
+                _logger.error(f"Error parsing response from Portainer API: {str(e)}")
+                return None
+        else:
+            _logger.error(f"Error creating template: {response.status_code} - {response.text}")
+            return None

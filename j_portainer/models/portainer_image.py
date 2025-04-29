@@ -24,6 +24,7 @@ class PortainerImage(models.Model):
     details = fields.Text('Details')
     in_use = fields.Boolean('In Use', default=False, help='Whether this image is being used by any containers')
     tags = fields.Html('Tags', compute='_compute_tags', store=True)
+    layers = fields.Html('Layers', compute='_compute_layers', store=True, help='Image layers with size information')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
@@ -55,6 +56,124 @@ class PortainerImage(models.Model):
                 image.tags = html
             else:
                 image.tags = "<div class='text-muted'>No tags available</div>"
+                
+    @api.depends('details')
+    def _compute_layers(self):
+        """Compute HTML formatted layers for this image
+        Format: Order | Size | Layer Command
+        """
+        for image in self:
+            if not image.details:
+                image.layers = "<div class='text-muted'>No layer information available</div>"
+                continue
+                
+            try:
+                details = json.loads(image.details)
+                
+                # Extract layers information
+                layers = []
+                
+                # Different Docker API versions have different fields
+                # Try to get layers from RootFS or History
+                if 'RootFS' in details and 'Layers' in details['RootFS']:
+                    # Just layer IDs, not much to display
+                    layer_ids = details['RootFS']['Layers']
+                    for i, layer_id in enumerate(layer_ids):
+                        # Try to get a size, but we can't reliably get it from RootFS
+                        size = "-"
+                        # Use short layer ID
+                        short_id = layer_id.split(':')[-1][:12]
+                        if len(short_id) > 12:
+                            short_id = short_id[:12]
+                        layers.append({
+                            'order': i + 1,
+                            'size': size,
+                            'command': f"Layer ID: {short_id}"
+                        })
+                
+                if 'History' in details and isinstance(details['History'], list):
+                    # We have history which contains more info
+                    history = details['History']
+                    
+                    # Get the actual image size for accurate layer size calculation
+                    total_size = details.get('Size', 0)
+                    
+                    layers = []  # Reset layers if we have history
+                    
+                    for i, entry in enumerate(history):
+                        # Skip empty layers created by cache or metadata
+                        if 'empty_layer' in entry and entry['empty_layer']:
+                            continue
+                            
+                        # Get the command that created this layer
+                        created_by = entry.get('created_by', '')
+                        if not created_by and 'Cmd' in entry:
+                            created_by = ' '.join(entry['Cmd']) if isinstance(entry['Cmd'], list) else str(entry['Cmd'])
+                            
+                        # Clean up the command for display
+                        if created_by.startswith('/bin/sh -c #(nop) '):
+                            created_by = created_by[18:]
+                        elif created_by.startswith('/bin/sh -c '):
+                            created_by = 'RUN ' + created_by[10:]
+                            
+                        # Calculate a relative size - this is approximate since Docker doesn't expose layer sizes directly
+                        size = entry.get('Size', total_size // (len(history) or 1))
+                        
+                        # Format size
+                        if size == 0:
+                            size_str = "0 B"
+                        else:
+                            units = ['B', 'KB', 'MB', 'GB']
+                            unit_index = 0
+                            while size >= 1024 and unit_index < len(units) - 1:
+                                size /= 1024
+                                unit_index += 1
+                            size_str = f"{size:.2f} {units[unit_index]}"
+                            
+                        layers.append({
+                            'order': i + 1,
+                            'size': size_str,
+                            'command': created_by
+                        })
+                
+                # Generate HTML table for layers
+                if layers:
+                    html = ['<table class="table table-sm table-hover">',
+                            '<thead>',
+                            '<tr>',
+                            '<th width="5%">#</th>',
+                            '<th width="15%">Size</th>',
+                            '<th>Layer</th>',
+                            '</tr>',
+                            '</thead>',
+                            '<tbody>']
+                    
+                    for layer in layers:
+                        html.append('<tr>')
+                        html.append(f'<td>{layer["order"]}</td>')
+                        html.append(f'<td>{layer["size"]}</td>')
+                        
+                        # Make sure we escape any HTML in the command
+                        command = layer["command"]
+                        command = command.replace('<', '&lt;').replace('>', '&gt;')
+                        
+                        # Truncate very long commands
+                        if len(command) > 100:
+                            command = command[:97] + '...'
+                            
+                        html.append(f'<td class="text-monospace">{command}</td>')
+                        html.append('</tr>')
+                        
+                    html.append('</tbody>')
+                    html.append('</table>')
+                    
+                    image.layers = ''.join(html)
+                else:
+                    image.layers = "<div class='text-muted'>No layer information available</div>"
+                    
+            except Exception as e:
+                _logger.error(f"Error computing layers for image {image.repository}:{image.tag}: {str(e)}")
+                image.layers = f"<div class='text-danger'>Error computing layers: {str(e)}</div>"
     
     def name_get(self):
         """Override name_get to display repository:tag"""

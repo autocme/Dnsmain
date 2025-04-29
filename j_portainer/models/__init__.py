@@ -10,6 +10,7 @@ from . import portainer_network
 # Temporarily comment out the template model that's causing issues
 # from . import portainer_template
 from . import portainer_template_category
+from . import portainer_git_credentials
 from . import portainer_template_new
 from . import portainer_stack
 from . import portainer_environment

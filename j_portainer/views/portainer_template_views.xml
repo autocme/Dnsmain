@@ -110,6 +110,7 @@
         <field name="res_model">j_portainer.template</field>
         <field name="view_mode">tree,form</field>
         <field name="search_view_id" ref="view_portainer_template_search"/>
+        <field name="domain">[('is_custom', '=', False)]</field>
         <field name="context">{'search_default_group_by_server': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
@@ -117,6 +118,134 @@
             </p>
             <p>
                 Sync your Portainer server to fetch templates.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Custom Portainer Template Action -->
+    <record id="action_portainer_custom_template" model="ir.actions.act_window">
+        <field name="name">Custom Templates</field>
+        <field name="res_model">j_portainer.template</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_portainer_template_search"/>
+        <field name="domain">[('is_custom', '=', True)]</field>
+        <field name="context">{'search_default_group_by_server': 1, 'default_is_custom': True}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No custom templates found
+            </p>
+            <p>
+                Create a new custom template to deploy containers with predefined settings.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Custom Portainer Template Form View -->
+    <record id="view_portainer_custom_template_form" model="ir.ui.view">
+        <field name="name">j_portainer.template.custom.form</field>
+        <field name="model">j_portainer.template</field>
+        <field name="arch" type="xml">
+            <form string="Custom Template">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="title" class="oe_edit_only"/>
+                        <h1><field name="title" placeholder="Give the template a descriptive name"/></h1>
+                    </div>
+                    
+                    <group>
+                        <group>
+                            <field name="server_id" options="{'no_create': True, 'no_open': True}" required="1"/>
+                            <field name="description" placeholder="Enter a brief description of what your template includes"/>
+                            <field name="note" placeholder="Note any extra information about the template (optional)"/>
+                            <field name="is_custom" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="platform"/>
+                            <field name="template_type" string="Type"/>
+                            <field name="category_ids" widget="many2many_tags" options="{'color_field': 'color', 'no_create_edit': False}"/>
+                            <field name="build_method" widget="radio"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Web Editor" name="web_editor" attrs="{'invisible': [('build_method', '!=', 'editor')]}">
+                            <field name="compose_file" placeholder="Paste the contents of your docker-compose file here..." widget="ace" options="{'mode': 'yaml'}" attrs="{'required': [('build_method', '=', 'editor')]}"/>
+                        </page>
+                        
+                        <page string="Git Repository" name="git_repository" attrs="{'invisible': [('build_method', '!=', 'repository')]}">
+                            <group>
+                                <group>
+                                    <field name="git_repository_url" placeholder="https://github.com/username/repository.git" attrs="{'required': [('build_method', '=', 'repository')]}"/>
+                                    <field name="git_repository_reference" placeholder="master" attrs="{'required': [('build_method', '=', 'repository')]}"/>
+                                    <field name="git_compose_path" placeholder="docker-compose.yml" attrs="{'required': [('build_method', '=', 'repository')]}"/>
+                                    <field name="git_skip_tls"/>
+                                </group>
+                                <group>
+                                    <field name="git_authentication"/>
+                                    <field name="git_credentials_id" 
+                                           attrs="{'invisible': [('git_authentication', '=', False)], 'required': [('git_authentication', '=', True), ('git_username', '=', False)]}"
+                                           domain="[('server_id', '=', server_id)]"
+                                           options="{'no_create': True}"/>
+                                    <field name="git_username" 
+                                           attrs="{'invisible': [('git_authentication', '=', False)], 'required': [('git_authentication', '=', True), ('git_credentials_id', '=', False)]}"/>
+                                    <field name="git_token" password="True" 
+                                           attrs="{'invisible': [('git_authentication', '=', False)], 'required': [('git_authentication', '=', True), ('git_credentials_id', '=', False)]}"/>
+                                    <field name="git_save_credential" 
+                                           attrs="{'invisible': ['|', ('git_authentication', '=', False), ('git_credentials_id', '!=', False)]}"/>
+                                    <field name="git_credential_name" 
+                                           attrs="{'invisible': ['|', '|', ('git_authentication', '=', False), ('git_save_credential', '=', False), ('git_credentials_id', '!=', False)], 
+                                                   'required': [('git_save_credential', '=', True), ('git_credentials_id', '=', False)]}"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Git Credentials Form View -->
+    <record id="view_portainer_git_credentials_form" model="ir.ui.view">
+        <field name="name">j_portainer.git.credentials.form</field>
+        <field name="model">j_portainer.git.credentials</field>
+        <field name="arch" type="xml">
+            <form string="Git Credentials">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="server_id" options="{'no_create': True, 'no_open': True}"/>
+                        <field name="username"/>
+                        <field name="token" password="True"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Git Credentials Tree View -->
+    <record id="view_portainer_git_credentials_tree" model="ir.ui.view">
+        <field name="name">j_portainer.git.credentials.tree</field>
+        <field name="model">j_portainer.git.credentials</field>
+        <field name="arch" type="xml">
+            <tree string="Git Credentials">
+                <field name="name"/>
+                <field name="username"/>
+                <field name="server_id"/>
+            </tree>
+        </field>
+    </record>
+    
+    <!-- Git Credentials Action -->
+    <record id="action_portainer_git_credentials" model="ir.actions.act_window">
+        <field name="name">Git Credentials</field>
+        <field name="res_model">j_portainer.git.credentials</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No Git credentials found
+            </p>
+            <p>
+                Create Git credentials to access private repositories.
             </p>
         </field>
     </record>
