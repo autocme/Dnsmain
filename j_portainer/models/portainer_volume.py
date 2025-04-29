@@ -14,12 +14,15 @@ class PortainerVolume(models.Model):
     _order = 'name'
     
     name = fields.Char('Name', required=True)
+    volume_id = fields.Char('Volume ID', help="The unique identifier for this volume")
     driver = fields.Char('Driver', required=True)
+    driver_opts = fields.Text('Driver Options', help="Options passed to the volume driver")
     mountpoint = fields.Char('Mountpoint')
     created = fields.Datetime('Created')
     scope = fields.Char('Scope', default='local')
     labels = fields.Text('Labels')
     details = fields.Text('Details')
+    in_use = fields.Boolean('In Use', default=False, help="Whether the volume is currently used by any containers")
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
