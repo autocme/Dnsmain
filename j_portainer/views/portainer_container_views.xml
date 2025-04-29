@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Portainer Container Form View -->
+    <record id="view_portainer_container_form" model="ir.ui.view">
+        <field name="name">j_portainer.container.form</field>
+        <field name="model">j_portainer.container</field>
+        <field name="arch" type="xml">
+            <form string="Container">
+                <header>
+                    <button name="start" string="Start" type="object" 
+                            invisible="state == 'running'" 
+                            class="btn-primary"/>
+                    <button name="stop" string="Stop" type="object" 
+                            invisible="state != 'running'" 
+                            class="btn-warning"/>
+                    <button name="restart" string="Restart" type="object" 
+                            invisible="state != 'running'"
+                            class="btn-info"/>
+                    <button name="pause" string="Pause" type="object" 
+                            invisible="state != 'running'"
+                            class="btn-secondary"/>
+                    <button name="unpause" string="Unpause" type="object" 
+                            invisible="state != 'paused'"
+                            class="btn-info"/>
+                    <button name="kill" string="Kill" type="object" 
+                            invisible="state != 'running'"
+                            class="btn-danger" 
+                            confirm="Are you sure you want to kill this container?"/>
+                    <button name="action_remove_with_options" string="Remove" type="object" 
+                            class="btn-danger" 
+                            confirm="Are you sure you want to remove this container?"/>
+                    <button name="action_refresh" string="Refresh" type="object" 
+                            class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only"/>
+                        <h1><field name="name"/></h1>
+                    </div>
+                    
+                    <group>
+                        <group>
+                            <field name="container_id" readonly="1"/>
+                            <field name="server_id" readonly="1"/>
+                            <field name="environment_id" readonly="1"/>
+                            <field name="environment_name" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="image" readonly="1"/>
+                            <field name="image_id" readonly="1"/>
+                            <field name="created" readonly="1"/>
+                            <field name="state" widget="badge" 
+                                   decoration-success="state == 'running'"
+                                   decoration-warning="state == 'paused'"
+                                   decoration-danger="state in ['stopped', 'exited', 'dead']"
+                                   readonly="1"/>
+                            <field name="status" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Ports" name="ports">
+                            <field name="ports" widget="html" readonly="1" invisible="1"/>
+                            <field name="get_formatted_ports" widget="html" readonly="1"/>
+                        </page>
+                        
+                        <page string="Labels" name="labels">
+                            <field name="labels" widget="html" readonly="1" invisible="1"/>
+                            <field name="get_formatted_labels" widget="html" readonly="1"/>
+                        </page>
+                        
+                        <page string="Logs" name="logs">
+                            <button name="action_view_logs" string="View Logs" type="object" 
+                                    class="btn-primary"/>
+                        </page>
+                        
+                        <page string="Details" name="details">
+                            <field name="details" widget="html" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Portainer Container Tree View -->
+    <record id="view_portainer_container_tree" model="ir.ui.view">
+        <field name="name">j_portainer.container.tree</field>
+        <field name="model">j_portainer.container</field>
+        <field name="arch" type="xml">
+            <tree string="Containers">
+                <field name="name"/>
+                <field name="state" widget="badge" 
+                       decoration-success="state == 'running'"
+                       decoration-warning="state == 'paused'"
+                       decoration-danger="state in ['stopped', 'exited', 'dead']"/>
+                <field name="image"/>
+                <field name="server_id"/>
+                <field name="environment_name"/>
+                <field name="created"/>
+                <button name="start" string="Start" type="object" 
+                        icon="fa-play"
+                        invisible="state == 'running'"/>
+                <button name="stop" string="Stop" type="object" 
+                        icon="fa-stop"
+                        invisible="state != 'running'"/>
+                <button name="restart" string="Restart" type="object" 
+                        icon="fa-refresh"
+                        invisible="state != 'running'"/>
+            </tree>
+        </field>
+    </record>
+    
+    <!-- Portainer Container Search View -->
+    <record id="view_portainer_container_search" model="ir.ui.view">
+        <field name="name">j_portainer.container.search</field>
+        <field name="model">j_portainer.container</field>
+        <field name="arch" type="xml">
+            <search string="Search Containers">
+                <field name="name"/>
+                <field name="image"/>
+                <field name="server_id"/>
+                <field name="environment_name"/>
+                <separator/>
+                <filter string="Running" name="running" domain="[('state', '=', 'running')]"/>
+                <filter string="Stopped" name="stopped" domain="[('state', '=', 'stopped')]"/>
+                <filter string="Paused" name="paused" domain="[('state', '=', 'paused')]"/>
+                <filter string="Exited" name="exited" domain="[('state', '=', 'exited')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
+                    <filter string="Environment" name="group_by_environment" domain="[]" context="{'group_by': 'environment_name'}"/>
+                    <filter string="State" name="group_by_state" domain="[]" context="{'group_by': 'state'}"/>
+                    <filter string="Image" name="group_by_image" domain="[]" context="{'group_by': 'image'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    
+    <!-- Portainer Container Action -->
+    <record id="action_portainer_container" model="ir.actions.act_window">
+        <field name="name">Containers</field>
+        <field name="res_model">j_portainer.container</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_portainer_container_search"/>
+        <field name="context">{'search_default_group_by_environment': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No containers found
+            </p>
+            <p>
+                Sync your Portainer environments to fetch containers.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Menu Item -->
+    <menuitem id="menu_j_portainer_containers" 
+              name="Containers" 
+              parent="menu_j_portainer_resources" 
+              action="action_portainer_container"
+              sequence="10"/>
+</odoo>

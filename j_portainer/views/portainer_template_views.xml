@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Portainer Template Form View -->
+    <record id="view_portainer_template_form" model="ir.ui.view">
+        <field name="name">j_portainer.template.form</field>
+        <field name="model">j_portainer.template</field>
+        <field name="arch" type="xml">
+            <form string="Template">
+                <header>
+                    <button name="action_deploy" string="Deploy Container" type="object" 
+                            class="btn-primary"/>
+                    <button name="action_refresh" string="Refresh" type="object" 
+                            class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="title" class="oe_edit_only"/>
+                        <h1><field name="title"/></h1>
+                    </div>
+                    
+                    <group>
+                        <group>
+                            <field name="server_id" readonly="1"/>
+                            <field name="template_id" readonly="1"/>
+                            <field name="is_custom" readonly="1"/>
+                            <field name="template_type" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="image" readonly="1"/>
+                            <field name="platform" readonly="1"/>
+                            <field name="categories" readonly="1" widget="many2many_tags"/>
+                            <field name="registry" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <field name="description" readonly="1"/>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Environment Variables" name="env_vars">
+                            <field name="environment_variables" widget="html" readonly="1"/>
+                        </page>
+                        
+                        <page string="Ports" name="ports">
+                            <field name="ports" widget="html" readonly="1"/>
+                        </page>
+                        
+                        <page string="Volumes" name="volumes">
+                            <field name="volumes" widget="html" readonly="1"/>
+                        </page>
+                        
+                        <page string="Details" name="details">
+                            <field name="details" widget="html" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Portainer Template Tree View -->
+    <record id="view_portainer_template_tree" model="ir.ui.view">
+        <field name="name">j_portainer.template.tree</field>
+        <field name="model">j_portainer.template</field>
+        <field name="arch" type="xml">
+            <tree string="Templates">
+                <field name="title"/>
+                <field name="image"/>
+                <field name="platform"/>
+                <field name="template_type"/>
+                <field name="is_custom"/>
+                <field name="server_id"/>
+                <field name="categories" widget="many2many_tags"/>
+                <button name="action_deploy" string="Deploy" type="object" 
+                        icon="fa-rocket"/>
+            </tree>
+        </field>
+    </record>
+    
+    <!-- Portainer Template Search View -->
+    <record id="view_portainer_template_search" model="ir.ui.view">
+        <field name="name">j_portainer.template.search</field>
+        <field name="model">j_portainer.template</field>
+        <field name="arch" type="xml">
+            <search string="Search Templates">
+                <field name="title"/>
+                <field name="image"/>
+                <field name="server_id"/>
+                <field name="categories"/>
+                <separator/>
+                <filter string="Custom Templates" name="custom" domain="[('is_custom', '=', True)]"/>
+                <filter string="Official Templates" name="official" domain="[('is_custom', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
+                    <filter string="Type" name="group_by_type" domain="[]" context="{'group_by': 'template_type'}"/>
+                    <filter string="Platform" name="group_by_platform" domain="[]" context="{'group_by': 'platform'}"/>
+                    <filter string="Is Custom" name="group_by_custom" domain="[]" context="{'group_by': 'is_custom'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    
+    <!-- Portainer Template Action -->
+    <record id="action_portainer_template" model="ir.actions.act_window">
+        <field name="name">Templates</field>
+        <field name="res_model">j_portainer.template</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_portainer_template_search"/>
+        <field name="context">{'search_default_group_by_server': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No templates found
+            </p>
+            <p>
+                Sync your Portainer server to fetch templates.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Menu Item -->
+    <menuitem id="menu_j_portainer_templates" 
+              name="Templates" 
+              parent="menu_j_portainer_resources" 
+              action="action_portainer_template"
+              sequence="50"/>
+</odoo>

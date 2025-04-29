@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Portainer Image Form View -->
+    <record id="view_portainer_image_form" model="ir.ui.view">
+        <field name="name">j_portainer.image.form</field>
+        <field name="model">j_portainer.image</field>
+        <field name="arch" type="xml">
+            <form string="Image">
+                <header>
+                    <button name="action_remove" string="Remove" type="object" 
+                            class="btn-danger" 
+                            confirm="Are you sure you want to remove this image?"/>
+                    <button name="action_refresh" string="Refresh" type="object" 
+                            class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="repository" class="oe_edit_only"/>
+                        <h1><field name="repository"/>:<field name="tag"/></h1>
+                    </div>
+                    
+                    <group>
+                        <group>
+                            <field name="image_id" readonly="1"/>
+                            <field name="server_id" readonly="1"/>
+                            <field name="environment_id" readonly="1"/>
+                            <field name="environment_name" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="size" readonly="1"/>
+                            <field name="created" readonly="1"/>
+                            <field name="in_use" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Tags" name="tags">
+                            <field name="all_tags" widget="html" readonly="1"/>
+                        </page>
+                        
+                        <page string="Details" name="details">
+                            <field name="details" widget="html" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Portainer Image Tree View -->
+    <record id="view_portainer_image_tree" model="ir.ui.view">
+        <field name="name">j_portainer.image.tree</field>
+        <field name="model">j_portainer.image</field>
+        <field name="arch" type="xml">
+            <tree string="Images">
+                <field name="repository"/>
+                <field name="tag"/>
+                <field name="image_id"/>
+                <field name="server_id"/>
+                <field name="environment_name"/>
+                <field name="created"/>
+                <field name="size"/>
+                <field name="in_use"/>
+                <button name="action_remove" string="Remove" type="object" 
+                        icon="fa-trash" 
+                        invisible="in_use == True"/>
+            </tree>
+        </field>
+    </record>
+    
+    <!-- Portainer Image Search View -->
+    <record id="view_portainer_image_search" model="ir.ui.view">
+        <field name="name">j_portainer.image.search</field>
+        <field name="model">j_portainer.image</field>
+        <field name="arch" type="xml">
+            <search string="Search Images">
+                <field name="repository"/>
+                <field name="tag"/>
+                <field name="image_id"/>
+                <field name="server_id"/>
+                <field name="environment_name"/>
+                <separator/>
+                <filter string="In Use" name="in_use" domain="[('in_use', '=', True)]"/>
+                <filter string="Not In Use" name="not_in_use" domain="[('in_use', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
+                    <filter string="Environment" name="group_by_environment" domain="[]" context="{'group_by': 'environment_name'}"/>
+                    <filter string="Repository" name="group_by_repository" domain="[]" context="{'group_by': 'repository'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    
+    <!-- Portainer Image Action -->
+    <record id="action_portainer_image" model="ir.actions.act_window">
+        <field name="name">Images</field>
+        <field name="res_model">j_portainer.image</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_portainer_image_search"/>
+        <field name="context">{'search_default_group_by_environment': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No images found
+            </p>
+            <p>
+                Sync your Portainer environments to fetch images.
+            </p>
+        </field>
+    </record>
+    
+    <!-- Menu Item -->
+    <menuitem id="menu_j_portainer_images" 
+              name="Images" 
+              parent="menu_j_portainer_resources" 
+              action="action_portainer_image"
+              sequence="20"/>
+</odoo>
