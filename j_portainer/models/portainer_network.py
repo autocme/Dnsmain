@@ -18,11 +18,18 @@ class PortainerNetwork(models.Model):
     driver = fields.Char('Driver', required=True)
     scope = fields.Char('Scope', default='local')
     ipam = fields.Text('IPAM')
+    ipam_config = fields.Text('IPAM Configuration') # Field to hold formatted IPAM configuration for display
     containers = fields.Text('Containers')
     labels = fields.Text('Labels')
     details = fields.Text('Details')
     is_default_network = fields.Boolean('Default Network', default=False, 
                                        help="Default networks like 'bridge' and 'host' cannot be removed")
+    is_ipv6 = fields.Boolean('IPv6 Enabled', default=False,
+                            help="Whether IPv6 is enabled for this network")
+    internal = fields.Boolean('Internal Network', default=False,
+                             help="Whether the network is internal (no external connectivity)")
+    attachable = fields.Boolean('Attachable', default=False,
+                               help="Whether containers can be attached to this network")
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
