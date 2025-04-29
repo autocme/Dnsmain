@@ -22,7 +22,7 @@
                     
                     <div name="status_message">
                         <field name="error_message" placeholder="Error messages will appear here" 
-                               attrs="{'invisible': [('error_message', '=', False)]}" 
+                               invisible="error_message == False" 
                                class="text-danger"/>
                     </div>
                     

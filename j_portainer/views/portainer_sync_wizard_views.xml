@@ -13,17 +13,17 @@
                                invisible="not environment_id" readonly="1"/>
                         <field name="sync_option"/>
                     </group>
-                    <group attrs="{'invisible': [('sync_option', '!=', 'specific')]}">
-                        <field name="sync_containers" attrs="{'required': [('sync_option', '=', 'specific')]}"/>
-                        <field name="sync_images" attrs="{'required': [('sync_option', '=', 'specific')]}"/>
-                        <field name="sync_volumes" attrs="{'required': [('sync_option', '=', 'specific')]}"/>
-                        <field name="sync_networks" attrs="{'required': [('sync_option', '=', 'specific')]}"/>
-                        <field name="sync_templates" attrs="{'required': [('sync_option', '=', 'specific')], 'invisible': [('environment_id', '!=', False)]}"/>
-                        <field name="sync_stacks" attrs="{'required': [('sync_option', '=', 'specific')]}"/>
+                    <group invisible="sync_option != 'specific'">
+                        <field name="sync_containers" required="sync_option == 'specific'"/>
+                        <field name="sync_images" required="sync_option == 'specific'"/>
+                        <field name="sync_volumes" required="sync_option == 'specific'"/>
+                        <field name="sync_networks" required="sync_option == 'specific'"/>
+                        <field name="sync_templates" required="sync_option == 'specific'" invisible="environment_id != False"/>
+                        <field name="sync_stacks" required="sync_option == 'specific'"/>
                     </group>
                     <div name="status_message">
                         <field name="error_message" placeholder="Error messages will appear here" 
-                               attrs="{'invisible': [('error_message', '=', False)]}" 
+                               invisible="error_message == False" 
                                class="text-danger"/>
                     </div>
                     <footer>
