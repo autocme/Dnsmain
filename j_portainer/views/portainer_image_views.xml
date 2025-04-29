@@ -35,7 +35,7 @@
                     
                     <notebook>
                         <page string="Tags" name="tags">
-                            <field name="all_tags" widget="html" readonly="1"/>
+                            <field name="tags" widget="html" readonly="1"/>
                         </page>
                         
                         <page string="Details" name="details">

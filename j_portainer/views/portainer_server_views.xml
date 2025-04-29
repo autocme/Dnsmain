@@ -20,10 +20,10 @@
                         <h1><field name="name" placeholder="e.g. Production Portainer"/></h1>
                     </div>
                     
-                    <div name="status_message" invisible="status != 'error'">
-                        <div class="alert alert-danger" role="alert">
-                            <field name="error_message"/>
-                        </div>
+                    <div name="status_message">
+                        <field name="error_message" placeholder="Error messages will appear here" 
+                               attrs="{'invisible': [('error_message', '=', False)]}" 
+                               class="text-danger"/>
                     </div>
                     
                     <group>

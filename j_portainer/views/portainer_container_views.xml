@@ -60,13 +60,11 @@
                     
                     <notebook>
                         <page string="Ports" name="ports">
-                            <field name="ports" widget="html" readonly="1" invisible="1"/>
-                            <field name="get_formatted_ports" widget="html" readonly="1"/>
+                            <field name="ports" widget="html" readonly="1"/>
                         </page>
                         
                         <page string="Labels" name="labels">
-                            <field name="labels" widget="html" readonly="1" invisible="1"/>
-                            <field name="get_formatted_labels" widget="html" readonly="1"/>
+                            <field name="labels" widget="html" readonly="1"/>
                         </page>
                         
                         <page string="Logs" name="logs">
