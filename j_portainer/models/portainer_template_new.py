@@ -16,10 +16,10 @@ class PortainerTemplateNew(models.Model):
     title = fields.Char('Title', required=True)
     description = fields.Text('Description')
     template_type = fields.Selection([
-        (1, 'Container'),
-        (2, 'Stack'),
-        (3, 'App Template')
-    ], string='Type', default=1, required=True)
+        ('1', 'Container'),
+        ('2', 'Stack'),
+        ('3', 'App Template')
+    ], string='Type', default='1', required=True)
     platform = fields.Char('Platform', default='linux')
     template_id = fields.Integer('Template ID')
     logo = fields.Char('Logo URL')
@@ -133,9 +133,9 @@ class PortainerTemplateNew(models.Model):
         """Get type name"""
         self.ensure_one()
         types = {
-            1: 'Container',
-            2: 'Stack',
-            3: 'App Template'
+            '1': 'Container',
+            '2': 'Stack',
+            '3': 'App Template'
         }
         return types.get(self.template_type, 'Unknown')
         
