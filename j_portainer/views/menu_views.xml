@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Main Menu -->
+    <menuitem id="menu_j_portainer_root" 
+              name="Portainer" 
+              web_icon="j_portainer,static/description/icon.png"
+              sequence="75"/>
+    
+    <!-- Servers Submenu -->
+    <menuitem id="menu_j_portainer_servers" 
+              name="Servers" 
+              parent="menu_j_portainer_root" 
+              action="action_portainer_server"
+              sequence="10"/>
+    
+    <!-- Environments Submenu -->
+    <menuitem id="menu_j_portainer_environments" 
+              name="Environments" 
+              parent="menu_j_portainer_root" 
+              action="action_portainer_environment"
+              sequence="20"/>
+    
+    <!-- Resources Section -->
+    <menuitem id="menu_j_portainer_resources" 
+              name="Resources" 
+              parent="menu_j_portainer_root" 
+              sequence="30"/>
+    
+    <!-- Actions for resources will be defined in their respective view files -->
+</odoo>
