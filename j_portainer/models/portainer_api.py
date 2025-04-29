@@ -302,6 +302,19 @@ class PortainerAPI(models.AbstractModel):
         server = self.env['j_portainer.server'].browse(server_id)
         if not server:
             return None
+            
+        # Validate required fields
+        if not template_data.get('title'):
+            template_data['title'] = 'Custom Template'
+        if not template_data.get('description'):
+            template_data['description'] = 'Custom template created from Odoo'
+        
+        # Normalize type field - ensure it's an integer
+        if 'type' in template_data and isinstance(template_data['type'], str):
+            try:
+                template_data['type'] = int(template_data['type'])
+            except ValueError:
+                template_data['type'] = 1  # Default to container type
         
         # Log the template data for debugging
         _logger.info(f"Creating template with data: {json.dumps(template_data, indent=2)}")
@@ -312,28 +325,108 @@ class PortainerAPI(models.AbstractModel):
         try:
             # Properly set Content-Type header
             headers = {'Content-Type': 'application/json'}
-            response = server._make_api_request(endpoint, 'POST', data=template_data, headers=headers)
+            
+            # Check Portainer version to determine correct API format
+            version_response = server._make_api_request('/api/system/version', 'GET')
+            version_str = ''
+            
+            if version_response.status_code == 200:
+                try:
+                    version_info = version_response.json()
+                    version_str = version_info.get('Version', '')
+                    _logger.info(f"Detected Portainer version: {version_str}")
+                except Exception as e:
+                    _logger.warning(f"Error parsing version info: {str(e)}")
+            
+            # Prepare API-specific data format
+            api_data = dict(template_data)  # Make a copy to avoid modifying the original
+            
+            # Get auth token to see if we need to handle it specially
+            auth_header = server._get_api_key_header()
+            
+            # Special case for Portainer CE 2.9+ and 2.17+
+            if "2.9." in version_str or "2.1" in version_str or "2.2" in version_str:
+                _logger.info("Using Portainer CE 2.9+ or 2.17+ format")
+                # Make sure type is an integer
+                if 'type' in api_data:
+                    api_data['type'] = int(api_data['type'])
+                
+            # Special handling for Portainer CE 2.27 LTS
+            if "2.27" in version_str:
+                _logger.info("Using Portainer CE 2.27 LTS format")
+                # Additional fields required for 2.27
+                if api_data.get('type') == 2:  # Stack template
+                    # Ensure required fields for stack templates
+                    if 'repository' not in api_data and 'repositoryURL' in api_data:
+                        api_data['repository'] = {
+                            'url': api_data.get('repositoryURL', ''),
+                            'stackfile': api_data.get('composeFilePath', 'docker-compose.yml')
+                        }
+                        if 'repositoryReferenceName' in api_data:
+                            api_data['repository']['reference'] = api_data.get('repositoryReferenceName')
+            
+            # First try standard endpoint
+            response = server._make_api_request(endpoint, 'POST', data=api_data, headers=headers)
             
             if response.status_code in [200, 201, 204]:
                 try:
-                    return response.json()
+                    result = response.json()
+                    _logger.info(f"Template created successfully with ID: {result.get('Id', 'N/A')}")
+                    return result
                 except Exception as e:
-                    _logger.error(f"Error parsing response from Portainer API: {str(e)}")
-                    return None
+                    _logger.error(f"Error parsing response: {str(e)}")
+                    if response.text:
+                        _logger.info(f"Raw response: {response.text}")
+                    return {'Id': 0}  # Return minimal success response
             else:
-                # If first attempt fails, try alternative endpoint for older Portainer versions
+                # If first attempt fails, try alternative endpoint
                 _logger.warning(f"Primary endpoint failed: {response.status_code} - {response.text}. Trying alternative endpoint.")
                 alt_endpoint = '/api/templates/custom'
-                alt_response = server._make_api_request(alt_endpoint, 'POST', data=template_data, headers=headers)
+                
+                # For some Portainer versions, we need to wrap the template in a templates array
+                if response.status_code == 400 and "templates" not in api_data:
+                    wrapped_data = {"templates": [api_data]}
+                    _logger.info(f"Trying with wrapped format: {json.dumps(wrapped_data, indent=2)}")
+                    alt_response = server._make_api_request(alt_endpoint, 'POST', data=wrapped_data, headers=headers)
+                else:
+                    alt_response = server._make_api_request(alt_endpoint, 'POST', data=api_data, headers=headers)
                 
                 if alt_response.status_code in [200, 201, 204]:
                     try:
-                        return alt_response.json()
+                        result = alt_response.json()
+                        _logger.info(f"Template created successfully with alternative endpoint. Response: {result}")
+                        return result
                     except Exception as e:
-                        _logger.error(f"Error parsing response from alternative Portainer API: {str(e)}")
-                        return None
+                        _logger.error(f"Error parsing alternative response: {str(e)}")
+                        if alt_response.text:
+                            _logger.info(f"Raw response from alternative endpoint: {alt_response.text}")
+                        return {'Id': 0}  # Return minimal success response
                 else:
-                    _logger.error(f"Error creating template on both endpoints: {alt_response.status_code} - {alt_response.text}")
+                    # Last attempt: try with templates array format directly on primary endpoint
+                    if alt_response.status_code not in [200, 201, 204]:
+                        wrapped_data = {"version": "2", "templates": [api_data]}
+                        _logger.info(f"Trying with v2 format on primary endpoint: {endpoint}")
+                        wrapped_response = server._make_api_request(endpoint, 'POST', data=wrapped_data, headers=headers)
+                        
+                        if wrapped_response.status_code in [200, 201, 204]:
+                            try:
+                                result = wrapped_response.json()
+                                _logger.info(f"Template created successfully with wrapped format. Response: {result}")
+                                return result
+                            except Exception as e:
+                                _logger.error(f"Error parsing wrapped response: {str(e)}")
+                                if wrapped_response.text:
+                                    _logger.info(f"Raw response from wrapped format: {wrapped_response.text}")
+                                return {'Id': 0}
+                    
+                    _logger.error(f"Error creating template on all endpoints. Last error: {alt_response.status_code} - {alt_response.text}")
+                    
+                    # Check if the feature is available at all
+                    version_endpoint = '/api/custom_templates'
+                    version_check = server._make_api_request(version_endpoint, 'GET')
+                    if version_check.status_code == 404:
+                        _logger.error("Custom templates feature not available in this Portainer version")
+                    
                     return None
         except Exception as e:
             _logger.error(f"Exception during template creation: {str(e)}")

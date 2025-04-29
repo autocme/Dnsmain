@@ -319,64 +319,108 @@ class PortainerTemplateNew(models.Model):
         
     def _prepare_template_data(self, vals):
         """Prepare template data for Portainer API"""
+        # Set required fields with fallbacks if empty
+        title = vals.get('title') or 'Custom Template'
+        description = vals.get('description') or f'Template for {title}'
+        
         template_data = {
             'type': int(vals.get('template_type', 1)),
-            'title': vals.get('title', ''),
-            'description': vals.get('description', ''),
+            'title': title,
+            'description': description,
             'note': vals.get('note', ''),
             'platform': vals.get('platform', 'linux'),
             'categories': vals.get('categories', '').split(',') if vals.get('categories') else []
         }
         
-        # Handle build method
-        if vals.get('build_method') == 'editor':
-            # Web editor method
-            template_data['composeFileContent'] = vals.get('compose_file', '')
-        elif vals.get('build_method') == 'repository':
-            # Git repository method
-            git_data = {
-                'url': vals.get('git_repository_url', ''),
-                'referenceName': vals.get('git_repository_reference', 'master'),
-                'composeFilePath': vals.get('git_compose_path', 'docker-compose.yml'),
-                'skipTLSVerify': vals.get('git_skip_tls', False)
-            }
-            
-            # Handle authentication
-            if vals.get('git_authentication'):
-                # Use credentials if provided
-                if vals.get('git_credentials_id'):
-                    credentials = self.env['j_portainer.git.credentials'].browse(vals.get('git_credentials_id'))
-                    git_data['authentication'] = {
-                        'username': credentials.username,
-                        'password': credentials.token
-                    }
-                else:
-                    # Use provided username/token
-                    git_data['authentication'] = {
-                        'username': vals.get('git_username', ''),
-                        'password': vals.get('git_token', '')
-                    }
-                    
-                    # Save credentials if requested
-                    if vals.get('git_save_credential') and vals.get('git_credential_name'):
-                        self._save_git_credentials(
-                            vals.get('server_id'),
-                            vals.get('git_credential_name'),
-                            vals.get('git_username', ''),
-                            vals.get('git_token', '')
-                        )
-                        
-            template_data['repositoryURL'] = git_data['url']
-            template_data['repositoryReferenceName'] = git_data['referenceName']
-            template_data['composeFilePath'] = git_data['composeFilePath']
-            template_data['repositoryAuthentication'] = bool(vals.get('git_authentication'))
-            
-            if template_data['repositoryAuthentication'] and 'authentication' in git_data:
-                template_data['repositoryUsername'] = git_data['authentication']['username']
-                template_data['repositoryPassword'] = git_data['authentication']['password']
+        # Clean up empty categories
+        template_data['categories'] = [c.strip() for c in template_data['categories'] if c.strip()]
+        
+        # Ensure at least one category exists
+        if not template_data['categories']:
+            template_data['categories'] = ['Custom']
+        
+        # Handle build method for Stack templates (type 2)
+        if template_data['type'] == 2:
+            if vals.get('build_method') == 'editor':
+                # Web editor method
+                template_data['composeFileContent'] = vals.get('compose_file', '')
                 
-            template_data['skipTLSVerify'] = git_data['skipTLSVerify']
-            
+                # Ensure composeFileContent is not empty
+                if not template_data['composeFileContent']:
+                    template_data['composeFileContent'] = 'version: "3"\nservices:\n  app:\n    image: nginx:latest'
+                    
+            elif vals.get('build_method') == 'repository':
+                # Git repository method
+                git_data = {
+                    'url': vals.get('git_repository_url', ''),
+                    'referenceName': vals.get('git_repository_reference', 'master'),
+                    'composeFilePath': vals.get('git_compose_path', 'docker-compose.yml'),
+                }
+                
+                # Add TLS option if it exists
+                if 'git_skip_tls' in vals:
+                    git_data['skipTLSVerify'] = vals.get('git_skip_tls', False)
+                
+                # Handle authentication
+                if vals.get('git_authentication'):
+                    # Use credentials if provided
+                    if vals.get('git_credentials_id'):
+                        credentials = self.env['j_portainer.git.credentials'].browse(vals.get('git_credentials_id'))
+                        git_data['authentication'] = {
+                            'username': credentials.username,
+                            'password': credentials.token
+                        }
+                    else:
+                        # Use provided username/token
+                        git_data['authentication'] = {
+                            'username': vals.get('git_username', ''),
+                            'password': vals.get('git_token', '')
+                        }
+                        
+                        # Save credentials if requested
+                        if vals.get('git_save_credential') and vals.get('git_credential_name'):
+                            self._save_git_credentials(
+                                vals.get('server_id'),
+                                vals.get('git_credential_name'),
+                                vals.get('git_username', ''),
+                                vals.get('git_token', '')
+                            )
+                
+                # Set repository fields
+                template_data['repository'] = {
+                    'url': git_data['url'],
+                    'stackfile': git_data['composeFilePath']
+                }
+                
+                if 'referenceName' in git_data:
+                    template_data['repository']['reference'] = git_data['referenceName']
+                    
+                if 'skipTLSVerify' in git_data:
+                    template_data['repository']['tlsSkipVerify'] = git_data['skipTLSVerify']
+                    
+                # Add authentication if present
+                if 'authentication' in git_data:
+                    template_data['repository']['authentication'] = {
+                        'username': git_data['authentication']['username'],
+                        'password': git_data['authentication']['password']
+                    }
+                
+                # For compatibility with older Portainer versions
+                template_data['repositoryURL'] = git_data['url']
+                template_data['repositoryReferenceName'] = git_data['referenceName']
+                template_data['composeFilePath'] = git_data['composeFilePath']
+                template_data['repositoryAuthentication'] = bool(vals.get('git_authentication'))
+                
+                if template_data['repositoryAuthentication'] and 'authentication' in git_data:
+                    template_data['repositoryUsername'] = git_data['authentication']['username']
+                    template_data['repositoryPassword'] = git_data['authentication']['password']
+                    
+                if 'skipTLSVerify' in git_data:
+                    template_data['skipTLSVerify'] = git_data['skipTLSVerify']
+        
+        # Add logging for debugging
+        _logger.info(f"Prepared template data: {json.dumps(template_data, indent=2)}")
+        
         return template_data
         
     def _save_git_credentials(self, server_id, name, username, token):
