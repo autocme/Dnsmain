@@ -15,7 +15,7 @@
                         <field name="environment_id" invisible="1"/>
                         <field name="lines"/>
                     </group>
-                    <div class="alert alert-info" role="alert" invisible="logs != False">
+                    <div class="alert alert-info" role="alert" invisible="logs != False and logs">
                         <span class="fa fa-info-circle"/> Click the "Refresh Logs" button to fetch container logs.
                     </div>
                     <group string="Container Logs" colspan="4">

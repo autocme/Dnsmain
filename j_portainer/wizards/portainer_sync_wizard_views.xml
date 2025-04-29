@@ -29,8 +29,8 @@
                         <field name="environment_specific"/>
                         <field name="environment_id" 
                                options="{'no_create': True}" 
-                               invisible="not environment_specific" 
-                               required="environment_specific"/>
+                               invisible="environment_specific == False" 
+                               required="environment_specific == True"/>
                     </group>
                 </div>
                 
