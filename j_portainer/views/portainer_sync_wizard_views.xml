@@ -43,10 +43,5 @@
         <field name="target">new</field>
     </record>
     
-    <!-- Menu Item -->
-    <menuitem id="menu_j_portainer_sync_wizard" 
-              name="Synchronize" 
-              parent="menu_j_portainer_root" 
-              action="action_portainer_sync_wizard"
-              sequence="5"/>
+    <!-- Menu Item has been moved to menu_views.xml for centralization -->
 </odoo>
