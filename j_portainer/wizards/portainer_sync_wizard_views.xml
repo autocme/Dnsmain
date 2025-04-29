@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Portainer Sync Wizard Form View -->
+    <record id="view_portainer_sync_wizard_form" model="ir.ui.view">
+        <field name="name">j_portainer.sync.wizard.form</field>
+        <field name="model">j_portainer.sync.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Synchronize Portainer Resources">
+                <field name="state" invisible="1"/>
+                
+                <!-- Initial Selection Screen -->
+                <div invisible="state != 'draft'">
+                    <group>
+                        <field name="server_id" options="{'no_create': True}" readonly="context.get('readonly_server')"/>
+                        <field name="sync_all"/>
+                    </group>
+                    
+                    <group string="Resources to Synchronize" invisible="sync_all">
+                        <field name="sync_environments"/>
+                        <field name="sync_containers"/>
+                        <field name="sync_images"/>
+                        <field name="sync_volumes"/>
+                        <field name="sync_networks"/>
+                        <field name="sync_stacks"/>
+                        <field name="sync_templates"/>
+                    </group>
+                    
+                    <group string="Environment Specifics">
+                        <field name="environment_specific"/>
+                        <field name="environment_id" 
+                               options="{'no_create': True}" 
+                               invisible="not environment_specific" 
+                               required="environment_specific"/>
+                    </group>
+                </div>
+                
+                <!-- Running Screen -->
+                <div invisible="state != 'running'" class="text-center">
+                    <h3>Synchronization in Progress</h3>
+                    <div class="fa fa-spinner fa-spin fa-3x"/>
+                    <field name="sync_log" readonly="1" widget="html"/>
+                </div>
+                
+                <!-- Done Screen -->
+                <div invisible="state != 'done'">
+                    <h3>Synchronization Complete</h3>
+                    <field name="sync_log" readonly="1" widget="html"/>
+                </div>
+                
+                <footer>
+                    <button name="action_sync" string="Synchronize" type="object" class="btn-primary" 
+                            invisible="state != 'draft'"/>
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Portainer Sync Wizard Action -->
+    <record id="action_portainer_sync_wizard" model="ir.actions.act_window">
+        <field name="name">Synchronize Portainer</field>
+        <field name="res_model">j_portainer.sync.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+    
+    <!-- Server Form View Sync Button -->
+    <record id="view_portainer_server_form_sync_button" model="ir.ui.view">
+        <field name="name">j_portainer.server.form.sync.button</field>
+        <field name="model">j_portainer.server</field>
+        <field name="inherit_id" ref="view_portainer_server_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="%(action_portainer_sync_wizard)d" string="Synchronize" type="action" 
+                        context="{'default_server_id': active_id, 'readonly_server': True}" 
+                        class="btn-primary"/>
+                <button name="test_connection" string="Test Connection" type="object" 
+                        class="btn-secondary"/>
+            </xpath>
+        </field>
+    </record>
+    
+    <!-- Environment Form View Sync Button -->
+    <record id="view_portainer_environment_form_sync_button" model="ir.ui.view">
+        <field name="name">j_portainer.environment.form.sync.button</field>
+        <field name="model">j_portainer.environment</field>
+        <field name="inherit_id" ref="view_portainer_environment_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="%(action_portainer_sync_wizard)d" string="Synchronize Resources" type="action" 
+                        context="{'default_server_id': server_id, 'readonly_server': True, 'default_environment_specific': True, 'default_environment_id': id}" 
+                        class="btn-primary"/>
+                <button name="sync_resources" string="Quick Sync" type="object" 
+                        class="btn-secondary"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

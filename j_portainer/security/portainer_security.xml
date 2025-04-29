@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <!-- Define security groups -->
+        <record id="module_category_portainer" model="ir.module.category">
+            <field name="name">Portainer</field>
+            <field name="description">Portainer Integration</field>
+            <field name="sequence">20</field>
+        </record>
+        
+        <record id="group_portainer_user" model="res.groups">
+            <field name="name">User</field>
+            <field name="category_id" ref="module_category_portainer"/>
+            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        </record>
+        
+        <record id="group_portainer_manager" model="res.groups">
+            <field name="name">Manager</field>
+            <field name="category_id" ref="module_category_portainer"/>
+            <field name="implied_ids" eval="[(4, ref('group_portainer_user'))]"/>
+            <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
+        </record>
+        
+        <record id="group_portainer_admin" model="res.groups">
+            <field name="name">Administrator</field>
+            <field name="category_id" ref="module_category_portainer"/>
+            <field name="implied_ids" eval="[(4, ref('group_portainer_manager'))]"/>
+            <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
+        </record>
+    </data>
+    
+    <data noupdate="1">
+        <!-- Define record rules -->
+        <record id="portainer_server_rule_admin" model="ir.rule">
+            <field name="name">Portainer Server Administrator Rule</field>
+            <field name="model_id" ref="model_j_portainer_server"/>
+            <field name="groups" eval="[(4, ref('group_portainer_admin'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+        
+        <record id="portainer_server_rule_manager" model="ir.rule">
+            <field name="name">Portainer Server Manager Rule</field>
+            <field name="model_id" ref="model_j_portainer_server"/>
+            <field name="groups" eval="[(4, ref('group_portainer_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+        
+        <record id="portainer_server_rule_user" model="ir.rule">
+            <field name="name">Portainer Server User Rule</field>
+            <field name="model_id" ref="model_j_portainer_server"/>
+            <field name="groups" eval="[(4, ref('group_portainer_user'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+    </data>
+</odoo>
