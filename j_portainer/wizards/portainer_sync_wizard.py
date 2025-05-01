@@ -21,7 +21,9 @@ class PortainerSyncWizard(models.TransientModel):
     sync_volumes = fields.Boolean('Volumes', default=True)
     sync_networks = fields.Boolean('Networks', default=True)
     sync_stacks = fields.Boolean('Stacks', default=True)
-    sync_templates = fields.Boolean('Templates', default=True)
+    sync_templates = fields.Boolean('Templates', default=True, help="For backward compatibility")
+    sync_standard_templates = fields.Boolean('Standard Templates', default=True)
+    sync_custom_templates = fields.Boolean('Custom Templates', default=True)
     
     # Sync specific environment
     environment_specific = fields.Boolean('Sync Specific Environment Only', default=False)
@@ -47,6 +49,8 @@ class PortainerSyncWizard(models.TransientModel):
             self.sync_networks = True
             self.sync_stacks = True
             self.sync_templates = True
+            self.sync_standard_templates = True
+            self.sync_custom_templates = True
             
     @api.onchange('environment_specific')
     def _onchange_environment_specific(self):
@@ -94,14 +98,32 @@ class PortainerSyncWizard(models.TransientModel):
                 else:
                     self._append_log(_('Environments synchronized'))
                     
-            # Sync templates if requested
+            # Sync templates if requested (for backward compatibility)
             if self.sync_templates and not self.environment_specific:
-                self._append_log(_('Synchronizing templates...'))
+                self._append_log(_('Synchronizing all templates...'))
                 result = server.sync_templates()
                 if 'params' in result and 'message' in result['params']:
                     self._append_log(result['params']['message'])
                 else:
-                    self._append_log(_('Templates synchronized'))
+                    self._append_log(_('All templates synchronized'))
+            else:
+                # Sync standard templates if requested
+                if self.sync_standard_templates and not self.environment_specific:
+                    self._append_log(_('Synchronizing standard templates...'))
+                    result = server.sync_standard_templates()
+                    if 'params' in result and 'message' in result['params']:
+                        self._append_log(result['params']['message'])
+                    else:
+                        self._append_log(_('Standard templates synchronized'))
+                
+                # Sync custom templates if requested
+                if self.sync_custom_templates and not self.environment_specific:
+                    self._append_log(_('Synchronizing custom templates...'))
+                    result = server.sync_custom_templates()
+                    if 'params' in result and 'message' in result['params']:
+                        self._append_log(result['params']['message'])
+                    else:
+                        self._append_log(_('Custom templates synchronized'))
                     
             # Sync containers if requested
             if self.sync_containers:
