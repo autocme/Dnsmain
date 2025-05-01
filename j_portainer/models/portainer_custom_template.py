@@ -413,7 +413,7 @@ class PortainerCustomTemplate(models.Model):
                     
                     env_file_response = api.direct_api_call(
                         server_id,
-                        endpoint="/templates/import",
+                        endpoint="/api/custom_templates/file",
                         method='POST',
                         data=multipart_data,
                         headers={'Content-Type': 'multipart/form-data'},
