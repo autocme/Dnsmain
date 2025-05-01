@@ -290,35 +290,12 @@ class PortainerTemplateNew(models.Model):
             
     @api.model
     def create(self, vals):
-        """Override create to handle custom templates creation in Portainer"""
-        # Skip Portainer creation if skip_portainer_create flag is set (used during sync)
-        if vals.get('is_custom') and not vals.get('skip_portainer_create'):
-            # This is a custom template, create it in Portainer
-            server_id = vals.get('server_id')
-            if not server_id:
-                raise UserError(_("Server is required for custom templates"))
-                
-            # Prepare template data for Portainer API
-            template_data = self._prepare_template_data(vals)
+        """Create template record in Odoo only, without syncing to Portainer"""
+        # Check if server is required for custom templates
+        if vals.get('is_custom') and not vals.get('server_id'):
+            raise UserError(_("Server is required for custom templates"))
             
-            # Create template in Portainer
-            try:
-                api = self.env['j_portainer.api']
-                server = self.env['j_portainer.server'].browse(server_id)
-                
-                response = api.create_template(server_id, template_data)
-                
-                if response and 'Id' in response:
-                    # Template created successfully, set template_id
-                    vals['template_id'] = response['Id']
-                else:
-                    raise UserError(_("Failed to create template in Portainer"))
-                    
-            except Exception as e:
-                _logger.error(f"Error creating template in Portainer: {str(e)}")
-                raise UserError(_("Error creating template in Portainer: %s") % str(e))
-                
-        # Create the record
+        # Create the record in Odoo only
         return super(PortainerTemplateNew, self).create(vals)
         
     def _prepare_template_data(self, vals):

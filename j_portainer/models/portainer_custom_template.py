@@ -838,83 +838,20 @@ class PortainerCustomTemplate(models.Model):
     
     @api.model
     def create(self, vals):
-        """Override create to sync with Portainer"""
+        """Create custom template record in Odoo only, without syncing to Portainer"""
         # Check required fields
         if not vals.get('server_id'):
             raise UserError(_("Server is required for custom templates"))
         if not vals.get('environment_id'):
             raise UserError(_("Environment is required for custom templates"))
         
-        # If manual template ID is provided, use it instead of creating in Portainer
+        # If manual template ID is provided, use it
         if vals.get('manual_template_id'):
             _logger.info(f"Using manually provided template ID: {vals.get('manual_template_id')}")
             vals['template_id'] = vals.get('manual_template_id')
-            
-        # Create the record in Odoo first
+        
+        # Create the record in Odoo only
         record = super(PortainerCustomTemplate, self).create(vals)
-        
-        # Skip Portainer creation if skip_portainer_create flag is set (used during sync)
-        if not vals.get('skip_portainer_create'):
-            try:
-                # Sync the template to Portainer
-                response = record._sync_to_portainer(vals, method='post')
-                
-                if response:
-                    # Update the template ID in Odoo if provided in response
-                    template_id = None
-                    if 'Id' in response:
-                        template_id = response['Id']
-                    elif 'id' in response:
-                        template_id = response['id']
-                        
-                    if template_id:
-                        record.write({'template_id': template_id})
-                        _logger.info(f"Template created successfully with ID: {template_id}")
-                    else:
-                        _logger.info("Template created, but no ID returned")
-                else:
-                    # All methods failed, display a warning message
-                    msg = _(
-                        "Automatic template creation in Portainer failed. "
-                        "Please create the template manually in Portainer and then enter its ID "
-                        "in the 'Manual Template ID' field to link it with this record."
-                    )
-                    _logger.warning(msg)
-                    
-                    # Don't raise an exception, just show a warning and continue
-                    self.env.user.notify_warning(
-                        title=_("Template Creation Warning"),
-                        message=msg
-                    ) if hasattr(self.env.user, 'notify_warning') else self.env['bus.bus']._sendone(
-                        self.env.user.partner_id, 'notification', {
-                            'type': 'warning',
-                            'title': _("Template Creation Warning"),
-                            'message': msg,
-                            'sticky': True
-                        }
-                    )
-            except Exception as e:
-                _logger.error(f"Error creating template in Portainer: {str(e)}")
-                
-                # Show warning instead of error
-                msg = _(
-                    "Error creating template in Portainer: %s\n"
-                    "Please create the template manually in Portainer and then enter its ID "
-                    "in the 'Manual Template ID' field to link it with this record."
-                ) % str(e)
-                
-                self.env.user.notify_warning(
-                    title=_("Template Creation Warning"),
-                    message=msg
-                ) if hasattr(self.env.user, 'notify_warning') else self.env['bus.bus']._sendone(
-                    self.env.user.partner_id, 'notification', {
-                        'type': 'warning',
-                        'title': _("Template Creation Warning"),
-                        'message': msg,
-                        'sticky': True
-                    }
-                )
-        
         return record
         
     def write(self, vals):
