@@ -31,6 +31,21 @@ class PortainerTemplateDeployWizard(models.TransientModel):
     
     # Stack specific options
     stack_file_path = fields.Char('Stack File Path', help="Path to the compose file in the stack")
+    env_vars = fields.Text('Environment Variables', help="Environment variables for the deployment")
+    use_registry = fields.Boolean('Use Registry', help="Use a custom registry for the deployment")
+    registry_url = fields.Char('Registry URL', help="Custom registry URL")
+    enable_access_control = fields.Boolean('Enable Access Control', help="Enable access control for the stack")
+    restart_policy = fields.Selection([
+        ('no', 'No'),
+        ('on-failure', 'On Failure'),
+        ('always', 'Always'),
+        ('unless-stopped', 'Unless Stopped')
+    ], string='Restart Policy', default='always', help="Restart policy for the container")
+    
+    # Advanced options
+    show_advanced = fields.Boolean('Show Advanced Options', default=False)
+    enable_tls = fields.Boolean('Enable TLS', default=False)
+    endpoint_id = fields.Char('Custom Endpoint ID')
     
     # Results
     state = fields.Selection([
@@ -39,6 +54,8 @@ class PortainerTemplateDeployWizard(models.TransientModel):
         ('error', 'Error')
     ], default='draft')
     result_message = fields.Text('Result', readonly=True)
+    deployed_resource_id = fields.Char('Deployed Resource ID', readonly=True)
+    compose_file_content = fields.Text('Compose File Content', readonly=True)
     
     @api.onchange('template_id', 'custom_template_id')
     def _onchange_template(self):
@@ -70,6 +87,39 @@ class PortainerTemplateDeployWizard(models.TransientModel):
         # Add stack-specific options
         if self.template_type == '2':  # Stack
             params['stackfile'] = self.stack_file_path or ''
+            
+            # Add access control options
+            if self.enable_access_control:
+                params['enableAccessControl'] = True
+                
+            # Add custom endpoint ID if specified
+            if self.endpoint_id:
+                # Override the environment_id with the custom endpoint ID
+                params['endpointId'] = self.endpoint_id
+                
+            # Add TLS options
+            if self.enable_tls:
+                params['tls'] = True
+                
+        # Add container-specific options
+        if self.template_type == '1':  # Container
+            # Add restart policy
+            params['RestartPolicy'] = {'Name': self.restart_policy}
+            
+        # Parse environment variables
+        if self.env_vars:
+            env_dict = {}
+            for line in self.env_vars.strip().split('\n'):
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    env_dict[key.strip()] = value.strip()
+            
+            if env_dict:
+                params['env'] = env_dict
+                
+        # Add registry options
+        if self.use_registry and self.registry_url:
+            params['registry'] = self.registry_url
             
         # Get API client
         api = self.env['j_portainer.api']
@@ -107,15 +157,39 @@ class PortainerTemplateDeployWizard(models.TransientModel):
                 
             # Handle result
             if result:
-                self.write({
+                # Store deployment information
+                result_data = {
                     'state': 'done',
                     'result_message': _("Template '%s' deployed successfully!") % self.template_title
-                })
+                }
+                
+                # Extract additional information from result
+                if isinstance(result, dict):
+                    if 'Id' in result:
+                        result_data['deployed_resource_id'] = result['Id']
+                    elif 'id' in result:
+                        result_data['deployed_resource_id'] = result['id']
+                    elif 'container_id' in result:
+                        result_data['deployed_resource_id'] = result['container_id']
+                        
+                    # For stack deployments, store compose file content if available
+                    if self.template_type == '2' and self.is_custom and self.custom_template_id.compose_file:
+                        result_data['compose_file_content'] = self.custom_template_id.compose_file
+                        
+                # Update wizard record
+                self.write(result_data)
                 
                 # Refresh resources after deployment
                 self.server_id.sync_containers(self.environment_id.environment_id)
                 if self.template_type == '2':  # Stack
                     self.server_id.sync_stacks(self.environment_id.environment_id)
+                
+                # Determine the appropriate resource type name for the message
+                resource_type = 'container'
+                if self.template_type == '2':
+                    resource_type = 'stack'
+                elif self.template_type == '3':
+                    resource_type = 'application'
                 
                 # Return success message
                 return {
@@ -123,7 +197,7 @@ class PortainerTemplateDeployWizard(models.TransientModel):
                     'tag': 'display_notification',
                     'params': {
                         'title': _('Deployment Successful'),
-                        'message': _("Template '%s' deployed successfully! Resources have been refreshed.") % self.template_title,
+                        'message': _("Template '%s' deployed successfully as %s! Resources have been refreshed.") % (self.template_title, resource_type),
                         'sticky': False,
                         'type': 'success',
                     }

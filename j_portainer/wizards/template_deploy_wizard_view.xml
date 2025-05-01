@@ -26,12 +26,59 @@
                         <field name="environment_id" options="{'no_create': True}"/>
                         <field name="name" placeholder="Name for the deployed container/stack"/>
                         <field name="stack_file_path" invisible="template_type != '2'"/>
+                        <field name="show_advanced" widget="boolean_toggle"/>
                     </group>
+                    
+                    <group string="Container Options" invisible="template_type != '1'">
+                        <field name="restart_policy" widget="radio"/>
+                    </group>
+                    
+                    <!-- Advanced Options -->
+                    <div invisible="show_advanced == False">
+                        <group string="Advanced Options">
+                            <notebook>
+                                <page string="Environment Variables" name="env_vars">
+                                    <field name="env_vars" placeholder="KEY=value&#10;ANOTHER_KEY=value" widget="CodeEditor" options="{'language': 'properties'}"/>
+                                    <div class="text-muted mt-2">
+                                        Format: One environment variable per line in KEY=value format
+                                    </div>
+                                </page>
+                                <page string="Registry" name="registry">
+                                    <group>
+                                        <field name="use_registry"/>
+                                        <field name="registry_url" invisible="use_registry == False" placeholder="registry.example.com"/>
+                                    </group>
+                                </page>
+                                <page string="Access Control" name="access_control">
+                                    <group>
+                                        <field name="enable_access_control"/>
+                                        <field name="enable_tls"/>
+                                    </group>
+                                </page>
+                                <page string="Advanced" name="advanced" groups="base.group_system">
+                                    <group>
+                                        <field name="endpoint_id" placeholder="Custom endpoint ID (advanced)"/>
+                                    </group>
+                                </page>
+                            </notebook>
+                        </group>
+                    </div>
                 </div>
                 
                 <!-- Done State -->
-                <div invisible="state != 'done'" class="alert alert-success" role="status">
-                    <field name="result_message"/>
+                <div invisible="state != 'done'">
+                    <div class="alert alert-success" role="status">
+                        <field name="result_message"/>
+                        <div invisible="deployed_resource_id == False">
+                            <strong>Resource ID:</strong> <field name="deployed_resource_id" class="oe_inline"/>
+                        </div>
+                    </div>
+                    
+                    <!-- Show Compose file content if available -->
+                    <div invisible="compose_file_content == False or template_type != '2'">
+                        <h4>Deployed Stack Compose File:</h4>
+                        <field name="compose_file_content" widget="CodeEditor" options="{'language': 'yaml'}" readonly="1"/>
+                    </div>
                 </div>
                 
                 <!-- Error State -->
