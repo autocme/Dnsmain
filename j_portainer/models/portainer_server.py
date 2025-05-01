@@ -157,6 +157,14 @@ class PortainerServer(models.Model):
             })
             raise UserError(_("Connection error: %s") % str(e))
     
+    def _get_api_key_header(self):
+        """Get the API key header for authentication
+        
+        Returns:
+            str: API key header value
+        """
+        return self.api_key
+        
     def _make_api_request(self, endpoint, method='GET', data=None, params=None, headers=None):
         """Make a request to the Portainer API
         
@@ -174,7 +182,7 @@ class PortainerServer(models.Model):
         
         # Default headers
         request_headers = {
-            'X-API-Key': self.api_key,
+            'X-API-Key': self._get_api_key_header(),
             'Content-Type': 'application/json'
         }
         
@@ -808,7 +816,8 @@ class PortainerServer(models.Model):
                     existing_template.write(template_data)
                     updated_count += 1
                 else:
-                    # Create new template
+                    # Create new template - skip Portainer creation since we're just syncing
+                    template_data['skip_portainer_create'] = True
                     self.env['j_portainer.template'].create(template_data)
                     created_count += 1
                 
@@ -874,6 +883,9 @@ class PortainerServer(models.Model):
             template_count = 0
             updated_count = 0
             created_count = 0
+            
+            # Don't try to create templates in Portainer, just sync existing ones
+            # We'll use skip_portainer_create flag for this
             
             # Get custom templates - try different API endpoints for different Portainer versions
             custom_templates = []
@@ -970,7 +982,8 @@ class PortainerServer(models.Model):
                     existing_template.write(template_data)
                     updated_count += 1
                 else:
-                    # Create new custom template
+                    # Create new custom template - skip Portainer creation since we're just syncing
+                    template_data['skip_portainer_create'] = True
                     self.env['j_portainer.template'].create(template_data)
                     created_count += 1
                 

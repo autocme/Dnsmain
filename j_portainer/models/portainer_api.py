@@ -342,7 +342,8 @@ class PortainerAPI(models.AbstractModel):
             api_data = dict(template_data)  # Make a copy to avoid modifying the original
             
             # Get auth token to see if we need to handle it specially
-            auth_header = server._get_api_key_header()
+            # This is used for version-specific handling if needed
+            api_key = server._get_api_key_header()
             
             # Special case for Portainer CE 2.9+ and 2.17+
             if "2.9." in version_str or "2.1" in version_str or "2.2" in version_str:
