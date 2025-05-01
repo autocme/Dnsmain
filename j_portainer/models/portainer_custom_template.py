@@ -68,6 +68,12 @@ class PortainerCustomTemplate(models.Model):
     # Additional Info
     app_template_variables = fields.Text('App Template Variables', help="Variables for app template deployments")
     
+    # Custom Template Additional Fields from Portainer
+    project_path = fields.Char('Project Path', help="Path to the project inside the repository")
+    entry_point = fields.Char('Entry Point', help="Docker compose file name inside the project path")
+    created_by_user_id = fields.Integer('Created By User ID', help="ID of the user who created the template in Portainer")
+    registry_url = fields.Char('Registry URL', help="URL of the registry for the template")
+    
     # Useful computed fields for display
     get_formatted_env = fields.Text('Formatted Environment Variables', compute='_compute_formatted_env')
     get_formatted_volumes = fields.Text('Formatted Volumes', compute='_compute_formatted_volumes')
