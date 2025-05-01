@@ -382,6 +382,95 @@ class PortainerCustomTemplate(models.Model):
         response = None
         error_messages = []
         
+        # Method 0: Direct multipart form upload (simple and reliable)
+        if (method == 'post' or (method == 'put' and self.template_id)) and self.build_method == 'editor' and (self.fileContent or self.compose_file):
+            try:
+                # We need to get the Portainer environment ID, not the Odoo record ID
+                env_record = self.env['j_portainer.environment'].browse(environment_id)
+                portainer_env_id = env_record.environment_id if env_record else None
+                
+                server_info = self.env['j_portainer.server'].browse(server_id)
+                server_url = server_info.url
+                api_key = server_info.api_key
+                
+                if not portainer_env_id:
+                    # Fallback to using first environment's ID
+                    if server_info and server_info.environment_ids:
+                        portainer_env_id = server_info.environment_ids[0].environment_id
+                
+                if not server_url or not api_key or not portainer_env_id:
+                    _logger.warning("Missing server URL, API key, or environment ID for direct template upload")
+                else:
+                    # Prepare URL with endpoint
+                    if server_url.endswith('/'):
+                        server_url = server_url[:-1]
+                    
+                    # Use different endpoints for create vs update
+                    if method == 'post':
+                        url = f"{server_url}/api/custom_templates"
+                    else:
+                        # For updates, include template ID in the URL
+                        url = f"{server_url}/api/custom_templates/{template_id}"
+                    
+                    # Prepare headers with authorization
+                    headers = {'Authorization': f'Bearer {api_key}'}
+                    
+                    # Convert platform and template type to strings
+                    platform_value = template_data.get('platform', 1)
+                    type_value = template_data.get('type', 1)
+                    
+                    # Prepare form data
+                    data = {
+                        'Title': self.title,
+                        'Description': self.description or f'Template for {self.title}',
+                        'Note': self.note or '',
+                        'Platform': str(platform_value),  # 1 or 2
+                        'Type': str(type_value),  # 1, 2, or 3
+                        'Logo': self.logo or '',
+                        'environmentId': str(portainer_env_id),  # required field
+                    }
+                    
+                    # Add variables if available
+                    if self.environment_variables:
+                        data['Variables'] = self.environment_variables
+                    
+                    # Get file content (prefer fileContent)
+                    file_content = self.fileContent or self.compose_file
+                    
+                    # Prepare files for upload
+                    files = {
+                        'File': ('template.yml', file_content.encode('utf-8'))
+                    }
+                    
+                    _logger.info(f"Sending direct multipart form request to {url} with data: {data}")
+                    
+                    # Make the API request
+                    import requests
+                    if method == 'post':
+                        res = requests.post(url, headers=headers, data=data, files=files)
+                    else:
+                        # For updates, need to use PUT instead of POST
+                        res = requests.put(url, headers=headers, data=data, files=files)
+                    
+                    if res.status_code in [200, 201, 202]:
+                        response_data = res.json()
+                        if method == 'post':
+                            _logger.info(f"Template created successfully via direct multipart form: {response_data}")
+                            # If this was a creation and we got a new ID, store it
+                            if response_data and ('Id' in response_data or 'id' in response_data):
+                                new_id = response_data.get('Id') or response_data.get('id')
+                                if new_id and not self.template_id:
+                                    self.template_id = str(new_id)
+                        else:
+                            _logger.info(f"Template updated successfully via direct multipart form: {response_data}")
+                        return response_data
+                    else:
+                        error_messages.append(f"Direct multipart form failed: {res.status_code} - {res.text}")
+                        _logger.warning(f"Direct multipart form failed: {res.status_code} - {res.text}")
+            except Exception as e:
+                error_messages.append(f"Direct multipart form failed: {str(e)}")
+                _logger.warning(f"Direct multipart form failed: {str(e)}")
+        
         # Method 1: Standard API endpoint
         try:
             if method == 'post':
