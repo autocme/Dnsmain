@@ -41,6 +41,8 @@ class PortainerCustomTemplate(models.Model):
     details = fields.Text('Details', help="Additional details about the template")
     skip_portainer_create = fields.Boolean('Skip Portainer Creation', default=False, 
                                           help='Used during sync to skip creating the template in Portainer')
+    manual_template_id = fields.Integer('Manual Template ID', 
+                                      help='Template ID for manually created templates in Portainer - use this if automatic creation fails')
     
     # Custom Template specific fields
     build_method = fields.Selection([
@@ -284,8 +286,14 @@ class PortainerCustomTemplate(models.Model):
     @api.model
     def create(self, vals):
         """Override create to sync with Portainer"""
-        # Skip Portainer creation if skip_portainer_create flag is set (used during sync)
-        if not vals.get('skip_portainer_create'):
+        # If manual template ID is provided, use it instead of creating in Portainer
+        if vals.get('manual_template_id'):
+            _logger.info(f"Using manually provided template ID: {vals.get('manual_template_id')}")
+            vals['template_id'] = vals.get('manual_template_id')
+            vals['skip_portainer_create'] = True
+            
+        # Skip Portainer creation if skip_portainer_create flag is set (used during sync or manual ID)
+        elif not vals.get('skip_portainer_create'):
             # Create the template in Portainer
             server_id = vals.get('server_id')
             if not server_id:
@@ -354,14 +362,70 @@ class PortainerCustomTemplate(models.Model):
                         else:
                             # Both API and file import methods failed
                             _logger.error("Both standard API and file import methods failed")
-                            raise UserError(_("Failed to create template in Portainer. Please check Portainer version compatibility."))
+                            
+                            # Instead of raising an error, show a friendly message advising manual creation
+                            msg = _(
+                                "Automatic template creation in Portainer failed. "
+                                "Please create the template manually in Portainer and then enter its ID "
+                                "in the 'Manual Template ID' field to link it with this record."
+                            )
+                            
+                            # Use warning level instead of error to allow creation to continue
+                            _logger.warning(msg)
+                            
+                            # Don't raise an exception, just show a warning and continue
+                            # Use display_notification or notification_warn based on Odoo version
+                            self.env.user.notify_warning(
+                                title=_("Template Creation Warning"),
+                                message=msg
+                            ) if hasattr(self.env.user, 'notify_warning') else self.env['bus.bus']._sendone(
+                                self.env.user.partner_id, 'notification', {
+                                    'type': 'warning',
+                                    'title': _("Template Creation Warning"),
+                                    'message': msg,
+                                    'sticky': True
+                                }
+                            )
                     else:
                         # Can't use file import for non-stack templates
-                        raise UserError(_("Failed to create template in Portainer"))
-                    
+                        msg = _(
+                            "Failed to create template in Portainer. "
+                            "Please create the template manually in Portainer and then enter its ID "
+                            "in the 'Manual Template ID' field to link it with this record."
+                        )
+                        _logger.warning(msg)
+                        self.env.user.notify_warning(
+                            title=_("Template Creation Warning"),
+                            message=msg
+                        ) if hasattr(self.env.user, 'notify_warning') else self.env['bus.bus']._sendone(
+                            self.env.user.partner_id, 'notification', {
+                                'type': 'warning',
+                                'title': _("Template Creation Warning"),
+                                'message': msg,
+                                'sticky': True
+                            }
+                        )
             except Exception as e:
                 _logger.error(f"Error creating template in Portainer: {str(e)}")
-                raise UserError(_("Error creating template in Portainer: %s") % str(e))
+                
+                # Show warning instead of error
+                msg = _(
+                    "Error creating template in Portainer: %s\n"
+                    "Please create the template manually in Portainer and then enter its ID "
+                    "in the 'Manual Template ID' field to link it with this record."
+                ) % str(e)
+                
+                self.env.user.notify_warning(
+                    title=_("Template Creation Warning"),
+                    message=msg
+                ) if hasattr(self.env.user, 'notify_warning') else self.env['bus.bus']._sendone(
+                    self.env.user.partner_id, 'notification', {
+                        'type': 'warning',
+                        'title': _("Template Creation Warning"),
+                        'message': msg,
+                        'sticky': True
+                    }
+                )
         
         # Create the record in Odoo
         return super(PortainerCustomTemplate, self).create(vals)
