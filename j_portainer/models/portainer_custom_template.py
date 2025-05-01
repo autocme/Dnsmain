@@ -8,9 +8,9 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
-class PortainerTemplate(models.Model):
-    _name = 'j_portainer.template'
-    _description = 'Portainer Template'
+class PortainerCustomTemplate(models.Model):
+    _name = 'j_portainer.customtemplate'
+    _description = 'Portainer Custom Template'
     _order = 'title'
     
     title = fields.Char('Title', required=True)
@@ -39,6 +39,29 @@ class PortainerTemplate(models.Model):
     details = fields.Text('Details', help="Additional details about the template")
     skip_portainer_create = fields.Boolean('Skip Portainer Creation', default=False, 
                                           help='Used during sync to skip creating the template in Portainer')
+    
+    # Custom Template specific fields
+    build_method = fields.Selection([
+        ('string', 'String'),
+        ('url', 'URL'),
+        ('repository', 'Git Repository'),
+        ('file', 'File Upload')
+    ], string='Build Method', default='string')
+    
+    # Repository details
+    git_repository_url = fields.Char('Repository URL')
+    git_repository_reference = fields.Char('Reference', help="Branch, tag, or commit hash")
+    git_compose_path = fields.Char('Compose File Path', default='docker-compose.yml')
+    git_skip_tls = fields.Boolean('Skip TLS Verification', default=False)
+    git_authentication = fields.Boolean('Use Authentication', default=False)
+    git_credentials_id = fields.Many2one('j_portainer.git.credentials', string='Git Credentials')
+    git_username = fields.Char('Username')
+    git_token = fields.Char('Token/Password')
+    git_save_credential = fields.Boolean('Save Credentials', default=False)
+    git_credential_name = fields.Char('Credential Name')
+    
+    # Additional Info
+    app_template_variables = fields.Text('App Template Variables', help="Variables for app template deployments")
     
     # Useful computed fields for display
     get_formatted_env = fields.Text('Formatted Environment Variables', compute='_compute_formatted_env')
@@ -166,21 +189,62 @@ class PortainerTemplate(models.Model):
             template.get_formatted_ports = result
     
     def action_refresh(self):
-        """Refresh templates from Portainer"""
+        """Refresh custom templates from Portainer"""
         for template in self:
             if template.server_id:
-                template.server_id.sync_standard_templates()
+                template.server_id.sync_custom_templates()
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'title': _('Templates Refreshed'),
-                        'message': _("Templates have been refreshed from Portainer"),
+                        'title': _('Custom Templates Refreshed'),
+                        'message': _("Custom templates have been refreshed from Portainer"),
                         'sticky': False,
                     }
                 }
         
-        raise UserError(_("No server found to refresh templates"))
+        raise UserError(_("No server found to refresh custom templates"))
+    
+    def remove_custom_template(self):
+        """Remove this custom template from Portainer"""
+        self.ensure_one()
+        
+        # Check that the server is connected
+        if self.server_id.status != 'connected':
+            raise UserError(_("Cannot remove template: Server is not connected"))
+            
+        if not self.template_id:
+            raise UserError(_("Cannot remove template: No template ID found"))
+            
+        # Call the API to remove the template
+        api = self.env['j_portainer.api']
+        result = api.template_action(self.server_id.id, self.template_id, 'delete')
+        
+        if result:
+            # Refresh templates
+            self.server_id.sync_custom_templates()
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Template Removed'),
+                    'message': _("Custom template '%s' has been removed from Portainer") % self.title,
+                    'sticky': False,
+                    'next': {'type': 'ir.actions.act_window_close'}
+                }
+            }
+        else:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Error'),
+                    'message': _("Failed to remove custom template from Portainer"),
+                    'sticky': True,
+                    'type': 'danger',
+                }
+            }
         
     def action_deploy(self):
         """Open the deploy wizard for this template"""
@@ -192,15 +256,15 @@ class PortainerTemplate(models.Model):
             
         # Open the deployment wizard
         return {
-            'name': _('Deploy Template'),
+            'name': _('Deploy Custom Template'),
             'type': 'ir.actions.act_window',
             'res_model': 'j_portainer.template.deploy.wizard',
             'view_mode': 'form',
             'target': 'new',
             'context': {
                 'default_server_id': self.server_id.id,
-                'default_template_id': self.id,
-                'default_is_custom': False,
+                'default_custom_template_id': self.id,
+                'default_is_custom': True,
                 'default_template_title': self.title,
                 'default_template_type': self.template_type,
                 'default_name': self.title,

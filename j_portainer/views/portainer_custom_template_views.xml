@@ -1,32 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Standard Template Tree View -->
-    <record id="view_portainer_template_tree" model="ir.ui.view">
-        <field name="name">j_portainer.template.tree</field>
-        <field name="model">j_portainer.template</field>
+    <!-- Custom Template Tree View -->
+    <record id="view_portainer_custom_template_tree" model="ir.ui.view">
+        <field name="name">j_portainer.customtemplate.tree</field>
+        <field name="model">j_portainer.customtemplate</field>
         <field name="arch" type="xml">
-            <tree string="Standard Templates" decoration-info="template_type=='2'">
+            <tree string="Custom Templates" decoration-info="template_type=='2'">
                 <field name="title"/>
                 <field name="template_type"/>
                 <field name="platform"/>
                 <field name="template_id"/>
                 <field name="server_id"/>
                 <field name="category_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+                <field name="build_method"/>
             </tree>
         </field>
     </record>
 
-    <!-- Standard Template Form View -->
-    <record id="view_portainer_template_form" model="ir.ui.view">
-        <field name="name">j_portainer.template.form</field>
-        <field name="model">j_portainer.template</field>
+    <!-- Custom Template Form View -->
+    <record id="view_portainer_custom_template_form" model="ir.ui.view">
+        <field name="name">j_portainer.customtemplate.form</field>
+        <field name="model">j_portainer.customtemplate</field>
         <field name="arch" type="xml">
-            <form string="Standard Template">
+            <form string="Custom Template">
                 <header>
                     <button name="action_deploy" string="Deploy" type="object" class="oe_highlight" help="Deploy this template"/>
-                    <button name="action_refresh" string="Refresh Templates" type="object" class="oe_link"
-                            help="Refresh templates from Portainer"/>
+                    <button name="remove_custom_template" string="Remove Template" type="object" class="oe_link"
+                            help="Remove this custom template from Portainer"
+                            confirm="Are you sure you want to remove this custom template?"/>
+                    <button name="action_refresh" string="Refresh Custom Templates" type="object" class="oe_link"
+                            help="Refresh custom templates from Portainer"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -42,6 +46,7 @@
                             <field name="category_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
                             <field name="template_type"/>
                             <field name="platform"/>
+                            <field name="build_method"/>
                         </group>
                         <group>
                             <field name="logo"/>
@@ -75,6 +80,31 @@
                                 <pre><field name="get_formatted_ports" readonly="1"/></pre>
                             </div>
                         </page>
+                        <page string="Repository" name="repository" attrs="{'invisible': [('build_method', '!=', 'repository')]}">
+                            <group>
+                                <group>
+                                    <field name="git_repository_url" placeholder="https://github.com/username/repo"/>
+                                    <field name="git_repository_reference" placeholder="main, master, v1.0, etc"/>
+                                    <field name="git_compose_path" placeholder="docker-compose.yml"/>
+                                    <field name="git_skip_tls"/>
+                                    <field name="git_authentication"/>
+                                </group>
+                                <group attrs="{'invisible': [('git_authentication', '=', False)]}">
+                                    <field name="git_credentials_id" attrs="{'required': [('git_authentication', '=', True)]}"/>
+                                    <div colspan="2" attrs="{'invisible': [('git_credentials_id', '!=', False)]}">
+                                        <group>
+                                            <field name="git_username" attrs="{'required': [('git_authentication', '=', True), ('git_credentials_id', '=', False)]}" placeholder="Username or Email"/>
+                                            <field name="git_token" attrs="{'required': [('git_authentication', '=', True), ('git_credentials_id', '=', False)]}" placeholder="Personal Access Token or Password"/>
+                                            <field name="git_save_credential"/>
+                                            <field name="git_credential_name" attrs="{'invisible': [('git_save_credential', '=', False)], 'required': [('git_save_credential', '=', True)]}" placeholder="Name for saved credentials"/>
+                                        </group>
+                                    </div>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Compose File" name="compose_file" attrs="{'invisible': [('build_method', '!=', 'editor')]}">
+                            <field name="compose_file" widget="ace" options="{'mode': 'yaml'}" placeholder="Docker Compose file content..."/>
+                        </page>
                         <page string="Raw Data" name="raw_data" groups="base.group_system">
                             <field name="details" widget="ace" options="{'mode': 'json'}" readonly="1"/>
                         </page>
@@ -84,12 +114,12 @@
         </field>
     </record>
 
-    <!-- Standard Template Search View -->
-    <record id="view_portainer_template_search" model="ir.ui.view">
-        <field name="name">j_portainer.template.search</field>
-        <field name="model">j_portainer.template</field>
+    <!-- Custom Template Search View -->
+    <record id="view_portainer_custom_template_search" model="ir.ui.view">
+        <field name="name">j_portainer.customtemplate.search</field>
+        <field name="model">j_portainer.customtemplate</field>
         <field name="arch" type="xml">
-            <search string="Search Standard Templates">
+            <search string="Search Custom Templates">
                 <field name="title"/>
                 <field name="description"/>
                 <field name="category_ids"/>
@@ -99,28 +129,31 @@
                 <filter string="Containers" name="container_templates" domain="[('template_type', '=', '1')]"/>
                 <filter string="Stacks" name="stack_templates" domain="[('template_type', '=', '2')]"/>
                 <filter string="App Templates" name="app_templates" domain="[('template_type', '=', '3')]"/>
+                <filter string="Web Editor" name="web_editor" domain="[('build_method', '=', 'editor')]"/>
+                <filter string="Git Repository" name="git_repository" domain="[('build_method', '=', 'repository')]"/>
                 <group expand="0" string="Group By">
                     <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
                     <filter string="Type" name="group_by_type" domain="[]" context="{'group_by': 'template_type'}"/>
                     <filter string="Platform" name="group_by_platform" domain="[]" context="{'group_by': 'platform'}"/>
+                    <filter string="Build Method" name="group_by_build_method" domain="[]" context="{'group_by': 'build_method'}"/>
                 </group>
             </search>
         </field>
     </record>
 
-    <!-- Standard Template Action -->
-    <record id="action_portainer_template" model="ir.actions.act_window">
-        <field name="name">Standard Templates</field>
-        <field name="res_model">j_portainer.template</field>
+    <!-- Custom Template Action -->
+    <record id="action_portainer_custom_template" model="ir.actions.act_window">
+        <field name="name">Custom Templates</field>
+        <field name="res_model">j_portainer.customtemplate</field>
         <field name="view_mode">tree,form</field>
-        <field name="search_view_id" ref="view_portainer_template_search"/>
+        <field name="search_view_id" ref="view_portainer_custom_template_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                No standard templates found
+                No custom templates found
             </p>
             <p>
-                Standard templates are predefined templates available in Portainer.
-                They can be used to deploy containers or stacks with predefined configurations.
+                Custom templates are created in Portainer and can be used to deploy containers or stacks.
+                Custom templates can be created from scratch or from existing containers.
             </p>
         </field>
     </record>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Portainer Template Deploy Wizard Form View -->
+    <record id="view_portainer_template_deploy_wizard_form" model="ir.ui.view">
+        <field name="name">j_portainer.template.deploy.wizard.form</field>
+        <field name="model">j_portainer.template.deploy.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Deploy Template">
+                <field name="state" invisible="1"/>
+                <field name="is_custom" invisible="1"/>
+                
+                <!-- Draft State -->
+                <div states="draft">
+                    <group>
+                        <field name="server_id" readonly="1"/>
+                        <field name="template_id" readonly="1" attrs="{'invisible': [('is_custom', '=', True)]}"/>
+                        <field name="custom_template_id" readonly="1" attrs="{'invisible': [('is_custom', '=', False)]}"/>
+                        <field name="template_title" readonly="1"/>
+                        <field name="template_type" readonly="1" widget="badge" 
+                               decoration-info="template_type=='1'"
+                               decoration-success="template_type=='2'"
+                               decoration-warning="template_type=='3'"/>
+                    </group>
+                    
+                    <group string="Deployment Options">
+                        <field name="environment_id" options="{'no_create': True}"/>
+                        <field name="name" placeholder="Name for the deployed container/stack"/>
+                        <field name="stack_file_path" attrs="{'invisible': [('template_type', '!=', '2')]}"/>
+                    </group>
+                </div>
+                
+                <!-- Done State -->
+                <div states="done" class="alert alert-success">
+                    <field name="result_message"/>
+                </div>
+                
+                <!-- Error State -->
+                <div states="error" class="alert alert-danger">
+                    <field name="result_message"/>
+                </div>
+                
+                <footer>
+                    <button name="action_deploy" string="Deploy" type="object" 
+                            class="btn-primary" states="draft"/>
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Portainer Template Deploy Wizard Action -->
+    <record id="action_portainer_template_deploy_wizard" model="ir.actions.act_window">
+        <field name="name">Deploy Template</field>
+        <field name="res_model">j_portainer.template.deploy.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>
