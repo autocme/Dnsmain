@@ -22,7 +22,8 @@
                         <field name="sync_volumes"/>
                         <field name="sync_networks"/>
                         <field name="sync_stacks"/>
-                        <field name="sync_templates"/>
+                        <field name="sync_standard_templates" string="Sync Templates"/>
+                        <field name="sync_custom_templates" string="Sync Custom Templates"/>
                     </group>
                     
                     <group string="Environment Specifics">

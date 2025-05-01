@@ -729,8 +729,8 @@ class PortainerServer(models.Model):
             _logger.error(f"Error syncing networks: {str(e)}")
             raise UserError(_("Error syncing networks: %s") % str(e))
     
-    def sync_templates(self):
-        """Sync application templates from Portainer"""
+    def sync_standard_templates(self):
+        """Sync standard application templates from Portainer"""
         self.ensure_one()
         
         try:
@@ -813,8 +813,67 @@ class PortainerServer(models.Model):
                     created_count += 1
                 
                 if isinstance(template_id, (int, str)) and str(template_id).isdigit():
-                    synced_template_ids.append(('standard', int(template_id)))
+                    synced_template_ids.append(int(template_id))
                 template_count += 1
+            
+            # Clean up templates that no longer exist in Portainer
+            # Get all standard templates for this server
+            all_templates = self.env['j_portainer.template'].search([
+                ('server_id', '=', self.id),
+                ('is_custom', '=', False)
+            ])
+            
+            # Make sure all IDs are integers for proper comparison
+            synced_ids = []
+            for template_id in synced_template_ids:
+                if isinstance(template_id, int) or (isinstance(template_id, str) and template_id.isdigit()):
+                    synced_ids.append(int(template_id))
+            
+            # Templates to remove - those not in synced_template_ids
+            templates_to_remove = all_templates.filtered(
+                lambda t: t.template_id not in synced_ids
+            )
+            
+            # Remove obsolete templates
+            if templates_to_remove:
+                removed_count = len(templates_to_remove)
+                _logger.info(f"Removing {removed_count} obsolete standard templates")
+                templates_to_remove.unlink()
+            else:
+                removed_count = 0
+            
+            # Log the statistics
+            _logger.info(f"Standard template sync complete: {template_count} total templates, {created_count} created, {updated_count} updated, {removed_count} removed")
+            
+            self.write({'last_sync': fields.Datetime.now()})
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Standard Templates Synchronized'),
+                    'message': _('%d standard templates found, %d removed') % (template_count, removed_count),
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"Error syncing standard templates: {str(e)}")
+            raise UserError(_("Error syncing standard templates: %s") % str(e))
+    
+    def sync_custom_templates(self):
+        """Sync custom templates from Portainer"""
+        self.ensure_one()
+        
+        try:
+            # Keep track of synced custom template IDs
+            synced_template_ids = []
+            
+            # For statistics
+            template_count = 0
+            updated_count = 0
+            created_count = 0
             
             # Get custom templates - try different API endpoints for different Portainer versions
             custom_templates = []
@@ -916,30 +975,37 @@ class PortainerServer(models.Model):
                     created_count += 1
                 
                 if isinstance(template_id, (int, str)) and str(template_id).isdigit():
-                    synced_template_ids.append(('custom', int(template_id)))
+                    synced_template_ids.append(int(template_id))
                 template_count += 1
             
-            # Clean up templates that no longer exist in Portainer
-            # Get all templates for this server
-            all_templates = self.env['j_portainer.template'].search([
-                ('server_id', '=', self.id)
+            # Clean up custom templates that no longer exist in Portainer
+            # Get all custom templates for this server
+            all_custom_templates = self.env['j_portainer.template'].search([
+                ('server_id', '=', self.id),
+                ('is_custom', '=', True)
             ])
             
+            # Make sure all IDs are integers for proper comparison
+            synced_ids = []
+            for template_id in synced_template_ids:
+                if isinstance(template_id, int) or (isinstance(template_id, str) and template_id.isdigit()):
+                    synced_ids.append(int(template_id))
+            
             # Templates to remove - those not in synced_template_ids
-            templates_to_remove = all_templates.filtered(
-                lambda t: (('standard' if not t.is_custom else 'custom'), t.template_id) not in synced_template_ids
+            templates_to_remove = all_custom_templates.filtered(
+                lambda t: t.template_id not in synced_ids
             )
             
-            # Remove obsolete templates
+            # Remove obsolete custom templates
             if templates_to_remove:
                 removed_count = len(templates_to_remove)
-                _logger.info(f"Removing {removed_count} obsolete templates")
+                _logger.info(f"Removing {removed_count} obsolete custom templates")
                 templates_to_remove.unlink()
             else:
                 removed_count = 0
             
             # Log the statistics
-            _logger.info(f"Template sync complete: {template_count} total templates, {created_count} created, {updated_count} updated, {removed_count} removed")
+            _logger.info(f"Custom template sync complete: {template_count} total custom templates, {created_count} created, {updated_count} updated, {removed_count} removed")
             
             self.write({'last_sync': fields.Datetime.now()})
             
@@ -947,16 +1013,42 @@ class PortainerServer(models.Model):
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'title': _('Templates Synchronized'),
-                    'message': _('%d templates found, %d templates removed') % (template_count, removed_count),
+                    'title': _('Custom Templates Synchronized'),
+                    'message': _('%d custom templates found, %d removed') % (template_count, removed_count),
                     'sticky': False,
                     'type': 'success',
                 }
             }
             
         except Exception as e:
-            _logger.error(f"Error syncing templates: {str(e)}")
-            raise UserError(_("Error syncing templates: %s") % str(e))
+            _logger.error(f"Error syncing custom templates: {str(e)}")
+            raise UserError(_("Error syncing custom templates: %s") % str(e))
+            
+    def sync_templates(self):
+        """Sync all templates (standard and custom) from Portainer"""
+        self.ensure_one()
+        
+        try:
+            # First sync standard templates
+            self.sync_standard_templates()
+            
+            # Then sync custom templates
+            self.sync_custom_templates()
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('All Templates Synchronized'),
+                    'message': _('Both standard and custom templates have been synchronized.'),
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"Error syncing all templates: {str(e)}")
+            raise UserError(_("Error syncing all templates: %s") % str(e))
             
     def sync_stacks(self, environment_id=None):
         """Sync stacks from Portainer
@@ -1074,7 +1166,8 @@ class PortainerServer(models.Model):
             self.sync_images()
             self.sync_volumes()
             self.sync_networks()
-            self.sync_templates()
+            self.sync_standard_templates()
+            self.sync_custom_templates()
             self.sync_stacks()
             
             return {
