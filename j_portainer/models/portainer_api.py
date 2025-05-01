@@ -935,17 +935,26 @@ class PortainerAPI(models.AbstractModel):
             # Properly set Content-Type header
             headers = {'Content-Type': 'application/json'}
             
-            # Check Portainer version to determine correct API format
-            version_response = server._make_api_request('/api/system/version', 'GET')
-            version_str = ''
+            # More robust version detection system
+            portainer_version = self._detect_portainer_version(server)
+            version_str = portainer_version.get('version_str', '')
+            version_major = portainer_version.get('major', 0)
+            version_minor = portainer_version.get('minor', 0)
+            version_patch = portainer_version.get('patch', 0)
             
-            if version_response.status_code == 200:
-                try:
-                    version_info = version_response.json()
-                    version_str = version_info.get('Version', '')
-                    _logger.info(f"Detected Portainer version: {version_str}")
-                except Exception as e:
-                    _logger.warning(f"Error parsing version info: {str(e)}")
+            # Log detected version details
+            _logger.info(f"Detected Portainer version: {version_str} (Major: {version_major}, Minor: {version_minor}, Patch: {version_patch})")
+            
+            # If version detection failed, try to detect using endpoints
+            if not version_str:
+                feature_endpoints = self._check_available_endpoints(server)
+                _logger.info(f"Available endpoints detected: {feature_endpoints}")
+                
+                # Use a hardcoded version if we could detect endpoints
+                if feature_endpoints.get('custom_templates'):
+                    _logger.info("Using estimated version based on endpoint availability")
+                    version_major = 2
+                    version_minor = 9  # Assume at least 2.9 if custom templates available
             
             # Prepare API-specific data format
             api_data = dict(template_data)  # Make a copy to avoid modifying the original
@@ -954,19 +963,36 @@ class PortainerAPI(models.AbstractModel):
             # This is used for version-specific handling if needed
             api_key = server._get_api_key_header()
             
-            # Special case for Portainer CE 2.9+ and 2.17+
-            if "2.9." in version_str or "2.1" in version_str or "2.2" in version_str:
-                _logger.info("Using Portainer CE 2.9+ or 2.17+ format")
-                # Make sure type is an integer
-                if 'type' in api_data:
+            # Make sure type is an integer for all versions
+            if 'type' in api_data and not isinstance(api_data['type'], int):
+                try:
                     api_data['type'] = int(api_data['type'])
+                except (ValueError, TypeError):
+                    api_data['type'] = 1  # Default to container type
+            
+            # Debug log for payload
+            _logger.info(f"Template payload: {api_data}")
+            
+            # Special case for Portainer CE 2.9+ and 2.10+
+            if version_major == 2 and (version_minor >= 9 or version_minor == 0):
+                _logger.info("Using Portainer CE 2.9+ format")
                 
-            # Special handling for Portainer CE 2.27 LTS
-            if "2.27" in version_str:
-                _logger.info("Using Portainer CE 2.27 LTS format")
-                # Additional fields required for 2.27
+                # Add/ensure required fields specific to this version
+                if 'note' not in api_data:
+                    api_data['note'] = False
+                
+                # Ensure categories is a list
+                if 'categories' in api_data and isinstance(api_data['categories'], str):
+                    if api_data['categories']:
+                        api_data['categories'] = api_data['categories'].split(',')
+                    else:
+                        api_data['categories'] = ["Custom"]
+                elif 'categories' not in api_data:
+                    api_data['categories'] = ["Custom"]
+                
+                # Stack specific fields for 2.9+
                 if api_data.get('type') == 2:  # Stack template
-                    # Ensure required fields for stack templates
+                    # Special handling for repository info
                     if 'repository' not in api_data and 'repositoryURL' in api_data:
                         api_data['repository'] = {
                             'url': api_data.get('repositoryURL', ''),
@@ -975,69 +1001,140 @@ class PortainerAPI(models.AbstractModel):
                         if 'repositoryReferenceName' in api_data:
                             api_data['repository']['reference'] = api_data.get('repositoryReferenceName')
             
-            # First try standard endpoint
-            response = server._make_api_request(endpoint, 'POST', data=api_data, headers=headers)
+            # Special handling for Portainer CE 2.16+
+            if version_major == 2 and version_minor >= 16:
+                _logger.info("Adding Portainer CE 2.16+ specific fields")
+                
+                # Add specific fields for 2.16+
+                api_data['platform'] = api_data.get('platform', 'linux')
+                if 'env' not in api_data:
+                    api_data['env'] = []
+                    
+            # Special handling for Portainer CE 2.27 LTS
+            if version_major == 2 and version_minor >= 27:
+                _logger.info("Using Portainer CE 2.27 LTS format")
+                
+                # Make sure all array fields are initialized
+                if 'env' not in api_data:
+                    api_data['env'] = []
+                if 'volumes' not in api_data:
+                    api_data['volumes'] = []
+                if 'ports' not in api_data:
+                    api_data['ports'] = []
             
-            if response.status_code in [200, 201, 204]:
+            # Define all possible endpoints and formats to try
+            template_creation_attempts = [
+                # Standard endpoint with regular data format
+                {
+                    'endpoint': '/api/custom_templates',
+                    'method': 'POST',
+                    'data': api_data,
+                    'description': 'Standard endpoint (CE 2.9.0+)'
+                },
+                # Alternative endpoint for older versions
+                {
+                    'endpoint': '/api/templates/custom',
+                    'method': 'POST',
+                    'data': api_data,
+                    'description': 'Alternative endpoint (older versions)'
+                },
+                # Standard endpoint with wrapped data
+                {
+                    'endpoint': '/api/custom_templates',
+                    'method': 'POST',
+                    'data': {"templates": [api_data]},
+                    'description': 'Standard endpoint with wrapped format'
+                },
+                # Alternative endpoint with wrapped data
+                {
+                    'endpoint': '/api/templates/custom',
+                    'method': 'POST',
+                    'data': {"templates": [api_data]},
+                    'description': 'Alternative endpoint with wrapped format'
+                },
+                # V2 format on primary endpoint
+                {
+                    'endpoint': '/api/custom_templates',
+                    'method': 'POST',
+                    'data': {"version": "2", "templates": [api_data]},
+                    'description': 'V2 format on primary endpoint'
+                },
+                # Stack templates endpoint for stack templates
+                {
+                    'endpoint': '/api/stacks',
+                    'method': 'POST',
+                    'data': api_data,
+                    'description': 'Stack templates endpoint',
+                    'condition': lambda: api_data.get('type') == 2  # Only for stack type
+                },
+                # Template with no version or type
+                {
+                    'endpoint': '/api/custom_templates',
+                    'method': 'POST',
+                    'data': {k: v for k, v in api_data.items() if k not in ['version', 'type']},
+                    'description': 'Standard endpoint with minimal data'
+                },
+                # PUT method for older versions
+                {
+                    'endpoint': '/api/custom_templates',
+                    'method': 'PUT',
+                    'data': api_data,
+                    'description': 'Standard endpoint with PUT method'
+                }
+            ]
+            
+            # Try each endpoint in sequence
+            last_error = None
+            for attempt in template_creation_attempts:
+                # Check if attempt has a condition and skip if not met
+                if 'condition' in attempt and not attempt['condition']():
+                    continue
+                    
+                _logger.info(f"Trying template creation with: {attempt['description']}")
+                
                 try:
-                    result = response.json()
-                    _logger.info(f"Template created successfully with ID: {result.get('Id', 'N/A')}")
-                    return result
+                    response = server._make_api_request(
+                        attempt['endpoint'], 
+                        attempt['method'], 
+                        data=attempt['data'], 
+                        headers=headers
+                    )
+                    
+                    if response.status_code in [200, 201, 202, 204]:
+                        try:
+                            # Try to parse response
+                            result = response.json()
+                            _logger.info(f"Template created successfully with {attempt['description']}. Response: {result}")
+                            return result
+                        except Exception as e:
+                            # Empty response is still success for some endpoints
+                            _logger.info(f"Empty or non-JSON response from {attempt['description']} (still success)")
+                            # For empty responses, return minimal success data
+                            return {'Id': 0, 'success': True, 'method': attempt['description']}
+                    else:
+                        _logger.warning(f"Failed with {attempt['description']}: {response.status_code} - {response.text}")
+                        last_error = {
+                            'status_code': response.status_code,
+                            'text': response.text,
+                            'method': attempt['description']
+                        }
                 except Exception as e:
-                    _logger.error(f"Error parsing response: {str(e)}")
-                    if response.text:
-                        _logger.info(f"Raw response: {response.text}")
-                    return {'Id': 0}  # Return minimal success response
-            else:
-                # If first attempt fails, try alternative endpoint
-                _logger.warning(f"Primary endpoint failed: {response.status_code} - {response.text}. Trying alternative endpoint.")
-                alt_endpoint = '/api/templates/custom'
-                
-                # For some Portainer versions, we need to wrap the template in a templates array
-                if response.status_code == 400 and "templates" not in api_data:
-                    wrapped_data = {"templates": [api_data]}
-                    _logger.info(f"Trying with wrapped format: {json.dumps(wrapped_data, indent=2)}")
-                    alt_response = server._make_api_request(alt_endpoint, 'POST', data=wrapped_data, headers=headers)
-                else:
-                    alt_response = server._make_api_request(alt_endpoint, 'POST', data=api_data, headers=headers)
-                
-                if alt_response.status_code in [200, 201, 204]:
-                    try:
-                        result = alt_response.json()
-                        _logger.info(f"Template created successfully with alternative endpoint. Response: {result}")
-                        return result
-                    except Exception as e:
-                        _logger.error(f"Error parsing alternative response: {str(e)}")
-                        if alt_response.text:
-                            _logger.info(f"Raw response from alternative endpoint: {alt_response.text}")
-                        return {'Id': 0}  # Return minimal success response
-                else:
-                    # Last attempt: try with templates array format directly on primary endpoint
-                    if alt_response.status_code not in [200, 201, 204]:
-                        wrapped_data = {"version": "2", "templates": [api_data]}
-                        _logger.info(f"Trying with v2 format on primary endpoint: {endpoint}")
-                        wrapped_response = server._make_api_request(endpoint, 'POST', data=wrapped_data, headers=headers)
-                        
-                        if wrapped_response.status_code in [200, 201, 204]:
-                            try:
-                                result = wrapped_response.json()
-                                _logger.info(f"Template created successfully with wrapped format. Response: {result}")
-                                return result
-                            except Exception as e:
-                                _logger.error(f"Error parsing wrapped response: {str(e)}")
-                                if wrapped_response.text:
-                                    _logger.info(f"Raw response from wrapped format: {wrapped_response.text}")
-                                return {'Id': 0}
+                    _logger.warning(f"Exception with {attempt['description']}: {str(e)}")
+                    last_error = {
+                        'error': str(e),
+                        'method': attempt['description']
+                    }
+            
+            # If we get here, all attempts failed
+            _logger.error(f"All template creation attempts failed. Last error: {last_error}")
+            
+            # Check if the feature is available at all
+            _logger.info("Checking if custom templates feature is available")
+            feature_endpoints = self._check_available_endpoints(server)
+            if not feature_endpoints.get('custom_templates'):
+                _logger.error("Custom templates feature not available in this Portainer version")
                     
-                    _logger.error(f"Error creating template on all endpoints. Last error: {alt_response.status_code} - {alt_response.text}")
-                    
-                    # Check if the feature is available at all
-                    version_endpoint = '/api/custom_templates'
-                    version_check = server._make_api_request(version_endpoint, 'GET')
-                    if version_check.status_code == 404:
-                        _logger.error("Custom templates feature not available in this Portainer version")
-                    
-                    return None
+            return None
         except Exception as e:
             _logger.error(f"Exception during template creation: {str(e)}")
             return None
@@ -1074,34 +1171,45 @@ class PortainerAPI(models.AbstractModel):
             # Properly set Content-Type header
             headers = {'Content-Type': 'application/json'}
             
-            # Check Portainer version to determine correct API format
-            version_response = server._make_api_request('/api/system/version', 'GET')
-            version_str = ''
+            # Use our enhanced version detection
+            portainer_version = self._detect_portainer_version(server)
+            version_str = portainer_version.get('version_str', '')
+            version_major = portainer_version.get('major', 0)
+            version_minor = portainer_version.get('minor', 0)
             
-            if version_response.status_code == 200:
-                try:
-                    version_info = version_response.json()
-                    version_str = version_info.get('Version', '')
-                    _logger.info(f"Detected Portainer version: {version_str}")
-                except Exception as e:
-                    _logger.warning(f"Error parsing version info: {str(e)}")
+            # Log detected version details
+            _logger.info(f"Detected Portainer version for update: {version_str} (Major: {version_major}, Minor: {version_minor})")
             
             # Prepare API-specific data format
             api_data = dict(template_data)  # Make a copy to avoid modifying the original
             
-            # Special case for Portainer CE 2.9+ and 2.17+
-            if "2.9." in version_str or "2.1" in version_str or "2.2" in version_str:
-                _logger.info("Using Portainer CE 2.9+ or 2.17+ format for update")
-                # Make sure type is an integer
-                if 'type' in api_data:
+            # Make sure type is an integer for all versions
+            if 'type' in api_data and not isinstance(api_data['type'], int):
+                try:
                     api_data['type'] = int(api_data['type'])
+                except (ValueError, TypeError):
+                    api_data['type'] = 1  # Default to container type
+            
+            # Special case for Portainer CE 2.9+ and 2.10+
+            if version_major == 2 and (version_minor >= 9 or version_minor == 0):
+                _logger.info("Using Portainer CE 2.9+ format for update")
                 
-            # Special handling for Portainer CE 2.27 LTS
-            if "2.27" in version_str:
-                _logger.info("Using Portainer CE 2.27 LTS format for update")
-                # Additional fields required for 2.27
+                # Add/ensure required fields specific to this version
+                if 'note' not in api_data:
+                    api_data['note'] = False
+                
+                # Ensure categories is a list
+                if 'categories' in api_data and isinstance(api_data['categories'], str):
+                    if api_data['categories']:
+                        api_data['categories'] = api_data['categories'].split(',')
+                    else:
+                        api_data['categories'] = ["Custom"]
+                elif 'categories' not in api_data:
+                    api_data['categories'] = ["Custom"]
+                
+                # Stack specific fields for 2.9+
                 if api_data.get('type') == 2:  # Stack template
-                    # Ensure required fields for stack templates
+                    # Special handling for repository info
                     if 'repository' not in api_data and 'repositoryURL' in api_data:
                         api_data['repository'] = {
                             'url': api_data.get('repositoryURL', ''),
@@ -1109,6 +1217,27 @@ class PortainerAPI(models.AbstractModel):
                         }
                         if 'repositoryReferenceName' in api_data:
                             api_data['repository']['reference'] = api_data.get('repositoryReferenceName')
+            
+            # Special handling for Portainer CE 2.16+
+            if version_major == 2 and version_minor >= 16:
+                _logger.info("Adding Portainer CE 2.16+ specific fields for update")
+                
+                # Add specific fields for 2.16+
+                api_data['platform'] = api_data.get('platform', 'linux')
+                if 'env' not in api_data:
+                    api_data['env'] = []
+                    
+            # Special handling for Portainer CE 2.27 LTS
+            if version_major == 2 and version_minor >= 27:
+                _logger.info("Using Portainer CE 2.27 LTS format for update")
+                
+                # Make sure all array fields are initialized
+                if 'env' not in api_data:
+                    api_data['env'] = []
+                if 'volumes' not in api_data:
+                    api_data['volumes'] = []
+                if 'ports' not in api_data:
+                    api_data['ports'] = []
             
             # Make the update request
             response = server._make_api_request(endpoint, 'PUT', data=api_data, headers=headers)
@@ -1130,3 +1259,131 @@ class PortainerAPI(models.AbstractModel):
         except Exception as e:
             _logger.error(f"Exception during template update: {str(e)}")
             return {'error': str(e)}
+            
+    def _detect_portainer_version(self, server):
+        """Detect Portainer version with detailed parsing
+        
+        Args:
+            server (j_portainer.server): Portainer server record
+            
+        Returns:
+            dict: Version information with keys:
+                - version_str: Raw version string
+                - major: Major version number
+                - minor: Minor version number
+                - patch: Patch version number
+                - error: Error message if any
+        """
+        result = {
+            'version_str': '',
+            'major': 0,
+            'minor': 0,
+            'patch': 0,
+            'error': None
+        }
+        
+        try:
+            # Try /api/system/version endpoint first (newer Portainer versions)
+            version_response = server._make_api_request('/api/system/version', 'GET')
+            
+            if version_response.status_code == 200:
+                try:
+                    version_info = version_response.json()
+                    version_str = version_info.get('Version', '')
+                    result['version_str'] = version_str
+                    
+                    # Parse version string (format: 2.x.x)
+                    if version_str:
+                        version_parts = version_str.split('.')
+                        if len(version_parts) >= 3:
+                            try:
+                                result['major'] = int(version_parts[0])
+                                result['minor'] = int(version_parts[1])
+                                result['patch'] = int(version_parts[2])
+                            except (ValueError, IndexError) as e:
+                                result['error'] = f"Error parsing version parts: {str(e)}"
+                        else:
+                            result['error'] = f"Invalid version format: {version_str}"
+                except Exception as e:
+                    result['error'] = f"Error parsing version info: {str(e)}"
+            elif version_response.status_code == 404:
+                # Try alternative version endpoint for older Portainer
+                alt_version_response = server._make_api_request('/api/status', 'GET')
+                if alt_version_response.status_code == 200:
+                    try:
+                        alt_version_info = alt_version_response.json()
+                        version_str = alt_version_info.get('Version', '')
+                        result['version_str'] = version_str
+                        
+                        # Parse version string
+                        if version_str:
+                            version_parts = version_str.split('.')
+                            if len(version_parts) >= 3:
+                                try:
+                                    result['major'] = int(version_parts[0])
+                                    result['minor'] = int(version_parts[1])
+                                    result['patch'] = int(version_parts[2])
+                                except (ValueError, IndexError) as e:
+                                    result['error'] = f"Error parsing version parts: {str(e)}"
+                            else:
+                                result['error'] = f"Invalid version format: {version_str}"
+                    except Exception as e:
+                        result['error'] = f"Error parsing alternative version info: {str(e)}"
+                else:
+                    result['error'] = "Could not detect Portainer version"
+            else:
+                result['error'] = f"Error fetching version: {version_response.status_code} - {version_response.text}"
+                
+        except Exception as e:
+            result['error'] = f"Exception during version detection: {str(e)}"
+            
+        return result
+        
+    def _check_available_endpoints(self, server):
+        """Check which endpoints are available in the Portainer instance
+        
+        Args:
+            server (j_portainer.server): Portainer server record
+            
+        Returns:
+            dict: Map of feature names to boolean availability
+        """
+        features = {
+            'custom_templates': False,
+            'stacks': False,
+            'containers': False,
+            'images': False,
+            'volumes': False,
+            'networks': False,
+            'templates': False,
+        }
+        
+        # Test endpoints to determine available features
+        endpoints_to_check = {
+            'custom_templates': '/api/custom_templates',
+            'stacks': '/api/stacks',
+            'containers': '/api/endpoints/1/docker/containers/json',
+            'images': '/api/endpoints/1/docker/images/json',
+            'volumes': '/api/endpoints/1/docker/volumes',
+            'networks': '/api/endpoints/1/docker/networks',
+            'templates': '/api/templates',
+        }
+        
+        for feature, endpoint in endpoints_to_check.items():
+            try:
+                response = server._make_api_request(endpoint, 'GET')
+                # Consider 200, 204, 401, 403 as endpoint exists but might need auth
+                if response.status_code in [200, 204, 401, 403]:
+                    features[feature] = True
+                # 404 means endpoint doesn't exist
+                elif response.status_code == 404:
+                    features[feature] = False
+                else:
+                    # For other status codes, assume endpoint might exist but has other issues
+                    # Use False instead of None to avoid type issues
+                    features[feature] = False
+            except Exception as e:
+                _logger.warning(f"Error checking endpoint {endpoint}: {str(e)}")
+                features[feature] = False  # Use False instead of None to avoid type issues
+                
+        return features
