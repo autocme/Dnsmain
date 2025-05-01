@@ -277,16 +277,27 @@ class PortainerImage(models.Model):
             # Update basic fields
             if 'Created' in image_data:
                 try:
-                    # Use server's date parser which handles ISO format
-                    self.created = self.server_id._parse_date_value(image_data['Created'])
+                    # Try to use fields.Datetime directly with a simple format first
+                    created_str = image_data['Created']
+                    # Just keep the date and time part without microseconds or timezone
+                    if 'T' in created_str:
+                        # Remove microseconds and timezone info for naive datetime
+                        # Example: '2025-03-04T22:12:54.389453136Z' -> '2025-03-04 22:12:54'
+                        simple_date = created_str.split('.')[0].replace('T', ' ')
+                        self.created = fields.Datetime.from_string(simple_date)
+                    else:
+                        self.created = fields.Datetime.from_string(created_str)
                 except Exception as e:
-                    _logger.warning(f"Error parsing date {image_data['Created']}: {str(e)}")
-                    # Fallback for various ISO formats
+                    _logger.warning(f"Simple date parsing failed for {image_data['Created']}: {str(e)}")
                     try:
+                        # Try more robust parsing but ensure naive datetime result
                         from datetime import datetime
-                        # Handle Portainer/Docker's ISO format with Z timezone indicator
+                        # Parse with timezone first
                         date_str = image_data['Created'].replace('Z', '+00:00')
-                        self.created = datetime.fromisoformat(date_str)
+                        dt_with_tz = datetime.fromisoformat(date_str)
+                        # Remove timezone info to get naive datetime that Odoo expects
+                        naive_dt = dt_with_tz.replace(tzinfo=None)
+                        self.created = naive_dt
                     except Exception as parse_error:
                         _logger.error(f"Failed to parse date format: {str(parse_error)}")
             
