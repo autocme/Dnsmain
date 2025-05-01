@@ -30,12 +30,12 @@
                 </div>
                 
                 <!-- Done State -->
-                <div invisible="state != 'done'" class="alert alert-success">
+                <div invisible="state != 'done'" class="alert alert-success" role="status">
                     <field name="result_message"/>
                 </div>
                 
                 <!-- Error State -->
-                <div invisible="state != 'error'" class="alert alert-danger">
+                <div invisible="state != 'error'" class="alert alert-danger" role="alert">
                     <field name="result_message"/>
                 </div>
                 

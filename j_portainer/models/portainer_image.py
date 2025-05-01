@@ -261,58 +261,26 @@ class PortainerImage(models.Model):
             raise UserError(_(f"Failed to remove image: {str(e)}"))
     
     def action_refresh(self):
-        """Refresh image data"""
+        """Refresh image information"""
         self.ensure_one()
         
         try:
-            api = self._get_api()
-            image_data = api.image_action(
-                self.server_id.id, 'inspect',
-                endpoint=f"/endpoints/{self.environment_id}/docker/images/{self.image_id}/json"
-            )
+            # Use the server's sync_images method to refresh this image
+            self.server_id.sync_images(self.environment_id)
             
-            if image_data.get('error'):
-                raise UserError(_(f"Failed to refresh image: {image_data.get('error')}"))
-                
-            # Update basic fields
-            if 'Created' in image_data:
-                try:
-                    # Try to use fields.Datetime directly with a simple format first
-                    created_str = image_data['Created']
-                    # Just keep the date and time part without microseconds or timezone
-                    if 'T' in created_str:
-                        # Remove microseconds and timezone info for naive datetime
-                        # Example: '2025-03-04T22:12:54.389453136Z' -> '2025-03-04 22:12:54'
-                        simple_date = created_str.split('.')[0].replace('T', ' ')
-                        self.created = fields.Datetime.from_string(simple_date)
-                    else:
-                        self.created = fields.Datetime.from_string(created_str)
-                except Exception as e:
-                    _logger.warning(f"Simple date parsing failed for {image_data['Created']}: {str(e)}")
-                    try:
-                        # Try more robust parsing but ensure naive datetime result
-                        from datetime import datetime
-                        # Parse with timezone first
-                        date_str = image_data['Created'].replace('Z', '+00:00')
-                        dt_with_tz = datetime.fromisoformat(date_str)
-                        # Remove timezone info to get naive datetime that Odoo expects
-                        naive_dt = dt_with_tz.replace(tzinfo=None)
-                        self.created = naive_dt
-                    except Exception as parse_error:
-                        _logger.error(f"Failed to parse date format: {str(parse_error)}")
-            
-            if 'Size' in image_data:
-                self.size = image_data['Size']
-            if 'Labels' in image_data:
-                self.labels = json.dumps(image_data['Labels']) if image_data['Labels'] else '{}'
-            
-            # Store complete details
-            self.details = json.dumps(image_data, indent=2)
-            
-            return True
-            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Image Refreshed'),
+                    'message': _('Image information refreshed successfully'),
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
         except Exception as e:
-            raise UserError(_(f"Failed to refresh image: {str(e)}"))
+            _logger.error(f"Error refreshing image {self.repository}:{self.tag}: {str(e)}")
+            raise UserError(_("Error refreshing image: %s") % str(e))
     
     def action_remove_with_options(self):
         """Action to show image removal options"""
