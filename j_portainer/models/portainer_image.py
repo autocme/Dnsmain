@@ -276,7 +276,20 @@ class PortainerImage(models.Model):
                 
             # Update basic fields
             if 'Created' in image_data:
-                self.created = fields.Datetime.to_datetime(image_data['Created'])
+                try:
+                    # Use server's date parser which handles ISO format
+                    self.created = self.server_id._parse_date_value(image_data['Created'])
+                except Exception as e:
+                    _logger.warning(f"Error parsing date {image_data['Created']}: {str(e)}")
+                    # Fallback for various ISO formats
+                    try:
+                        from datetime import datetime
+                        # Handle Portainer/Docker's ISO format with Z timezone indicator
+                        date_str = image_data['Created'].replace('Z', '+00:00')
+                        self.created = datetime.fromisoformat(date_str)
+                    except Exception as parse_error:
+                        _logger.error(f"Failed to parse date format: {str(parse_error)}")
+            
             if 'Size' in image_data:
                 self.size = image_data['Size']
             if 'Labels' in image_data:
