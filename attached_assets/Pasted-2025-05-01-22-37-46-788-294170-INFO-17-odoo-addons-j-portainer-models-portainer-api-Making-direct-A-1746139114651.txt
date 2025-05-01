@@ -1,0 +1,36 @@
+2025-05-01 22:37:46,788 294170 INFO 17 odoo.addons.j_portainer.models.portainer_api: Making direct API call to /api/custom_templates?environment=3 with method POST 
+2025-05-01 22:37:47,022 294170 INFO 17 odoo.addons.j_portainer.models.portainer_api: Direct API call response status: 405 
+2025-05-01 22:37:47,023 294170 INFO 17 odoo.addons.j_portainer.models.portainer_api: Importing template via V2 API: {
+  "version": "2",
+  "templates": [
+    {
+      "type": 2,
+      "title": "5",
+      "description": "5",
+      "note": false,
+      "platform": 1,
+      "categories": [
+        "Custom"
+      ],
+      "stackfile": "2025-05-01 22:33:05,932 294170 ERROR 17 odoo.addons.j_portainer.models.portainer_custom_template: All Portainer synchronization methods failed: Environment API method failed: cannot access local variable 'json' where it is not associated with a value \n"
+    }
+  ]
+} 
+2025-05-01 22:37:47,023 294170 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying POST to /api/custom_templates/file 
+2025-05-01 22:37:47,251 294170 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with POST to /api/custom_templates/file: 405 -  
+2025-05-01 22:37:47,252 294170 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying POST to /api/custom_templates 
+2025-05-01 22:37:47,481 294170 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with POST to /api/custom_templates: 405 -  
+2025-05-01 22:37:47,481 294170 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying POST to /api/custom_templates/create 
+2025-05-01 22:37:47,716 294170 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with POST to /api/custom_templates/create: 405 -  
+2025-05-01 22:37:47,716 294170 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying PUT to /api/custom_templates/file 
+2025-05-01 22:37:47,951 294170 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with PUT to /api/custom_templates/file: 400 - {"message":"Invalid Custom template identifier route variable","details":"Strconv.Atoi: parsing \"file\": invalid syntax"} 
+2025-05-01 22:37:47,951 294170 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying PUT to /api/custom_templates 
+2025-05-01 22:37:48,179 294170 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with PUT to /api/custom_templates: 405 -  
+2025-05-01 22:37:48,180 294170 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying PUT to /api/custom_templates/create 
+2025-05-01 22:37:48,418 294170 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with PUT to /api/custom_templates/create: 400 - {"message":"Invalid Custom template identifier route variable","details":"Strconv.Atoi: parsing \"create\": invalid syntax"} 
+2025-05-01 22:37:48,418 294170 ERROR 17 odoo.addons.j_portainer.models.portainer_api: All V2 API template import attempts failed 
+2025-05-01 22:37:48,418 294170 INFO 17 odoo.addons.j_portainer.models.portainer_api: Making direct API call to /api/custom_templates/file with method POST 
+2025-05-01 22:37:48,651 294170 INFO 17 odoo.addons.j_portainer.models.portainer_api: Direct API call response status: 405 
+2025-05-01 22:37:48,651 294170 ERROR 17 odoo.addons.j_portainer.models.portainer_custom_template: All Portainer synchronization methods failed: Direct multipart form failed: HTTPSConnectionPool(host='3.110.80.87', port=9443): Max retries exceeded with url: /api/custom_templates/create/file (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)'))) 
+2025-05-01 22:37:48,652 294170 WARNING 17 odoo.addons.j_portainer.models.portainer_custom_template: Automatic template creation in Portainer failed. Please create the template manually in Portainer and then enter its ID in the 'Manual Template ID' field to link it with this record. 
+2025-05-01 22:37:48,675 294170 INFO 17 werkzeug: 127.0.0.1 - - [01/May/2025 22:37:48] "POST /web/dataset/call_kw/j_portainer.customtemplate/web_save HTTP/1.1" 200 - 9 0.006 7.339

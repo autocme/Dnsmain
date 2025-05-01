@@ -337,6 +337,8 @@ class PortainerCustomTemplate(models.Model):
         @param method: HTTP method to use (post for create, put for update)
         @return: Response from Portainer API or None if failed
         """
+        # Make sure json module is explicitly available in this method
+        import json
         self.ensure_one()
         
         # Use passed vals or prepare from current record for updates
@@ -639,6 +641,9 @@ class PortainerCustomTemplate(models.Model):
         try:
             # We need to get the Portainer environment ID, not the Odoo record ID
             # Find the environment record to get its environment_id field
+            # Make sure json is imported for this scope
+            import json
+            
             env_record = self.env['j_portainer.environment'].browse(environment_id)
             portainer_env_id = env_record.environment_id if env_record else None
             
@@ -689,6 +694,8 @@ class PortainerCustomTemplate(models.Model):
                         if self.git_repository_reference:
                             update_data['repository']['reference'] = self.git_repository_reference
                 
+                # Make sure to use json module imported at method level
+                import json
                 _logger.info(f"Updating template with data: {json.dumps(update_data, indent=2)}")
                 
                 response = api.direct_api_call(
@@ -743,11 +750,29 @@ class PortainerCustomTemplate(models.Model):
                     
                 # If regular import fails, try with environment specified
                 try:
+                    # Get environment ID from portainer for this scope
+                    try:
+                        # Find the environment record to get its environment_id field
+                        env_record = self.env['j_portainer.environment'].browse(environment_id)
+                        env_portainer_id = env_record.environment_id if env_record else None
+                        
+                        if not env_portainer_id:
+                            # Fallback to using first environment's ID
+                            server = self.env['j_portainer.server'].browse(server_id)
+                            if server and server.environment_ids:
+                                env_portainer_id = server.environment_ids[0].environment_id
+                        _logger.info(f"Using Portainer environment ID {env_portainer_id} for file upload")
+                    except Exception as env_error:
+                        _logger.warning(f"Could not resolve environment ID: {str(env_error)}")
+                        env_portainer_id = 1  # Default to first environment ID
+                    
                     # Try direct file upload to environment endpoint
+                    # Make sure json module is available in this scope
+                    import json
                     multipart_data = {
                         'file': json.dumps(file_template),
                         'type': template_data.get('type', 1),
-                        'environment': portainer_env_id
+                        'environment': env_portainer_id
                     }
                     
                     env_file_response = api.direct_api_call(
@@ -917,6 +942,9 @@ class PortainerCustomTemplate(models.Model):
     
     def _prepare_template_data(self, vals):
         """Prepare template data for Portainer API v2 from vals dictionary"""
+        # Make sure json module is available in this method 
+        import json
+        
         # Set required fields with fallbacks if empty
         title = vals.get('title') or 'Custom Template'
         description = vals.get('description') or f'Template for {title}'
@@ -1039,6 +1067,9 @@ class PortainerCustomTemplate(models.Model):
         
     def _prepare_template_data_from_record(self):
         """Prepare template data for Portainer API v2 from current record"""
+        # Make sure json module is available in this method scope
+        import json
+        
         self.ensure_one()
         
         # Convert platform string to integer for Portainer v2 API
