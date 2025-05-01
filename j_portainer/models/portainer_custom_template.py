@@ -506,7 +506,9 @@ class PortainerCustomTemplate(models.Model):
         if template_data['type'] == 2:
             if self.build_method == 'editor':
                 # Web editor method
-                template_data['composeFileContent'] = self.compose_file or ''
+                compose_content = self.compose_file or ''
+                _logger.info(f"Using compose file content for template '{self.title}' (ID: {self.template_id}). Content length: {len(compose_content)} chars")
+                template_data['composeFileContent'] = compose_content
                 
             elif self.build_method == 'repository':
                 # Git repository method
