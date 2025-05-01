@@ -13,6 +13,8 @@ class PortainerCustomTemplate(models.Model):
     _description = 'Portainer Custom Template'
     _order = 'title'
     
+    is_custom = fields.Boolean('Custom Template', default=True, help="Used to identify custom templates")
+    
     title = fields.Char('Title', required=True)
     description = fields.Text('Description')
     template_type = fields.Selection([
