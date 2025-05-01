@@ -946,7 +946,8 @@ class PortainerServer(models.Model):
             # If primary endpoint failed, try alternative endpoint for older versions
             if not custom_templates and (custom_response is None or custom_response.status_code != 200):
                 try:
-                    alt_response = self._make_api_request('/api/templates/custom', 'GET')
+                    # Removed v1 endpoint reference, using only v2 API
+                    alt_response = self._make_api_request('/api/custom_templates', 'GET')
                     if alt_response.status_code == 200:
                         data = alt_response.json()
                         # Handle both array and object formats

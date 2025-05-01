@@ -1,0 +1,16 @@
+INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying template creation with: V2 format on primary endpoint 
+2025-05-01 16:45:05,476 272812 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with V2 format on primary endpoint: 405 -  
+2025-05-01 16:45:05,476 272812 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying template creation with: Stack templates endpoint 
+2025-05-01 16:45:05,709 272812 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with Stack templates endpoint: 405 -  
+2025-05-01 16:45:05,709 272812 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying template creation with: Standard endpoint with minimal data 
+2025-05-01 16:45:05,950 272812 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with Standard endpoint with minimal data: 405 -  
+2025-05-01 16:45:05,950 272812 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying template creation with: Standard endpoint with PUT method 
+2025-05-01 16:45:06,191 272812 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with Standard endpoint with PUT method: 405 -  
+2025-05-01 16:45:06,191 272812 ERROR 17 odoo.addons.j_portainer.models.portainer_api: All template creation attempts failed. Last error: {'status_code': 405, 'text': '', 'method': 'Standard endpoint with PUT method'} 
+2025-05-01 16:45:06,191 272812 INFO 17 odoo.addons.j_portainer.models.portainer_api: Checking if custom templates feature is available 
+2025-05-01 16:45:07,878 272812 WARNING 17 odoo.addons.j_portainer.models.portainer_custom_template: Environment API method failed: 'j_portainer.api' object has no attribute 'direct_api_call' 
+2025-05-01 16:45:07,878 272812 ERROR 17 odoo.addons.j_portainer.models.portainer_api: Exception during template import: cannot access local variable 'json' where it is not associated with a value 
+2025-05-01 16:45:07,878 272812 WARNING 17 odoo.addons.j_portainer.models.portainer_custom_template: Environment file import method failed: 'j_portainer.api' object has no attribute 'direct_api_call' 
+2025-05-01 16:45:07,878 272812 ERROR 17 odoo.addons.j_portainer.models.portainer_custom_template: All Portainer synchronization methods failed: Environment API method failed: 'j_portainer.api' object has no attribute 'direct_api_call'; Environment file import method failed: 'j_portainer.api' object has no attribute 'direct_api_call' 
+2025-05-01 16:45:07,878 272812 WARNING 17 odoo.addons.j_portainer.models.portainer_custom_template: Automatic template creation in Portainer failed. Please create the template manually in Portainer and then enter its ID in the 'Manual Template ID' field to link it with this record. 
+2025-05-01 16:45:07,905 272812 INFO 17 werkzeug: 127.0.0.1 - - [01/May/2025 16:45:07] "POST /web/dataset/call_kw/j_portainer.customtemplate/web_save HTTP/1.1" 200 - 10 0.008 6.734

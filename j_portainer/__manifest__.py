@@ -19,6 +19,7 @@
         * Environments & Host Details
         
         Uses API Key authentication method for secure communication with Portainer.
+        Exclusively uses Portainer v2 API endpoints for full compatibility with CE 2.9.0+ and 2.27.4 LTS.
     """,
     'author': 'Your Company',
     'category': 'Administration',
