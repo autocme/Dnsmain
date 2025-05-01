@@ -281,3 +281,258 @@ class PortainerCustomTemplate(models.Model):
                 'default_name': self.title,
             }
         }
+        
+    @api.model
+    def create(self, vals):
+        """Override create to sync with Portainer"""
+        # Skip Portainer creation if skip_portainer_create flag is set (used during sync)
+        if not vals.get('skip_portainer_create'):
+            # Create the template in Portainer
+            server_id = vals.get('server_id')
+            if not server_id:
+                raise UserError(_("Server is required for custom templates"))
+                
+            # Prepare template data for Portainer API
+            template_data = self._prepare_template_data(vals)
+            
+            # Create template in Portainer
+            try:
+                api = self.env['j_portainer.api']
+                server = self.env['j_portainer.server'].browse(server_id)
+                
+                response = api.create_template(server_id, template_data)
+                
+                if response and 'Id' in response:
+                    # Template created successfully, set template_id
+                    vals['template_id'] = response['Id']
+                else:
+                    raise UserError(_("Failed to create template in Portainer"))
+                    
+            except Exception as e:
+                _logger.error(f"Error creating template in Portainer: {str(e)}")
+                raise UserError(_("Error creating template in Portainer: %s") % str(e))
+        
+        # Create the record in Odoo
+        return super(PortainerCustomTemplate, self).create(vals)
+        
+    def write(self, vals):
+        """Override write to sync with Portainer"""
+        result = super(PortainerCustomTemplate, self).write(vals)
+        
+        # Skip Portainer update if we're just updating from a sync operation
+        if not self.env.context.get('skip_portainer_update'):
+            for template in self:
+                if template.template_id and template.server_id.status == 'connected':
+                    try:
+                        # Skip if we're just setting skip_portainer_create flag
+                        if len(vals) == 1 and 'skip_portainer_create' in vals:
+                            continue
+                            
+                        api = self.env['j_portainer.api']
+                        
+                        # Prepare current template data
+                        template_data = template._prepare_template_data_from_record()
+                        
+                        # Make API request to update template
+                        response = api.update_template(
+                            template.server_id.id, 
+                            template.template_id,
+                            template_data
+                        )
+                        
+                        if not response or response.get('error'):
+                            error_msg = response.get('error') if response else 'Unknown error'
+                            _logger.warning(f"Could not update template {template.id} in Portainer: {error_msg}")
+                    except Exception as e:
+                        _logger.error(f"Error updating template {template.id} in Portainer: {str(e)}")
+        
+        return result
+    
+    def _prepare_template_data(self, vals):
+        """Prepare template data for Portainer API from vals dictionary"""
+        # Set required fields with fallbacks if empty
+        title = vals.get('title') or 'Custom Template'
+        description = vals.get('description') or f'Template for {title}'
+        
+        template_data = {
+            'type': int(vals.get('template_type', 1)),
+            'title': title,
+            'description': description,
+            'note': vals.get('note', ''),
+            'platform': vals.get('platform', 'linux'),
+            'categories': vals.get('categories', '').split(',') if vals.get('categories') else []
+        }
+        
+        # Clean up empty categories
+        template_data['categories'] = [c.strip() for c in template_data['categories'] if c.strip()]
+        
+        # Ensure at least one category exists
+        if not template_data['categories']:
+            template_data['categories'] = ['Custom']
+            
+        # Handle image for container templates (type 1)
+        if template_data['type'] == 1 and vals.get('image'):
+            template_data['image'] = vals.get('image')
+            
+            # Add registry if specified
+            if vals.get('registry'):
+                template_data['registry'] = vals.get('registry')
+                
+            # Add environment variables if specified
+            if vals.get('environment_variables'):
+                try:
+                    env_vars = json.loads(vals.get('environment_variables'))
+                    template_data['env'] = env_vars
+                except Exception as e:
+                    _logger.warning(f"Error parsing environment variables: {str(e)}")
+                    
+            # Add volumes if specified
+            if vals.get('volumes'):
+                try:
+                    volumes = json.loads(vals.get('volumes'))
+                    template_data['volumes'] = volumes
+                except Exception as e:
+                    _logger.warning(f"Error parsing volumes: {str(e)}")
+                    
+            # Add ports if specified
+            if vals.get('ports'):
+                try:
+                    ports = json.loads(vals.get('ports'))
+                    template_data['ports'] = ports
+                except Exception as e:
+                    _logger.warning(f"Error parsing ports: {str(e)}")
+        
+        # Handle build method for Stack templates (type 2)
+        if template_data['type'] == 2:
+            build_method = vals.get('build_method')
+            
+            if build_method == 'editor':
+                # Web editor method
+                template_data['composeFileContent'] = vals.get('compose_file', '')
+                
+            elif build_method == 'repository':
+                # Git repository method
+                repository_data = {
+                    'url': vals.get('git_repository_url', ''),
+                    'stackfile': vals.get('git_compose_path', 'docker-compose.yml')
+                }
+                
+                # Add reference if specified
+                if vals.get('git_repository_reference'):
+                    repository_data['reference'] = vals.get('git_repository_reference')
+                    
+                template_data['repository'] = repository_data
+                
+                # Handle authentication if needed
+                if vals.get('git_authentication'):
+                    template_data['repositoryAuthentication'] = True
+                    
+                    # Use Git credentials if specified
+                    if vals.get('git_credentials_id'):
+                        credentials = self.env['j_portainer.git.credentials'].browse(vals.get('git_credentials_id'))
+                        if credentials:
+                            template_data['repositoryUsername'] = credentials.username
+                            template_data['repositoryPassword'] = credentials.password
+                    else:
+                        # Otherwise use username/token from form
+                        template_data['repositoryUsername'] = vals.get('git_username', '')
+                        template_data['repositoryPassword'] = vals.get('git_token', '')
+        
+        return template_data
+        
+    def _prepare_template_data_from_record(self):
+        """Prepare template data for Portainer API from current record"""
+        self.ensure_one()
+        
+        template_data = {
+            'type': int(self.template_type),
+            'title': self.title,
+            'description': self.description or f'Template for {self.title}',
+            'note': self.note or '',
+            'platform': self.platform or 'linux'
+        }
+        
+        # Handle categories
+        category_list = []
+        if self.categories:
+            try:
+                # Try parsing as JSON first
+                categories = json.loads(self.categories)
+                if isinstance(categories, list):
+                    category_list = [c for c in categories if isinstance(c, str)]
+            except Exception:
+                # Fall back to comma-separated string
+                category_list = [c.strip() for c in self.categories.split(',') if c.strip()]
+                
+        # Add from category_ids as well
+        for category in self.category_ids:
+            if category.name not in category_list:
+                category_list.append(category.name)
+                
+        template_data['categories'] = category_list or ['Custom']
+        
+        # Handle image for container templates (type 1)
+        if template_data['type'] == 1 and self.image:
+            template_data['image'] = self.image
+            
+            # Add registry if specified
+            if self.registry:
+                template_data['registry'] = self.registry
+                
+            # Add environment variables if specified
+            if self.environment_variables:
+                try:
+                    env_vars = json.loads(self.environment_variables)
+                    template_data['env'] = env_vars
+                except Exception as e:
+                    _logger.warning(f"Error parsing environment variables: {str(e)}")
+                    
+            # Add volumes if specified
+            if self.volumes:
+                try:
+                    volumes = json.loads(self.volumes)
+                    template_data['volumes'] = volumes
+                except Exception as e:
+                    _logger.warning(f"Error parsing volumes: {str(e)}")
+                    
+            # Add ports if specified
+            if self.ports:
+                try:
+                    ports = json.loads(self.ports)
+                    template_data['ports'] = ports
+                except Exception as e:
+                    _logger.warning(f"Error parsing ports: {str(e)}")
+        
+        # Handle build method for Stack templates (type 2)
+        if template_data['type'] == 2:
+            if self.build_method == 'editor':
+                # Web editor method
+                template_data['composeFileContent'] = self.compose_file or ''
+                
+            elif self.build_method == 'repository':
+                # Git repository method
+                repository_data = {
+                    'url': self.git_repository_url or '',
+                    'stackfile': self.git_compose_path or 'docker-compose.yml'
+                }
+                
+                # Add reference if specified
+                if self.git_repository_reference:
+                    repository_data['reference'] = self.git_repository_reference
+                    
+                template_data['repository'] = repository_data
+                
+                # Handle authentication if needed
+                if self.git_authentication:
+                    template_data['repositoryAuthentication'] = True
+                    
+                    # Use Git credentials if specified
+                    if self.git_credentials_id:
+                        template_data['repositoryUsername'] = self.git_credentials_id.username
+                        template_data['repositoryPassword'] = self.git_credentials_id.password
+                    else:
+                        # Otherwise use username/token from form
+                        template_data['repositoryUsername'] = self.git_username or ''
+                        template_data['repositoryPassword'] = self.git_token or ''
+        
+        return template_data
