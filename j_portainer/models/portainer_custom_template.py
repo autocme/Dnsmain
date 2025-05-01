@@ -12,7 +12,15 @@ class PortainerCustomTemplate(models.Model):
     _name = 'j_portainer.customtemplate'
     _description = 'Portainer Custom Template'
     _order = 'title'
-    _copy_default_excluded_fields = ['template_id']
+    _copy_default_excluded_fields = [
+        'template_id', 
+        'fileContent',
+        'compose_file',
+        'repository',
+        'volumes',
+        'ports',
+        'environment_variables'
+    ]
     
     is_custom = fields.Boolean('Custom Template', default=True, help="Used to identify custom templates")
     
@@ -749,6 +757,28 @@ class PortainerCustomTemplate(models.Model):
         
         # Return failure
         return None
+        
+    def copy(self, default=None):
+        """Override copy method to clear raw data fields in duplicated templates"""
+        if default is None:
+            default = {}
+            
+        # Explicitly clear raw data fields
+        default.update({
+            'fileContent': None,
+            'compose_file': None,
+            'environment_variables': None,
+            'volumes': None,
+            'ports': None,
+            'repository': None,
+        })
+        
+        # Add "(copy)" to title if not already specified
+        if 'title' not in default:
+            default['title'] = _("%s (copy)") % self.title
+            
+        # Use standard method to copy the record with our defaults
+        return super(PortainerCustomTemplate, self).copy(default)
     
     @api.model
     def create(self, vals):
