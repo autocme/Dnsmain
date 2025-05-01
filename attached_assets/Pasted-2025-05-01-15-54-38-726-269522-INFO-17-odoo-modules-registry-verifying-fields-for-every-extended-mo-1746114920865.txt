@@ -1,0 +1,27 @@
+2025-05-01 15:54:38,726 269522 INFO 17 odoo.modules.registry: verifying fields for every extended model 
+2025-05-01 15:54:38,790 269522 WARNING 17 odoo.addons.base.models.ir_model: Two fields (environment_ids, environment_count) of j_portainer.server() have the same label: Environments. [Modules: j_portainer and j_portainer] 
+2025-05-01 15:54:38,830 269522 INFO 17 odoo.modules.loading: Modules loaded. 
+2025-05-01 15:54:38,834 269522 INFO 17 odoo.modules.registry: Registry loaded in 1.313s 
+2025-05-01 15:54:38,835 269522 INFO 17 odoo.addons.base.models.ir_http: Generating routing map for key None 
+2025-05-01 15:54:38,853 269522 INFO 17 odoo.modules.registry: Caches invalidated, signaling through the database: ['default', 'templates'] 
+2025-05-01 15:54:38,871 269522 INFO 17 werkzeug: 127.0.0.1 - - [01/May/2025 15:54:38] "GET /websocket?version=17.0-1 HTTP/1.1" 101 - 1089 0.618 0.733
+2025-05-01 15:54:39,192 269522 INFO ? odoo.addons.bus.models.bus: Bus.loop listen imbus on db postgres 
+2025-05-01 15:55:02,762 269522 WARNING ? odoo.modules.module: Missing `license` key in manifest for 'jaah_ssh', defaulting to LGPL-3 
+2025-05-01 15:55:02,763 269522 WARNING ? odoo.modules.module: Missing `license` key in manifest for 'jaah_craping', defaulting to LGPL-3 
+2025-05-01 15:55:02,773 269522 INFO 17 odoo.addons.j_portainer.models.portainer_api: Creating template with data: {
+  "type": 1,
+  "title": "odoo15",
+  "description": "odoo15",
+  "note": false,
+  "platform": "linux",
+  "categories": [
+    "Custom"
+  ]
+} 
+2025-05-01 15:55:03,293 269522 INFO 17 odoo.addons.j_portainer.models.portainer_api: Detected Portainer version:  
+2025-05-01 15:55:03,521 269522 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Primary endpoint failed: 405 - . Trying alternative endpoint. 
+2025-05-01 15:55:03,759 269522 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying with v2 format on primary endpoint: /api/custom_templates 
+2025-05-01 15:55:04,001 269522 ERROR 17 odoo.addons.j_portainer.models.portainer_api: Error creating template on all endpoints. Last error: 404 - 404 page not found
+ 
+2025-05-01 15:55:04,233 269522 ERROR 17 odoo.addons.j_portainer.models.portainer_custom_template: Error creating template in Portainer: Failed to create template in Portainer 
+2025-05-01 15:55:04,235 269522 WARNING 17 odoo.http: Error creating template in Portainer: Failed to create template in Portainer 
