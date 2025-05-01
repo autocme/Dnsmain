@@ -950,8 +950,9 @@ class PortainerAPI(models.AbstractModel):
         # Log the template data for debugging
         _logger.info(f"Creating template with data: {json.dumps(template_data, indent=2)}")
             
-        # Try the v2 API endpoint first (Portainer CE 2.9.0+)
-        endpoint = '/api/custom_templates'
+        # Endpoint for custom templates has changed for CE 2.27.4 LTS
+        # Now using /api/custom_templates/create/file for multipart form data upload
+        endpoint = '/api/custom_templates/create/file'
         
         try:
             # Properly set Content-Type header
@@ -1045,7 +1046,53 @@ class PortainerAPI(models.AbstractModel):
                     api_data['ports'] = []
             
             # Define all possible endpoints and formats to try
+            # For CE 2.27+, we need to use the multipart/form-data format with /api/custom_templates/create/file endpoint
+            # Check if we have fileContent for file upload
+            has_file_content = False
+            file_content = None
+            
+            # Check for fileContent in api_data or compose_file
+            if 'fileContent' in api_data:
+                file_content = api_data.get('fileContent')
+                has_file_content = bool(file_content)
+            elif 'compose_file' in api_data:
+                file_content = api_data.get('compose_file')
+                has_file_content = bool(file_content)
+            elif 'composeFileContent' in api_data:
+                file_content = api_data.get('composeFileContent')
+                has_file_content = bool(file_content)
+                
+            # Log if we found file content
+            if has_file_content and file_content:
+                _logger.info(f"Found file content for multipart form upload, length: {len(file_content)}")
+            elif has_file_content:
+                _logger.info("Found file content flag but content is None")
+            
+            # First attempt should be with multipart/form-data and create/file endpoint as it works reliably
             template_creation_attempts = [
+                # CE 2.27 LTS Multipart form data approach (most reliable)
+                {
+                    'endpoint': '/api/custom_templates/create/file',
+                    'method': 'POST',
+                    'is_multipart': True,
+                    'form_data': {
+                        'Title': api_data.get('title'),
+                        'Description': api_data.get('description', ''),
+                        'Note': api_data.get('note', ''),
+                        'Platform': str(api_data.get('platform', 1)),  # 1 for Linux, 2 for Windows
+                        'Type': str(api_data.get('type', 1)),  # Must be string for form data
+                        'Logo': api_data.get('logo', ''),
+                        # Add environment ID if available
+                        'environmentId': str(api_data.get('environmentId', '')),
+                        # Add variables if available as JSON string
+                        'Variables': json.dumps(api_data.get('env', [])) if 'env' in api_data else '[]',
+                    },
+                    'files': {
+                        'File': ('template.yml', file_content.encode('utf-8') if file_content else b'version: "3"\nservices:\n  app:\n    image: nginx')
+                    },
+                    'description': 'CE 2.27 multipart form data with create/file endpoint',
+                    'condition': lambda: has_file_content
+                },
                 # V2 format on primary endpoint
                 {
                     'endpoint': '/api/custom_templates',
@@ -1072,14 +1119,6 @@ class PortainerAPI(models.AbstractModel):
                     },
                     'description': 'Standard endpoint with minimal data (v2)'
                 },
-                # Removed all v1 endpoints per request - only using v2 endpoints
-                # V2 format on primary endpoint - direct template data
-                {
-                    'endpoint': '/api/custom_templates',
-                    'method': 'POST',
-                    'data': api_data,
-                    'description': 'V2 format with direct template data'
-                },
                 # V2 format on primary endpoint with templates array (fallback)
                 {
                     'endpoint': '/api/custom_templates',
@@ -1094,20 +1133,6 @@ class PortainerAPI(models.AbstractModel):
                     'data': api_data,
                     'description': 'Stack templates endpoint',
                     'condition': lambda: api_data.get('type') == 2  # Only for stack type
-                },
-                # Template with no version or type
-                {
-                    'endpoint': '/api/custom_templates',
-                    'method': 'POST',
-                    'data': {k: v for k, v in api_data.items() if k not in ['version', 'type']},
-                    'description': 'Standard endpoint with minimal data'
-                },
-                # PUT method for older versions
-                {
-                    'endpoint': '/api/custom_templates',
-                    'method': 'PUT',
-                    'data': api_data,
-                    'description': 'Standard endpoint with PUT method'
                 }
             ]
             
@@ -1121,12 +1146,48 @@ class PortainerAPI(models.AbstractModel):
                 _logger.info(f"Trying template creation with: {attempt['description']}")
                 
                 try:
-                    response = server._make_api_request(
-                        attempt['endpoint'], 
-                        attempt['method'], 
-                        data=attempt['data'], 
-                        headers=headers
-                    )
+                    # Handle multipart form data requests differently
+                    if attempt.get('is_multipart'):
+                        _logger.info("Using multipart form data request")
+                        import requests
+                        
+                        # Get server URL and API key
+                        server_url = server.url
+                        if server_url.endswith('/'):
+                            server_url = server_url[:-1]
+                            
+                        api_key = server._get_api_key()
+                        
+                        # Create complete URL
+                        url = f"{server_url}{attempt['endpoint']}"
+                        
+                        # Create headers with auth
+                        req_headers = {'Authorization': f'Bearer {api_key}'}
+                        
+                        # Log the multipart form data request
+                        form_data = attempt.get('form_data', {})
+                        files = attempt.get('files', {})
+                        
+                        _logger.info(f"Sending multipart form data to {url}")
+                        _logger.info(f"Form data: {form_data}")
+                        _logger.info(f"Files: {list(files.keys())}")
+                        
+                        # Send the multipart request
+                        response = requests.post(
+                            url=url,
+                            headers=req_headers,
+                            data=form_data,
+                            files=files,
+                            verify=server.verify_ssl
+                        )
+                    else:
+                        # Use standard API request
+                        response = server._make_api_request(
+                            attempt['endpoint'], 
+                            attempt['method'], 
+                            data=attempt['data'], 
+                            headers=headers
+                        )
                     
                     if response.status_code in [200, 201, 202, 204]:
                         try:
