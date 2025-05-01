@@ -14,7 +14,7 @@ class PortainerEnvironment(models.Model):
     _order = 'name'
     
     name = fields.Char('Name', required=True)
-    environment_id = fields.Integer('Environment ID', required=True)
+    environment_id = fields.Integer('Environment ID')
     url = fields.Char('URL')
     status = fields.Selection([
         ('up', 'Up'),
