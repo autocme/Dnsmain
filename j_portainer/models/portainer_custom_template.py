@@ -420,9 +420,22 @@ class PortainerCustomTemplate(models.Model):
                         use_multipart=True
                     )
                     
-                    if env_file_response and ('success' in env_file_response or 'Id' in env_file_response or 'id' in env_file_response):
-                        _logger.info(f"Template created via environment file import: {env_file_response}")
-                        return env_file_response
+                    # Check if response is a dict or a response object
+                    if isinstance(env_file_response, dict):
+                        # Dict response from enhanced direct_api_call
+                        if env_file_response.get('success') or 'Id' in env_file_response or 'id' in env_file_response:
+                            _logger.info(f"Template created via environment file import: {env_file_response}")
+                            return env_file_response
+                    elif env_file_response and hasattr(env_file_response, 'status_code'):
+                        # Response object
+                        if env_file_response.status_code in [200, 201, 202, 204]:
+                            try:
+                                result = env_file_response.json()
+                                _logger.info(f"Template created via environment file import with response object: {result}")
+                                return result
+                            except Exception:
+                                # Handle non-JSON success response
+                                return {'success': True, 'message': 'Template created successfully via file import'}
                 except Exception as e2:
                     error_messages.append(f"Environment file import method failed: {str(e2)}")
                     _logger.warning(f"Environment file import method failed: {str(e2)}")
@@ -547,12 +560,22 @@ class PortainerCustomTemplate(models.Model):
         title = vals.get('title') or 'Custom Template'
         description = vals.get('description') or f'Template for {title}'
         
+        # Convert platform string to integer
+        platform_value = vals.get('platform', 'linux')
+        platform_int = 1  # Default to Linux (1)
+        if platform_value:
+            platform_map = {
+                'linux': 1,
+                'windows': 2
+            }
+            platform_int = platform_map.get(platform_value.lower(), 1)
+            
         template_data = {
             'type': int(vals.get('template_type', 1)),
             'title': title,
             'description': description,
             'note': vals.get('note', ''),
-            'platform': vals.get('platform', 'linux'),
+            'platform': platform_int,
             'categories': vals.get('categories', '').split(',') if vals.get('categories') else []
         }
         
@@ -637,12 +660,21 @@ class PortainerCustomTemplate(models.Model):
         """Prepare template data for Portainer API from current record"""
         self.ensure_one()
         
+        # Convert platform string to integer
+        platform_int = 1  # Default to Linux (1)
+        if self.platform:
+            platform_map = {
+                'linux': 1,
+                'windows': 2
+            }
+            platform_int = platform_map.get(self.platform.lower(), 1)
+            
         template_data = {
             'type': int(self.template_type),
             'title': self.title,
             'description': self.description or f'Template for {self.title}',
             'note': self.note or '',
-            'platform': self.platform or 'linux'
+            'platform': platform_int
         }
         
         # Handle categories

@@ -1210,6 +1210,20 @@ class PortainerAPI(models.AbstractModel):
                     api_data['type'] = int(api_data['type'])
                 except (ValueError, TypeError):
                     api_data['type'] = 1  # Default to container type
+                    
+            # Make sure platform is an integer for CE 2.27+
+            if 'platform' in api_data and isinstance(api_data['platform'], str):
+                try:
+                    # Map platform strings to integers for Portainer v2 API
+                    platform_map = {
+                        'linux': 1,
+                        'windows': 2
+                    }
+                    api_data['platform'] = platform_map.get(api_data['platform'].lower(), 1)  # Default to Linux (1)
+                    _logger.info(f"Converted platform string to integer: {api_data['platform']}")
+                except Exception as e:
+                    _logger.warning(f"Error converting platform to integer: {str(e)}")
+                    api_data['platform'] = 1  # Default to Linux (1)
             
             # Special case for Portainer CE 2.9+ and 2.10+
             if version_major == 2 and (version_minor >= 9 or version_minor == 0):
@@ -1244,7 +1258,8 @@ class PortainerAPI(models.AbstractModel):
                 _logger.info("Adding Portainer CE 2.16+ specific fields for update")
                 
                 # Add specific fields for 2.16+
-                api_data['platform'] = api_data.get('platform', 'linux')
+                if 'platform' not in api_data:
+                    api_data['platform'] = 1  # Default to Linux (1)
                 if 'env' not in api_data:
                     api_data['env'] = []
                     
@@ -1436,6 +1451,66 @@ class PortainerAPI(models.AbstractModel):
         except Exception as e:
             _logger.error(f"Exception during template import: {str(e)}")
             return None
+            
+    def direct_api_call(self, server_id, endpoint, method='GET', data=None, params=None, headers=None, use_multipart=False):
+        """Make a direct API call to Portainer
+        
+        This is a utility method for making direct API calls to Portainer without
+        the standard endpoint prefixes. Useful for custom templates and file uploads.
+        
+        Args:
+            server_id (int): ID of the Portainer server
+            endpoint (str): API endpoint to call (e.g., "/api/custom_templates")
+            method (str): HTTP method to use (GET, POST, PUT, DELETE)
+            data (dict, optional): Data to send in the request body
+            params (dict, optional): Query parameters for the request
+            headers (dict, optional): Additional headers to include
+            use_multipart (bool): Whether to use multipart form encoding
+            
+        Returns:
+            response object: The raw response from the server or dict with result
+        """
+        server = self.env['j_portainer.server'].browse(server_id)
+        if not server:
+            _logger.error(f"Server with ID {server_id} not found")
+            return None
+            
+        try:
+            # Ensure endpoint starts with /
+            if not endpoint.startswith('/'):
+                endpoint = f'/{endpoint}'
+                
+            # Ensure endpoint has /api prefix if not already specified
+            if not endpoint.startswith('/api'):
+                endpoint = f'/api{endpoint}'
+                
+            # Make the API call
+            _logger.info(f"Making direct API call to {endpoint} with method {method}")
+            response = server._make_api_request(endpoint, method, data=data, params=params, headers=headers, use_multipart=use_multipart)
+            
+            # Log the response status
+            _logger.info(f"Direct API call response status: {response.status_code}")
+            
+            # For successful responses, parse JSON if possible
+            if response.status_code in [200, 201, 202, 204]:
+                try:
+                    # Try to parse JSON response
+                    result = response.json()
+                    _logger.info(f"Successfully parsed JSON response from {endpoint}")
+                    return result
+                except Exception as e:
+                    # If not JSON or empty response, return a success dict
+                    _logger.info(f"Non-JSON response from {endpoint}, returning success dict")
+                    if response.text and len(response.text.strip()) > 0:
+                        return {'success': True, 'response_text': response.text[:100] + '...'}
+                    else:
+                        return {'success': True, 'message': f'Successful {method} request to {endpoint}'}
+            else:
+                # Return the response object for error handling
+                return response
+        except Exception as e:
+            _logger.error(f"Error making direct API call to {endpoint}: {str(e)}")
+            return {'error': str(e), 'success': False}
             
     def _check_available_endpoints(self, server):
         """Check which endpoints are available in the Portainer instance
