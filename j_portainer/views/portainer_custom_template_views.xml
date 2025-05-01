@@ -6,7 +6,7 @@
         <field name="name">j_portainer.customtemplate.tree</field>
         <field name="model">j_portainer.customtemplate</field>
         <field name="arch" type="xml">
-            <tree string="Custom Templates" decoration-info="template_type=='2'" decoration-muted="skip_portainer_create==True">
+            <tree string="Custom Templates" decoration-info="template_type=='2'">
                 <field name="title"/>
                 <field name="template_type"/>
                 <field name="platform"/>
@@ -44,10 +44,11 @@
                     </div>
                     <group>
                         <group>
-                            <field name="server_id"/>
+                            <field name="server_id" required="1"/>
+                            <field name="environment_id" required="1"/>
                             <field name="template_id"/>
                             <field name="manual_template_id" help="If automatic template creation fails, you can create the template manually in Portainer and enter its ID here"/>
-                            <field name="skip_portainer_create"/>
+                            <field name="skip_portainer_create" invisible="1"/>
                             <field name="category_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
                             <field name="template_type"/>
                             <field name="platform"/>

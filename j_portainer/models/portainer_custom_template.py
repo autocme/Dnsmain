@@ -26,8 +26,10 @@ class PortainerCustomTemplate(models.Model):
         ('linux', 'Linux'),
         ('windows', 'Windows')
     ], string='Platform', default='linux', required=True)
-    template_id = fields.Integer('Template ID')
+    template_id = fields.Char('Template ID')
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
+    environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True,
+                                domain="[('server_id', '=', server_id)]")
     logo = fields.Char('Logo URL')
     registry = fields.Char('Registry')
     image = fields.Char('Image')
@@ -41,7 +43,7 @@ class PortainerCustomTemplate(models.Model):
     details = fields.Text('Details', help="Additional details about the template")
     skip_portainer_create = fields.Boolean('Skip Portainer Creation', default=False, 
                                           help='Used during sync to skip creating the template in Portainer')
-    manual_template_id = fields.Integer('Manual Template ID', 
+    manual_template_id = fields.Char('Manual Template ID', 
                                       help='Template ID for manually created templates in Portainer - use this if automatic creation fails')
     
     # Custom Template specific fields
@@ -290,10 +292,11 @@ class PortainerCustomTemplate(models.Model):
         if vals.get('manual_template_id'):
             _logger.info(f"Using manually provided template ID: {vals.get('manual_template_id')}")
             vals['template_id'] = vals.get('manual_template_id')
-            vals['skip_portainer_create'] = True
+            # Even with manual ID, try to ensure it exists in Portainer
+            vals['skip_portainer_create'] = False
             
-        # Skip Portainer creation if skip_portainer_create flag is set (used during sync or manual ID)
-        elif not vals.get('skip_portainer_create'):
+        # Always try to create in Portainer unless during sync
+        if not vals.get('skip_portainer_create'):
             # Create the template in Portainer
             server_id = vals.get('server_id')
             if not server_id:
