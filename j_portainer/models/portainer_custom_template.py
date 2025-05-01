@@ -299,13 +299,65 @@ class PortainerCustomTemplate(models.Model):
                 api = self.env['j_portainer.api']
                 server = self.env['j_portainer.server'].browse(server_id)
                 
+                # First try standard API method
+                _logger.info("Attempting template creation via standard API")
                 response = api.create_template(server_id, template_data)
                 
-                if response and 'Id' in response:
-                    # Template created successfully, set template_id
-                    vals['template_id'] = response['Id']
+                if response and ('Id' in response or 'success' in response):
+                    # Template created successfully, set template_id if available
+                    if 'Id' in response:
+                        vals['template_id'] = response['Id']
+                        _logger.info(f"Template created successfully with ID: {response['Id']}")
+                    elif 'id' in response:
+                        vals['template_id'] = response['id']
+                        _logger.info(f"Template created successfully with ID: {response['id']}")
+                    else:
+                        # For responses without ID, we'll need to fetch the ID after creation
+                        _logger.info("Template created, but no ID returned - using placeholder")
+                        vals['template_id'] = 0  # Temporary ID
                 else:
-                    raise UserError(_("Failed to create template in Portainer"))
+                    # If API method fails, try file import method for stack/compose templates
+                    _logger.info("API-based template creation failed, trying file import...")
+                    
+                    if vals.get('build_method') == 'editor' and vals.get('compose_file'):
+                        # For stack templates, try file import
+                        file_template = {
+                            "version": "2",
+                            "templates": [
+                                {
+                                    "type": int(template_data.get('type', 1)),
+                                    "title": template_data.get('title', 'Custom Template'),
+                                    "description": template_data.get('description', ''),
+                                    "note": template_data.get('note', False),
+                                    "platform": template_data.get('platform', 'linux'),
+                                    "categories": template_data.get('categories', ['Custom']),
+                                }
+                            ]
+                        }
+                        
+                        # For stack templates, add stack file content
+                        if int(template_data.get('type', 1)) == 2:
+                            file_template['templates'][0]['stackfile'] = vals.get('compose_file', '')
+                        
+                        file_response = api.import_template_file(server_id, file_template)
+                        
+                        if file_response and ('success' in file_response or 'Id' in file_response):
+                            _logger.info(f"Template created via file import: {file_response}")
+                            if 'Id' in file_response:
+                                vals['template_id'] = file_response['Id']
+                            elif 'id' in file_response:
+                                vals['template_id'] = file_response['id']
+                            else:
+                                # Template likely created, but we can't get the ID immediately
+                                _logger.info("Template likely created but no ID returned")
+                                vals['template_id'] = 0
+                        else:
+                            # Both API and file import methods failed
+                            _logger.error("Both standard API and file import methods failed")
+                            raise UserError(_("Failed to create template in Portainer. Please check Portainer version compatibility."))
+                    else:
+                        # Can't use file import for non-stack templates
+                        raise UserError(_("Failed to create template in Portainer"))
                     
             except Exception as e:
                 _logger.error(f"Error creating template in Portainer: {str(e)}")
