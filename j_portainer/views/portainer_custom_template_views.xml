@@ -50,8 +50,8 @@
                         </group>
                         <group>
                             <field name="logo"/>
-                            <field name="registry" attrs="{'invisible': [('template_type', '!=', '1')]}"/>
-                            <field name="image" attrs="{'invisible': [('template_type', '!=', '1')]}"/>
+                            <field name="registry" invisible="template_type != '1'"/>
+                            <field name="image" invisible="template_type != '1'"/>
                         </group>
                     </group>
                     <notebook>
@@ -59,28 +59,28 @@
                             <field name="description" placeholder="Template description..."/>
                             <field name="note" placeholder="Additional notes..."/>
                         </page>
-                        <page string="Environment Variables" name="env_vars" attrs="{'invisible': [('template_type', '!=', '1')]}">
+                        <page string="Environment Variables" name="env_vars" invisible="template_type != '1'">
                             <field name="environment_variables" widget="ace" options="{'mode': 'json'}" placeholder="Environment variables in JSON format..."/>
                             <div class="text-muted">
                                 Environment Variables Preview:
                                 <pre><field name="get_formatted_env" readonly="1"/></pre>
                             </div>
                         </page>
-                        <page string="Volumes" name="volumes" attrs="{'invisible': [('template_type', '!=', '1')]}">
+                        <page string="Volumes" name="volumes" invisible="template_type != '1'">
                             <field name="volumes" widget="ace" options="{'mode': 'json'}" placeholder="Volumes in JSON format..."/>
                             <div class="text-muted">
                                 Volumes Preview:
                                 <pre><field name="get_formatted_volumes" readonly="1"/></pre>
                             </div>
                         </page>
-                        <page string="Ports" name="ports" attrs="{'invisible': [('template_type', '!=', '1')]}">
+                        <page string="Ports" name="ports" invisible="template_type != '1'">
                             <field name="ports" widget="ace" options="{'mode': 'json'}" placeholder="Ports in JSON format..."/>
                             <div class="text-muted">
                                 Ports Preview:
                                 <pre><field name="get_formatted_ports" readonly="1"/></pre>
                             </div>
                         </page>
-                        <page string="Repository" name="repository" attrs="{'invisible': [('build_method', '!=', 'repository')]}">
+                        <page string="Repository" name="repository" invisible="build_method != 'repository'">
                             <group>
                                 <group>
                                     <field name="git_repository_url" placeholder="https://github.com/username/repo"/>
@@ -89,20 +89,20 @@
                                     <field name="git_skip_tls"/>
                                     <field name="git_authentication"/>
                                 </group>
-                                <group attrs="{'invisible': [('git_authentication', '=', False)]}">
-                                    <field name="git_credentials_id" attrs="{'required': [('git_authentication', '=', True)]}"/>
-                                    <div colspan="2" attrs="{'invisible': [('git_credentials_id', '!=', False)]}">
+                                <group invisible="git_authentication == False">
+                                    <field name="git_credentials_id" required="git_authentication == True"/>
+                                    <div colspan="2" invisible="git_credentials_id != False">
                                         <group>
-                                            <field name="git_username" attrs="{'required': [('git_authentication', '=', True), ('git_credentials_id', '=', False)]}" placeholder="Username or Email"/>
-                                            <field name="git_token" attrs="{'required': [('git_authentication', '=', True), ('git_credentials_id', '=', False)]}" placeholder="Personal Access Token or Password"/>
+                                            <field name="git_username" required="git_authentication == True and git_credentials_id == False" placeholder="Username or Email"/>
+                                            <field name="git_token" required="git_authentication == True and git_credentials_id == False" placeholder="Personal Access Token or Password"/>
                                             <field name="git_save_credential"/>
-                                            <field name="git_credential_name" attrs="{'invisible': [('git_save_credential', '=', False)], 'required': [('git_save_credential', '=', True)]}" placeholder="Name for saved credentials"/>
+                                            <field name="git_credential_name" invisible="git_save_credential == False" required="git_save_credential == True" placeholder="Name for saved credentials"/>
                                         </group>
                                     </div>
                                 </group>
                             </group>
                         </page>
-                        <page string="Compose File" name="compose_file" attrs="{'invisible': [('build_method', '!=', 'editor')]}">
+                        <page string="Compose File" name="compose_file" invisible="build_method != 'editor'">
                             <field name="compose_file" widget="ace" options="{'mode': 'yaml'}" placeholder="Docker Compose file content..."/>
                         </page>
                         <page string="Raw Data" name="raw_data" groups="base.group_system">
