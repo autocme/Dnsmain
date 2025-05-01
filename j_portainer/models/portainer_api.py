@@ -524,3 +524,92 @@ class PortainerAPI(models.AbstractModel):
         except Exception as e:
             _logger.error(f"Exception during template creation: {str(e)}")
             return None
+            
+    def update_template(self, server_id, template_id, template_data):
+        """Update a custom template in Portainer
+        
+        Args:
+            server_id (int): ID of the Portainer server
+            template_id (int): ID of the template to update
+            template_data (dict): Updated template data
+            
+        Returns:
+            dict: Response data or None if failed
+        """
+        server = self.env['j_portainer.server'].browse(server_id)
+        if not server:
+            return {'error': 'Server not found'}
+            
+        # Normalize type field - ensure it's an integer
+        if 'type' in template_data and isinstance(template_data['type'], str):
+            try:
+                template_data['type'] = int(template_data['type'])
+            except ValueError:
+                template_data['type'] = 1  # Default to container type
+        
+        # Log the template data for debugging
+        _logger.info(f"Updating template {template_id} with data: {json.dumps(template_data, indent=2)}")
+            
+        # Try the v2 API endpoint for custom templates
+        endpoint = f'/api/custom_templates/{template_id}'
+        
+        try:
+            # Properly set Content-Type header
+            headers = {'Content-Type': 'application/json'}
+            
+            # Check Portainer version to determine correct API format
+            version_response = server._make_api_request('/api/system/version', 'GET')
+            version_str = ''
+            
+            if version_response.status_code == 200:
+                try:
+                    version_info = version_response.json()
+                    version_str = version_info.get('Version', '')
+                    _logger.info(f"Detected Portainer version: {version_str}")
+                except Exception as e:
+                    _logger.warning(f"Error parsing version info: {str(e)}")
+            
+            # Prepare API-specific data format
+            api_data = dict(template_data)  # Make a copy to avoid modifying the original
+            
+            # Special case for Portainer CE 2.9+ and 2.17+
+            if "2.9." in version_str or "2.1" in version_str or "2.2" in version_str:
+                _logger.info("Using Portainer CE 2.9+ or 2.17+ format for update")
+                # Make sure type is an integer
+                if 'type' in api_data:
+                    api_data['type'] = int(api_data['type'])
+                
+            # Special handling for Portainer CE 2.27 LTS
+            if "2.27" in version_str:
+                _logger.info("Using Portainer CE 2.27 LTS format for update")
+                # Additional fields required for 2.27
+                if api_data.get('type') == 2:  # Stack template
+                    # Ensure required fields for stack templates
+                    if 'repository' not in api_data and 'repositoryURL' in api_data:
+                        api_data['repository'] = {
+                            'url': api_data.get('repositoryURL', ''),
+                            'stackfile': api_data.get('composeFilePath', 'docker-compose.yml')
+                        }
+                        if 'repositoryReferenceName' in api_data:
+                            api_data['repository']['reference'] = api_data.get('repositoryReferenceName')
+            
+            # Make the update request
+            response = server._make_api_request(endpoint, 'PUT', data=api_data, headers=headers)
+            
+            if response.status_code in [200, 201, 204]:
+                try:
+                    result = response.json()
+                    _logger.info(f"Template updated successfully: {result}")
+                    return result
+                except Exception as e:
+                    _logger.warning(f"Error parsing update response: {str(e)}")
+                    if response.text:
+                        _logger.info(f"Raw update response: {response.text}")
+                    return {'Id': template_id}  # Assume success with empty response
+            else:
+                _logger.error(f"Error updating template: {response.status_code} - {response.text}")
+                return {'error': f"API error: {response.status_code} - {response.text}"}
+                
+        except Exception as e:
+            _logger.error(f"Exception during template update: {str(e)}")
+            return {'error': str(e)}
