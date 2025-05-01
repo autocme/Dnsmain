@@ -407,7 +407,8 @@ class PortainerCustomTemplate(models.Model):
                     
                     # Use different endpoints for create vs update
                     if method == 'post':
-                        url = f"{server_url}/api/custom_templates"
+                        # For new template creation with file, use the dedicated endpoint
+                        url = f"{server_url}/api/custom_templates/create/file"
                     else:
                         # For updates, include template ID in the URL
                         url = f"{server_url}/api/custom_templates/{template_id}"
@@ -419,50 +420,82 @@ class PortainerCustomTemplate(models.Model):
                     platform_value = template_data.get('platform', 1)
                     type_value = template_data.get('type', 1)
                     
-                    # Prepare form data
-                    data = {
-                        'Title': self.title,
-                        'Description': self.description or f'Template for {self.title}',
-                        'Note': self.note or '',
-                        'Platform': str(platform_value),  # 1 or 2
-                        'Type': str(type_value),  # 1, 2, or 3
-                        'Logo': self.logo or '',
-                        'environmentId': str(portainer_env_id),  # required field
-                    }
-                    
-                    # Add variables if available
-                    if self.environment_variables:
-                        data['Variables'] = self.environment_variables
-                    
                     # Get file content (prefer fileContent)
                     file_content = self.fileContent or self.compose_file
                     
-                    # Prepare files for upload
-                    files = {
-                        'File': ('template.yml', file_content.encode('utf-8'))
-                    }
-                    
-                    _logger.info(f"Sending direct multipart form request to {url} with data: {data}")
-                    
-                    # Make the API request
+                    # Create data differently based on method
                     import requests
+                    import json
+                    
                     if method == 'post':
+                        # For creation, use multipart form data as required by the API
+                        # Prepare form data for multipart/form-data request
+                        data = {
+                            'Title': self.title,
+                            'Description': self.description or f'Template for {self.title}',
+                            'Note': self.note or '',
+                            'Platform': str(platform_value),  # 1 or 2
+                            'Type': str(type_value),  # 1, 2, or 3
+                            'Logo': self.logo or '',
+                            'environmentId': str(portainer_env_id),  # required field
+                        }
+                        
+                        # Add variables if available
+                        if self.environment_variables:
+                            data['Variables'] = self.environment_variables
+                            
+                        # Prepare files for upload
+                        files = {
+                            'File': ('template.yml', file_content.encode('utf-8'))
+                        }
+                        
+                        _logger.info(f"Sending direct multipart form request to {url} with data: {data}")
                         res = requests.post(url, headers=headers, data=data, files=files)
                     else:
-                        # For updates, need to use PUT instead of POST
-                        res = requests.put(url, headers=headers, data=data, files=files)
+                        # For updates, use application/json as required by the API
+                        # Prepare JSON data
+                        json_data = {
+                            'Title': self.title,
+                            'Description': self.description or f'Template for {self.title}',
+                            'Note': self.note or '',
+                            'Platform': int(platform_value),  # 1 or 2
+                            'Type': int(type_value),  # 1, 2, or 3
+                            'Logo': self.logo or '',
+                        }
+                        
+                        # Add variables if available
+                        if self.environment_variables:
+                            json_data['Variables'] = []
+                            try:
+                                import json
+                                if isinstance(self.environment_variables, str):
+                                    env_vars = json.loads(self.environment_variables)
+                                    json_data['Variables'] = env_vars
+                            except Exception as e:
+                                _logger.warning(f"Failed to parse variables: {e}")
+                        
+                        # Add file content directly in the JSON payload
+                        if file_content:
+                            json_data['FileContent'] = file_content
+                        
+                        # Add specific headers for JSON
+                        json_headers = headers.copy()
+                        json_headers['Content-Type'] = 'application/json'
+                        
+                        _logger.info(f"Sending JSON update request to {url} with data: {json.dumps(json_data)}")
+                        res = requests.put(url, headers=json_headers, json=json_data)
                     
                     if res.status_code in [200, 201, 202]:
                         response_data = res.json()
                         if method == 'post':
-                            _logger.info(f"Template created successfully via direct multipart form: {response_data}")
+                            _logger.info(f"Template created successfully via multipart form: {response_data}")
                             # If this was a creation and we got a new ID, store it
                             if response_data and ('Id' in response_data or 'id' in response_data):
                                 new_id = response_data.get('Id') or response_data.get('id')
                                 if new_id and not self.template_id:
                                     self.template_id = str(new_id)
                         else:
-                            _logger.info(f"Template updated successfully via direct multipart form: {response_data}")
+                            _logger.info(f"Template updated successfully via JSON API: {response_data}")
                         return response_data
                     else:
                         error_messages.append(f"Direct multipart form failed: {res.status_code} - {res.text}")
