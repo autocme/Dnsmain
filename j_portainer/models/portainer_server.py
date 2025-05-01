@@ -967,6 +967,11 @@ class PortainerServer(models.Model):
                     'note': template.get('note', ''),
                     'is_custom': True,
                     'details': json.dumps(template, indent=2),
+                    # Additional fields from Portainer
+                    'project_path': template.get('ProjectPath', ''),
+                    'entry_point': template.get('EntryPoint', ''),
+                    'created_by_user_id': template.get('CreatedByUserId') or template.get('createdByUserId', 0),
+                    'registry_url': template.get('registry', ''),
                 }
                 
                 # Add Git repository information if available

@@ -51,6 +51,7 @@
                         <group>
                             <field name="logo"/>
                             <field name="registry" invisible="template_type != '1'"/>
+                            <field name="registry_url"/>
                             <field name="image" invisible="template_type != '1'"/>
                         </group>
                     </group>
@@ -58,6 +59,15 @@
                         <page string="Description" name="description">
                             <field name="description" placeholder="Template description..."/>
                             <field name="note" placeholder="Additional notes..."/>
+                        </page>
+                        <page string="Advanced Details" name="advanced_details">
+                            <group>
+                                <group>
+                                    <field name="project_path"/>
+                                    <field name="entry_point"/>
+                                    <field name="created_by_user_id"/>
+                                </group>
+                            </group>
                         </page>
                         <page string="Environment Variables" name="env_vars" invisible="template_type != '1'">
                             <field name="environment_variables" widget="ace" options="{'mode': 'json'}" placeholder="Environment variables in JSON format..."/>
