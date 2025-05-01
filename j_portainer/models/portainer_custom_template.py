@@ -355,6 +355,23 @@ class PortainerCustomTemplate(models.Model):
             else:
                 response = api.update_template(server_id, template_id, template_data)
                 
+                # Check if update failed with 404 (template not found) - try creating it instead
+                if response and isinstance(response, dict) and response.get('error') and '404' in str(response.get('error')):
+                    _logger.warning(f"Template ID {template_id} not found in Portainer. Attempting to create it instead.")
+                    # Remove original template_id to allow Portainer to generate a new one
+                    create_data = template_data.copy()
+                    
+                    # Try to create the template as a new one
+                    response = api.create_template(server_id, create_data)
+                    
+                    # If creation was successful, update the template_id in our database
+                    if response and ('Id' in response or 'id' in response):
+                        new_id = response.get('Id') or response.get('id')
+                        if new_id:
+                            _logger.info(f"Created new template with ID {new_id} to replace missing template {template_id}")
+                            # Update the template_id in the database
+                            self.template_id = str(new_id)
+                
             if response and ('Id' in response or 'id' in response or 'success' in response):
                 _logger.info(f"Template synced successfully via standard API: {response}")
                 return response
