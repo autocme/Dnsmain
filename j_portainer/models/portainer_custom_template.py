@@ -82,6 +82,25 @@ class PortainerCustomTemplate(models.Model):
     get_formatted_volumes = fields.Text('Formatted Volumes', compute='_compute_formatted_volumes')
     get_formatted_ports = fields.Text('Formatted Ports', compute='_compute_formatted_ports')
     
+    # SQL Constraint to ensure Template ID is unique within a server
+    _sql_constraints = [
+        ('template_id_server_unique', 'UNIQUE(server_id, template_id)', 'Template ID must be unique within the same Portainer server!'),
+    ]
+    
+    @api.constrains('template_id')
+    def _check_template_id(self):
+        """Additional validation for template_id to handle edge cases"""
+        for template in self:
+            if template.template_id:
+                # Check for duplicate template IDs within the same server
+                domain = [
+                    ('server_id', '=', template.server_id.id),
+                    ('template_id', '=', template.template_id),
+                    ('id', '!=', template.id)  # exclude current record
+                ]
+                if self.search_count(domain) > 0:
+                    raise ValidationError(_("Template ID %s already exists for this Portainer server!") % template.template_id)
+    
     @api.depends('categories')
     def _compute_category_ids(self):
         """Compute and maintain category_ids from categories text"""
