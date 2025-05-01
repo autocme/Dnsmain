@@ -285,129 +285,215 @@ class PortainerCustomTemplate(models.Model):
             }
         }
         
+    def _sync_to_portainer(self, vals=None, method='post'):
+        """
+        Synchronize template with Portainer via direct API calls
+        
+        @param vals: Values dictionary for the template (used for creation)
+        @param method: HTTP method to use (post for create, put for update)
+        @return: Response from Portainer API or None if failed
+        """
+        self.ensure_one()
+        
+        # Use passed vals or prepare from current record for updates
+        if method == 'post' and vals:
+            server_id = vals.get('server_id')
+            environment_id = vals.get('environment_id')
+            template_data = self._prepare_template_data(vals)
+        else:
+            server_id = self.server_id.id
+            environment_id = self.environment_id.id
+            template_data = self._prepare_template_data_from_record()
+            
+        if not server_id or not environment_id:
+            _logger.error("Cannot sync template: Server and Environment are required")
+            return None
+            
+        api = self.env['j_portainer.api']
+        server = self.env['j_portainer.server'].browse(server_id)
+        
+        # Ensure template_data has the right format for API
+        # Add environment ID to ensure it's created in the right place
+        if isinstance(template_data, dict) and environment_id:
+            template_data['environment_id'] = environment_id
+            
+        _logger.info(f"Syncing template to Portainer using {method} method")
+        
+        # For updates, use the existing template ID
+        template_id = None
+        if method == 'put':
+            template_id = self.template_id
+            
+        # Try multiple API endpoints and approaches
+        response = None
+        error_messages = []
+        
+        # Method 1: Standard API endpoint
+        try:
+            if method == 'post':
+                response = api.create_template(server_id, template_data)
+            else:
+                response = api.update_template(server_id, template_id, template_data)
+                
+            if response and ('Id' in response or 'id' in response or 'success' in response):
+                _logger.info(f"Template synced successfully via standard API: {response}")
+                return response
+        except Exception as e:
+            error_messages.append(f"Standard API method failed: {str(e)}")
+            _logger.warning(f"Standard API method failed: {str(e)}")
+            
+        # Method 1B: Direct environment API endpoint for custom templates
+        try:
+            # Try direct environment endpoint for custom templates
+            env_endpoint = f"/custom_templates?environment={environment_id}"
+            
+            if method == 'post':
+                response = api.direct_api_call(
+                    server_id, 
+                    endpoint=env_endpoint,
+                    method='POST',
+                    data=template_data
+                )
+            else:
+                env_endpoint = f"/custom_templates/{template_id}?environment={environment_id}"
+                response = api.direct_api_call(
+                    server_id, 
+                    endpoint=env_endpoint,
+                    method='PUT',
+                    data=template_data
+                )
+                
+            if response and ('Id' in response or 'id' in response or 'success' in response):
+                _logger.info(f"Template synced successfully via environment API: {response}")
+                return response
+        except Exception as e:
+            error_messages.append(f"Environment API method failed: {str(e)}")
+            _logger.warning(f"Environment API method failed: {str(e)}")
+            
+        # Method 2: File import method for stack/compose templates
+        if method == 'post' and ((vals and vals.get('build_method') == 'editor' and vals.get('compose_file')) 
+                                or (self.build_method == 'editor' and self.compose_file)):
+            try:
+                compose_file = vals.get('compose_file') if vals else self.compose_file
+                
+                # Create file template structure
+                file_template = {
+                    "version": "2",
+                    "templates": [
+                        {
+                            "type": int(template_data.get('type', 1)),
+                            "title": template_data.get('title', 'Custom Template'),
+                            "description": template_data.get('description', ''),
+                            "note": template_data.get('note', False),
+                            "platform": template_data.get('platform', 'linux'),
+                            "categories": template_data.get('categories', ['Custom']),
+                        }
+                    ]
+                }
+                
+                # For stack templates, add stack file content
+                if int(template_data.get('type', 1)) == 2:
+                    file_template['templates'][0]['stackfile'] = compose_file
+                
+                # Try regular template import
+                file_response = api.import_template_file(server_id, file_template)
+                
+                if file_response and ('success' in file_response or 'Id' in file_response or 'id' in file_response):
+                    _logger.info(f"Template created via file import: {file_response}")
+                    return file_response
+                    
+                # If regular import fails, try with environment specified
+                try:
+                    # Try direct file upload to environment endpoint
+                    multipart_data = {
+                        'file': json.dumps(file_template),
+                        'type': template_data.get('type', 1),
+                        'environment': environment_id
+                    }
+                    
+                    env_file_response = api.direct_api_call(
+                        server_id,
+                        endpoint="/templates/import",
+                        method='POST',
+                        data=multipart_data,
+                        headers={'Content-Type': 'multipart/form-data'},
+                        use_multipart=True
+                    )
+                    
+                    if env_file_response and ('success' in env_file_response or 'Id' in env_file_response or 'id' in env_file_response):
+                        _logger.info(f"Template created via environment file import: {env_file_response}")
+                        return env_file_response
+                except Exception as e2:
+                    error_messages.append(f"Environment file import method failed: {str(e2)}")
+                    _logger.warning(f"Environment file import method failed: {str(e2)}")
+            except Exception as e:
+                error_messages.append(f"File import method failed: {str(e)}")
+                _logger.warning(f"File import method failed: {str(e)}")
+        
+        # If we get here, all methods failed
+        error_summary = "; ".join(error_messages)
+        _logger.error(f"All Portainer synchronization methods failed: {error_summary}")
+        
+        # Return failure
+        return None
+    
     @api.model
     def create(self, vals):
         """Override create to sync with Portainer"""
+        # Check required fields
+        if not vals.get('server_id'):
+            raise UserError(_("Server is required for custom templates"))
+        if not vals.get('environment_id'):
+            raise UserError(_("Environment is required for custom templates"))
+        
         # If manual template ID is provided, use it instead of creating in Portainer
         if vals.get('manual_template_id'):
             _logger.info(f"Using manually provided template ID: {vals.get('manual_template_id')}")
             vals['template_id'] = vals.get('manual_template_id')
-            # Even with manual ID, try to ensure it exists in Portainer
-            vals['skip_portainer_create'] = False
             
-        # Always try to create in Portainer unless during sync
+        # Create the record in Odoo first
+        record = super(PortainerCustomTemplate, self).create(vals)
+        
+        # Skip Portainer creation if skip_portainer_create flag is set (used during sync)
         if not vals.get('skip_portainer_create'):
-            # Create the template in Portainer
-            server_id = vals.get('server_id')
-            if not server_id:
-                raise UserError(_("Server is required for custom templates"))
-                
-            # Prepare template data for Portainer API
-            template_data = self._prepare_template_data(vals)
-            
-            # Create template in Portainer
             try:
-                api = self.env['j_portainer.api']
-                server = self.env['j_portainer.server'].browse(server_id)
+                # Sync the template to Portainer
+                response = record._sync_to_portainer(vals, method='post')
                 
-                # First try standard API method
-                _logger.info("Attempting template creation via standard API")
-                response = api.create_template(server_id, template_data)
-                
-                if response and ('Id' in response or 'success' in response):
-                    # Template created successfully, set template_id if available
+                if response:
+                    # Update the template ID in Odoo if provided in response
+                    template_id = None
                     if 'Id' in response:
-                        vals['template_id'] = response['Id']
-                        _logger.info(f"Template created successfully with ID: {response['Id']}")
+                        template_id = response['Id']
                     elif 'id' in response:
-                        vals['template_id'] = response['id']
-                        _logger.info(f"Template created successfully with ID: {response['id']}")
+                        template_id = response['id']
+                        
+                    if template_id:
+                        record.write({'template_id': template_id})
+                        _logger.info(f"Template created successfully with ID: {template_id}")
                     else:
-                        # For responses without ID, we'll need to fetch the ID after creation
-                        _logger.info("Template created, but no ID returned - using placeholder")
-                        vals['template_id'] = 0  # Temporary ID
+                        _logger.info("Template created, but no ID returned")
                 else:
-                    # If API method fails, try file import method for stack/compose templates
-                    _logger.info("API-based template creation failed, trying file import...")
+                    # All methods failed, display a warning message
+                    msg = _(
+                        "Automatic template creation in Portainer failed. "
+                        "Please create the template manually in Portainer and then enter its ID "
+                        "in the 'Manual Template ID' field to link it with this record."
+                    )
+                    _logger.warning(msg)
                     
-                    if vals.get('build_method') == 'editor' and vals.get('compose_file'):
-                        # For stack templates, try file import
-                        file_template = {
-                            "version": "2",
-                            "templates": [
-                                {
-                                    "type": int(template_data.get('type', 1)),
-                                    "title": template_data.get('title', 'Custom Template'),
-                                    "description": template_data.get('description', ''),
-                                    "note": template_data.get('note', False),
-                                    "platform": template_data.get('platform', 'linux'),
-                                    "categories": template_data.get('categories', ['Custom']),
-                                }
-                            ]
+                    # Don't raise an exception, just show a warning and continue
+                    self.env.user.notify_warning(
+                        title=_("Template Creation Warning"),
+                        message=msg
+                    ) if hasattr(self.env.user, 'notify_warning') else self.env['bus.bus']._sendone(
+                        self.env.user.partner_id, 'notification', {
+                            'type': 'warning',
+                            'title': _("Template Creation Warning"),
+                            'message': msg,
+                            'sticky': True
                         }
-                        
-                        # For stack templates, add stack file content
-                        if int(template_data.get('type', 1)) == 2:
-                            file_template['templates'][0]['stackfile'] = vals.get('compose_file', '')
-                        
-                        file_response = api.import_template_file(server_id, file_template)
-                        
-                        if file_response and ('success' in file_response or 'Id' in file_response):
-                            _logger.info(f"Template created via file import: {file_response}")
-                            if 'Id' in file_response:
-                                vals['template_id'] = file_response['Id']
-                            elif 'id' in file_response:
-                                vals['template_id'] = file_response['id']
-                            else:
-                                # Template likely created, but we can't get the ID immediately
-                                _logger.info("Template likely created but no ID returned")
-                                vals['template_id'] = 0
-                        else:
-                            # Both API and file import methods failed
-                            _logger.error("Both standard API and file import methods failed")
-                            
-                            # Instead of raising an error, show a friendly message advising manual creation
-                            msg = _(
-                                "Automatic template creation in Portainer failed. "
-                                "Please create the template manually in Portainer and then enter its ID "
-                                "in the 'Manual Template ID' field to link it with this record."
-                            )
-                            
-                            # Use warning level instead of error to allow creation to continue
-                            _logger.warning(msg)
-                            
-                            # Don't raise an exception, just show a warning and continue
-                            # Use display_notification or notification_warn based on Odoo version
-                            self.env.user.notify_warning(
-                                title=_("Template Creation Warning"),
-                                message=msg
-                            ) if hasattr(self.env.user, 'notify_warning') else self.env['bus.bus']._sendone(
-                                self.env.user.partner_id, 'notification', {
-                                    'type': 'warning',
-                                    'title': _("Template Creation Warning"),
-                                    'message': msg,
-                                    'sticky': True
-                                }
-                            )
-                    else:
-                        # Can't use file import for non-stack templates
-                        msg = _(
-                            "Failed to create template in Portainer. "
-                            "Please create the template manually in Portainer and then enter its ID "
-                            "in the 'Manual Template ID' field to link it with this record."
-                        )
-                        _logger.warning(msg)
-                        self.env.user.notify_warning(
-                            title=_("Template Creation Warning"),
-                            message=msg
-                        ) if hasattr(self.env.user, 'notify_warning') else self.env['bus.bus']._sendone(
-                            self.env.user.partner_id, 'notification', {
-                                'type': 'warning',
-                                'title': _("Template Creation Warning"),
-                                'message': msg,
-                                'sticky': True
-                            }
-                        )
+                    )
             except Exception as e:
                 _logger.error(f"Error creating template in Portainer: {str(e)}")
                 
@@ -430,8 +516,7 @@ class PortainerCustomTemplate(models.Model):
                     }
                 )
         
-        # Create the record in Odoo
-        return super(PortainerCustomTemplate, self).create(vals)
+        return record
         
     def write(self, vals):
         """Override write to sync with Portainer"""
@@ -445,22 +530,12 @@ class PortainerCustomTemplate(models.Model):
                         # Skip if we're just setting skip_portainer_create flag
                         if len(vals) == 1 and 'skip_portainer_create' in vals:
                             continue
-                            
-                        api = self.env['j_portainer.api']
                         
-                        # Prepare current template data
-                        template_data = template._prepare_template_data_from_record()
+                        # Sync the template to Portainer
+                        response = template._sync_to_portainer(method='put')
                         
-                        # Make API request to update template
-                        response = api.update_template(
-                            template.server_id.id, 
-                            template.template_id,
-                            template_data
-                        )
-                        
-                        if not response or response.get('error'):
-                            error_msg = response.get('error') if response else 'Unknown error'
-                            _logger.warning(f"Could not update template {template.id} in Portainer: {error_msg}")
+                        if not response:
+                            _logger.warning(f"Could not update template {template.id} in Portainer")
                     except Exception as e:
                         _logger.error(f"Error updating template {template.id} in Portainer: {str(e)}")
         

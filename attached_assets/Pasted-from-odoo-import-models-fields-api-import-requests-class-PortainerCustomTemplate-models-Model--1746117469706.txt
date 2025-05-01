@@ -1,0 +1,64 @@
+from odoo import models, fields, api
+import requests
+
+class PortainerCustomTemplate(models.Model):
+    _name = 'portainer.custom.template'
+    _description = 'Portainer Custom Template'
+
+    title = fields.Char(required=True)
+    description = fields.Text()
+    platform = fields.Selection([('linux', 'Linux'), ('windows', 'Windows')], default='linux', required=True)
+    type = fields.Integer(default=1)  # 1 = custom template
+    logo = fields.Char()  # URL
+    note = fields.Text()
+    categories = fields.Char()
+    env = fields.Text(string="Environment Variables (JSON)")
+    file_content = fields.Text(required=True)
+
+    portainer_id = fields.Integer(string="Portainer Template ID")
+
+    def _get_portainer_headers(self):
+        token = self.env['ir.config_parameter'].sudo().get_param('portainer.api.token')
+        return {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
+
+    def _get_portainer_url(self):
+        return self.env['ir.config_parameter'].sudo().get_param('portainer.api.url')
+
+    def _sync_to_portainer(self, method='post'):
+        url = f"{self._get_portainer_url()}/custom_templates"
+        headers = self._get_portainer_headers()
+
+        payload = {
+            "title": self.title,
+            "description": self.description,
+            "platform": self.platform,
+            "type": self.type,
+            "logo": self.logo,
+            "note": self.note,
+            "categories": self.categories.split(',') if self.categories else [],
+            "env": self.env and eval(self.env) or [],
+            "fileContent": self.file_content,
+        }
+
+        if method == 'post':
+            response = requests.post(url, json=payload, headers=headers)
+            if response.ok:
+                self.portainer_id = response.json().get('Id')
+        elif method == 'put' and self.portainer_id:
+            url = f"{url}/{self.portainer_id}"
+            response = requests.put(url, json=payload, headers=headers)
+
+        if not response.ok:
+            raise Exception(f"Portainer sync failed: {response.text}")
+
+    @api.model
+    def create(self, vals):
+        record = super().create(vals)
+        record._sync_to_portainer(method='post')
+        return record
+
+    def write(self, vals):
+        result = super().write(vals)
+        for record in self:
+            record._sync_to_portainer(method='put')
+        return result
