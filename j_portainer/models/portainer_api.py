@@ -4,6 +4,24 @@
 from odoo import models
 import logging
 import json
+import io
+import uuid
+import urllib.request
+import urllib.parse
+import urllib.error
+
+# Try to import optional dependencies
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
+    
+try:
+    from requests_toolbelt.multipart.encoder import MultipartEncoder
+    MULTIPART_ENCODER_AVAILABLE = True
+except ImportError:
+    MULTIPART_ENCODER_AVAILABLE = False
 
 _logger = logging.getLogger(__name__)
 
@@ -1024,33 +1042,66 @@ class PortainerAPI(models.AbstractModel):
             
             # Define all possible endpoints and formats to try
             template_creation_attempts = [
-                # Standard endpoint with regular data format
+                # V2 format on primary endpoint
                 {
                     'endpoint': '/api/custom_templates',
                     'method': 'POST',
                     'data': api_data,
-                    'description': 'Standard endpoint (CE 2.9.0+)'
+                    'description': 'V2 format on primary endpoint'
                 },
-                # Alternative endpoint for older versions
+                # Stack templates endpoint (for v2.0+)
                 {
-                    'endpoint': '/api/templates/custom',
+                    'endpoint': '/api/stacks/template',
                     'method': 'POST',
                     'data': api_data,
-                    'description': 'Alternative endpoint (older versions)'
+                    'description': 'Stack templates endpoint'
                 },
-                # Standard endpoint with wrapped data
-                {
-                    'endpoint': '/api/custom_templates',
-                    'method': 'POST',
-                    'data': {"templates": [api_data]},
-                    'description': 'Standard endpoint with wrapped format'
-                },
-                # Alternative endpoint with wrapped data
+                # Standard endpoint with minimal data
                 {
                     'endpoint': '/api/templates/custom',
                     'method': 'POST',
+                    'data': {
+                        'title': api_data.get('title'),
+                        'description': api_data.get('description'),
+                        'type': api_data.get('type', 1),
+                        'platform': api_data.get('platform', 'linux')
+                    },
+                    'description': 'Standard endpoint with minimal data'
+                },
+                # Standard endpoint with PUT method
+                {
+                    'endpoint': '/api/templates/custom',
+                    'method': 'PUT',
+                    'data': api_data,
+                    'description': 'Standard endpoint with PUT method'
+                },
+                # Try the file upload endpoint (CE 1.24+)
+                {
+                    'endpoint': '/api/templates/create',
+                    'method': 'POST',
+                    'data': api_data,
+                    'description': 'File creation endpoint'
+                },
+                # Try template creation with import endpoint
+                {
+                    'endpoint': '/api/templates/import',
+                    'method': 'POST',
                     'data': {"templates": [api_data]},
-                    'description': 'Alternative endpoint with wrapped format'
+                    'description': 'Import endpoint with wrapped templates'
+                },
+                # Try with a v1 format template
+                {
+                    'endpoint': '/api/templates',
+                    'method': 'POST',
+                    'data': api_data,
+                    'description': 'Legacy v1 templates endpoint'
+                },
+                # Try direct XML upload in request body
+                {
+                    'endpoint': '/api/templates/upload',
+                    'method': 'POST',
+                    'data': {"templates": [api_data]},
+                    'description': 'Direct upload endpoint'
                 },
                 # V2 format on primary endpoint
                 {
@@ -1339,6 +1390,184 @@ class PortainerAPI(models.AbstractModel):
             
         return result
         
+    def import_template_file(self, server_id, template_data):
+        """Import a template from a file
+        
+        This is an alternative method when the API creation fails.
+        Uses the file upload endpoints which are often less restricted.
+        
+        Args:
+            server_id (int): ID of the Portainer server
+            template_data (dict): Template data in format compatible with file import
+            
+        Returns:
+            dict: Created template data or None if failed
+        """
+        server = self.env['j_portainer.server'].browse(server_id)
+        if not server:
+            return None
+            
+        try:
+            # Convert template data to JSON string
+            template_json = json.dumps(template_data, indent=2)
+            _logger.info(f"Importing template via file: {template_json}")
+            
+            # Try multiple file import endpoints
+            endpoints = [
+                '/api/custom_templates/file',
+                '/api/templates/custom/file',
+                '/templates/upload',
+                '/api/templates/import'
+            ]
+            
+            headers = {'Content-Type': 'application/json'}
+            
+            # Try each endpoint
+            for endpoint in endpoints:
+                try:
+                    response = server._make_api_request(endpoint, 'POST', data=template_data, headers=headers)
+                    if response.status_code in [200, 201, 202, 204]:
+                        try:
+                            result = response.json()
+                            _logger.info(f"Template imported successfully via {endpoint}. Response: {result}")
+                            return result
+                        except Exception as e:
+                            # Empty response is still success for some endpoints
+                            _logger.info(f"Empty or non-JSON response from {endpoint} (still success)")
+                            return {'success': True, 'method': 'file_import'}
+                    else:
+                        _logger.warning(f"Failed with endpoint {endpoint}: {response.status_code} - {response.text}")
+                except Exception as e:
+                    _logger.warning(f"Error with endpoint {endpoint}: {str(e)}")
+            
+            # If all endpoints fail, try simulating a form upload
+            try:
+                # Convert JSON to file-like object for upload
+                import io
+                file_data = io.BytesIO(template_json.encode('utf-8'))
+                
+                # Try direct endpoint with template content as PUT data
+                for direct_endpoint in ['/api/templates/custom', '/api/custom_templates/create']:
+                    try:
+                        _logger.info(f"Trying direct template creation via {direct_endpoint}")
+                        headers = {'Content-Type': 'application/json'}
+                        response = server._make_api_request(direct_endpoint, 'PUT', data=template_data, headers=headers)
+                        
+                        if response.status_code in [200, 201, 202, 204]:
+                            _logger.info(f"Template created successfully via PUT to {direct_endpoint}")
+                            try:
+                                return response.json()
+                            except:
+                                return {'success': True, 'method': f'direct_put_{direct_endpoint}'}
+                    except Exception as e:
+                        _logger.warning(f"Error with direct PUT to {direct_endpoint}: {str(e)}")
+                        
+                # Try using standard Python libraries only, no additional dependencies
+                try:
+                    import urllib.request
+                    import urllib.parse
+                    import uuid
+                    
+                    boundary = str(uuid.uuid4())
+                    
+                    # Prepare multipart/form-data manually
+                    data = []
+                    data.append(f'--{boundary}'.encode())
+                    data.append(f'Content-Disposition: form-data; name="file"; filename="template.json"'.encode())
+                    data.append('Content-Type: application/json'.encode())
+                    data.append(''.encode())  # Empty line
+                    data.append(template_json.encode())
+                    data.append(f'--{boundary}--'.encode())
+                    
+                    body = '\r\n'.join([part.decode() if isinstance(part, bytes) else part for part in data]).encode()
+                    
+                    url = f"{server.url}/api/templates/import"
+                    req = urllib.request.Request(url)
+                    req.add_header('Content-Type', f'multipart/form-data; boundary={boundary}')
+                    req.add_header('X-API-Key', server.api_key)
+                    req.data = body
+                    
+                    try:
+                        _logger.info("Trying urllib-based form upload")
+                        with urllib.request.urlopen(req) as response:
+                            if response.status == 200:
+                                _logger.info("Template imported successfully via urllib form upload")
+                                try:
+                                    import json
+                                    return json.loads(response.read().decode())
+                                except:
+                                    return {'success': True, 'method': 'urllib_form_upload'}
+                    except Exception as e:
+                        _logger.warning(f"Error with urllib form upload: {str(e)}")
+                except Exception as e:
+                    _logger.warning(f"Error setting up urllib request: {str(e)}")
+                    
+                # Only try the requests_toolbelt approach if imports succeed
+                try:
+                    # Check if requests is available first
+                    if REQUESTS_AVAILABLE and MULTIPART_ENCODER_AVAILABLE:
+                        # Both required modules are available
+                        _logger.info("Using requests_toolbelt MultipartEncoder for file upload")
+                        
+                        # Create multipart form data
+                        m = MultipartEncoder(
+                            fields={
+                                'file': ('template.json', file_data, 'application/json')
+                            }
+                        )
+                        
+                        # Custom request using requests library
+                        headers = {
+                            'Content-Type': m.content_type,
+                            'X-API-Key': server.api_key
+                        }
+                        
+                        url = f"{server.url}/api/templates/import"
+                        response = requests.post(url, data=m, headers=headers, verify=False)
+                        
+                        if response.status_code in [200, 201, 202, 204]:
+                            _logger.info("Template imported successfully via MultipartEncoder")
+                            try:
+                                return response.json()
+                            except:
+                                return {'success': True, 'method': 'requests_toolbelt_upload'}
+                    else:
+                        _logger.warning("requests and/or requests_toolbelt not available, skipping MultipartEncoder approach")
+                        
+                    # Try alternative API-based import if the tools aren't available
+                    if REQUESTS_AVAILABLE:
+                        # Try direct upload through standard request
+                        for import_endpoint in ['/api/templates/import', '/api/custom_templates/import']:
+                            try:
+                                _logger.info(f"Trying direct JSON import via {import_endpoint}")
+                                headers = {
+                                    'Content-Type': 'application/json',
+                                    'X-API-Key': server.api_key
+                                }
+                                url = f"{server.url}{import_endpoint}"
+                                response = requests.post(url, json=template_data, headers=headers, verify=False)
+                                
+                                if response.status_code in [200, 201, 202, 204]:
+                                    _logger.info(f"Template imported successfully via direct JSON import to {import_endpoint}")
+                                    try:
+                                        return response.json()
+                                    except:
+                                        return {'success': True, 'method': f'direct_json_import_{import_endpoint}'}
+                            except Exception as e:
+                                _logger.warning(f"Error with direct JSON import to {import_endpoint}: {str(e)}")
+                except Exception as e:
+                    _logger.warning(f"Error with requests-based upload: {str(e)}")
+            except Exception as e:
+                _logger.warning(f"Error with all form upload approaches: {str(e)}")
+            
+            # If all attempts fail, return None
+            _logger.error("All template import attempts failed")
+            return None
+            
+        except Exception as e:
+            _logger.error(f"Exception during template import: {str(e)}")
+            return None
+            
     def _check_available_endpoints(self, server):
         """Check which endpoints are available in the Portainer instance
         
