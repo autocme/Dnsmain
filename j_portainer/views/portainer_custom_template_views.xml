@@ -14,6 +14,7 @@
                 <field name="manual_template_id" invisible="1"/>
                 <field name="skip_portainer_create" invisible="1"/>
                 <field name="server_id"/>
+                <field name="environment_id"/>
                 <field name="category_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
                 <field name="build_method"/>
                 <button name="action_deploy" string="Deploy" type="object" icon="fa-rocket" title="Deploy Template"/>
@@ -140,6 +141,7 @@
                 <field name="description"/>
                 <field name="category_ids"/>
                 <field name="server_id"/>
+                <field name="environment_id"/>
                 <filter string="Linux Templates" name="linux_templates" domain="[('platform', '=', 'linux')]"/>
                 <filter string="Windows Templates" name="windows_templates" domain="[('platform', '=', 'windows')]"/>
                 <filter string="Containers" name="container_templates" domain="[('template_type', '=', '1')]"/>
@@ -151,6 +153,7 @@
                 <filter string="File Upload" name="file_upload" domain="[('build_method', '=', 'file')]"/>
                 <group expand="0" string="Group By">
                     <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
+                    <filter string="Environment" name="group_by_environment" domain="[]" context="{'group_by': 'environment_id'}"/>
                     <filter string="Type" name="group_by_type" domain="[]" context="{'group_by': 'template_type'}"/>
                     <filter string="Platform" name="group_by_platform" domain="[]" context="{'group_by': 'platform'}"/>
                     <filter string="Build Method" name="group_by_build_method" domain="[]" context="{'group_by': 'build_method'}"/>
