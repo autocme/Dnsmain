@@ -16,26 +16,136 @@ class PortainerAPI(models.AbstractModel):
     _name = 'j_portainer.api'
     _description = 'Portainer API Client'
     
-    def container_action(self, server_id, environment_id, container_id, action):
+    def container_action(self, server_id, environment_id, container_id, action, params=None):
         """Perform action on a container
         
         Args:
             server_id (int): ID of the Portainer server
             environment_id (int): ID of the environment
             container_id (str): Container ID
-            action (str): Action to perform (start, stop, restart, kill, pause, unpause, etc.)
+            action (str): Action to perform (start, stop, restart, kill, pause, unpause, exec, rename, etc.)
+            params (dict, optional): Additional parameters for the action
             
         Returns:
-            bool: True if successful
+            bool or dict: True if successful with no response data, or dict with response data
         """
         server = self.env['j_portainer.server'].browse(server_id)
         if not server:
             return False
-            
-        endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/{action}'
-        response = server._make_api_request(endpoint, 'POST')
         
-        return response.status_code in [200, 201, 204]
+        # Special handling for certain actions
+        if action == 'exec':
+            if not params:
+                params = {}
+            
+            # Create exec instance
+            exec_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/exec'
+            exec_data = {
+                'AttachStdout': True,
+                'AttachStderr': True,
+                'Tty': params.get('tty', True),
+                'Cmd': params.get('cmd', ['/bin/sh'])
+            }
+            
+            # Add additional parameters
+            if 'user' in params:
+                exec_data['User'] = params['user']
+            if 'env' in params:
+                exec_data['Env'] = params['env']
+            if 'workdir' in params:
+                exec_data['WorkingDir'] = params['workdir']
+                
+            # Create the exec instance
+            response = server._make_api_request(exec_endpoint, 'POST', data=exec_data)
+            
+            if response.status_code != 201:
+                return {'error': f'Failed to create exec instance: {response.text}'}
+                
+            # Get the exec ID
+            exec_id = response.json().get('Id')
+            if not exec_id:
+                return {'error': 'No exec ID returned'}
+                
+            # Start the exec instance
+            start_endpoint = f'/api/endpoints/{environment_id}/docker/exec/{exec_id}/start'
+            start_data = {
+                'Detach': params.get('detach', False),
+                'Tty': params.get('tty', True)
+            }
+            
+            start_response = server._make_api_request(start_endpoint, 'POST', data=start_data)
+            
+            if start_response.status_code == 200:
+                # If we're in attached mode, return the output
+                if not params.get('detach', False):
+                    return {'success': True, 'output': start_response.text}
+                return {'success': True, 'exec_id': exec_id}
+            else:
+                return {'error': f'Failed to start exec instance: {start_response.text}'}
+        
+        elif action == 'logs':
+            # Get container logs
+            logs_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/logs'
+            query_params = {
+                'stdout': 1,
+                'stderr': 1
+            }
+            
+            # Add optional parameters
+            if params:
+                if 'tail' in params:
+                    query_params['tail'] = params['tail']
+                if 'since' in params:
+                    query_params['since'] = params['since']
+                if 'until' in params:
+                    query_params['until'] = params['until']
+                if 'timestamps' in params:
+                    query_params['timestamps'] = 1 if params['timestamps'] else 0
+                if 'follow' in params:
+                    query_params['follow'] = 1 if params['follow'] else 0
+            
+            response = server._make_api_request(logs_endpoint, 'GET', params=query_params, 
+                                              headers={'Accept': 'text/plain'})
+            
+            if response.status_code == 200:
+                return {'success': True, 'logs': response.text}
+            else:
+                return {'error': f'Failed to get logs: {response.text}'}
+        
+        elif action == 'rename':
+            if not params or 'name' not in params:
+                return {'error': 'New name is required for rename action'}
+                
+            rename_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/rename'
+            query_params = {'name': params['name']}
+            
+            response = server._make_api_request(rename_endpoint, 'POST', params=query_params)
+            
+            return response.status_code in [200, 201, 204]
+            
+        elif action == 'inspect':
+            # Get detailed container information
+            inspect_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/json'
+            
+            query_params = {}
+            if params and 'size' in params:
+                query_params['size'] = params['size']
+                
+            response = server._make_api_request(inspect_endpoint, 'GET', params=query_params)
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {'error': f'Failed to inspect container: {response.text}'}
+        
+        else:
+            # Standard actions: start, stop, restart, kill, pause, unpause
+            endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/{action}'
+            query_params = params if params else {}
+            
+            response = server._make_api_request(endpoint, 'POST', params=query_params)
+            
+            return response.status_code in [200, 201, 204]
     
     def remove_container(self, server_id, environment_id, container_id, force=False, volumes=False):
         """Remove a container
@@ -84,7 +194,7 @@ class PortainerAPI(models.AbstractModel):
         
         Args:
             server_id (int): ID of the Portainer server
-            action (str): Action to perform (pull, delete, inspect, etc.)
+            action (str): Action to perform (pull, delete, inspect, tag, push, history, etc.)
             image_id (str, optional): Image ID or name
             environment_id (int, optional): ID of the environment
             endpoint (str, optional): Custom API endpoint to use (overrides default endpoints)
@@ -102,10 +212,20 @@ class PortainerAPI(models.AbstractModel):
             api_endpoint = f'/api{endpoint}' if not endpoint.startswith('/api') else endpoint
         elif action == 'pull' and environment_id:
             api_endpoint = f'/api/endpoints/{environment_id}/docker/images/create'
+        elif action == 'list' and environment_id:
+            api_endpoint = f'/api/endpoints/{environment_id}/docker/images/json'
         elif action in ['delete', 'remove'] and environment_id and image_id:
             api_endpoint = f'/api/endpoints/{environment_id}/docker/images/{image_id}'
         elif action == 'inspect' and environment_id and image_id:
             api_endpoint = f'/api/endpoints/{environment_id}/docker/images/{image_id}/json'
+        elif action == 'history' and environment_id and image_id:
+            api_endpoint = f'/api/endpoints/{environment_id}/docker/images/{image_id}/history'
+        elif action == 'tag' and environment_id and image_id:
+            api_endpoint = f'/api/endpoints/{environment_id}/docker/images/{image_id}/tag'
+        elif action == 'push' and environment_id and image_id:
+            api_endpoint = f'/api/endpoints/{environment_id}/docker/images/{image_id}/push'
+        elif action == 'prune' and environment_id:
+            api_endpoint = f'/api/endpoints/{environment_id}/docker/images/prune'
         else:
             return {'error': f'Invalid action or missing parameters: {action}'}
         
@@ -119,10 +239,30 @@ class PortainerAPI(models.AbstractModel):
                         query_params['fromImage'] = params['fromImage']
                     if 'tag' in params:
                         query_params['tag'] = params['tag']
+                    if 'platform' in params:
+                        query_params['platform'] = params['platform']
                 
                 response = server._make_api_request(api_endpoint, 'POST', params=query_params)
                 if response.status_code in [200, 201, 204]:
-                    return True
+                    return {'success': True, 'message': 'Image pulled successfully'}
+                return {'error': f'API error: {response.status_code} - {response.text}'}
+            
+            elif action == 'list':
+                query_params = {}
+                if params:
+                    if 'all' in params:
+                        query_params['all'] = params['all']
+                    if 'filters' in params:
+                        query_params['filters'] = params['filters']
+                    if 'digests' in params:
+                        query_params['digests'] = params['digests']
+                
+                response = server._make_api_request(api_endpoint, 'GET', params=query_params)
+                if response.status_code == 200:
+                    try:
+                        return response.json()
+                    except Exception as e:
+                        return {'error': f'Failed to parse response: {str(e)}'}
                 return {'error': f'API error: {response.status_code} - {response.text}'}
                 
             elif action in ['delete', 'remove']:
@@ -135,7 +275,11 @@ class PortainerAPI(models.AbstractModel):
                 
                 response = server._make_api_request(api_endpoint, 'DELETE', params=query_params)
                 if response.status_code in [200, 201, 204]:
-                    return True
+                    try:
+                        # Some versions return a JSON response with deletion info
+                        return response.json() 
+                    except:
+                        return {'success': True, 'message': 'Image removed successfully'}
                 return {'error': f'API error: {response.status_code} - {response.text}'}
                 
             elif action == 'inspect':
@@ -146,57 +290,319 @@ class PortainerAPI(models.AbstractModel):
                     except Exception as e:
                         return {'error': f'Failed to parse response: {str(e)}'}
                 return {'error': f'API error: {response.status_code} - {response.text}'}
+            
+            elif action == 'history':
+                response = server._make_api_request(api_endpoint, 'GET')
+                if response.status_code == 200:
+                    try:
+                        return response.json()
+                    except Exception as e:
+                        return {'error': f'Failed to parse response: {str(e)}'}
+                return {'error': f'API error: {response.status_code} - {response.text}'}
+            
+            elif action == 'tag':
+                if not params or not params.get('repo'):
+                    return {'error': 'Repository name is required for tagging'}
+                
+                query_params = {'repo': params['repo']}
+                if 'tag' in params:
+                    query_params['tag'] = params['tag']
+                
+                response = server._make_api_request(api_endpoint, 'POST', params=query_params)
+                if response.status_code in [200, 201, 204]:
+                    return {'success': True, 'message': 'Image tagged successfully'}
+                return {'error': f'API error: {response.status_code} - {response.text}'}
+            
+            elif action == 'push':
+                if not params:
+                    params = {}
+                
+                # Check if auth credentials are provided
+                headers = {}
+                if 'X-Registry-Auth' in params:
+                    headers['X-Registry-Auth'] = params['X-Registry-Auth']
+                
+                response = server._make_api_request(api_endpoint, 'POST', headers=headers)
+                if response.status_code in [200, 201, 204]:
+                    return {'success': True, 'message': 'Image pushed successfully'}
+                return {'error': f'API error: {response.status_code} - {response.text}'}
+            
+            elif action == 'prune':
+                query_params = {}
+                if params and 'filters' in params:
+                    query_params['filters'] = params['filters']
+                
+                response = server._make_api_request(api_endpoint, 'POST', params=query_params)
+                if response.status_code in [200, 201, 204]:
+                    try:
+                        return response.json()  # Returns {"ImagesDeleted": [], "SpaceReclaimed": 0}
+                    except Exception as e:
+                        return {'success': True, 'message': 'Images pruned successfully'}
+                return {'error': f'API error: {response.status_code} - {response.text}'}
                 
             return {'error': f'Unsupported action: {action}'}
             
         except Exception as e:
             return {'error': str(e)}
     
-    def volume_action(self, server_id, environment_id, volume_name, action):
+    def volume_action(self, server_id, environment_id, volume_name=None, action=None, params=None):
         """Perform action on a volume
         
         Args:
             server_id (int): ID of the Portainer server
             environment_id (int): ID of the environment
-            volume_name (str): Volume name
-            action (str): Action to perform (currently only 'delete' is supported)
+            volume_name (str, optional): Volume name (required for specific volume actions)
+            action (str): Action to perform (create, delete, inspect, list, prune)
+            params (dict, optional): Additional parameters for the action
             
         Returns:
-            bool: True if successful
+            dict or bool: API response data or success status
         """
         server = self.env['j_portainer.server'].browse(server_id)
         if not server:
-            return False
+            return {'error': 'Server not found'}
+        
+        if action == 'create':
+            # Create a new volume
+            endpoint = f'/api/endpoints/{environment_id}/docker/volumes/create'
             
-        if action == 'delete':
+            # Prepare volume data
+            data = {}
+            if params:
+                if 'Name' in params:
+                    data['Name'] = params['Name']
+                if 'Driver' in params:
+                    data['Driver'] = params['Driver']
+                if 'DriverOpts' in params:
+                    data['DriverOpts'] = params['DriverOpts']
+                if 'Labels' in params:
+                    data['Labels'] = params['Labels']
+            
+            response = server._make_api_request(endpoint, 'POST', data=data)
+            if response.status_code in [201, 200]:
+                try:
+                    return response.json()
+                except Exception as e:
+                    return {'error': f'Failed to parse response: {str(e)}'}
+            return {'error': f'Failed to create volume: {response.text}'}
+            
+        elif action == 'list':
+            # List all volumes
+            endpoint = f'/api/endpoints/{environment_id}/docker/volumes'
+            
+            # Add filters if provided
+            query_params = {}
+            if params and 'filters' in params:
+                query_params['filters'] = params['filters']
+                
+            response = server._make_api_request(endpoint, 'GET', params=query_params)
+            if response.status_code == 200:
+                try:
+                    return response.json()
+                except Exception as e:
+                    return {'error': f'Failed to parse response: {str(e)}'}
+            return {'error': f'Failed to list volumes: {response.text}'}
+            
+        elif action == 'inspect' and volume_name:
+            # Inspect a specific volume
             endpoint = f'/api/endpoints/{environment_id}/docker/volumes/{volume_name}'
-            response = server._make_api_request(endpoint, 'DELETE')
-            return response.status_code in [200, 201, 204]
+            response = server._make_api_request(endpoint, 'GET')
+            if response.status_code == 200:
+                try:
+                    return response.json()
+                except Exception as e:
+                    return {'error': f'Failed to parse response: {str(e)}'}
+            return {'error': f'Failed to inspect volume: {response.text}'}
             
-        return False
+        elif action == 'delete' and volume_name:
+            # Delete a volume
+            endpoint = f'/api/endpoints/{environment_id}/docker/volumes/{volume_name}'
+            
+            # Add force parameter if provided
+            query_params = {}
+            if params and 'force' in params:
+                query_params['force'] = params['force']
+                
+            response = server._make_api_request(endpoint, 'DELETE', params=query_params)
+            if response.status_code in [200, 201, 204]:
+                return {'success': True, 'message': f'Volume {volume_name} deleted successfully'}
+            return {'error': f'Failed to delete volume: {response.text}'}
+            
+        elif action == 'prune':
+            # Prune unused volumes
+            endpoint = f'/api/endpoints/{environment_id}/docker/volumes/prune'
+            
+            # Add filters if provided
+            query_params = {}
+            if params and 'filters' in params:
+                query_params['filters'] = params['filters']
+                
+            response = server._make_api_request(endpoint, 'POST', params=query_params)
+            if response.status_code in [200, 201]:
+                try:
+                    return response.json()  # Returns {"VolumesDeleted": [], "SpaceReclaimed": 0}
+                except Exception as e:
+                    return {'success': True, 'message': 'Volumes pruned successfully'}
+            return {'error': f'Failed to prune volumes: {response.text}'}
+            
+        return {'error': f'Unsupported action: {action}'}
     
-    def network_action(self, server_id, environment_id, network_id, action):
+    def network_action(self, server_id, environment_id, network_id=None, action=None, params=None):
         """Perform action on a network
         
         Args:
             server_id (int): ID of the Portainer server
             environment_id (int): ID of the environment
-            network_id (str): Network ID
-            action (str): Action to perform (currently only 'delete' is supported)
+            network_id (str, optional): Network ID (required for specific network actions)
+            action (str): Action to perform (create, delete, inspect, list, connect, disconnect, prune)
+            params (dict, optional): Additional parameters for the action
             
         Returns:
-            bool: True if successful
+            dict or bool: API response data or success status
         """
         server = self.env['j_portainer.server'].browse(server_id)
         if not server:
-            return False
+            return {'error': 'Server not found'}
+        
+        if action == 'list':
+            # List all networks
+            endpoint = f'/api/endpoints/{environment_id}/docker/networks'
             
-        if action == 'delete':
+            # Add filters if provided
+            query_params = {}
+            if params and 'filters' in params:
+                query_params['filters'] = params['filters']
+                
+            response = server._make_api_request(endpoint, 'GET', params=query_params)
+            if response.status_code == 200:
+                try:
+                    return response.json()
+                except Exception as e:
+                    return {'error': f'Failed to parse response: {str(e)}'}
+            return {'error': f'Failed to list networks: {response.text}'}
+            
+        elif action == 'inspect' and network_id:
+            # Inspect a specific network
+            endpoint = f'/api/endpoints/{environment_id}/docker/networks/{network_id}'
+            
+            # Add optional parameters if provided
+            query_params = {}
+            if params and 'verbose' in params:
+                query_params['verbose'] = params['verbose']
+            if params and 'scope' in params:
+                query_params['scope'] = params['scope']
+                
+            response = server._make_api_request(endpoint, 'GET', params=query_params)
+            if response.status_code == 200:
+                try:
+                    return response.json()
+                except Exception as e:
+                    return {'error': f'Failed to parse response: {str(e)}'}
+            return {'error': f'Failed to inspect network: {response.text}'}
+            
+        elif action == 'create':
+            # Create a new network
+            endpoint = f'/api/endpoints/{environment_id}/docker/networks/create'
+            
+            # Prepare network data
+            data = {}
+            if params:
+                # Required parameters
+                if 'Name' in params:
+                    data['Name'] = params['Name']
+                else:
+                    return {'error': 'Network name is required for creation'}
+                
+                # Optional parameters
+                if 'Driver' in params:
+                    data['Driver'] = params['Driver']
+                if 'Options' in params:
+                    data['Options'] = params['Options']
+                if 'IPAM' in params:
+                    data['IPAM'] = params['IPAM']
+                if 'Internal' in params:
+                    data['Internal'] = params['Internal']
+                if 'EnableIPv6' in params:
+                    data['EnableIPv6'] = params['EnableIPv6']
+                if 'Labels' in params:
+                    data['Labels'] = params['Labels']
+                if 'Attachable' in params:
+                    data['Attachable'] = params['Attachable']
+            else:
+                return {'error': 'Network parameters are required for creation'}
+            
+            response = server._make_api_request(endpoint, 'POST', data=data)
+            if response.status_code in [201, 200]:
+                try:
+                    return response.json()
+                except Exception as e:
+                    return {'error': f'Failed to parse response: {str(e)}'}
+            return {'error': f'Failed to create network: {response.text}'}
+            
+        elif action == 'delete' and network_id:
+            # Delete a network
             endpoint = f'/api/endpoints/{environment_id}/docker/networks/{network_id}'
             response = server._make_api_request(endpoint, 'DELETE')
-            return response.status_code in [200, 201, 204]
+            if response.status_code in [200, 201, 204]:
+                return {'success': True, 'message': f'Network {network_id} deleted successfully'}
+            return {'error': f'Failed to delete network: {response.text}'}
             
-        return False
+        elif action == 'connect' and network_id:
+            # Connect a container to a network
+            if not params or 'Container' not in params:
+                return {'error': 'Container ID is required to connect to network'}
+                
+            endpoint = f'/api/endpoints/{environment_id}/docker/networks/{network_id}/connect'
+            
+            # Prepare connect data
+            data = {'Container': params['Container']}
+            
+            # Optional parameters
+            if 'EndpointConfig' in params:
+                data['EndpointConfig'] = params['EndpointConfig']
+                
+            response = server._make_api_request(endpoint, 'POST', data=data)
+            if response.status_code in [200, 201, 204]:
+                return {'success': True, 'message': f'Container connected to network successfully'}
+            return {'error': f'Failed to connect container to network: {response.text}'}
+            
+        elif action == 'disconnect' and network_id:
+            # Disconnect a container from a network
+            if not params or 'Container' not in params:
+                return {'error': 'Container ID is required to disconnect from network'}
+                
+            endpoint = f'/api/endpoints/{environment_id}/docker/networks/{network_id}/disconnect'
+            
+            # Prepare disconnect data
+            data = {'Container': params['Container']}
+            
+            # Optional parameters
+            if 'Force' in params:
+                data['Force'] = params['Force']
+                
+            response = server._make_api_request(endpoint, 'POST', data=data)
+            if response.status_code in [200, 201, 204]:
+                return {'success': True, 'message': f'Container disconnected from network successfully'}
+            return {'error': f'Failed to disconnect container from network: {response.text}'}
+            
+        elif action == 'prune':
+            # Prune unused networks
+            endpoint = f'/api/endpoints/{environment_id}/docker/networks/prune'
+            
+            # Add filters if provided
+            query_params = {}
+            if params and 'filters' in params:
+                query_params['filters'] = params['filters']
+                
+            response = server._make_api_request(endpoint, 'POST', params=query_params)
+            if response.status_code in [200, 201]:
+                try:
+                    return response.json()  # Returns {"NetworksDeleted": []}
+                except Exception as e:
+                    return {'success': True, 'message': 'Networks pruned successfully'}
+            return {'error': f'Failed to prune networks: {response.text}'}
+            
+        return {'error': f'Unsupported action: {action}'}
         
     def prune_images(self, server_id, environment_id, filters=None):
         """Prune unused images
@@ -234,35 +640,98 @@ class PortainerAPI(models.AbstractModel):
         Args:
             server_id (int): ID of the Portainer server
             stack_id (int): Stack ID
-            action (str): Action to perform (delete, stop, start, etc.)
+            action (str): Action to perform (delete, stop, start, redeploy, etc.)
             data (dict, optional): Additional data for the action
             
         Returns:
-            bool: True if successful
+            bool or dict: True if successful with no response, or dict with response data
         """
         server = self.env['j_portainer.server'].browse(server_id)
         if not server:
-            return False
+            return {'error': 'Server not found'}
             
         if action == 'delete':
             endpoint = f'/api/stacks/{stack_id}'
             response = server._make_api_request(endpoint, 'DELETE')
-            return response.status_code in [200, 201, 204]
+            if response.status_code in [200, 201, 204]:
+                return True
+            return {'error': f'Failed to delete stack: {response.text}'}
             
         elif action in ['start', 'stop']:
             endpoint = f'/api/stacks/{stack_id}/' + ('start' if action == 'start' else 'stop')
             response = server._make_api_request(endpoint, 'POST')
-            return response.status_code in [200, 201, 204]
+            if response.status_code in [200, 201, 204]:
+                return True
+            return {'error': f'Failed to {action} stack: {response.text}'}
             
         elif action == 'update':
             if not data:
-                return False
+                return {'error': 'No data provided for stack update'}
                 
             endpoint = f'/api/stacks/{stack_id}'
             response = server._make_api_request(endpoint, 'PUT', data=data)
-            return response.status_code in [200, 201, 204]
+            if response.status_code in [200, 201, 204]:
+                if response.text:
+                    try:
+                        return response.json()
+                    except:
+                        return True
+                return True
+            return {'error': f'Failed to update stack: {response.text}'}
             
-        return False
+        elif action == 'redeploy':
+            endpoint = f'/api/stacks/{stack_id}/git/redeploy'
+            response = server._make_api_request(endpoint, 'PUT', data=data)
+            if response.status_code in [200, 201, 204]:
+                return True
+            return {'error': f'Failed to redeploy stack: {response.text}'}
+            
+        elif action == 'migrate':
+            if not data or 'endpointId' not in data:
+                return {'error': 'Target environment ID is required for stack migration'}
+                
+            endpoint = f'/api/stacks/{stack_id}/migrate'
+            response = server._make_api_request(endpoint, 'POST', data=data)
+            if response.status_code in [200, 201, 204]:
+                if response.text:
+                    try:
+                        return response.json()
+                    except:
+                        return True
+                return True
+            return {'error': f'Failed to migrate stack: {response.text}'}
+            
+        elif action == 'get_file':
+            endpoint = f'/api/stacks/{stack_id}/file'
+            response = server._make_api_request(endpoint, 'GET')
+            if response.status_code == 200:
+                try:
+                    return response.json()
+                except:
+                    return {'content': response.text}
+            return {'error': f'Failed to get stack file: {response.text}'}
+            
+        elif action == 'update_git':
+            if not data:
+                return {'error': 'No Git data provided for stack update'}
+                
+            endpoint = f'/api/stacks/{stack_id}/git'
+            response = server._make_api_request(endpoint, 'POST', data=data)
+            if response.status_code in [200, 201, 204]:
+                return True
+            return {'error': f'Failed to update stack Git config: {response.text}'}
+            
+        elif action == 'associate':
+            if not data or 'endpointId' not in data:
+                return {'error': 'Target environment ID is required for stack association'}
+                
+            endpoint = f'/api/stacks/{stack_id}/associate'
+            response = server._make_api_request(endpoint, 'PUT', data=data)
+            if response.status_code in [200, 201, 204]:
+                return True
+            return {'error': f'Failed to associate stack: {response.text}'}
+            
+        return {'error': f'Unsupported stack action: {action}'}
         
     def template_action(self, server_id, template_id, action, environment_id=None, data=None):
         """Perform action on a template
@@ -270,16 +739,16 @@ class PortainerAPI(models.AbstractModel):
         Args:
             server_id (int): ID of the Portainer server
             template_id (int): Template ID
-            action (str): Action to perform (deploy, delete, etc.)
+            action (str): Action to perform (deploy, delete, get_file, update, git_fetch)
             environment_id (int, optional): Environment ID (required for deploy)
             data (dict, optional): Additional data for the action
             
         Returns:
-            bool: True if successful
+            dict or bool: API response data or success status
         """
         server = self.env['j_portainer.server'].browse(server_id)
         if not server:
-            return False
+            return {'error': 'Server not found'}
             
         if action == 'deploy' and environment_id and data:
             # Deploy template
@@ -292,34 +761,82 @@ class PortainerAPI(models.AbstractModel):
                     data['endpointId'] = environment_id
                     
                 response = server._make_api_request(endpoint, 'POST', data=data)
-                return response.status_code in [200, 201, 204]
+                if response.status_code in [200, 201, 204]:
+                    try:
+                        return response.json()
+                    except:
+                        return {'success': True, 'message': 'Stack deployed successfully'}
+                return {'error': f'Failed to deploy stack: {response.text}'}
                 
             else:  # Container template
                 endpoint = f'/api/endpoints/{environment_id}/docker/containers/create'
                 response = server._make_api_request(endpoint, 'POST', data=data)
                 
                 if response.status_code not in [200, 201, 204]:
-                    return False
-                    
-                # Start the container if requested
-                if data.get('start', False):
+                    return {'error': f'Failed to create container: {response.text}'}
+                
+                # Get the container ID from the response
+                try:
                     result = response.json()
                     container_id = result.get('Id')
                     
-                    if container_id:
+                    # Start the container if requested
+                    if data.get('start', False) and container_id:
                         start_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/start'
                         start_response = server._make_api_request(start_endpoint, 'POST')
-                        return start_response.status_code in [200, 201, 204]
                         
-                return True
+                        if start_response.status_code in [200, 201, 204]:
+                            return {'success': True, 'message': 'Container created and started successfully', 'container_id': container_id}
+                        else:
+                            return {
+                                'warning': True, 
+                                'message': f'Container created but failed to start: {start_response.text}',
+                                'container_id': container_id
+                            }
+                    
+                    return {'success': True, 'message': 'Container created successfully', 'container_id': container_id}
+                except Exception as e:
+                    return {'warning': True, 'message': f'Container created but error processing response: {str(e)}'}
                 
         elif action == 'delete' and template_id:
             # Delete custom template
             endpoint = f'/api/custom_templates/{template_id}'
             response = server._make_api_request(endpoint, 'DELETE')
-            return response.status_code in [200, 201, 204]
+            if response.status_code in [200, 201, 204]:
+                return {'success': True, 'message': 'Template deleted successfully'}
+            return {'error': f'Failed to delete template: {response.text}'}
             
-        return False
+        elif action == 'get_file' and template_id:
+            # Get template file content
+            endpoint = f'/api/custom_templates/{template_id}/file'
+            response = server._make_api_request(endpoint, 'GET')
+            if response.status_code == 200:
+                try:
+                    return response.json()
+                except:
+                    return {'content': response.text}
+            return {'error': f'Failed to get template file: {response.text}'}
+            
+        elif action == 'update' and template_id:
+            # Update custom template
+            if not data:
+                return {'error': 'No data provided for template update'}
+                
+            endpoint = f'/api/custom_templates/{template_id}'
+            response = server._make_api_request(endpoint, 'PUT', data=data)
+            if response.status_code in [200, 201, 204]:
+                return {'success': True, 'message': 'Template updated successfully'}
+            return {'error': f'Failed to update template: {response.text}'}
+            
+        elif action == 'git_fetch' and template_id:
+            # Fetch latest content from git repository
+            endpoint = f'/api/custom_templates/{template_id}/git_fetch'
+            response = server._make_api_request(endpoint, 'PUT', data=data)
+            if response.status_code in [200, 201, 204]:
+                return {'success': True, 'message': 'Git repository fetched successfully'}
+            return {'error': f'Failed to fetch from git repository: {response.text}'}
+            
+        return {'error': f'Unsupported action: {action}'}
             
     def deploy_template(self, server_id, template_id, environment_id, params=None, is_custom=False):
         """Deploy a template (standard or custom)
