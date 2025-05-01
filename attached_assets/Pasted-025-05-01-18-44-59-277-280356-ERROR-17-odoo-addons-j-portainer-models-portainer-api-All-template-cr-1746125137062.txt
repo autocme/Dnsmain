@@ -1,0 +1,37 @@
+025-05-01 18:44:59,277 280356 ERROR 17 odoo.addons.j_portainer.models.portainer_api: All template creation attempts failed. Last error: {'status_code': 405, 'text': '', 'method': 'Standard endpoint with PUT method'} 
+2025-05-01 18:44:59,277 280356 INFO 17 odoo.addons.j_portainer.models.portainer_api: Checking if custom templates feature is available 
+2025-05-01 18:45:00,957 280356 INFO 17 odoo.addons.j_portainer.models.portainer_api: Making direct API call to /api/custom_templates?environment=52 with method POST 
+2025-05-01 18:45:01,197 280356 INFO 17 odoo.addons.j_portainer.models.portainer_api: Direct API call response status: 405 
+2025-05-01 18:45:01,197 280356 INFO 17 odoo.addons.j_portainer.models.portainer_api: Importing template via V2 API: {
+  "version": "2",
+  "templates": [
+    {
+      "type": 1,
+      "title": "odoo22",
+      "description": "odoo22",
+      "note": false,
+      "platform": 1,
+      "categories": [
+        "Custom"
+      ]
+    }
+  ]
+} 
+2025-05-01 18:45:01,197 280356 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying POST to /api/custom_templates/file 
+2025-05-01 18:45:01,428 280356 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with POST to /api/custom_templates/file: 405 -  
+2025-05-01 18:45:01,428 280356 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying POST to /api/custom_templates 
+2025-05-01 18:45:01,658 280356 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with POST to /api/custom_templates: 405 -  
+2025-05-01 18:45:01,659 280356 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying POST to /api/custom_templates/create 
+2025-05-01 18:45:01,893 280356 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with POST to /api/custom_templates/create: 405 -  
+2025-05-01 18:45:01,893 280356 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying PUT to /api/custom_templates/file 
+2025-05-01 18:45:02,124 280356 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with PUT to /api/custom_templates/file: 400 - {"message":"Invalid Custom template identifier route variable","details":"Strconv.Atoi: parsing \"file\": invalid syntax"} 
+2025-05-01 18:45:02,124 280356 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying PUT to /api/custom_templates 
+2025-05-01 18:45:02,363 280356 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with PUT to /api/custom_templates: 405 -  
+2025-05-01 18:45:02,363 280356 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying PUT to /api/custom_templates/create 
+2025-05-01 18:45:02,607 280356 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with PUT to /api/custom_templates/create: 400 - {"message":"Invalid Custom template identifier route variable","details":"Strconv.Atoi: parsing \"create\": invalid syntax"} 
+2025-05-01 18:45:02,607 280356 ERROR 17 odoo.addons.j_portainer.models.portainer_api: All V2 API template import attempts failed 
+2025-05-01 18:45:02,607 280356 INFO 17 odoo.addons.j_portainer.models.portainer_api: Making direct API call to /api/custom_templates/file with method POST 
+2025-05-01 18:45:02,842 280356 INFO 17 odoo.addons.j_portainer.models.portainer_api: Direct API call response status: 405 
+2025-05-01 18:45:02,842 280356 ERROR 17 odoo.addons.j_portainer.models.portainer_custom_template: All Portainer synchronization methods failed:  
+2025-05-01 18:45:02,843 280356 WARNING 17 odoo.addons.j_portainer.models.portainer_custom_template: Automatic template creation in Portainer failed. Please create the template manually in Portainer and then enter its ID in the 'Manual Template ID' field to link it with this record. 
+2025-05-01 18:45:02,864 280356 INFO 17 werkzeug: 127.0.0.1 - - [01/May/2025 18:45:02] "POST /web/dataset/call_kw/j_portainer.customtemplate/web_save HTTP/1.1" 200 - 9 0.007 6.920

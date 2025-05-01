@@ -1073,12 +1073,19 @@ class PortainerAPI(models.AbstractModel):
                     'description': 'Standard endpoint with minimal data (v2)'
                 },
                 # Removed all v1 endpoints per request - only using v2 endpoints
-                # V2 format on primary endpoint
+                # V2 format on primary endpoint - direct template data
+                {
+                    'endpoint': '/api/custom_templates',
+                    'method': 'POST',
+                    'data': api_data,
+                    'description': 'V2 format with direct template data'
+                },
+                # V2 format on primary endpoint with templates array (fallback)
                 {
                     'endpoint': '/api/custom_templates',
                     'method': 'POST',
                     'data': {"version": "2", "templates": [api_data]},
-                    'description': 'V2 format on primary endpoint'
+                    'description': 'V2 format with templates array'
                 },
                 # Stack templates endpoint for stack templates
                 {

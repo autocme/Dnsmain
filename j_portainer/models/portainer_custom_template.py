@@ -675,15 +675,19 @@ class PortainerCustomTemplate(models.Model):
             if vals.get('registry'):
                 template_data['registry'] = vals.get('registry')
         
-        # Handle build method for Stack templates (type 2)
-        if template_data['type'] == 2:
-            build_method = vals.get('build_method')
-            
-            if build_method == 'editor':
-                # Web editor method - use fileContent for Portainer API v2
-                template_data['fileContent'] = vals.get('compose_file', '')
-                
-            elif build_method == 'repository':
+        # Handle build method for templates
+        build_method = vals.get('build_method')
+        
+        # Include fileContent for all template types if using editor method
+        if build_method == 'editor':
+            # Web editor method - always add fileContent for Portainer API v2
+            compose_content = vals.get('compose_file', '')
+            if compose_content:
+                template_data['fileContent'] = compose_content
+                _logger.info(f"Including compose file content in template data. Length: {len(compose_content)} chars")
+        
+        # Repository method specific settings
+        if build_method == 'repository':
                 # Git repository method
                 repository_data = {
                     'url': vals.get('git_repository_url', ''),
@@ -793,16 +797,17 @@ class PortainerCustomTemplate(models.Model):
             if self.registry:
                 template_data['registry'] = self.registry
         
-        # Handle build method for Stack templates (type 2)
-        if template_data['type'] == 2:
-            if self.build_method == 'editor':
-                # Web editor method
-                compose_content = self.compose_file or ''
+        # Handle build method for templates
+        # Include fileContent for all template types if using editor method
+        if self.build_method == 'editor':
+            # Web editor method - always add fileContent for Portainer API v2
+            compose_content = self.compose_file or ''
+            if compose_content:
                 _logger.info(f"Using compose file content for template '{self.title}' (ID: {self.template_id}). Content length: {len(compose_content)} chars")
-                # Use fileContent for Portainer API v2
                 template_data['fileContent'] = compose_content
-                
-            elif self.build_method == 'repository':
+        
+        # Repository method specific settings
+        if self.build_method == 'repository':
                 # Git repository method
                 repository_data = {
                     'url': self.git_repository_url or '',
