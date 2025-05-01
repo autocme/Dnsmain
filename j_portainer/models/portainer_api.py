@@ -79,46 +79,78 @@ class PortainerAPI(models.AbstractModel):
         except Exception as e:
             return {'success': False, 'message': f'Error removing container: {str(e)}'}
     
-    def image_action(self, server_id, environment_id, image_id, action, params=None):
+    def image_action(self, server_id, action, image_id=None, environment_id=None, endpoint=None, params=None):
         """Perform action on an image
         
         Args:
             server_id (int): ID of the Portainer server
-            environment_id (int): ID of the environment
-            image_id (str): Image ID or name
-            action (str): Action to perform (pull, delete, etc.)
+            action (str): Action to perform (pull, delete, inspect, etc.)
+            image_id (str, optional): Image ID or name
+            environment_id (int, optional): ID of the environment
+            endpoint (str, optional): Custom API endpoint to use (overrides default endpoints)
             params (dict, optional): Additional parameters
             
         Returns:
-            bool: True if successful
+            dict or bool: API response if successful, False if failed
         """
         server = self.env['j_portainer.server'].browse(server_id)
         if not server:
-            return False
-            
-        if action == 'pull':
-            endpoint = f'/api/endpoints/{environment_id}/docker/images/create'
-            # For pull, image_id is actually the image name
-            query_params = {'fromImage': image_id}
-            if params and 'tag' in params:
-                query_params['tag'] = params['tag']
+            return {'error': 'Server not found'}
+        
+        # Use custom endpoint if provided, otherwise build standard endpoints
+        if endpoint:
+            api_endpoint = f'/api{endpoint}' if not endpoint.startswith('/api') else endpoint
+        elif action == 'pull' and environment_id:
+            api_endpoint = f'/api/endpoints/{environment_id}/docker/images/create'
+        elif action in ['delete', 'remove'] and environment_id and image_id:
+            api_endpoint = f'/api/endpoints/{environment_id}/docker/images/{image_id}'
+        elif action == 'inspect' and environment_id and image_id:
+            api_endpoint = f'/api/endpoints/{environment_id}/docker/images/{image_id}/json'
+        else:
+            return {'error': f'Invalid action or missing parameters: {action}'}
+        
+        try:
+            # Handle different actions
+            if action == 'pull':
+                # For pull, image_id is actually the image name
+                query_params = {}
+                if params:
+                    if 'fromImage' in params:
+                        query_params['fromImage'] = params['fromImage']
+                    if 'tag' in params:
+                        query_params['tag'] = params['tag']
                 
-            response = server._make_api_request(endpoint, 'POST', params=query_params)
-            return response.status_code in [200, 201, 204]
+                response = server._make_api_request(api_endpoint, 'POST', params=query_params)
+                if response.status_code in [200, 201, 204]:
+                    return True
+                return {'error': f'API error: {response.status_code} - {response.text}'}
+                
+            elif action in ['delete', 'remove']:
+                query_params = {}
+                if params:
+                    if 'force' in params:
+                        query_params['force'] = params['force']
+                    if 'noprune' in params:
+                        query_params['noprune'] = params['noprune']
+                
+                response = server._make_api_request(api_endpoint, 'DELETE', params=query_params)
+                if response.status_code in [200, 201, 204]:
+                    return True
+                return {'error': f'API error: {response.status_code} - {response.text}'}
+                
+            elif action == 'inspect':
+                response = server._make_api_request(api_endpoint, 'GET')
+                if response.status_code == 200:
+                    try:
+                        return response.json()
+                    except Exception as e:
+                        return {'error': f'Failed to parse response: {str(e)}'}
+                return {'error': f'API error: {response.status_code} - {response.text}'}
+                
+            return {'error': f'Unsupported action: {action}'}
             
-        elif action == 'delete':
-            endpoint = f'/api/endpoints/{environment_id}/docker/images/{image_id}'
-            query_params = {}
-            if params:
-                if 'force' in params:
-                    query_params['force'] = params['force']
-                if 'noprune' in params:
-                    query_params['noprune'] = params['noprune']
-                    
-            response = server._make_api_request(endpoint, 'DELETE', params=query_params)
-            return response.status_code in [200, 201, 204]
-            
-        return False
+        except Exception as e:
+            return {'error': str(e)}
     
     def volume_action(self, server_id, environment_id, volume_name, action):
         """Perform action on a volume
