@@ -839,8 +839,9 @@ class PortainerServer(models.Model):
                     synced_ids.append(int(template_id))
             
             # Templates to remove - those not in synced_template_ids
+            # Handle template_id type conversion for comparison (some might be strings, some integers)
             templates_to_remove = all_templates.filtered(
-                lambda t: t.template_id not in synced_ids
+                lambda t: (int(t.template_id) not in synced_ids) if t.template_id else True
             )
             
             # Remove obsolete templates
@@ -1005,8 +1006,9 @@ class PortainerServer(models.Model):
                     synced_ids.append(int(template_id))
             
             # Templates to remove - those not in synced_template_ids
+            # Handle template_id type conversion for comparison (some might be strings, some integers)
             templates_to_remove = all_custom_templates.filtered(
-                lambda t: t.template_id not in synced_ids
+                lambda t: (int(t.template_id) not in synced_ids) if t.template_id else True
             )
             
             # Remove obsolete custom templates

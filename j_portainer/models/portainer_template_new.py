@@ -37,6 +37,8 @@ class PortainerTemplateNew(models.Model):
     note = fields.Text('Note')
     details = fields.Text('Details', help="Additional details about the template")
     is_custom = fields.Boolean('Custom Template', default=False)
+    skip_portainer_create = fields.Boolean('Skip Portainer Creation', default=False, 
+                                          help='Used during sync to skip creating the template in Portainer')
     
     # Custom template fields
     build_method = fields.Selection([
