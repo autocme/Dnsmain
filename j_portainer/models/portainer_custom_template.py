@@ -541,7 +541,36 @@ class PortainerCustomTemplate(models.Model):
                         
                         # Switch to POST request to create a new template
                         create_url = f"{server_url}/api/custom_templates"
-                        create_res = requests.post(url=create_url, headers=headers, data=data, files=files)
+                        
+                        # For creation after failed update, we need to use multipart form data format
+                        # but we may not have the original 'data' and 'files' from the PUT request context
+                        # so recreate the POST request data from the current record
+                        
+                        # Prepare form data for multipart/form-data request
+                        post_data = {
+                            'Title': self.title,
+                            'Description': self.description or f'Template for {self.title}',
+                            'Note': self.note or '',
+                            'Platform': str(platform_value),  # 1 for Linux, 2 for Windows
+                            'Type': str(type_value),  # 1 for container, 2 for stack, 3 for app template
+                            'Logo': self.logo or '',
+                        }
+                        
+                        # Add environment ID - this is critical for the API request
+                        if portainer_env_id:
+                            post_data['environmentId'] = str(portainer_env_id)
+                            
+                        # Add variables if available
+                        if self.environment_variables:
+                            post_data['Variables'] = self.environment_variables
+                            
+                        # Prepare files for upload
+                        post_files = {
+                            'File': ('template.yml', file_content.encode('utf-8'))
+                        }
+                        
+                        _logger.info(f"Sending fallback multipart form POST request to {create_url}")
+                        create_res = requests.post(url=create_url, headers=headers, data=post_data, files=post_files)
                         
                         if create_res.status_code in [200, 201, 202]:
                             try:
@@ -587,7 +616,8 @@ class PortainerCustomTemplate(models.Model):
                     # Remove original template_id to allow Portainer to generate a new one
                     create_data = template_data.copy()
                     
-                    # Try to create the template as a new one
+                    # Try to create the template as a new one - explicitly use POST for creation
+                    _logger.info(f"Switching to POST method for template creation after 404 error")
                     response = api.create_template(server_id, create_data)
                     
                     # If creation was successful, update the template_id in our database
@@ -627,10 +657,11 @@ class PortainerCustomTemplate(models.Model):
             env_endpoint = f"/custom_templates?environment={portainer_env_id}"
             
             if method == 'post':
+                # For creation, always use POST
                 response = api.direct_api_call(
                     server_id, 
                     endpoint=env_endpoint,
-                    method='POST',
+                    method='POST',  # Explicitly use POST for creation
                     data=template_data
                 )
             else:
