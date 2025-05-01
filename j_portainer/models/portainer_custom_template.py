@@ -44,11 +44,10 @@ class PortainerCustomTemplate(models.Model):
     
     # Custom Template specific fields
     build_method = fields.Selection([
-        ('string', 'String'),
-        ('url', 'URL'),
-        ('repository', 'Git Repository'),
-        ('file', 'File Upload')
-    ], string='Build Method', default='string')
+        ('editor', 'Web Editor'),
+        ('file', 'File Upload'),
+        ('repository', 'Git Repository')
+    ], string='Build Method', default='editor')
     
     # Repository details
     git_repository_url = fields.Char('Repository URL')
@@ -406,8 +405,8 @@ class PortainerCustomTemplate(models.Model):
         if template_data['type'] == 2:
             build_method = vals.get('build_method')
             
-            if build_method == 'string':
-                # String method (formerly 'editor')
+            if build_method == 'editor':
+                # Web editor method
                 template_data['composeFileContent'] = vals.get('compose_file', '')
                 
             elif build_method == 'repository':
@@ -505,8 +504,8 @@ class PortainerCustomTemplate(models.Model):
         
         # Handle build method for Stack templates (type 2)
         if template_data['type'] == 2:
-            if self.build_method == 'string':
-                # String method (formerly 'editor')
+            if self.build_method == 'editor':
+                # Web editor method
                 template_data['composeFileContent'] = self.compose_file or ''
                 
             elif self.build_method == 'repository':

@@ -1050,7 +1050,7 @@ class PortainerServer(models.Model):
                     template_data['git_skip_tls'] = get_field_value(template, ['skipTLSVerify', 'SkipTLSVerify'], False)
                     template_data['git_authentication'] = get_field_value(template, ['repositoryAuthentication', 'RepositoryAuthentication'], False)
                 elif get_field_value(template, ['composeFileContent', 'ComposeFileContent']):
-                    template_data['build_method'] = 'string'  # Use 'string' instead of 'editor' to match the field definition
+                    template_data['build_method'] = 'editor'  # Web editor method
                     template_data['compose_file'] = get_field_value(template, ['composeFileContent', 'ComposeFileContent'], '')
                 
                 if existing_template:
