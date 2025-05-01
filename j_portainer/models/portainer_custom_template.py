@@ -406,8 +406,8 @@ class PortainerCustomTemplate(models.Model):
         if template_data['type'] == 2:
             build_method = vals.get('build_method')
             
-            if build_method == 'editor':
-                # Web editor method
+            if build_method == 'string':
+                # String method (formerly 'editor')
                 template_data['composeFileContent'] = vals.get('compose_file', '')
                 
             elif build_method == 'repository':
@@ -505,8 +505,8 @@ class PortainerCustomTemplate(models.Model):
         
         # Handle build method for Stack templates (type 2)
         if template_data['type'] == 2:
-            if self.build_method == 'editor':
-                # Web editor method
+            if self.build_method == 'string':
+                # String method (formerly 'editor')
                 template_data['composeFileContent'] = self.compose_file or ''
                 
             elif self.build_method == 'repository':
