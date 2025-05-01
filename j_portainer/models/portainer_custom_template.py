@@ -645,8 +645,8 @@ class PortainerCustomTemplate(models.Model):
             build_method = vals.get('build_method')
             
             if build_method == 'editor':
-                # Web editor method
-                template_data['composeFileContent'] = vals.get('compose_file', '')
+                # Web editor method - use fileContent for Portainer API v2
+                template_data['fileContent'] = vals.get('compose_file', '')
                 
             elif build_method == 'repository':
                 # Git repository method
