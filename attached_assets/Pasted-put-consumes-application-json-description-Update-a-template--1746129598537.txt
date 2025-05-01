@@ -1,0 +1,175 @@
+put:
+      consumes:
+      - application/json
+      description: |-
+        Update a template.
+        **Access policy**: authenticated
+      operationId: CustomTemplateUpdate
+      parameters:
+      - description: Template identifier
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Template details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/customtemplates.customTemplateUpdatePayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/portainer.CustomTemplate'
+        "400":
+          description: Invalid request
+        "403":
+          description: Permission denied to access template
+        "404":
+          description: Template not found
+        "500":
+          description: Server error
+      security:
+      - ApiKeyAuth: []
+      - jwt: []
+      summary: Update a template
+      tags:
+      - custom_templates
+  /custom_templates/{id}/file:
+    get:
+      description: |-
+        Retrieve the content of the Stack file for the specified custom template
+        **Access policy**: authenticated
+      operationId: CustomTemplateFile
+      parameters:
+      - description: Template identifier
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/customtemplates.fileResponse'
+        "400":
+          description: Invalid request
+        "404":
+          description: Custom template not found
+        "500":
+          description: Server error
+      security:
+      - ApiKeyAuth: []
+      - jwt: []
+      summary: Get Template stack file content.
+      tags:
+      - custom_templates
+  /custom_templates/{id}/git_fetch:
+    put:
+      description: |-
+        Retrieve details about a template created from git repository method.
+        **Access policy**: authenticated
+      operationId: CustomTemplateGitFetch
+      parameters:
+      - description: Template identifier
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/customtemplates.fileResponse'
+        "400":
+          description: Invalid request
+        "404":
+          description: Custom template not found
+        "500":
+          description: Server error
+      security:
+      - ApiKeyAuth: []
+      - jwt: []
+      summary: Fetch the latest config file content based on custom template's git
+        repository configuration
+      tags:
+      - custom_templates
+  /custom_templates/create/file:
+    post:
+      consumes:
+      - multipart/form-data
+      description: |-
+        Create a custom template.
+        **Access policy**: authenticated
+      operationId: CustomTemplateCreateFile
+      parameters:
+      - description: Title of the template
+        in: formData
+        name: Title
+        required: true
+        type: string
+      - description: Description of the template
+        in: formData
+        name: Description
+        required: true
+        type: string
+      - description: A note that will be displayed in the UI. Supports HTML content
+        in: formData
+        name: Note
+        required: true
+        type: string
+      - description: Platform associated to the template (1 - 'linux', 2 - 'windows')
+        enum:
+        - 1
+        - 2
+        in: formData
+        name: Platform
+        required: true
+        type: integer
+      - description: Type of created stack (1 - swarm, 2 - compose, 3 - kubernetes)
+        enum:
+        - 1
+        - 2
+        - 3
+        in: formData
+        name: Type
+        required: true
+        type: integer
+      - description: File
+        in: formData
+        name: File
+        required: true
+        type: file
+      - description: URL of the template's logo
+        in: formData
+        name: Logo
+        type: string
+      - description: A json array of variables definitions
+        in: formData
+        name: Variables
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/portainer.CustomTemplate'
+        "400":
+          description: Invalid request
+        "500":
+          description: Server error
+      security:
+      - ApiKeyAuth: []
+      - jwt: []
+      summary: Create a custom template
+      tags:
+      - custom_templates
+  /custom_templates/create/repository:
