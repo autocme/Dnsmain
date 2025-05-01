@@ -356,11 +356,33 @@ class PortainerCustomTemplate(models.Model):
                 )
             else:
                 env_endpoint = f"/custom_templates/{template_id}?environment={environment_id}"
+                # For PUT requests, ensure we're providing either fileContent or repository data
+                update_data = template_data.copy()
+                
+                # Add fileContent for editor templates (composeFileContent is renamed to fileContent for API)
+                if self.build_method == 'editor' and self.compose_file:
+                    update_data['fileContent'] = self.compose_file
+                    # Delete composeFileContent if present to avoid confusion
+                    if 'composeFileContent' in update_data:
+                        del update_data['composeFileContent']
+                
+                # For Git repository templates, ensure repository info is present
+                elif self.build_method == 'repository' and self.git_repository_url:
+                    if 'repository' not in update_data:
+                        update_data['repository'] = {
+                            'url': self.git_repository_url,
+                            'stackfile': self.git_compose_path or 'docker-compose.yml'
+                        }
+                        if self.git_repository_reference:
+                            update_data['repository']['reference'] = self.git_repository_reference
+                
+                _logger.info(f"Updating template with data: {json.dumps(update_data, indent=2)}")
+                
                 response = api.direct_api_call(
                     server_id, 
                     endpoint=env_endpoint,
                     method='PUT',
-                    data=template_data
+                    data=update_data
                 )
                 
             if response and ('Id' in response or 'id' in response or 'success' in response):
@@ -734,7 +756,8 @@ class PortainerCustomTemplate(models.Model):
                 # Web editor method
                 compose_content = self.compose_file or ''
                 _logger.info(f"Using compose file content for template '{self.title}' (ID: {self.template_id}). Content length: {len(compose_content)} chars")
-                template_data['composeFileContent'] = compose_content
+                # Use fileContent for Portainer API v2 (not composeFileContent)
+                template_data['fileContent'] = compose_content
                 
             elif self.build_method == 'repository':
                 # Git repository method

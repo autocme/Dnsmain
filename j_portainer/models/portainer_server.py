@@ -198,7 +198,7 @@ class PortainerServer(models.Model):
         # Format header value for X-API-Key authentication
         return f"{self.api_key}"
         
-    def _make_api_request(self, endpoint, method='GET', data=None, params=None, headers=None):
+    def _make_api_request(self, endpoint, method='GET', data=None, params=None, headers=None, use_multipart=False):
         """Make a request to the Portainer API
         
         Args:
@@ -207,6 +207,7 @@ class PortainerServer(models.Model):
             data (dict, optional): Request payload for POST/PUT
             params (dict, optional): URL parameters
             headers (dict, optional): Additional headers to include with the request
+            use_multipart (bool, optional): Whether to use multipart form data instead of JSON
             
         Returns:
             requests.Response: API response
@@ -216,8 +217,11 @@ class PortainerServer(models.Model):
         # Default headers
         request_headers = {
             'X-API-Key': self._get_api_key_header(),
-            'Content-Type': 'application/json'
         }
+        
+        # Set Content-Type if not using multipart (for multipart it's set automatically)
+        if not use_multipart and 'Content-Type' not in request_headers:
+            request_headers['Content-Type'] = 'application/json'
         
         # Update with any additional headers
         if headers:
@@ -230,12 +234,22 @@ class PortainerServer(models.Model):
                 response = requests.get(url, headers=request_headers, params=params, 
                                       verify=self.verify_ssl, timeout=15)
             elif method == 'POST':
-                _logger.debug(f"POST request data: {json.dumps(data, indent=2) if data else None}")
-                response = requests.post(url, headers=request_headers, json=data,
-                                       verify=self.verify_ssl, timeout=15)
+                if use_multipart:
+                    _logger.debug(f"POST request with multipart data")
+                    response = requests.post(url, headers=request_headers, data=data,
+                                           verify=self.verify_ssl, timeout=30)
+                else:
+                    _logger.debug(f"POST request data: {json.dumps(data, indent=2) if data else None}")
+                    response = requests.post(url, headers=request_headers, json=data,
+                                           verify=self.verify_ssl, timeout=15)
             elif method == 'PUT':
-                response = requests.put(url, headers=request_headers, json=data,
-                                      verify=self.verify_ssl, timeout=15)
+                if use_multipart:
+                    _logger.debug(f"PUT request with multipart data")
+                    response = requests.put(url, headers=request_headers, data=data,
+                                          verify=self.verify_ssl, timeout=30)
+                else:
+                    response = requests.put(url, headers=request_headers, json=data,
+                                          verify=self.verify_ssl, timeout=15)
             elif method == 'DELETE':
                 response = requests.delete(url, headers=request_headers, params=params,
                                         verify=self.verify_ssl, timeout=15)
