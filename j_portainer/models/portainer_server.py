@@ -1050,8 +1050,10 @@ class PortainerServer(models.Model):
                     template_data['git_skip_tls'] = get_field_value(template, ['skipTLSVerify', 'SkipTLSVerify'], False)
                     template_data['git_authentication'] = get_field_value(template, ['repositoryAuthentication', 'RepositoryAuthentication'], False)
                 elif get_field_value(template, ['composeFileContent', 'ComposeFileContent']):
+                    compose_content = get_field_value(template, ['composeFileContent', 'ComposeFileContent'], '')
+                    _logger.info(f"Found compose file content for template '{template_data['title']}' (ID: {template_id}). Content length: {len(compose_content)} chars")
                     template_data['build_method'] = 'editor'  # Web editor method
-                    template_data['compose_file'] = get_field_value(template, ['composeFileContent', 'ComposeFileContent'], '')
+                    template_data['compose_file'] = compose_content
                 
                 if existing_template:
                     # Update existing custom template
