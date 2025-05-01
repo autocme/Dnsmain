@@ -163,7 +163,11 @@ class PortainerServer(models.Model):
         Returns:
             str: API key header value
         """
-        return self.api_key
+        if not self.api_key:
+            return None
+            
+        # Format header value for X-API-Key authentication
+        return f"{self.api_key}"
         
     def _make_api_request(self, endpoint, method='GET', data=None, params=None, headers=None):
         """Make a request to the Portainer API
@@ -786,8 +790,7 @@ class PortainerServer(models.Model):
                 if template_id:
                     existing_template = self.env['j_portainer.template'].search([
                         ('server_id', '=', self.id),
-                        ('template_id', '=', template_id),
-                        ('is_custom', '=', False)
+                        ('template_id', '=', template_id)
                     ], limit=1)
                 
                 # Prepare template data
@@ -940,10 +943,9 @@ class PortainerServer(models.Model):
                 # Check if this custom template already exists in Odoo
                 existing_template = False
                 if template_id:
-                    existing_template = self.env['j_portainer.template'].search([
+                    existing_template = self.env['j_portainer.customtemplate'].search([
                         ('server_id', '=', self.id),
-                        ('template_id', '=', template_id),
-                        ('is_custom', '=', True)
+                        ('template_id', '=', template_id)
                     ], limit=1)
                 
                 # Prepare custom template data
@@ -985,7 +987,7 @@ class PortainerServer(models.Model):
                 else:
                     # Create new custom template - skip Portainer creation since we're just syncing
                     template_data['skip_portainer_create'] = True
-                    self.env['j_portainer.template'].create(template_data)
+                    self.env['j_portainer.customtemplate'].create(template_data)
                     created_count += 1
                 
                 if isinstance(template_id, (int, str)) and str(template_id).isdigit():
@@ -994,9 +996,8 @@ class PortainerServer(models.Model):
             
             # Clean up custom templates that no longer exist in Portainer
             # Get all custom templates for this server
-            all_custom_templates = self.env['j_portainer.template'].search([
-                ('server_id', '=', self.id),
-                ('is_custom', '=', True)
+            all_custom_templates = self.env['j_portainer.customtemplate'].search([
+                ('server_id', '=', self.id)
             ])
             
             # Make sure all IDs are integers for proper comparison

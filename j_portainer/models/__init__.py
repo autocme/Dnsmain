@@ -7,10 +7,11 @@ from . import portainer_container
 from . import portainer_image
 from . import portainer_volume
 from . import portainer_network
-# Temporarily comment out the template model that's causing issues
-# from . import portainer_template
+from . import portainer_template
+from . import portainer_custom_template
 from . import portainer_template_category
 from . import portainer_git_credentials
-from . import portainer_template_new
+# Replaced with two separate models:
+# from . import portainer_template_new
 from . import portainer_stack
 from . import portainer_environment

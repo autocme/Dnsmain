@@ -288,6 +288,66 @@ class PortainerAPI(models.AbstractModel):
             return response.status_code in [200, 201, 204]
             
         return False
+            
+    def deploy_template(self, server_id, template_id, environment_id, params=None, is_custom=False):
+        """Deploy a template (standard or custom)
+        
+        Args:
+            server_id (int): ID of the Portainer server
+            template_id (int or str): Template ID
+            environment_id (int): Environment ID
+            params (dict, optional): Additional parameters for deployment
+            is_custom (bool): Whether this is a custom template (True) or standard template (False)
+            
+        Returns:
+            dict: Deployment result or False if failed
+        """
+        server = self.env['j_portainer.server'].browse(server_id)
+        if not server:
+            _logger.error("Server not found")
+            return False
+            
+        if not environment_id:
+            _logger.error("Environment ID is required")
+            return False
+            
+        # Prepare the request
+        if is_custom:
+            # Custom template deployment
+            endpoint = f'/api/templates/custom/{template_id}'
+            method = 'POST'
+        else:
+            # Standard template deployment
+            endpoint = f'/api/templates/{template_id}'
+            method = 'POST'
+            
+        # Prepare the request data
+        data = {
+            'endpointId': environment_id
+        }
+        
+        # Add additional parameters
+        if params:
+            for key, value in params.items():
+                data[key] = value
+                
+        _logger.info(f"Deploying {'custom' if is_custom else 'standard'} template with data: {json.dumps(data, indent=2)}")
+        
+        # Make the API request
+        try:
+            response = server._make_api_request(endpoint, method, data=data)
+            
+            if response.status_code in [200, 201, 204]:
+                try:
+                    return response.json()
+                except:
+                    return {'success': True, 'message': 'Deployment successful (no response data)'}
+            else:
+                _logger.error(f"Deployment failed: {response.status_code} - {response.text}")
+                return False
+        except Exception as e:
+            _logger.error(f"Error deploying template: {str(e)}")
+            return False
     
     def create_template(self, server_id, template_data):
         """Create a custom template in Portainer
