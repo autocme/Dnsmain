@@ -32,23 +32,51 @@ class PortainerServer(models.Model):
             date_value: Date value from API response
             
         Returns:
-            datetime object or None if value cannot be parsed
+            naive datetime object or None if value cannot be parsed
+            
+        Note:
+            Returns naive datetime objects (without timezone info) as required by Odoo
         """
         if not date_value:
             return None
-            
+        
+        # First try with fields.Datetime which is safer for Odoo
+        if isinstance(date_value, str):
+            try:
+                # Simple format without timezone for Datetime fields
+                if 'T' in date_value:
+                    # Format: 2025-03-04T22:12:54.389453136Z -> 2025-03-04 22:12:54
+                    simple_date = date_value.split('.')[0].replace('T', ' ')
+                    return fields.Datetime.from_string(simple_date)
+            except Exception:
+                pass
+        
+        # Fall back to more complex parsing if needed
         try:
             if isinstance(date_value, str):
-                # Handle ISO format string
-                return datetime.fromisoformat(date_value.replace('Z', '+00:00'))
+                # Handle ISO format string with timezone
+                dt_with_tz = datetime.fromisoformat(date_value.replace('Z', '+00:00'))
+                # Return naive datetime (no timezone info) for Odoo compatibility
+                return dt_with_tz.replace(tzinfo=None)
             elif isinstance(date_value, int):
-                # Handle timestamp
+                # Handle timestamp (always returns naive datetime)
                 return datetime.fromtimestamp(date_value)
             else:
                 _logger.warning(f"Unsupported date format: {date_value} ({type(date_value)})")
                 return None
         except Exception as e:
             _logger.warning(f"Error parsing date value {date_value}: {str(e)}")
+            
+            # Last attempt for ISO-format with Z timezone
+            if isinstance(date_value, str) and 'T' in date_value and date_value.endswith('Z'):
+                try:
+                    # Just extract YYYY-MM-DD HH:MM:SS without timezone or microseconds
+                    date_parts = date_value.replace('Z', '').split('.')
+                    simple_str = date_parts[0].replace('T', ' ')
+                    return datetime.strptime(simple_str, '%Y-%m-%d %H:%M:%S')
+                except Exception as simple_error:
+                    _logger.warning(f"Simple date parsing also failed: {str(simple_error)}")
+            
             return None
     
     name = fields.Char('Name', required=True, tracking=True)
