@@ -67,7 +67,12 @@ class PortainerCustomTemplate(models.Model):
     git_credential_name = fields.Char('Credential Name')
     
     # Editor method fields
-    compose_file = fields.Text('Compose File', help="Docker Compose file content when using the editor build method")
+    fileContent = fields.Text('File Content', help="Content of the template file (Docker Compose or Stack file)")
+    compose_file = fields.Text('Compose File', 
+                              help="Docker Compose file content when using the editor build method (deprecated, use fileContent)",
+                              compute='_compute_compose_file',
+                              inverse='_inverse_compose_file',
+                              store=True)
     
     # Additional Info
     app_template_variables = fields.Text('App Template Variables', help="Variables for app template deployments")
@@ -197,6 +202,17 @@ class PortainerCustomTemplate(models.Model):
             
             template.get_formatted_volumes = result
     
+    @api.depends('fileContent')
+    def _compute_compose_file(self):
+        """Copy content from fileContent to compose_file field for backward compatibility"""
+        for template in self:
+            template.compose_file = template.fileContent
+            
+    def _inverse_compose_file(self):
+        """Copy content from compose_file to fileContent field for backward compatibility"""
+        for template in self:
+            template.fileContent = template.compose_file
+            
     @api.depends('ports')
     def _compute_formatted_ports(self):
         """Format ports for display"""
@@ -430,9 +446,12 @@ class PortainerCustomTemplate(models.Model):
                 # For PUT requests, ensure we're providing either fileContent or repository data
                 update_data = template_data.copy()
                 
-                # Add fileContent for editor templates (composeFileContent is renamed to fileContent for API)
-                if self.build_method == 'editor' and self.compose_file:
-                    update_data['fileContent'] = self.compose_file
+                # Add fileContent for editor templates
+                if self.build_method == 'editor':
+                    # Prefer fileContent field, fall back to compose_file for backward compatibility
+                    content = self.fileContent or self.compose_file
+                    if content:
+                        update_data['fileContent'] = content
                     # Delete composeFileContent if present to avoid confusion
                     if 'composeFileContent' in update_data:
                         del update_data['composeFileContent']
@@ -464,10 +483,14 @@ class PortainerCustomTemplate(models.Model):
             _logger.warning(f"Environment API method failed: {str(e)}")
             
         # Method 2: File import method for stack/compose templates
-        if method == 'post' and ((vals and vals.get('build_method') == 'editor' and vals.get('compose_file')) 
-                                or (self.build_method == 'editor' and self.compose_file)):
+        if method == 'post' and ((vals and vals.get('build_method') == 'editor' and (vals.get('fileContent') or vals.get('compose_file'))) 
+                                or (self.build_method == 'editor' and (self.fileContent or self.compose_file))):
             try:
-                compose_file = vals.get('compose_file') if vals else self.compose_file
+                # Prefer fileContent field, fall back to compose_file for backward compatibility
+                if vals:
+                    compose_file = vals.get('fileContent') or vals.get('compose_file')
+                else:
+                    compose_file = self.fileContent or self.compose_file
                 
                 # Create file template structure
                 file_template = {
@@ -732,10 +755,11 @@ class PortainerCustomTemplate(models.Model):
         # Include fileContent for all template types if using editor method
         if build_method == 'editor':
             # Web editor method - always add fileContent for Portainer API v2
-            compose_content = vals.get('compose_file', '')
+            # Prefer fileContent field, fall back to compose_file for backward compatibility
+            compose_content = vals.get('fileContent', '') or vals.get('compose_file', '')
             if compose_content:
                 template_data['fileContent'] = compose_content
-                _logger.info(f"Including compose file content in template data. Length: {len(compose_content)} chars")
+                _logger.info(f"Including file content in template data. Length: {len(compose_content)} chars")
         
         # Repository method specific settings
         if build_method == 'repository':
@@ -852,9 +876,10 @@ class PortainerCustomTemplate(models.Model):
         # Include fileContent for all template types if using editor method
         if self.build_method == 'editor':
             # Web editor method - always add fileContent for Portainer API v2
-            compose_content = self.compose_file or ''
+            # Prefer fileContent field, fall back to compose_file for backward compatibility
+            compose_content = self.fileContent or self.compose_file or ''
             if compose_content:
-                _logger.info(f"Using compose file content for template '{self.title}' (ID: {self.template_id}). Content length: {len(compose_content)} chars")
+                _logger.info(f"Using file content for template '{self.title}' (ID: {self.template_id}). Content length: {len(compose_content)} chars")
                 template_data['fileContent'] = compose_content
         
         # Repository method specific settings
