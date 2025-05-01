@@ -1,0 +1,58 @@
+Adding a new environment
+On a fresh install, Portainer has no environments configured. You will first need to add an environment for Portainer to manage.
+
+You can add an environment to manage via the Portainer API, or via the web interface both during the initial setup and after setup is complete.
+
+Execute Docker queries against a specific environment
+The Portainer HTTP API endpoint acts as a reverse-proxy to the Docker HTTP API and can be used to execute any of the Docker HTTP API requests:
+
+/api/endpoints/<ENVIRONMENT_ID>/docker
+
+Read Docker's API documentation to learn how to query the Docker Engine.
+
+List all containers
+This call lists all of the containers available in a specific environment:
+
+Copy
+http GET <portainer url>/api/endpoints/1/docker/containers/json \
+    X-API-Key:your_access-token \
+    all==true
+The response is identical to that returned by the ContainerList operation of the Docker API. See Docker's documentation about this operation.
+
+Create a container
+You can create a container in a specific environment using the Portainer HTTP API as a gateway. The following query will create a new Docker container inside the environment using ID 1. The container will be named web01 and will use the nginx:latest Docker image. It will publish container port 80 on port 8080 on the host.
+
+Copy
+http POST <portainer url>/api/endpoints/1/docker/containers/create \
+    X-API-Key:your_access-token \
+    name=="web01" Image="nginx:latest" \
+    ExposedPorts:='{ "80/tcp": {} }' \
+    HostConfig:='{ "PortBindings": { "80/tcp": [{ "HostPort": "8080" }] } }'
+The response is identical to that returned by the ContainerCreate operation of the Docker API. See Docker's documentation about this operation.
+
+Here is an example response:
+
+Copy
+{
+    "Id": "5fc2a93d7a3d426a1c3937436697fc5e5343cc375226f6110283200bede3b107",
+    "Warnings": null
+}
+You will need the container ID in order to execute actions against that container.
+
+Start a container
+Using the ID you retrieved previously, you can start your new container using this endpoint:
+
+/api/endpoints/<ENVIRONMENT_ID>/docker/containers/<CONTAINER_ID>/start
+
+Copy
+http POST <portainer url>/api/endpoints/1/docker/containers/5fc2a93d7a3d426a1c3937436697fc5e5343cc375226f6110283200bede3b107/start \
+    X-API-Key:your_access-token
+The response is identical to that returned by the ContainerStart operation of the Docker API. See Docker's documentation about this operation.
+
+Delete a container
+You can create a container using the endpoint /api/endpoints/<ENVIRONMENT_ID>/docker/containers/:
+
+Copy
+http DELETE <portainer url>/api/endpoints/1/docker/containers/5fc2a93d7a3d426a1c3937436697fc5e5343cc375226f6110283200bede3b107 \
+    X-API-Key:your_access-token \
+    force==true
