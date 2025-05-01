@@ -415,8 +415,8 @@ class PortainerCustomTemplate(models.Model):
                     
                     # Use different endpoints for create vs update
                     if method == 'post':
-                        # For new template creation with file, use the direct endpoint
-                        url = f"{server_url}/api/custom_templates"
+                        # For new template creation with file, use the create/file endpoint
+                        url = f"{server_url}/api/custom_templates/create/file"
                     else:
                         # For updates, include template ID in the URL
                         url = f"{server_url}/api/custom_templates/{template_id}"
@@ -540,7 +540,7 @@ class PortainerCustomTemplate(models.Model):
                         _logger.warning(f"Template with ID {template_id} not found in Portainer, attempting to create a new one")
                         
                         # Switch to POST request to create a new template
-                        create_url = f"{server_url}/api/custom_templates"
+                        create_url = f"{server_url}/api/custom_templates/create/file"
                         
                         # For creation after failed update, we need to use multipart form data format
                         # but we may not have the original 'data' and 'files' from the PUT request context
