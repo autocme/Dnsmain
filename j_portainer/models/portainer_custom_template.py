@@ -323,6 +323,24 @@ class PortainerCustomTemplate(models.Model):
         else:
             server_id = self.server_id.id
             environment_id = self.environment_id.id if self.environment_id else None
+            
+            # Map the environment ID correctly if using a direct Portainer environment ID
+            # This fixes the "foreign key constraint" error in the template sync
+            if isinstance(environment_id, (int, str)) and not self.env['j_portainer.environment'].browse(environment_id).exists():
+                # Try to find a matching environment by Portainer environment_id
+                portainer_env_id = environment_id
+                matching_env = self.env['j_portainer.environment'].search([
+                    ('server_id', '=', server_id), 
+                    ('environment_id', '=', portainer_env_id)
+                ], limit=1)
+                
+                if matching_env:
+                    environment_id = matching_env.id
+                    _logger.info(f"Mapped Portainer environment ID {portainer_env_id} to Odoo environment record ID {environment_id}")
+                elif self.server_id.environment_ids:
+                    # Fallback to first environment for this server
+                    environment_id = self.server_id.environment_ids[0].id
+                    _logger.warning(f"Using first environment {environment_id} as fallback for Portainer environment ID {portainer_env_id}")
             template_data = self._prepare_template_data_from_record()
             
         if not server_id or not environment_id:
@@ -381,8 +399,24 @@ class PortainerCustomTemplate(models.Model):
             
         # Method 1B: Direct environment API endpoint for custom templates
         try:
+            # We need to get the Portainer environment ID, not the Odoo record ID
+            # Find the environment record to get its environment_id field
+            env_record = self.env['j_portainer.environment'].browse(environment_id)
+            portainer_env_id = env_record.environment_id if env_record else None
+            
+            if not portainer_env_id:
+                # Fallback to using first environment's ID
+                server = self.env['j_portainer.server'].browse(server_id)
+                if server and server.environment_ids:
+                    portainer_env_id = server.environment_ids[0].environment_id
+            
+            if not portainer_env_id:
+                raise UserError(_("No valid environment found for custom template"))
+                
+            _logger.info(f"Using Portainer environment ID {portainer_env_id} for API call")
+            
             # Try direct environment endpoint for custom templates
-            env_endpoint = f"/custom_templates?environment={environment_id}"
+            env_endpoint = f"/custom_templates?environment={portainer_env_id}"
             
             if method == 'post':
                 response = api.direct_api_call(
@@ -392,7 +426,7 @@ class PortainerCustomTemplate(models.Model):
                     data=template_data
                 )
             else:
-                env_endpoint = f"/custom_templates/{template_id}?environment={environment_id}"
+                env_endpoint = f"/custom_templates/{template_id}?environment={portainer_env_id}"
                 # For PUT requests, ensure we're providing either fileContent or repository data
                 update_data = template_data.copy()
                 
@@ -467,7 +501,7 @@ class PortainerCustomTemplate(models.Model):
                     multipart_data = {
                         'file': json.dumps(file_template),
                         'type': template_data.get('type', 1),
-                        'environment': environment_id
+                        'environment': portainer_env_id
                     }
                     
                     env_file_response = api.direct_api_call(

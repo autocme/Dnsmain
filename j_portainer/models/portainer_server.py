@@ -1040,16 +1040,35 @@ class PortainerServer(models.Model):
                 platform_value = get_field_value(template, ['Platform', 'platform'])
                 
                 # Get environment ID from template or resource control
-                environment_id_value = get_field_value(template, ['EndpointId', 'endpointId'], None)
+                portainer_environment_id = get_field_value(template, ['EndpointId', 'endpointId'], None)
                 
                 # Try to get environment ID from ResourceControl if available
                 resource_control = get_field_value(template, ['ResourceControl', 'resourceControl'], None)
-                if not environment_id_value and resource_control and isinstance(resource_control, dict):
-                    environment_id_value = get_field_value(resource_control, ['EndpointId', 'endpointId'], None)
+                if not portainer_environment_id and resource_control and isinstance(resource_control, dict):
+                    portainer_environment_id = get_field_value(resource_control, ['EndpointId', 'endpointId'], None)
+                
+                # Ensure environment_id is numeric for comparison
+                if isinstance(portainer_environment_id, str) and portainer_environment_id.isdigit():
+                    portainer_environment_id = int(portainer_environment_id)
+                    
+                # Map the Portainer environment ID to Odoo environment record ID
+                environment_id_value = None
+                if portainer_environment_id:
+                    # Log all environments for debugging
+                    env_data = [(e.id, e.environment_id, e.name) for e in self.environment_ids]
+                    _logger.info(f"Looking for environment ID {portainer_environment_id} in available environments: {env_data}")
+                    
+                    # Find the matching environment record in Odoo based on Portainer's environment_id
+                    matching_env = self.environment_ids.filtered(lambda e: str(e.environment_id) == str(portainer_environment_id))
+                    if matching_env:
+                        environment_id_value = matching_env[0].id
+                        _logger.info(f"Mapped Portainer environment ID {portainer_environment_id} to Odoo environment record ID {environment_id_value}")
+                    else:
+                        _logger.warning(f"No matching environment found for Portainer ID {portainer_environment_id}")
                 
                 # If still no environment ID found, use first available environment as fallback
                 if not environment_id_value and self.environment_ids:
-                    environment_id_value = self.environment_ids[0].environment_id
+                    environment_id_value = self.environment_ids[0].id
                     _logger.warning(f"No environment ID found in template {template_id}, using first environment as fallback: {environment_id_value}")
                 
                 # Prepare custom template data with case-insensitive field extraction
@@ -1101,8 +1120,23 @@ class PortainerServer(models.Model):
                 else:
                     # Create new custom template - skip Portainer creation since we're just syncing
                     template_data['skip_portainer_create'] = True
-                    self.env['j_portainer.customtemplate'].create(template_data)
-                    created_count += 1
+                    
+                    # Double check that environment_id is set and is a valid ID
+                    if not template_data.get('environment_id'):
+                        # Find the first valid environment as fallback
+                        if self.environment_ids:
+                            template_data['environment_id'] = self.environment_ids[0].id
+                            _logger.warning(f"No environment ID found for template {template_id}, using first environment {self.environment_ids[0].id} as fallback")
+                        else:
+                            _logger.error(f"Cannot create custom template {template_id}: No environment found")
+                            continue
+                            
+                    try:
+                        self.env['j_portainer.customtemplate'].create(template_data)
+                        created_count += 1
+                    except Exception as e:
+                        _logger.error(f"Error creating custom template: {str(e)}")
+                        # Continue with next template instead of failing the entire sync
                 
                 if isinstance(template_id, (int, str)) and str(template_id).isdigit():
                     synced_template_ids.append(int(template_id))
