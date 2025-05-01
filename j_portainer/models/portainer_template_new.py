@@ -42,9 +42,10 @@ class PortainerTemplateNew(models.Model):
     
     # Custom template fields
     build_method = fields.Selection([
-        ('string', 'String'),
+        ('editor', 'Web Editor'),
+        ('file', 'File Upload'),
         ('repository', 'Git Repository')
-    ], string='Build Method', default='string')
+    ], string='Build Method', default='editor')
     compose_file = fields.Text('Compose File', help="Docker Compose file content for the template")
     
     # Git repository fields
@@ -344,8 +345,8 @@ class PortainerTemplateNew(models.Model):
         
         # Handle build method for Stack templates (type 2)
         if template_data['type'] == 2:
-            if vals.get('build_method') == 'string':
-                # String method (formerly 'editor')
+            if vals.get('build_method') == 'editor':
+                # Web editor method
                 template_data['composeFileContent'] = vals.get('compose_file', '')
                 
                 # Ensure composeFileContent is not empty
