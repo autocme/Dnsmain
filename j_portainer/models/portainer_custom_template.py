@@ -577,12 +577,12 @@ class PortainerCustomTemplate(models.Model):
         return result
     
     def _prepare_template_data(self, vals):
-        """Prepare template data for Portainer API from vals dictionary"""
+        """Prepare template data for Portainer API v2 from vals dictionary"""
         # Set required fields with fallbacks if empty
         title = vals.get('title') or 'Custom Template'
         description = vals.get('description') or f'Template for {title}'
         
-        # Convert platform string to integer
+        # Convert platform string to integer for Portainer v2 API
         platform_value = vals.get('platform', 'linux')
         platform_int = 1  # Default to Linux (1)
         if platform_value:
@@ -592,53 +592,68 @@ class PortainerCustomTemplate(models.Model):
             }
             platform_int = platform_map.get(platform_value.lower(), 1)
             
+        # Prepare primary fields based on v2 API requirements
         template_data = {
             'type': int(vals.get('template_type', 1)),
             'title': title,
             'description': description,
             'note': vals.get('note', ''),
             'platform': platform_int,
-            'categories': vals.get('categories', '').split(',') if vals.get('categories') else []
+            'logo': vals.get('logo', '')
         }
         
-        # Clean up empty categories
-        template_data['categories'] = [c.strip() for c in template_data['categories'] if c.strip()]
-        
+        # Handle categories - ensure proper format for v2 API
+        category_list = []
+        if vals.get('categories'):
+            if isinstance(vals.get('categories'), str):
+                # Convert comma-separated string to list
+                category_list = [c.strip() for c in vals.get('categories').split(',') if c.strip()]
+            elif isinstance(vals.get('categories'), list):
+                category_list = vals.get('categories')
+                
         # Ensure at least one category exists
-        if not template_data['categories']:
-            template_data['categories'] = ['Custom']
+        if not category_list:
+            category_list = ['Custom']
             
-        # Handle image for container templates (type 1)
+        template_data['categories'] = category_list
+        
+        # Handle environment variables if specified - ensure proper format for v2 API
+        if vals.get('environment_variables'):
+            try:
+                env_vars = json.loads(vals.get('environment_variables')) if isinstance(vals.get('environment_variables'), str) else vals.get('environment_variables')
+                if isinstance(env_vars, list):
+                    # Validate each environment variable has required fields
+                    valid_env_vars = []
+                    for env in env_vars:
+                        if isinstance(env, dict) and 'name' in env:
+                            valid_env_vars.append(env)
+                    template_data['env'] = valid_env_vars
+            except Exception as e:
+                _logger.warning(f"Error parsing environment variables: {str(e)}")
+        
+        # Handle volumes if specified
+        if vals.get('volumes'):
+            try:
+                volumes = json.loads(vals.get('volumes')) if isinstance(vals.get('volumes'), str) else vals.get('volumes')
+                template_data['volumes'] = volumes
+            except Exception as e:
+                _logger.warning(f"Error parsing volumes: {str(e)}")
+                
+        # Handle ports if specified
+        if vals.get('ports'):
+            try:
+                ports = json.loads(vals.get('ports')) if isinstance(vals.get('ports'), str) else vals.get('ports')
+                template_data['ports'] = ports
+            except Exception as e:
+                _logger.warning(f"Error parsing ports: {str(e)}")
+        
+        # Add image for container templates (type 1)
         if template_data['type'] == 1 and vals.get('image'):
             template_data['image'] = vals.get('image')
             
             # Add registry if specified
             if vals.get('registry'):
                 template_data['registry'] = vals.get('registry')
-                
-            # Add environment variables if specified
-            if vals.get('environment_variables'):
-                try:
-                    env_vars = json.loads(vals.get('environment_variables'))
-                    template_data['env'] = env_vars
-                except Exception as e:
-                    _logger.warning(f"Error parsing environment variables: {str(e)}")
-                    
-            # Add volumes if specified
-            if vals.get('volumes'):
-                try:
-                    volumes = json.loads(vals.get('volumes'))
-                    template_data['volumes'] = volumes
-                except Exception as e:
-                    _logger.warning(f"Error parsing volumes: {str(e)}")
-                    
-            # Add ports if specified
-            if vals.get('ports'):
-                try:
-                    ports = json.loads(vals.get('ports'))
-                    template_data['ports'] = ports
-                except Exception as e:
-                    _logger.warning(f"Error parsing ports: {str(e)}")
         
         # Handle build method for Stack templates (type 2)
         if template_data['type'] == 2:
@@ -655,9 +670,9 @@ class PortainerCustomTemplate(models.Model):
                     'stackfile': vals.get('git_compose_path', 'docker-compose.yml')
                 }
                 
-                # Add reference if specified
+                # Add reference if specified - use referenceName for v2 API
                 if vals.get('git_repository_reference'):
-                    repository_data['reference'] = vals.get('git_repository_reference')
+                    repository_data['referenceName'] = vals.get('git_repository_reference')
                     
                 template_data['repository'] = repository_data
                 
@@ -679,10 +694,10 @@ class PortainerCustomTemplate(models.Model):
         return template_data
         
     def _prepare_template_data_from_record(self):
-        """Prepare template data for Portainer API from current record"""
+        """Prepare template data for Portainer API v2 from current record"""
         self.ensure_one()
         
-        # Convert platform string to integer
+        # Convert platform string to integer for Portainer v2 API
         platform_int = 1  # Default to Linux (1)
         if self.platform:
             platform_map = {
@@ -691,15 +706,17 @@ class PortainerCustomTemplate(models.Model):
             }
             platform_int = platform_map.get(self.platform.lower(), 1)
             
+        # Prepare base template data according to v2 API specification
         template_data = {
             'type': int(self.template_type),
             'title': self.title,
             'description': self.description or f'Template for {self.title}',
             'note': self.note or '',
-            'platform': platform_int
+            'platform': platform_int,
+            'logo': self.logo or ''
         }
         
-        # Handle categories
+        # Handle categories - ensure proper format for v2 API
         category_list = []
         if self.categories:
             try:
@@ -718,37 +735,43 @@ class PortainerCustomTemplate(models.Model):
                 
         template_data['categories'] = category_list or ['Custom']
         
-        # Handle image for container templates (type 1)
+        # Handle environment variables if specified - ensure proper format for v2 API
+        if self.environment_variables:
+            try:
+                env_vars = json.loads(self.environment_variables)
+                if isinstance(env_vars, list):
+                    # Validate each environment variable has required fields
+                    valid_env_vars = []
+                    for env in env_vars:
+                        if isinstance(env, dict) and 'name' in env:
+                            valid_env_vars.append(env)
+                    template_data['env'] = valid_env_vars
+            except Exception as e:
+                _logger.warning(f"Error parsing environment variables: {str(e)}")
+                
+        # Handle volumes if specified
+        if self.volumes:
+            try:
+                volumes = json.loads(self.volumes)
+                template_data['volumes'] = volumes
+            except Exception as e:
+                _logger.warning(f"Error parsing volumes: {str(e)}")
+                
+        # Handle ports if specified
+        if self.ports:
+            try:
+                ports = json.loads(self.ports)
+                template_data['ports'] = ports
+            except Exception as e:
+                _logger.warning(f"Error parsing ports: {str(e)}")
+        
+        # Add image for container templates (type 1)
         if template_data['type'] == 1 and self.image:
             template_data['image'] = self.image
             
             # Add registry if specified
             if self.registry:
                 template_data['registry'] = self.registry
-                
-            # Add environment variables if specified
-            if self.environment_variables:
-                try:
-                    env_vars = json.loads(self.environment_variables)
-                    template_data['env'] = env_vars
-                except Exception as e:
-                    _logger.warning(f"Error parsing environment variables: {str(e)}")
-                    
-            # Add volumes if specified
-            if self.volumes:
-                try:
-                    volumes = json.loads(self.volumes)
-                    template_data['volumes'] = volumes
-                except Exception as e:
-                    _logger.warning(f"Error parsing volumes: {str(e)}")
-                    
-            # Add ports if specified
-            if self.ports:
-                try:
-                    ports = json.loads(self.ports)
-                    template_data['ports'] = ports
-                except Exception as e:
-                    _logger.warning(f"Error parsing ports: {str(e)}")
         
         # Handle build method for Stack templates (type 2)
         if template_data['type'] == 2:
@@ -756,7 +779,7 @@ class PortainerCustomTemplate(models.Model):
                 # Web editor method
                 compose_content = self.compose_file or ''
                 _logger.info(f"Using compose file content for template '{self.title}' (ID: {self.template_id}). Content length: {len(compose_content)} chars")
-                # Use fileContent for Portainer API v2 (not composeFileContent)
+                # Use fileContent for Portainer API v2
                 template_data['fileContent'] = compose_content
                 
             elif self.build_method == 'repository':
@@ -766,9 +789,9 @@ class PortainerCustomTemplate(models.Model):
                     'stackfile': self.git_compose_path or 'docker-compose.yml'
                 }
                 
-                # Add reference if specified
+                # Add reference if specified - use referenceName for v2 API
                 if self.git_repository_reference:
-                    repository_data['reference'] = self.git_repository_reference
+                    repository_data['referenceName'] = self.git_repository_reference
                     
                 template_data['repository'] = repository_data
                 

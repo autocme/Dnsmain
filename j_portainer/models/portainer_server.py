@@ -966,7 +966,7 @@ class PortainerServer(models.Model):
             custom_templates = []
             custom_response = None
             
-            # Try primary endpoint for Portainer CE 2.9.0+
+            # Use Portainer v2 API endpoint for custom templates
             try:
                 custom_response = self._make_api_request('/api/custom_templates', 'GET')
                 if custom_response.status_code == 200:
@@ -978,29 +978,10 @@ class PortainerServer(models.Model):
                         custom_templates = data['templates']
                     else:
                         _logger.info(f"Custom templates data has unexpected format: {data}")
-                elif custom_response.status_code == 404:
-                    _logger.info("Primary custom templates endpoint not found. Trying alternative endpoint.")
                 else:
-                    _logger.warning(f"Failed to get custom templates from primary endpoint: {custom_response.status_code}")
+                    _logger.warning(f"Failed to get custom templates from v2 API endpoint: {custom_response.status_code} - {custom_response.text}")
             except Exception as e:
-                _logger.error(f"Error getting custom templates from primary endpoint: {str(e)}")
-            
-            # If primary endpoint failed, try alternative endpoint for older versions
-            if not custom_templates and (custom_response is None or custom_response.status_code != 200):
-                try:
-                    # Removed v1 endpoint reference, using only v2 API
-                    alt_response = self._make_api_request('/api/custom_templates', 'GET')
-                    if alt_response.status_code == 200:
-                        data = alt_response.json()
-                        # Handle both array and object formats
-                        if isinstance(data, list):
-                            custom_templates = data
-                        elif isinstance(data, dict) and 'templates' in data:
-                            custom_templates = data['templates']
-                    else:
-                        _logger.warning(f"Failed to get custom templates from alternative endpoint: {alt_response.status_code}")
-                except Exception as e:
-                    _logger.error(f"Error getting custom templates from alternative endpoint: {str(e)}")
+                _logger.error(f"Error getting custom templates from v2 API: {str(e)}")
             
             # Process custom templates
             for template in custom_templates:
