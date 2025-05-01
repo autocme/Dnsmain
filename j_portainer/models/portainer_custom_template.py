@@ -322,7 +322,7 @@ class PortainerCustomTemplate(models.Model):
             template_data = self._prepare_template_data(vals)
         else:
             server_id = self.server_id.id
-            environment_id = self.environment_id.id
+            environment_id = self.environment_id.id if self.environment_id else None
             template_data = self._prepare_template_data_from_record()
             
         if not server_id or not environment_id:

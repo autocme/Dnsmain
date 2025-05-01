@@ -1039,9 +1039,23 @@ class PortainerServer(models.Model):
                 # Get platform value with case-insensitive lookup
                 platform_value = get_field_value(template, ['Platform', 'platform'])
                 
+                # Get environment ID from template or resource control
+                environment_id_value = get_field_value(template, ['EndpointId', 'endpointId'], None)
+                
+                # Try to get environment ID from ResourceControl if available
+                resource_control = get_field_value(template, ['ResourceControl', 'resourceControl'], None)
+                if not environment_id_value and resource_control and isinstance(resource_control, dict):
+                    environment_id_value = get_field_value(resource_control, ['EndpointId', 'endpointId'], None)
+                
+                # If still no environment ID found, use first available environment as fallback
+                if not environment_id_value and self.environment_ids:
+                    environment_id_value = self.environment_ids[0].environment_id
+                    _logger.warning(f"No environment ID found in template {template_id}, using first environment as fallback: {environment_id_value}")
+                
                 # Prepare custom template data with case-insensitive field extraction
                 template_data = {
                     'server_id': self.id,
+                    'environment_id': environment_id_value,  # Set environment ID (required field)
                     'title': get_field_value(template, ['Title', 'title'], ''),
                     'description': get_field_value(template, ['Description', 'description'], ''),
                     'template_type': str(get_field_value(template, ['Type', 'type'], 1)),
