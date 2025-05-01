@@ -938,8 +938,24 @@ class PortainerServer(models.Model):
                     _logger.warning(f"Skipping non-dict custom template: {template}")
                     continue
                 
-                # Handle different ID field names (id or Id)
-                template_id = template.get('id') or template.get('Id')
+                # Function to get field value regardless of capitalization
+                def get_field_value(data, field_names, default=None):
+                    """Get a field value from a dict using multiple possible field names in any capitalization"""
+                    # Try exact matches first
+                    for name in field_names:
+                        if name in data:
+                            return data[name]
+                    
+                    # Try case-insensitive matches
+                    lowercase_data = {k.lower(): v for k, v in data.items()}
+                    for name in field_names:
+                        if name.lower() in lowercase_data:
+                            return lowercase_data[name.lower()]
+                    
+                    return default
+                
+                # Handle different ID field names with case insensitivity
+                template_id = get_field_value(template, ['id', 'Id', 'ID'])
                 
                 # Check if this custom template already exists in Odoo
                 existing_template = False
@@ -949,42 +965,43 @@ class PortainerServer(models.Model):
                         ('template_id', '=', template_id)
                     ], limit=1)
                 
-                # Prepare custom template data
+                # Prepare custom template data with case-insensitive field extraction
                 template_data = {
                     'server_id': self.id,
-                    'title': template.get('title', ''),
-                    'description': template.get('description', ''),
-                    'template_type': str(template.get('type', 1)),
-                    'platform': template.get('platform', 'linux'),
+                    'title': get_field_value(template, ['Title', 'title'], ''),
+                    'description': get_field_value(template, ['Description', 'description'], ''),
+                    'template_type': str(get_field_value(template, ['Type', 'type'], 1)),
+                    'platform': get_field_value(template, ['Platform', 'platform'], 'linux'),
                     'template_id': template_id,
-                    'logo': template.get('logo', ''),
-                    'image': template.get('image', ''),
-                    'repository': json.dumps(template.get('repository', {})) if isinstance(template.get('repository', {}), dict) else '',
-                    'categories': ','.join(template.get('categories', [])) if isinstance(template.get('categories', []), list) else '',
-                    'environment_variables': json.dumps(template.get('env', [])),
-                    'volumes': json.dumps(template.get('volumes', [])),
-                    'ports': json.dumps(template.get('ports', [])),
-                    'note': template.get('note', ''),
+                    'logo': get_field_value(template, ['Logo', 'logo'], ''),
+                    'image': get_field_value(template, ['Image', 'image'], ''),
+                    'repository': json.dumps(get_field_value(template, ['Repository', 'repository'], {})) if isinstance(get_field_value(template, ['Repository', 'repository'], {}), dict) else '',
+                    'categories': ','.join(get_field_value(template, ['Categories', 'categories'], [])) if isinstance(get_field_value(template, ['Categories', 'categories'], []), list) else '',
+                    'environment_variables': json.dumps(get_field_value(template, ['Env', 'env'], [])),
+                    'volumes': json.dumps(get_field_value(template, ['Volumes', 'volumes'], [])),
+                    'ports': json.dumps(get_field_value(template, ['Ports', 'ports'], [])),
+                    'note': get_field_value(template, ['Note', 'note'], ''),
                     'is_custom': True,
                     'details': json.dumps(template, indent=2),
-                    # Additional fields from Portainer
-                    'project_path': template.get('ProjectPath', ''),
-                    'entry_point': template.get('EntryPoint', ''),
-                    'created_by_user_id': template.get('CreatedByUserId') or template.get('createdByUserId', 0),
-                    'registry_url': template.get('registry', ''),
+                    # Additional fields from Portainer with case-insensitive lookup
+                    'project_path': get_field_value(template, ['ProjectPath', 'projectPath', 'projectpath'], ''),
+                    'entry_point': get_field_value(template, ['EntryPoint', 'entryPoint', 'entrypoint'], ''),
+                    'created_by_user_id': get_field_value(template, ['CreatedByUserId', 'createdByUserId', 'createdbyuserid'], 0),
+                    'registry_url': get_field_value(template, ['Registry', 'registry'], ''),
                 }
                 
                 # Add Git repository information if available
-                if 'repositoryURL' in template:
+                repo_url = get_field_value(template, ['repositoryURL', 'RepositoryURL'])
+                if repo_url:
                     template_data['build_method'] = 'repository'
-                    template_data['git_repository_url'] = template.get('repositoryURL', '')
-                    template_data['git_repository_reference'] = template.get('repositoryReferenceName', '')
-                    template_data['git_compose_path'] = template.get('composeFilePath', '')
-                    template_data['git_skip_tls'] = template.get('skipTLSVerify', False)
-                    template_data['git_authentication'] = template.get('repositoryAuthentication', False)
-                elif 'composeFileContent' in template:
+                    template_data['git_repository_url'] = repo_url
+                    template_data['git_repository_reference'] = get_field_value(template, ['repositoryReferenceName', 'RepositoryReferenceName'], '')
+                    template_data['git_compose_path'] = get_field_value(template, ['composeFilePath', 'ComposeFilePath'], '')
+                    template_data['git_skip_tls'] = get_field_value(template, ['skipTLSVerify', 'SkipTLSVerify'], False)
+                    template_data['git_authentication'] = get_field_value(template, ['repositoryAuthentication', 'RepositoryAuthentication'], False)
+                elif get_field_value(template, ['composeFileContent', 'ComposeFileContent']):
                     template_data['build_method'] = 'editor'
-                    template_data['compose_file'] = template.get('composeFileContent', '')
+                    template_data['compose_file'] = get_field_value(template, ['composeFileContent', 'ComposeFileContent'], '')
                 
                 if existing_template:
                     # Update existing custom template
