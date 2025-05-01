@@ -60,6 +60,9 @@ class PortainerCustomTemplate(models.Model):
     git_save_credential = fields.Boolean('Save Credentials', default=False)
     git_credential_name = fields.Char('Credential Name')
     
+    # Editor method fields
+    compose_file = fields.Text('Compose File', help="Docker Compose file content when using the editor build method")
+    
     # Additional Info
     app_template_variables = fields.Text('App Template Variables', help="Variables for app template deployments")
     
