@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 import json
 import logging
 
@@ -12,6 +12,7 @@ class PortainerCustomTemplate(models.Model):
     _name = 'j_portainer.customtemplate'
     _description = 'Portainer Custom Template'
     _order = 'title'
+    _copy_default_excluded_fields = ['template_id']
     
     is_custom = fields.Boolean('Custom Template', default=True, help="Used to identify custom templates")
     
@@ -26,7 +27,7 @@ class PortainerCustomTemplate(models.Model):
         ('linux', 'Linux'),
         ('windows', 'Windows')
     ], string='Platform', default='linux', required=True)
-    template_id = fields.Char('Template ID')
+    template_id = fields.Char('Template ID', copy=False)
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True,
                                 domain="[('server_id', '=', server_id)]")
@@ -43,7 +44,7 @@ class PortainerCustomTemplate(models.Model):
     details = fields.Text('Details', help="Additional details about the template")
     skip_portainer_create = fields.Boolean('Skip Portainer Creation', default=False, 
                                           help='Used during sync to skip creating the template in Portainer')
-    manual_template_id = fields.Char('Manual Template ID', 
+    manual_template_id = fields.Char('Manual Template ID', copy=False,
                                       help='Template ID for manually created templates in Portainer - use this if automatic creation fails')
     
     # Custom Template specific fields
