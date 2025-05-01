@@ -19,7 +19,7 @@
                         <span class="fa fa-info-circle"/> Click the "Refresh Logs" button to fetch container logs.
                     </div>
                     <group string="Container Logs" colspan="4">
-                        <field name="logs" nolabel="1" colspan="4" widget="ace" options="{'mode': 'text', 'theme': 'monokai'}" style="min-height: 500px; font-family: 'Courier New', monospace; white-space: pre-wrap;"/>
+                        <field name="logs" nolabel="1" colspan="4" widget="CodeEditor" options="{'language': 'text'}" style="min-height: 500px; font-family: 'Courier New', monospace; white-space: pre-wrap;"/>
                     </group>
                 </sheet>
                 <footer>
