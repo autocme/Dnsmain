@@ -26,6 +26,9 @@ class PortainerEnvironment(models.Model):
     group_name = fields.Char('Group')
     tags = fields.Char('Tags')
     details = fields.Text('Details')
+    active = fields.Boolean('Active', default=True, 
+                          help="If unchecked, it means this environment no longer exists in Portainer, "
+                               "but it's kept in Odoo for reference and to maintain relationships with templates")
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     
