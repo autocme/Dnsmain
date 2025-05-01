@@ -119,8 +119,11 @@
                                 </group>
                             </group>
                         </page>
-                        <page string="Compose File" name="compose_file" invisible="build_method != 'editor'">
-                            <field name="compose_file" widget="CodeEditor" options="{'language': 'yaml'}" placeholder="Docker Compose file content..."/>
+                        <page string="File Content" name="file_content" invisible="build_method != 'editor'">
+                            <field name="fileContent" widget="CodeEditor" options="{'language': 'yaml'}" placeholder="Docker Compose or Stack file content..."/>
+                            <div class="text-muted">
+                                This field replaces the older "compose_file" field and is synchronized directly with Portainer.
+                            </div>
                         </page>
                         <page string="Raw Data" name="raw_data" groups="base.group_system">
                             <field name="details" widget="CodeEditor" options="{'language': 'json'}" readonly="1"/>
