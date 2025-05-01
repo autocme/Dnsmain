@@ -130,16 +130,29 @@
                         </page>
                         
                         <page string="Templates" name="templates">
-                            <field name="template_ids">
-                                <tree string="Templates">
-                                    <field name="title"/>
-                                    <field name="template_type" widget="badge"/>
-                                    <field name="platform"/>
-                                    <field name="image"/>
-                                    <field name="categories"/>
-                                    <field name="is_custom"/>
-                                </tree>
-                            </field>
+                            <group>
+                                <h3>Standard Templates</h3>
+                                <field name="template_ids">
+                                    <tree string="Standard Templates">
+                                        <field name="title"/>
+                                        <field name="template_type" widget="badge"/>
+                                        <field name="platform"/>
+                                        <field name="image"/>
+                                        <field name="categories"/>
+                                    </tree>
+                                </field>
+                                <h3>Custom Templates</h3>
+                                <field name="custom_template_ids">
+                                    <tree string="Custom Templates">
+                                        <field name="title"/>
+                                        <field name="template_type" widget="badge"/>
+                                        <field name="platform"/>
+                                        <field name="image"/>
+                                        <field name="categories"/>
+                                        <field name="build_method"/>
+                                    </tree>
+                                </field>
+                            </group>
                         </page>
                         
                         <page string="Stacks" name="stacks">

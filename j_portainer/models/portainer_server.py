@@ -76,6 +76,7 @@ class PortainerServer(models.Model):
     volume_ids = fields.One2many('j_portainer.volume', 'server_id', string='Volumes')
     network_ids = fields.One2many('j_portainer.network', 'server_id', string='Networks')
     template_ids = fields.One2many('j_portainer.template', 'server_id', string='Templates')
+    custom_template_ids = fields.One2many('j_portainer.customtemplate', 'server_id', string='Custom Templates')
     stack_ids = fields.One2many('j_portainer.stack', 'server_id', string='Stacks')
     environment_ids = fields.One2many('j_portainer.environment', 'server_id', string='Environments')
     
