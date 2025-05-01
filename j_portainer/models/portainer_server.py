@@ -274,15 +274,16 @@ class PortainerServer(models.Model):
         self.ensure_one()
         
         try:
-            # Clear existing environments
-            self.environment_ids.unlink()
-            
-            # Get all endpoints
+            # Get all endpoints from Portainer
             response = self._make_api_request('/api/endpoints', 'GET')
             if response.status_code != 200:
                 raise UserError(_("Failed to get environments: %s") % response.text)
                 
             environments = response.json()
+            synced_env_ids = []  # Track which environment IDs we've synced
+            created_count = 0
+            updated_count = 0
+            
             for env in environments:
                 env_id = env.get('Id')
                 env_name = env.get('Name', 'Unknown')
@@ -291,7 +292,14 @@ class PortainerServer(models.Model):
                 details_response = self._make_api_request(f'/api/endpoints/{env_id}', 'GET')
                 details = details_response.json() if details_response.status_code == 200 else {}
                 
-                self.env['j_portainer.environment'].create({
+                # Check if environment already exists in Odoo
+                existing_env = self.env['j_portainer.environment'].search([
+                    ('server_id', '=', self.id),
+                    ('environment_id', '=', env_id)
+                ], limit=1)
+                
+                # Prepare environment data
+                env_data = {
                     'server_id': self.id,
                     'environment_id': env_id,
                     'name': env_name,
@@ -303,12 +311,32 @@ class PortainerServer(models.Model):
                     'group_name': env.get('GroupName', ''),
                     'tags': ','.join(env.get('Tags', [])) if isinstance(env.get('Tags', []), list) else '',
                     'details': json.dumps(details, indent=2) if details else '',
-                })
+                }
+                
+                if existing_env:
+                    # Update existing environment
+                    existing_env.write(env_data)
+                    updated_count += 1
+                    synced_env_ids.append(existing_env.id)
+                else:
+                    # Create new environment
+                    new_env = self.env['j_portainer.environment'].create(env_data)
+                    created_count += 1
+                    synced_env_ids.append(new_env.id)
+            
+            # Mark environments that no longer exist in Portainer as inactive
+            # Instead of deleting them (which would break foreign key constraints)
+            obsolete_envs = self.environment_ids.filtered(lambda e: e.id not in synced_env_ids)
+            if obsolete_envs:
+                obsolete_envs.write({'active': False})
+                _logger.info(f"Marked {len(obsolete_envs)} obsolete environments as inactive")
             
             self.write({
                 'last_sync': fields.Datetime.now(),
                 'environment_count': len(environments)
             })
+            
+            _logger.info(f"Environment sync complete: {len(environments)} total environments, {created_count} created, {updated_count} updated")
             
             return {
                 'type': 'ir.actions.client',
