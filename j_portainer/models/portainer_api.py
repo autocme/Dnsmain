@@ -1296,8 +1296,13 @@ class PortainerAPI(models.AbstractModel):
                         _logger.info(f"Raw update response: {response.text}")
                     return {'Id': template_id}  # Assume success with empty response
             else:
-                _logger.error(f"Error updating template: {response.status_code} - {response.text}")
-                return {'error': f"API error: {response.status_code} - {response.text}"}
+                error_message = f"{response.status_code} - {response.text}"
+                _logger.error(f"Error updating template: {error_message}")
+                return {
+                    'error': error_message,
+                    'status_code': response.status_code,
+                    'text': response.text
+                }
                 
         except Exception as e:
             _logger.error(f"Exception during template update: {str(e)}")
