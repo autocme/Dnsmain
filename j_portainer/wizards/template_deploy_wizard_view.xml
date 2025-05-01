@@ -10,7 +10,7 @@
                 <field name="is_custom" invisible="1"/>
                 
                 <!-- Draft State -->
-                <div states="draft">
+                <div invisible="state != 'draft'">
                     <group>
                         <field name="server_id" readonly="1"/>
                         <field name="template_id" readonly="1" invisible="is_custom == True"/>
@@ -30,18 +30,18 @@
                 </div>
                 
                 <!-- Done State -->
-                <div states="done" class="alert alert-success">
+                <div invisible="state != 'done'" class="alert alert-success">
                     <field name="result_message"/>
                 </div>
                 
                 <!-- Error State -->
-                <div states="error" class="alert alert-danger">
+                <div invisible="state != 'error'" class="alert alert-danger">
                     <field name="result_message"/>
                 </div>
                 
                 <footer>
                     <button name="action_deploy" string="Deploy" type="object" 
-                            class="btn-primary" states="draft"/>
+                            class="btn-primary" invisible="state != 'draft'"/>
                     <button string="Close" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
