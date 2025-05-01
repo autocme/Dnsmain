@@ -1,0 +1,35 @@
+2025-05-01 22:43:49,182 295018 INFO 17 odoo.addons.j_portainer.models.portainer_api: Importing template via V2 API: {
+  "version": "2",
+  "templates": [
+    {
+      "type": 2,
+      "title": "vv",
+      "description": "vv",
+      "note": false,
+      "platform": 1,
+      "categories": [
+        "Custom"
+      ],
+      "stackfile": "version: '3.8'\n\nservices:\n\n  odoo:\n\n    image: odoo:17\n\n    ports:\n\n      - \"8069:8069\"\n\n    depends_on:\n\n      - db\n\n    volumes:\n\n      - odoo_data:/var/lib/odoo\n\n      - odoo_custom_addons:/mnt/extra-addons\n\n    environment:\n\n      - POSTGRES_USER=odoo\n\n      - POSTGRES_PASSWORD=odoo\n\n      - POSTGRES_DB=postgres\n\n      - PGHOST=db\n\n\n\n  db:\n\n    image: postgres:12\n\n    environment:\n\n      - POSTGRES_USER=odoo\n\n      - POSTGRES_PASSWORD=odoo\n\n      - POSTGRES_DB=postgres\n\n    volumes:\n\n      - odoo_db_data:/var/lib/postgresql/data\n\n\n\nvolumes:\n\n  odoo_data:\n\n  odoo_custom_addons:\n\n  odoo_db_data:\n\n"
+    }
+  ]
+} 
+2025-05-01 22:43:49,182 295018 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying POST to /api/custom_templates/file 
+2025-05-01 22:43:49,416 295018 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with POST to /api/custom_templates/file: 405 -  
+2025-05-01 22:43:49,416 295018 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying POST to /api/custom_templates 
+2025-05-01 22:43:49,649 295018 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with POST to /api/custom_templates: 405 -  
+2025-05-01 22:43:49,649 295018 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying POST to /api/custom_templates/create 
+2025-05-01 22:43:49,876 295018 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with POST to /api/custom_templates/create: 405 -  
+2025-05-01 22:43:49,876 295018 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying PUT to /api/custom_templates/file 
+2025-05-01 22:43:50,118 295018 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with PUT to /api/custom_templates/file: 400 - {"message":"Invalid Custom template identifier route variable","details":"Strconv.Atoi: parsing \"file\": invalid syntax"} 
+2025-05-01 22:43:50,118 295018 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying PUT to /api/custom_templates 
+2025-05-01 22:43:50,352 295018 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with PUT to /api/custom_templates: 405 -  
+2025-05-01 22:43:50,352 295018 INFO 17 odoo.addons.j_portainer.models.portainer_api: Trying PUT to /api/custom_templates/create 
+2025-05-01 22:43:50,592 295018 WARNING 17 odoo.addons.j_portainer.models.portainer_api: Failed with PUT to /api/custom_templates/create: 400 - {"message":"Invalid Custom template identifier route variable","details":"Strconv.Atoi: parsing \"create\": invalid syntax"} 
+2025-05-01 22:43:50,592 295018 ERROR 17 odoo.addons.j_portainer.models.portainer_api: All V2 API template import attempts failed 
+2025-05-01 22:43:50,593 295018 INFO 17 odoo.addons.j_portainer.models.portainer_custom_template: Using Portainer environment ID 3 for file upload 
+2025-05-01 22:43:50,593 295018 INFO 17 odoo.addons.j_portainer.models.portainer_api: Making direct API call to /api/custom_templates/file with method POST 
+2025-05-01 22:43:50,735 295018 INFO 17 odoo.addons.j_portainer.models.portainer_api: Direct API call response status: 405 
+2025-05-01 22:43:50,735 295018 ERROR 17 odoo.addons.j_portainer.models.portainer_custom_template: All Portainer synchronization methods failed: Direct multipart form failed: HTTPSConnectionPool(host='3.110.80.87', port=9443): Max retries exceeded with url: /api/custom_templates/create/file (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1000)'))) 
+2025-05-01 22:43:50,736 295018 WARNING 17 odoo.addons.j_portainer.models.portainer_custom_template: Automatic template creation in Portainer failed. Please create the template manually in Portainer and then enter its ID in the 'Manual Template ID' field to link it with this record. 
+2025-05-01 22:43:50,755 295018 INFO 17 werkzeug: 127.0.0.1 - - [01/May/2025 22:43:50] "POST /web/dataset/call_kw/j_portainer.customtemplate/web_save HTTP/1.1" 200 - 11 0.007 7.280
