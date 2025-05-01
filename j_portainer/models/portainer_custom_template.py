@@ -407,8 +407,8 @@ class PortainerCustomTemplate(models.Model):
                     
                     # Use different endpoints for create vs update
                     if method == 'post':
-                        # For new template creation with file, use the dedicated endpoint
-                        url = f"{server_url}/api/custom_templates/create/file"
+                        # For new template creation with file, use the direct endpoint
+                        url = f"{server_url}/api/custom_templates"
                     else:
                         # For updates, include template ID in the URL
                         url = f"{server_url}/api/custom_templates/{template_id}"
@@ -434,11 +434,14 @@ class PortainerCustomTemplate(models.Model):
                             'Title': self.title,
                             'Description': self.description or f'Template for {self.title}',
                             'Note': self.note or '',
-                            'Platform': str(platform_value),  # 1 or 2
-                            'Type': str(type_value),  # 1, 2, or 3
+                            'Platform': str(platform_value),  # 1 for Linux, 2 for Windows
+                            'Type': str(type_value),  # 1 for container, 2 for stack, 3 for app template
                             'Logo': self.logo or '',
-                            'environmentId': str(portainer_env_id),  # required field
                         }
+                        
+                        # Add environment ID - this is critical for the API request
+                        if portainer_env_id:
+                            data['environmentId'] = str(portainer_env_id)
                         
                         # Add variables if available
                         if self.environment_variables:
@@ -449,7 +452,24 @@ class PortainerCustomTemplate(models.Model):
                             'File': ('template.yml', file_content.encode('utf-8'))
                         }
                         
-                        _logger.info(f"Sending direct multipart form request to {url} with data: {data}")
+                        # Log the complete request for debugging
+                        _logger.info(f"POST Request URL: {url}")
+                        _logger.info(f"POST Request Headers: {headers}")
+                        _logger.info(f"POST Request Data: {data}")
+                        _logger.info(f"POST Request Files: {list(files.keys())}")
+                        
+                        # Verify we have environment ID before proceeding
+                        if 'environmentId' not in data:
+                            _logger.warning("No environment ID found for template creation, trying to find one")
+                            # Try one more attempt to find environment ID
+                            server = self.env['j_portainer.server'].browse(server_id)
+                            for env in server.environment_ids:
+                                if env.environment_id:
+                                    _logger.info(f"Found environment ID: {env.environment_id}")
+                                    data['environmentId'] = str(env.environment_id)
+                                    break
+                        
+                        # Send the POST request
                         res = requests.post(url, headers=headers, data=data, files=files)
                     else:
                         # For updates, use application/json as required by the API
@@ -482,24 +502,66 @@ class PortainerCustomTemplate(models.Model):
                         json_headers = headers.copy()
                         json_headers['Content-Type'] = 'application/json'
                         
-                        _logger.info(f"Sending JSON update request to {url} with data: {json.dumps(json_data)}")
+                        # Log the complete request for debugging
+                        _logger.info(f"PUT Request URL: {url}")
+                        _logger.info(f"PUT Request Headers: {json_headers}")
+                        _logger.info(f"PUT Request JSON: {json.dumps(json_data)}")
+                        
+                        # Send the PUT request
                         res = requests.put(url, headers=json_headers, json=json_data)
                     
                     if res.status_code in [200, 201, 202]:
-                        response_data = res.json()
-                        if method == 'post':
-                            _logger.info(f"Template created successfully via multipart form: {response_data}")
-                            # If this was a creation and we got a new ID, store it
-                            if response_data and ('Id' in response_data or 'id' in response_data):
-                                new_id = response_data.get('Id') or response_data.get('id')
-                                if new_id and not self.template_id:
-                                    self.template_id = str(new_id)
+                        try:
+                            response_data = res.json()
+                            if method == 'post':
+                                _logger.info(f"Template created successfully via multipart form: {response_data}")
+                                # If this was a creation and we got a new ID, store it
+                                if response_data and ('Id' in response_data or 'id' in response_data):
+                                    new_id = response_data.get('Id') or response_data.get('id')
+                                    if new_id and not self.template_id:
+                                        self.template_id = str(new_id)
+                            else:
+                                _logger.info(f"Template updated successfully via JSON API: {response_data}")
+                            return response_data
+                        except Exception as e:
+                            # Handle non-JSON response
+                            _logger.info(f"Successfully synchronized template, but response was not JSON: {e}")
+                            return {'success': True, 'message': 'Template synchronized successfully'}
+                    elif res.status_code == 404 and method == 'put':
+                        # For 404 on PUT requests, try to create instead (template might have been deleted in Portainer)
+                        _logger.warning(f"Template with ID {template_id} not found in Portainer, attempting to create a new one")
+                        
+                        # Switch to POST request to create a new template
+                        create_url = f"{server_url}/api/custom_templates"
+                        create_res = requests.post(url=create_url, headers=headers, data=data, files=files)
+                        
+                        if create_res.status_code in [200, 201, 202]:
+                            try:
+                                create_data = create_res.json()
+                                _logger.info(f"Successfully created new template after 404 on update: {create_data}")
+                                # Update template ID if we got a new one
+                                if create_data and ('Id' in create_data or 'id' in create_data):
+                                    new_id = create_data.get('Id') or create_data.get('id')
+                                    if new_id:
+                                        self.template_id = str(new_id)
+                                return create_data
+                            except Exception as e:
+                                _logger.info(f"Created template successfully, but response was not JSON: {e}")
+                                return {'success': True, 'message': 'New template created successfully after 404'}
                         else:
-                            _logger.info(f"Template updated successfully via JSON API: {response_data}")
-                        return response_data
+                            error_messages.append(f"Fallback creation after 404 failed: {create_res.status_code} - {create_res.text}")
+                            _logger.warning(f"Fallback creation after 404 failed: {create_res.status_code} - {create_res.text}")
                     else:
-                        error_messages.append(f"Direct multipart form failed: {res.status_code} - {res.text}")
-                        _logger.warning(f"Direct multipart form failed: {res.status_code} - {res.text}")
+                        # Log detailed error information
+                        error_detail = f"HTTP {res.status_code}"
+                        try:
+                            error_json = res.json()
+                            error_detail += f" - {json.dumps(error_json)}"
+                        except:
+                            error_detail += f" - {res.text}"
+                            
+                        error_messages.append(f"API request failed: {error_detail}")
+                        _logger.warning(f"API request failed: {error_detail}")
             except Exception as e:
                 error_messages.append(f"Direct multipart form failed: {str(e)}")
                 _logger.warning(f"Direct multipart form failed: {str(e)}")
