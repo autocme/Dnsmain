@@ -288,7 +288,8 @@ class PortainerTemplateNew(models.Model):
     @api.model
     def create(self, vals):
         """Override create to handle custom templates creation in Portainer"""
-        if vals.get('is_custom'):
+        # Skip Portainer creation if skip_portainer_create flag is set (used during sync)
+        if vals.get('is_custom') and not vals.get('skip_portainer_create'):
             # This is a custom template, create it in Portainer
             server_id = vals.get('server_id')
             if not server_id:
