@@ -965,13 +965,35 @@ class PortainerServer(models.Model):
                         ('template_id', '=', template_id)
                     ], limit=1)
                 
+                # Platform mapping function to handle numeric values
+                def map_platform(platform_value):
+                    """Map platform value to appropriate string value"""
+                    if isinstance(platform_value, int) or (isinstance(platform_value, str) and platform_value.isdigit()):
+                        # Portainer sometimes uses numeric values for platform
+                        platform_map = {
+                            '1': 'linux',
+                            '2': 'windows',
+                            1: 'linux',
+                            2: 'windows'
+                        }
+                        return platform_map.get(platform_value, 'linux')
+                    elif isinstance(platform_value, str):
+                        # If it's already a string like 'linux' or 'windows', use it directly
+                        if platform_value.lower() in ['linux', 'windows']:
+                            return platform_value.lower()
+                    # Default fallback
+                    return 'linux'
+                
+                # Get platform value with case-insensitive lookup
+                platform_value = get_field_value(template, ['Platform', 'platform'])
+                
                 # Prepare custom template data with case-insensitive field extraction
                 template_data = {
                     'server_id': self.id,
                     'title': get_field_value(template, ['Title', 'title'], ''),
                     'description': get_field_value(template, ['Description', 'description'], ''),
                     'template_type': str(get_field_value(template, ['Type', 'type'], 1)),
-                    'platform': get_field_value(template, ['Platform', 'platform'], 'linux'),
+                    'platform': map_platform(platform_value),
                     'template_id': template_id,
                     'logo': get_field_value(template, ['Logo', 'logo'], ''),
                     'image': get_field_value(template, ['Image', 'image'], ''),
