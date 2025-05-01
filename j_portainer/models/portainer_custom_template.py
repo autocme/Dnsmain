@@ -479,8 +479,8 @@ class PortainerCustomTemplate(models.Model):
                                     data['environmentId'] = str(env.environment_id)
                                     break
                         
-                        # Send the POST request
-                        res = requests.post(url, headers=headers, data=data, files=files)
+                        # Send the POST request - skip SSL verification for self-signed certs
+                        res = requests.post(url, headers=headers, data=data, files=files, verify=False)
                     else:
                         # For updates, use application/json as required by the API
                         # Prepare JSON data
@@ -517,8 +517,8 @@ class PortainerCustomTemplate(models.Model):
                         _logger.info(f"PUT Request Headers: {json_headers}")
                         _logger.info(f"PUT Request JSON: {json.dumps(json_data)}")
                         
-                        # Send the PUT request
-                        res = requests.put(url, headers=json_headers, json=json_data)
+                        # Send the PUT request - skip SSL verification for self-signed certs
+                        res = requests.put(url, headers=json_headers, json=json_data, verify=False)
                     
                     if res.status_code in [200, 201, 202]:
                         try:
@@ -572,7 +572,7 @@ class PortainerCustomTemplate(models.Model):
                         }
                         
                         _logger.info(f"Sending fallback multipart form POST request to {create_url}")
-                        create_res = requests.post(url=create_url, headers=headers, data=post_data, files=post_files)
+                        create_res = requests.post(url=create_url, headers=headers, data=post_data, files=post_files, verify=False)
                         
                         if create_res.status_code in [200, 201, 202]:
                             try:

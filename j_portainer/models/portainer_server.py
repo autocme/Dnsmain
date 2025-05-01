@@ -84,8 +84,8 @@ class PortainerServer(models.Model):
                      help="URL to Portainer server (e.g., https://portainer.example.com:9443)")
     api_key = fields.Char('API Key', required=True, tracking=True, 
                        help="Portainer API key for authentication")
-    verify_ssl = fields.Boolean('Verify SSL', default=True, tracking=True,
-                               help="Verify SSL certificates when connecting")
+    verify_ssl = fields.Boolean('Verify SSL', default=False, tracking=True,
+                               help="Verify SSL certificates when connecting (disable for self-signed certificates)")
     status = fields.Selection([
         ('unknown', 'Unknown'),
         ('connecting', 'Connecting'),
