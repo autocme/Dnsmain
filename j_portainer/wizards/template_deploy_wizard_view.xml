@@ -13,8 +13,8 @@
                 <div states="draft">
                     <group>
                         <field name="server_id" readonly="1"/>
-                        <field name="template_id" readonly="1" attrs="{'invisible': [('is_custom', '=', True)]}"/>
-                        <field name="custom_template_id" readonly="1" attrs="{'invisible': [('is_custom', '=', False)]}"/>
+                        <field name="template_id" readonly="1" invisible="is_custom == True"/>
+                        <field name="custom_template_id" readonly="1" invisible="is_custom == False"/>
                         <field name="template_title" readonly="1"/>
                         <field name="template_type" readonly="1" widget="badge" 
                                decoration-info="template_type=='1'"
@@ -25,7 +25,7 @@
                     <group string="Deployment Options">
                         <field name="environment_id" options="{'no_create': True}"/>
                         <field name="name" placeholder="Name for the deployed container/stack"/>
-                        <field name="stack_file_path" attrs="{'invisible': [('template_type', '!=', '2')]}"/>
+                        <field name="stack_file_path" invisible="template_type != '2'"/>
                     </group>
                 </div>
                 
