@@ -34,6 +34,7 @@
         'views/portainer_network_views.xml',
         'views/portainer_template_views.xml',
         'views/portainer_custom_template_views.xml',
+        'views/portainer_git_credentials_views.xml',
         'views/portainer_stack_views.xml',
         'wizards/portainer_sync_wizard_views.xml',
         'wizards/container_logs_wizard_view.xml',
