@@ -111,14 +111,14 @@
                                     <field name="git_skip_tls"/>
                                     <field name="git_authentication"/>
                                 </group>
-                                <group invisible="git_authentication == False">
-                                    <field name="git_credentials_id" required="git_authentication == True"/>
-                                    <div colspan="2" invisible="git_credentials_id != False">
+                                <group invisible="not git_authentication">
+                                    <field name="git_credentials_id" required="git_authentication"/>
+                                    <div colspan="2" invisible="git_credentials_id">
                                         <group>
-                                            <field name="git_username" required="git_authentication == True and git_credentials_id == False" placeholder="Username or Email"/>
-                                            <field name="git_token" required="git_authentication == True and git_credentials_id == False" placeholder="Personal Access Token or Password"/>
+                                            <field name="git_username" required="git_authentication and not git_credentials_id" placeholder="Username or Email"/>
+                                            <field name="git_token" required="git_authentication and not git_credentials_id" placeholder="Personal Access Token or Password"/>
                                             <field name="git_save_credential"/>
-                                            <field name="git_credential_name" invisible="git_save_credential == False" required="git_save_credential == True" placeholder="Name for saved credentials"/>
+                                            <field name="git_credential_name" invisible="not git_save_credential" required="git_save_credential" placeholder="Name for saved credentials"/>
                                         </group>
                                     </div>
                                 </group>
@@ -126,7 +126,7 @@
                         </page>
                         <page string="File Content" name="file_content" invisible="build_method != 'editor'">
                             <button name="action_refresh_file_content" string="Refresh File Content" type="object" 
-                                    class="btn-secondary mb-2" attrs="{'invisible': [('template_id', '=', False)]}"/>
+                                    class="btn-secondary mb-2" invisible="not template_id"/>
                             <field name="fileContent" widget="CodeEditor" options="{'language': 'yaml'}" placeholder="Docker Compose or Stack file content..."/>
                             <div class="text-muted">
                                 This field replaces the older "compose_file" field and is synchronized directly with Portainer.
