@@ -290,13 +290,122 @@ class PortainerTemplateNew(models.Model):
             
     @api.model
     def create(self, vals):
-        """Create template record in Odoo only, without syncing to Portainer"""
+        """Create template in Odoo and post to Portainer for custom templates"""
         # Check if server is required for custom templates
         if vals.get('is_custom') and not vals.get('server_id'):
             raise UserError(_("Server is required for custom templates"))
             
-        # Create the record in Odoo only
-        return super(PortainerTemplateNew, self).create(vals)
+        # Create the record in Odoo
+        record = super(PortainerTemplateNew, self).create(vals)
+        
+        # If this is a custom template and not skipped, create it in Portainer
+        if vals.get('is_custom') and not vals.get('skip_portainer_create'):
+            try:
+                import requests
+                import json
+                
+                server_id = vals.get('server_id')
+                server = self.env['j_portainer.server'].browse(server_id)
+                
+                # Skip if server is not connected or invalid
+                if not server or server.status != 'connected':
+                    _logger.warning(f"Skipping auto-create in Portainer: Server not connected")
+                    return record
+                
+                # Prepare the template data
+                template_data = self._prepare_template_data(vals)
+                
+                # For stack templates with editor build method, use the file upload API
+                if int(vals.get('template_type', 1)) == 2 and vals.get('build_method') == 'editor' and vals.get('compose_file'):
+                    # Find the environment ID (required for file upload API)
+                    # Get first environment from server if needed
+                    environment_id = None
+                    if server.environment_ids:
+                        environment_id = server.environment_ids[0].environment_id
+                        
+                    if not environment_id:
+                        _logger.warning(f"Skipping auto-create in Portainer: No environment found")
+                        return record
+                        
+                    # Use the file upload API for stack templates
+                    url = f"{server.url.rstrip('/')}/api/custom_templates/create/file?environment={environment_id}"
+                    
+                    # Prepare headers with API key
+                    headers = {
+                        "X-API-Key": server._get_api_key_header()
+                    }
+                    
+                    # Prepare form data (convert to strings as required by multipart form)
+                    data = {
+                        "Title": vals.get('title', ''),
+                        "Description": vals.get('description', ''),
+                        "Note": vals.get('note', ''),
+                        "Platform": "1" if vals.get('platform') == 'linux' else "2",
+                        "Type": vals.get('template_type', '2'),
+                        "Logo": vals.get('logo', '')
+                    }
+                    
+                    # Add categories if available
+                    if vals.get('categories'):
+                        categories = [c.strip() for c in vals.get('categories').split(',') if c.strip()]
+                        data["Categories"] = json.dumps(categories)
+                    
+                    # Prepare the file content
+                    compose_content = vals.get('compose_file', '')
+                    if compose_content:
+                        files = {
+                            "File": ("template.yml", compose_content.encode('utf-8'), "text/x-yaml")
+                        }
+                        
+                        try:
+                            _logger.info(f"Auto-creating template in Portainer at URL: {url}")
+                            
+                            # Make the request
+                            response = requests.post(
+                                url, 
+                                headers=headers,
+                                data=data,
+                                files=files,
+                                verify=server.verify_ssl
+                            )
+                            
+                            # Check response
+                            if response.status_code in [200, 201, 202, 204]:
+                                try:
+                                    result = response.json()
+                                    template_id = result.get('Id', result.get('id'))
+                                    
+                                    if template_id:
+                                        # Update template ID in Odoo
+                                        record.write({'template_id': template_id})
+                                        _logger.info(f"Template created successfully in Portainer with ID: {template_id}")
+                                except Exception as e:
+                                    _logger.warning(f"Couldn't parse JSON response: {str(e)}")
+                            else:
+                                # Log error but don't raise exception
+                                _logger.warning(f"Error creating template in Portainer: {response.text} (status: {response.status_code})")
+                        except Exception as e:
+                            _logger.warning(f"Error connecting to Portainer: {str(e)}")
+                    else:
+                        _logger.warning("Skipping auto-create in Portainer: No compose file content")
+                else:
+                    # Use standard API for other template types
+                    api = self.env['j_portainer.api']
+                    try:
+                        response = api.create_template(server_id, template_data)
+                        
+                        if response and ('Id' in response or 'id' in response):
+                            template_id = response.get('Id', response.get('id'))
+                            if template_id:
+                                record.write({'template_id': template_id})
+                                _logger.info(f"Template created successfully in Portainer with ID: {template_id}")
+                    except Exception as e:
+                        _logger.warning(f"Error creating template in Portainer using standard API: {str(e)}")
+                
+            except Exception as e:
+                _logger.warning(f"Error during auto-create in Portainer (record still created in Odoo): {str(e)}")
+                
+        return record
         
     def _prepare_template_data(self, vals):
         """Prepare template data for Portainer API"""
