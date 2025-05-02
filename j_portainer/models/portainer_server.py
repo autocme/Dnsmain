@@ -1113,12 +1113,20 @@ class PortainerServer(models.Model):
                 if not compose_content and template_id:
                     try:
                         _logger.info(f"No file content found in template data, fetching from file API endpoint for template ID: {template_id}")
-                        file_response = self._make_api_request(f'/api/custom_templates/file/{template_id}', 'GET')
+                        file_response = self._make_api_request(f'/api/custom_templates/{template_id}/file', 'GET')
                         
                         if file_response.status_code == 200:
                             file_data = file_response.json()
-                            compose_content = file_data.get('FileContent', '')
-                            _logger.info(f"Retrieved file content from API for template '{template_data['title']}'. Content length: {len(compose_content)} chars")
+                            # Try different possible field names for the file content
+                            for field_name in ['FileContent', 'StackFileContent', 'Content', 'stackFileContent']:
+                                if field_name in file_data:
+                                    compose_content = file_data[field_name]
+                                    _logger.info(f"Retrieved file content (field: {field_name}) from API for template '{template_data['title']}'. Content length: {len(compose_content)} chars")
+                                    break
+                            
+                            # If we still don't have content, log the entire response
+                            if not compose_content:
+                                _logger.warning(f"File content not found in response: {file_data}")
                         else:
                             _logger.warning(f"Failed to get file content for custom template {template_id}: {file_response.status_code} - {file_response.text}")
                     except Exception as e:
@@ -1340,6 +1348,85 @@ class PortainerServer(models.Model):
             _logger.error(f"Error during bidirectional template sync: {str(e)}")
             raise UserError(_("Error during bidirectional template sync: %s") % str(e))
             
+    def _fetch_missing_template_file_content(self):
+        """Fetch missing file content for templates that have a template_id but no file content"""
+        self.ensure_one()
+        
+        try:
+            # Find all custom templates for this server with a template_id but no file content
+            templates_without_content = self.env['j_portainer.customtemplate'].search([
+                ('server_id', '=', self.id),
+                ('template_id', '!=', False),
+                '|',
+                ('fileContent', '=', False),
+                ('fileContent', '=', '')
+            ])
+            
+            if not templates_without_content:
+                _logger.info("No templates missing file content")
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('No Missing Content'),
+                        'message': _('No templates with missing file content found.'),
+                        'sticky': False,
+                        'type': 'info',
+                    }
+                }
+                
+            _logger.info(f"Found {len(templates_without_content)} templates missing file content")
+            success_count = 0
+            total_count = len(templates_without_content)
+            
+            for template in templates_without_content:
+                try:
+                    _logger.info(f"Fetching file content for template '{template.title}' (ID: {template.template_id})")
+                    file_response = self._make_api_request(f'/api/custom_templates/{template.template_id}/file', 'GET')
+                    
+                    if file_response.status_code == 200:
+                        file_data = file_response.json()
+                        compose_content = None
+                        
+                        # Try different possible field names for the file content
+                        for field_name in ['FileContent', 'StackFileContent', 'Content', 'stackFileContent']:
+                            if field_name in file_data:
+                                compose_content = file_data[field_name]
+                                _logger.info(f"Retrieved file content (field: {field_name}) for template '{template.title}'. Content length: {len(compose_content)} chars")
+                                break
+                        
+                        if compose_content:
+                            template.write({
+                                'fileContent': compose_content,
+                                'compose_file': compose_content,
+                                'build_method': 'editor'
+                            })
+                            success_count += 1
+                        else:
+                            _logger.warning(f"No file content found in response for template {template.template_id}: {file_data}")
+                    else:
+                        _logger.warning(f"Failed to get file content for template {template.template_id}: {file_response.status_code} - {file_response.text}")
+                except Exception as e:
+                    _logger.error(f"Error fetching file content for template {template.template_id}: {str(e)}")
+                    
+            _logger.info(f"Successfully fetched file content for {success_count} of {total_count} templates")
+            
+            # Return notification for the user
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('File Content Updated'),
+                    'message': _('Fetched file content for %d of %d templates') % (success_count, total_count),
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"Error fetching template file content: {str(e)}")
+            raise UserError(_("Error fetching template file content: %s") % str(e))
+        
     def sync_templates(self):
         """Sync all templates (standard and custom) from Portainer"""
         self.ensure_one()
@@ -1350,6 +1437,9 @@ class PortainerServer(models.Model):
             
             # Then sync custom templates
             self.sync_custom_templates()
+            
+            # Fetch missing file content for any templates that still need it
+            self._fetch_missing_template_file_content()
             
             return {
                 'type': 'ir.actions.client',
@@ -1484,6 +1574,10 @@ class PortainerServer(models.Model):
             self.sync_networks()
             self.sync_standard_templates()
             self.sync_custom_templates()
+            
+            # Fetch missing file content for any templates
+            self._fetch_missing_template_file_content()
+            
             self.sync_stacks()
             
             return {
