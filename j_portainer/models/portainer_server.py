@@ -1348,8 +1348,12 @@ class PortainerServer(models.Model):
             _logger.error(f"Error during bidirectional template sync: {str(e)}")
             raise UserError(_("Error during bidirectional template sync: %s") % str(e))
             
+    def fetch_missing_template_file_content(self):
+        """Public method to fetch missing file content for templates"""
+        return self._fetch_missing_template_file_content()
+        
     def _fetch_missing_template_file_content(self):
-        """Fetch missing file content for templates that have a template_id but no file content"""
+        """Private implementation to fetch missing file content for templates that have a template_id but no file content"""
         self.ensure_one()
         
         try:
@@ -1439,7 +1443,7 @@ class PortainerServer(models.Model):
             self.sync_custom_templates()
             
             # Fetch missing file content for any templates that still need it
-            self._fetch_missing_template_file_content()
+            self._fetch_missing_template_file_content() # Use private method to avoid duplicate notifications
             
             return {
                 'type': 'ir.actions.client',
@@ -1576,7 +1580,7 @@ class PortainerServer(models.Model):
             self.sync_custom_templates()
             
             # Fetch missing file content for any templates
-            self._fetch_missing_template_file_content()
+            self._fetch_missing_template_file_content() # Use private method to avoid duplicate notifications
             
             self.sync_stacks()
             

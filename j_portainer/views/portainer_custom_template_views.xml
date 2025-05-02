@@ -38,6 +38,8 @@
                             confirm="Are you sure you want to remove this custom template?"/>
                     <button name="action_refresh" string="Refresh Custom Templates" type="object" class="oe_link"
                             help="Refresh custom templates from Portainer"/>
+                    <button name="action_refresh_file_content" string="Refresh File Content" type="object" class="oe_link"
+                            help="Refresh file content for this template from Portainer"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -123,6 +125,8 @@
                             </group>
                         </page>
                         <page string="File Content" name="file_content" invisible="build_method != 'editor'">
+                            <button name="action_refresh_file_content" string="Refresh File Content" type="object" 
+                                    class="btn-secondary mb-2" attrs="{'invisible': [('template_id', '=', False)]}"/>
                             <field name="fileContent" widget="CodeEditor" options="{'language': 'yaml'}" placeholder="Docker Compose or Stack file content..."/>
                             <div class="text-muted">
                                 This field replaces the older "compose_file" field and is synchronized directly with Portainer.
