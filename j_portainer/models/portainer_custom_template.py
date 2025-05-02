@@ -262,6 +262,77 @@ class PortainerCustomTemplate(models.Model):
                 }
         
         raise UserError(_("No server found to refresh custom templates"))
+        
+    def action_refresh_file_content(self):
+        """Refresh file content for this template from Portainer"""
+        self.ensure_one()
+        
+        if not self.server_id:
+            raise UserError(_("Server is required to refresh file content"))
+            
+        if not self.template_id:
+            raise UserError(_("Template ID is required to refresh file content"))
+            
+        try:
+            _logger.info(f"Fetching file content for template '{self.title}' (ID: {self.template_id})")
+            file_response = self.server_id._make_api_request(f'/api/custom_templates/{self.template_id}/file', 'GET')
+            
+            if file_response.status_code == 200:
+                file_data = file_response.json()
+                compose_content = None
+                
+                # Try different possible field names for the file content
+                for field_name in ['FileContent', 'StackFileContent', 'Content', 'stackFileContent']:
+                    if field_name in file_data:
+                        compose_content = file_data[field_name]
+                        _logger.info(f"Retrieved file content (field: {field_name}) for template '{self.title}'. Content length: {len(compose_content)} chars")
+                        break
+                
+                if compose_content:
+                    self.write({
+                        'fileContent': compose_content,
+                        'compose_file': compose_content,
+                        'build_method': 'editor'
+                    })
+                    
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('File Content Updated'),
+                            'message': _("Template file content has been updated from Portainer"),
+                            'sticky': False,
+                            'type': 'success',
+                        }
+                    }
+                else:
+                    _logger.warning(f"No file content found in response for template {self.template_id}: {file_data}")
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('No File Content Found'),
+                            'message': _("No file content was found for this template in Portainer"),
+                            'sticky': False,
+                            'type': 'warning',
+                        }
+                    }
+            else:
+                error_message = file_response.text
+                _logger.warning(f"Failed to get file content for template {self.template_id}: {file_response.status_code} - {error_message}")
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Error'),
+                        'message': _("Failed to get file content: %s") % error_message,
+                        'sticky': True,
+                        'type': 'danger',
+                    }
+                }
+        except Exception as e:
+            _logger.error(f"Error fetching file content for template {self.template_id}: {str(e)}")
+            raise UserError(_("Error fetching file content: %s") % str(e))
     
     def remove_custom_template(self):
         """Remove this custom template from Portainer"""

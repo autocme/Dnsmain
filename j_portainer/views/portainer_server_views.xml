@@ -29,6 +29,8 @@
                             class="btn-secondary"/>
                     <button name="sync_all_custom_templates" string="Bidirectional Custom Template Sync" type="object" 
                             class="btn-secondary"/>
+                    <button name="_fetch_missing_template_file_content" string="Fetch Missing Template File Content" type="object" 
+                            class="btn-secondary"/>
                     <button name="sync_stacks" string="Sync Stacks" type="object" 
                             class="btn-secondary"/>
                 </header>
