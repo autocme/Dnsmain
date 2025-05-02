@@ -18,10 +18,10 @@ class PortainerTemplateDeployWizard(models.TransientModel):
     
     # Template Info
     template_type = fields.Selection([
-        ('1', 'Container'),
-        ('2', 'Stack'),
-        ('3', 'App Template')
-    ], string='Type', default='1', required=True)
+        ('1', 'Swarm'),
+        ('2', 'Compose'),
+        ('3', 'Podman')
+    ], string='Type', default='2', required=True)
     template_title = fields.Char('Template Title', readonly=True)
     
     # Deployment options
@@ -84,8 +84,8 @@ class PortainerTemplateDeployWizard(models.TransientModel):
             'name': self.name
         }
         
-        # Add stack-specific options
-        if self.template_type == '2':  # Stack
+        # Add Compose stack-specific options
+        if self.template_type == '2':  # Compose
             params['stackfile'] = self.stack_file_path or ''
             
             # Add access control options
@@ -101,8 +101,8 @@ class PortainerTemplateDeployWizard(models.TransientModel):
             if self.enable_tls:
                 params['tls'] = True
                 
-        # Add container-specific options
-        if self.template_type == '1':  # Container
+        # Add Swarm service-specific options
+        if self.template_type == '1':  # Swarm
             # Add restart policy
             params['RestartPolicy'] = {'Name': self.restart_policy}
             
@@ -172,24 +172,24 @@ class PortainerTemplateDeployWizard(models.TransientModel):
                     elif 'container_id' in result:
                         result_data['deployed_resource_id'] = result['container_id']
                         
-                    # For stack deployments, store compose file content if available
-                    if self.template_type == '2' and self.is_custom and self.custom_template_id.compose_file:
-                        result_data['compose_file_content'] = self.custom_template_id.compose_file
+                    # For compose stack deployments, store compose file content if available
+                    if self.template_type == '2' and self.is_custom and self.custom_template_id.fileContent:
+                        result_data['compose_file_content'] = self.custom_template_id.fileContent
                         
                 # Update wizard record
                 self.write(result_data)
                 
                 # Refresh resources after deployment
                 self.server_id.sync_containers(self.environment_id.environment_id)
-                if self.template_type == '2':  # Stack
+                if self.template_type == '2':  # Compose
                     self.server_id.sync_stacks(self.environment_id.environment_id)
                 
                 # Determine the appropriate resource type name for the message
-                resource_type = 'container'
+                resource_type = 'swarm service'
                 if self.template_type == '2':
-                    resource_type = 'stack'
+                    resource_type = 'compose stack'
                 elif self.template_type == '3':
-                    resource_type = 'application'
+                    resource_type = 'podman container'
                 
                 # Return success message
                 return {
