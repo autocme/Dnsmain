@@ -1108,8 +1108,24 @@ class PortainerServer(models.Model):
                     template_data['git_authentication'] = get_field_value(template, ['repositoryAuthentication', 'RepositoryAuthentication'], False)
                 # Check for compose file content in any of the possible field names
                 compose_content = get_field_value(template, ['fileContent', 'FileContent', 'composeFileContent', 'ComposeFileContent'], '')
+                
+                # If no file content in the template data, try to get it from the file API endpoint
+                if not compose_content and template_id:
+                    try:
+                        _logger.info(f"No file content found in template data, fetching from file API endpoint for template ID: {template_id}")
+                        file_response = self._make_api_request(f'/api/custom_templates/file/{template_id}', 'GET')
+                        
+                        if file_response.status_code == 200:
+                            file_data = file_response.json()
+                            compose_content = file_data.get('FileContent', '')
+                            _logger.info(f"Retrieved file content from API for template '{template_data['title']}'. Content length: {len(compose_content)} chars")
+                        else:
+                            _logger.warning(f"Failed to get file content for custom template {template_id}: {file_response.status_code} - {file_response.text}")
+                    except Exception as e:
+                        _logger.error(f"Error fetching file content for template {template_id}: {str(e)}")
+                
                 if compose_content:
-                    _logger.info(f"Found file content for template '{template_data['title']}' (ID: {template_id}). Content length: {len(compose_content)} chars")
+                    _logger.info(f"Using file content for template '{template_data['title']}' (ID: {template_id}). Content length: {len(compose_content)} chars")
                     template_data['build_method'] = 'editor'  # Web editor method
                     template_data['fileContent'] = compose_content  # Use fileContent field instead of compose_file
                     template_data['compose_file'] = compose_content  # Keep compose_file for backward compatibility
