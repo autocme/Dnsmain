@@ -96,9 +96,8 @@
                 <field name="server_id"/>
                 <filter string="Linux Templates" name="linux_templates" domain="[('platform', '=', 'linux')]"/>
                 <filter string="Windows Templates" name="windows_templates" domain="[('platform', '=', 'windows')]"/>
-                <filter string="Swarm" name="swarm_templates" domain="[('template_type', '=', '1')]"/>
-                <filter string="Compose" name="compose_templates" domain="[('template_type', '=', '2')]"/>
-                <filter string="Podman" name="podman_templates" domain="[('template_type', '=', '3')]"/>
+                <filter string="Standalone / Podman" name="standalone_templates" domain="[('template_type', '=', '1')]"/>
+                <filter string="Swarm" name="swarm_templates" domain="[('template_type', '=', '2')]"/>
                 <group expand="0" string="Group By">
                     <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
                     <filter string="Type" name="group_by_type" domain="[]" context="{'group_by': 'template_type'}"/>
