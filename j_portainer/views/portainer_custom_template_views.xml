@@ -154,9 +154,9 @@
                 <field name="environment_id"/>
                 <filter string="Linux Templates" name="linux_templates" domain="[('platform', '=', 'linux')]"/>
                 <filter string="Windows Templates" name="windows_templates" domain="[('platform', '=', 'windows')]"/>
-                <filter string="Containers" name="container_templates" domain="[('template_type', '=', '1')]"/>
-                <filter string="Stacks" name="stack_templates" domain="[('template_type', '=', '2')]"/>
-                <filter string="App Templates" name="app_templates" domain="[('template_type', '=', '3')]"/>
+                <filter string="Swarm" name="swarm_templates" domain="[('template_type', '=', '1')]"/>
+                <filter string="Compose" name="compose_templates" domain="[('template_type', '=', '2')]"/>
+                <filter string="Podman" name="podman_templates" domain="[('template_type', '=', '3')]"/>
                 <filter string="Web Editor" name="web_editor" domain="[('build_method', '=', 'editor')]"/>
                 <filter string="Git Repository" name="git_repository" domain="[('build_method', '=', 'repository')]"/>
                 <filter string="URL" name="url_method" domain="[('build_method', '=', 'url')]"/>
