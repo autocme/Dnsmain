@@ -18,10 +18,9 @@ class PortainerTemplateDeployWizard(models.TransientModel):
     
     # Template Info
     template_type = fields.Selection([
-        ('1', 'Swarm'),
-        ('2', 'Compose'),
-        ('3', 'Podman')
-    ], string='Type', default='2', required=True)
+        ('1', 'Standalone / Podman'),
+        ('2', 'Swarm')
+    ], string='Type', default='1', required=True)
     template_title = fields.Char('Template Title', readonly=True)
     
     # Deployment options
@@ -84,8 +83,8 @@ class PortainerTemplateDeployWizard(models.TransientModel):
             'name': self.name
         }
         
-        # Add Compose stack-specific options
-        if self.template_type == '2':  # Compose
+        # Add Swarm-specific options
+        if self.template_type == '2':  # Swarm
             params['stackfile'] = self.stack_file_path or ''
             
             # Add access control options
@@ -101,8 +100,8 @@ class PortainerTemplateDeployWizard(models.TransientModel):
             if self.enable_tls:
                 params['tls'] = True
                 
-        # Add Swarm service-specific options
-        if self.template_type == '1':  # Swarm
+        # Add Standalone/Podman-specific options
+        if self.template_type == '1':  # Standalone/Podman
             # Add restart policy
             params['RestartPolicy'] = {'Name': self.restart_policy}
             
@@ -172,7 +171,7 @@ class PortainerTemplateDeployWizard(models.TransientModel):
                     elif 'container_id' in result:
                         result_data['deployed_resource_id'] = result['container_id']
                         
-                    # For compose stack deployments, store compose file content if available
+                    # For swarm stack deployments, store file content if available
                     if self.template_type == '2' and self.is_custom and self.custom_template_id.fileContent:
                         result_data['compose_file_content'] = self.custom_template_id.fileContent
                         
@@ -181,15 +180,13 @@ class PortainerTemplateDeployWizard(models.TransientModel):
                 
                 # Refresh resources after deployment
                 self.server_id.sync_containers(self.environment_id.environment_id)
-                if self.template_type == '2':  # Compose
+                if self.template_type == '2':  # Swarm
                     self.server_id.sync_stacks(self.environment_id.environment_id)
                 
                 # Determine the appropriate resource type name for the message
-                resource_type = 'swarm service'
+                resource_type = 'standalone container'
                 if self.template_type == '2':
-                    resource_type = 'compose stack'
-                elif self.template_type == '3':
-                    resource_type = 'podman container'
+                    resource_type = 'swarm stack'
                 
                 # Return success message
                 return {
