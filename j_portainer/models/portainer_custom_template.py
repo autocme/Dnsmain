@@ -12,6 +12,7 @@ class PortainerCustomTemplate(models.Model):
     _name = 'j_portainer.customtemplate'
     _description = 'Portainer Custom Template'
     _order = 'title'
+    _inherit = ['j_portainer.template.mixin']
     _copy_default_excluded_fields = [
         'template_id', 
         'fileContent',
@@ -114,100 +115,8 @@ class PortainerCustomTemplate(models.Model):
                 if self.search_count(domain) > 0:
                     raise ValidationError(_("Template ID %s already exists for this Portainer server!") % template.template_id)
     
-    @api.depends('categories')
-    def _compute_category_ids(self):
-        """Compute and maintain category_ids from categories text"""
-        category_model = self.env['j_portainer.template.category']
-        
-        for template in self:
-            category_list = []
-            
-            if template.categories:
-                try:
-                    # Try to parse as JSON
-                    categories = json.loads(template.categories)
-                    if isinstance(categories, list):
-                        for category in categories:
-                            if isinstance(category, str):
-                                # Get or create the category
-                                category_obj = category_model.search([('name', '=', category)], limit=1)
-                                if not category_obj:
-                                    category_obj = category_model.create({'name': category})
-                                category_list.append(category_obj.id)
-                            elif isinstance(category, dict) and 'name' in category:
-                                # Handle object format with name key
-                                category_obj = category_model.search([('name', '=', category['name'])], limit=1)
-                                if not category_obj:
-                                    category_obj = category_model.create({'name': category['name']})
-                                category_list.append(category_obj.id)
-                except Exception as e:
-                    _logger.warning(f"Error parsing categories: {str(e)}")
-                    # Try to parse as comma-separated string
-                    try:
-                        for category in template.categories.split(','):
-                            category = category.strip()
-                            if category:
-                                category_obj = category_model.search([('name', '=', category)], limit=1)
-                                if not category_obj:
-                                    category_obj = category_model.create({'name': category})
-                                category_list.append(category_obj.id)
-                    except Exception as e2:
-                        _logger.error(f"Failed to parse categories as string: {str(e2)}")
-            
-            template.category_ids = [(6, 0, category_list)]
-    
-    @api.depends('environment_variables')
-    def _compute_formatted_env(self):
-        """Format environment variables for display"""
-        for template in self:
-            result = ""
-            
-            if template.environment_variables:
-                try:
-                    env_vars = json.loads(template.environment_variables)
-                    if isinstance(env_vars, list):
-                        for env in env_vars:
-                            if isinstance(env, dict):
-                                name = env.get('name', '')
-                                default_value = env.get('default', '')
-                                description = env.get('description', '')
-                                label = env.get('label', '')
-                                
-                                result += f"{name}: {default_value}\n"
-                                if description:
-                                    result += f"  Description: {description}\n"
-                                if label:
-                                    result += f"  Label: {label}\n"
-                                result += "\n"
-                            elif isinstance(env, str):
-                                result += f"{env}\n"
-                except Exception as e:
-                    result = f"Error parsing environment variables: {str(e)}"
-            
-            template.get_formatted_env = result
-    
-    @api.depends('volumes')
-    def _compute_formatted_volumes(self):
-        """Format volumes for display"""
-        for template in self:
-            result = ""
-            
-            if template.volumes:
-                try:
-                    volumes = json.loads(template.volumes)
-                    if isinstance(volumes, list):
-                        for volume in volumes:
-                            if isinstance(volume, dict):
-                                container = volume.get('container', '')
-                                bind = volume.get('bind', '')
-                                result += f"Container: {container}\n"
-                                result += f"  Bind: {bind}\n\n"
-                            elif isinstance(volume, str):
-                                result += f"{volume}\n"
-                except Exception as e:
-                    result = f"Error parsing volumes: {str(e)}"
-            
-            template.get_formatted_volumes = result
+    # The formatting functions for environment variables, volumes, and
+    # categories are now inherited from j_portainer.template.mixin
     
     @api.depends('fileContent')
     def _compute_compose_file(self):
@@ -220,30 +129,7 @@ class PortainerCustomTemplate(models.Model):
         for template in self:
             template.fileContent = template.compose_file
             
-    @api.depends('ports')
-    def _compute_formatted_ports(self):
-        """Format ports for display"""
-        for template in self:
-            result = ""
-            
-            if template.ports:
-                try:
-                    ports = json.loads(template.ports)
-                    if isinstance(ports, list):
-                        for port in ports:
-                            if isinstance(port, dict):
-                                container = port.get('container', '')
-                                host = port.get('host', '')
-                                protocol = port.get('protocol', 'tcp')
-                                result += f"Container: {container}\n"
-                                result += f"  Host: {host}\n"
-                                result += f"  Protocol: {protocol}\n\n"
-                            elif isinstance(port, str):
-                                result += f"{port}\n"
-                except Exception as e:
-                    result = f"Error parsing ports: {str(e)}"
-            
-            template.get_formatted_ports = result
+    # The ports formatting function is now inherited from j_portainer.template.mixin
     
     def action_refresh(self):
         """Refresh custom templates from Portainer"""
@@ -441,7 +327,7 @@ class PortainerCustomTemplate(models.Model):
             "Description": self.description or f"Auto-created from Odoo",
             "Note": self.note or "Created from Odoo j_portainer module",
             "Platform": str(platform_int),  # Must be a string for multipart form
-            "Type": type_str,              # "1" for Swarm, "2" for Compose, "3" for Podman
+            "Type": type_str,              # "1" for Standalone/Podman, "2" for Swarm
             "Logo": self.logo or "",
             "Variables": self.environment_variables or "[]"
         }
@@ -655,7 +541,7 @@ class PortainerCustomTemplate(models.Model):
                             'Description': self.description or f'Template for {self.title}',
                             'Note': self.note or '',
                             'Platform': str(platform_value),  # 1 for Linux, 2 for Windows
-                            'Type': str(type_value),  # 1 for container, 2 for stack, 3 for app template
+                            'Type': str(type_value),  # 1 for Standalone/Podman, 2 for Swarm
                             'Logo': self.logo or '',
                         }
                         
@@ -784,7 +670,7 @@ class PortainerCustomTemplate(models.Model):
                             'Description': self.description or f'Template for {self.title}',
                             'Note': self.note or '',
                             'Platform': str(platform_value),  # 1 for Linux, 2 for Windows
-                            'Type': str(type_value),  # 1 for container, 2 for stack, 3 for app template
+                            'Type': str(type_value),  # 1 for Standalone/Podman, 2 for Swarm
                             'Logo': self.logo or '',
                         }
                         
@@ -1374,19 +1260,19 @@ class PortainerCustomTemplate(models.Model):
             platform_int = platform_map.get(self.platform.lower(), 1)
             
         # Convert template type to integer for Portainer API v2
-        # Type 1 = Swarm, Type 2 = Compose, Type 3 = Podman
-        type_int = 2  # Default to Compose (2)
+        # Type 1 = Standalone/Podman, Type 2 = Swarm
+        type_int = 1  # Default to Standalone/Podman (1)
         try:
             type_int = int(self.template_type)
         except (ValueError, TypeError):
             # In case template_type is not a numeric string, try to map it
             type_map = {
-                'swarm': 1,
-                'compose': 2, 
-                'podman': 3
+                'swarm': 2,
+                'standalone': 1, 
+                'podman': 1
             }
             if isinstance(self.template_type, str) and self.template_type.lower() in type_map:
-                type_int = type_map.get(self.template_type.lower(), 2)
+                type_int = type_map.get(self.template_type.lower(), 1)
             
         # Prepare base template data according to v2 API specification
         template_data = {
