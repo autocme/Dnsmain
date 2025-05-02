@@ -586,17 +586,37 @@ class PortainerCustomTemplate(models.Model):
                             'Logo': self.logo or '',
                         }
                         
-                        # Add environment ID - this is critical for the API request
+                        # Add environment ID in the URL query params instead of form data
+                        # This ensures compatibility with Portainer CE current API
                         if portainer_env_id:
-                            data['environmentId'] = str(portainer_env_id)
+                            url = f"{url}?environment={portainer_env_id}"
                         
                         # Add variables if available
                         if self.environment_variables:
-                            data['Variables'] = self.environment_variables
+                            try:
+                                # Convert to proper JSON string if it's a raw string
+                                if isinstance(self.environment_variables, str):
+                                    # Try to parse as JSON to validate
+                                    env_vars_json = json.loads(self.environment_variables)
+                                    data['Variables'] = json.dumps(env_vars_json)
+                                else:
+                                    data['Variables'] = json.dumps(self.environment_variables)
+                            except Exception as e:
+                                _logger.warning(f"Error formatting environment variables: {str(e)}")
+                                data['Variables'] = self.environment_variables
+                                
+                        # Add categories if available
+                        if self.categories:
+                            try:
+                                # Try to format categories as JSON string
+                                categories = self.categories.split(",") if isinstance(self.categories, str) else []
+                                data["Categories"] = json.dumps(categories)
+                            except Exception as e:
+                                _logger.warning(f"Error formatting categories: {str(e)}")
                             
-                        # Prepare files for upload
+                        # Prepare files for upload - use a proper MIME type for YAML files
                         files = {
-                            'File': ('template.yml', file_content.encode('utf-8'))
+                            'File': ('template.yml', file_content.encode('utf-8'), 'text/x-yaml')
                         }
                         
                         # Log the complete request for debugging
@@ -616,8 +636,8 @@ class PortainerCustomTemplate(models.Model):
                                     data['environmentId'] = str(env.environment_id)
                                     break
                         
-                        # Send the POST request - skip SSL verification for self-signed certs
-                        res = requests.post(url, headers=headers, data=data, files=files, verify=False)
+                        # Send the POST request with SSL verification as configured in server
+                        res = requests.post(url, headers=headers, data=data, files=files, verify=server_info.verify_ssl)
                     else:
                         # For updates, use application/json as required by the API
                         # Prepare JSON data
@@ -654,8 +674,8 @@ class PortainerCustomTemplate(models.Model):
                         _logger.info(f"PUT Request Headers: {json_headers}")
                         _logger.info(f"PUT Request JSON: {json.dumps(json_data)}")
                         
-                        # Send the PUT request - skip SSL verification for self-signed certs
-                        res = requests.put(url, headers=json_headers, json=json_data, verify=False)
+                        # Send the PUT request with SSL verification as configured in server
+                        res = requests.put(url, headers=json_headers, json=json_data, verify=server_info.verify_ssl)
                     
                     if res.status_code in [200, 201, 202]:
                         try:
@@ -695,21 +715,40 @@ class PortainerCustomTemplate(models.Model):
                             'Logo': self.logo or '',
                         }
                         
-                        # Add environment ID - this is critical for the API request
+                        # Add environment ID to the URL query params instead of form data
                         if portainer_env_id:
-                            post_data['environmentId'] = str(portainer_env_id)
+                            create_url = f"{create_url}?environment={portainer_env_id}"
                             
                         # Add variables if available
                         if self.environment_variables:
-                            post_data['Variables'] = self.environment_variables
+                            try:
+                                # Convert to proper JSON string if it's a raw string
+                                if isinstance(self.environment_variables, str):
+                                    # Try to parse as JSON to validate
+                                    env_vars_json = json.loads(self.environment_variables)
+                                    post_data['Variables'] = json.dumps(env_vars_json)
+                                else:
+                                    post_data['Variables'] = json.dumps(self.environment_variables)
+                            except Exception as e:
+                                _logger.warning(f"Error formatting environment variables for fallback: {str(e)}")
+                                post_data['Variables'] = self.environment_variables
+                                
+                        # Add categories if available
+                        if self.categories:
+                            try:
+                                # Try to format categories as JSON string
+                                categories = self.categories.split(",") if isinstance(self.categories, str) else []
+                                post_data["Categories"] = json.dumps(categories)
+                            except Exception as e:
+                                _logger.warning(f"Error formatting categories for fallback: {str(e)}")
                             
-                        # Prepare files for upload
+                        # Prepare files for upload with proper MIME type
                         post_files = {
-                            'File': ('template.yml', file_content.encode('utf-8'))
+                            'File': ('template.yml', file_content.encode('utf-8'), 'text/x-yaml')
                         }
                         
                         _logger.info(f"Sending fallback multipart form POST request to {create_url}")
-                        create_res = requests.post(url=create_url, headers=headers, data=post_data, files=post_files, verify=False)
+                        create_res = requests.post(url=create_url, headers=headers, data=post_data, files=post_files, verify=server_info.verify_ssl)
                         
                         if create_res.status_code in [200, 201, 202]:
                             try:
