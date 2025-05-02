@@ -27,10 +27,10 @@ class PortainerCustomTemplate(models.Model):
     title = fields.Char('Title', required=True)
     description = fields.Text('Description')
     template_type = fields.Selection([
-        ('1', 'Container'),
-        ('2', 'Stack'),
-        ('3', 'App Template')
-    ], string='Type', default='1', required=True)
+        ('1', 'Swarm'),
+        ('2', 'Compose'),
+        ('3', 'Podman')
+    ], string='Type', default='2', required=True)
     platform = fields.Selection([
         ('linux', 'Linux'),
         ('windows', 'Windows')
@@ -433,13 +433,16 @@ class PortainerCustomTemplate(models.Model):
             }
             platform_int = platform_map.get(self.platform.lower(), 1)
             
+        # Convert template type to proper format
+        type_str = self.template_type  # Default use as-is (should be "1", "2", or "3")
+            
         # Prepare form data
         data = {
             "Title": self.title,
             "Description": self.description or f"Auto-created from Odoo",
             "Note": self.note or "Created from Odoo j_portainer module",
             "Platform": str(platform_int),  # Must be a string for multipart form
-            "Type": self.template_type,     # Already a string in our model
+            "Type": type_str,              # "1" for Swarm, "2" for Compose, "3" for Podman
             "Logo": self.logo or "",
             "Variables": self.environment_variables or "[]"
         }
@@ -1371,9 +1374,24 @@ class PortainerCustomTemplate(models.Model):
             }
             platform_int = platform_map.get(self.platform.lower(), 1)
             
+        # Convert template type to integer for Portainer API v2
+        # Type 1 = Swarm, Type 2 = Compose, Type 3 = Podman
+        type_int = 2  # Default to Compose (2)
+        try:
+            type_int = int(self.template_type)
+        except (ValueError, TypeError):
+            # In case template_type is not a numeric string, try to map it
+            type_map = {
+                'swarm': 1,
+                'compose': 2, 
+                'podman': 3
+            }
+            if isinstance(self.template_type, str) and self.template_type.lower() in type_map:
+                type_int = type_map.get(self.template_type.lower(), 2)
+            
         # Prepare base template data according to v2 API specification
         template_data = {
-            'type': int(self.template_type),
+            'type': type_int,
             'title': self.title,
             'description': self.description or f'Template for {self.title}',
             'note': self.note or '',
