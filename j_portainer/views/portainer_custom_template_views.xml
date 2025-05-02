@@ -17,6 +17,7 @@
                 <field name="environment_id"/>
                 <field name="category_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
                 <field name="build_method"/>
+                <button name="action_create_in_portainer" string="Create in Portainer" type="object" icon="fa-upload" title="Create in Portainer"/>
                 <button name="action_deploy" string="Deploy" type="object" icon="fa-rocket" title="Deploy Template"/>
             </tree>
         </field>
@@ -30,6 +31,8 @@
             <form string="Custom Template">
                 <header>
                     <button name="action_deploy" string="Deploy" type="object" class="oe_highlight" help="Deploy this template"/>
+                    <button name="action_create_in_portainer" string="Create in Portainer" type="object" 
+                            class="btn-primary" help="Create this template in Portainer using direct file upload API"/>
                     <button name="remove_custom_template" string="Remove Template" type="object" class="oe_link"
                             help="Remove this custom template from Portainer"
                             confirm="Are you sure you want to remove this custom template?"/>
