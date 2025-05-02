@@ -6,7 +6,7 @@
         <field name="name">j_portainer.customtemplate.tree</field>
         <field name="model">j_portainer.customtemplate</field>
         <field name="arch" type="xml">
-            <tree string="Custom Templates" decoration-info="template_type=='2'">
+            <tree string="Custom Templates" decoration-info="template_type == '2'">
                 <field name="title"/>
                 <field name="template_type"/>
                 <field name="platform"/>
@@ -81,21 +81,21 @@
                                 </group>
                             </group>
                         </page>
-                        <page string="Environment Variables" name="env_vars" invisible="template_type != '1'">
+                        <page string="Environment Variables" name="env_vars">
                             <field name="environment_variables" widget="CodeEditor" options="{'language': 'json'}" placeholder="Environment variables in JSON format..."/>
                             <div class="text-muted">
                                 Environment Variables Preview:
                                 <pre><field name="get_formatted_env" readonly="1"/></pre>
                             </div>
                         </page>
-                        <page string="Volumes" name="volumes" invisible="template_type != '1'">
+                        <page string="Volumes" name="volumes">
                             <field name="volumes" widget="CodeEditor" options="{'language': 'json'}" placeholder="Volumes in JSON format..."/>
                             <div class="text-muted">
                                 Volumes Preview:
                                 <pre><field name="get_formatted_volumes" readonly="1"/></pre>
                             </div>
                         </page>
-                        <page string="Ports" name="ports" invisible="template_type != '1'">
+                        <page string="Ports" name="ports">
                             <field name="ports" widget="CodeEditor" options="{'language': 'json'}" placeholder="Ports in JSON format..."/>
                             <div class="text-muted">
                                 Ports Preview:

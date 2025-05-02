@@ -6,7 +6,7 @@
         <field name="name">j_portainer.template.tree</field>
         <field name="model">j_portainer.template</field>
         <field name="arch" type="xml">
-            <tree string="Standard Templates" decoration-info="template_type=='2'">
+            <tree string="Standard Templates" decoration-info="template_type == '2'">
                 <field name="title"/>
                 <field name="template_type"/>
                 <field name="platform"/>
@@ -54,21 +54,21 @@
                             <field name="description" placeholder="Template description..."/>
                             <field name="note" placeholder="Additional notes..."/>
                         </page>
-                        <page string="Environment Variables" name="env_vars" invisible="template_type != '1'">
+                        <page string="Environment Variables" name="env_vars">
                             <field name="environment_variables" widget="CodeEditor" options="{'language': 'json'}" placeholder="Environment variables in JSON format..."/>
                             <div class="text-muted">
                                 Environment Variables Preview:
                                 <pre><field name="get_formatted_env" readonly="1"/></pre>
                             </div>
                         </page>
-                        <page string="Volumes" name="volumes" invisible="template_type != '1'">
+                        <page string="Volumes" name="volumes">
                             <field name="volumes" widget="CodeEditor" options="{'language': 'json'}" placeholder="Volumes in JSON format..."/>
                             <div class="text-muted">
                                 Volumes Preview:
                                 <pre><field name="get_formatted_volumes" readonly="1"/></pre>
                             </div>
                         </page>
-                        <page string="Ports" name="ports" invisible="template_type != '1'">
+                        <page string="Ports" name="ports">
                             <field name="ports" widget="CodeEditor" options="{'language': 'json'}" placeholder="Ports in JSON format..."/>
                             <div class="text-muted">
                                 Ports Preview:
@@ -96,9 +96,9 @@
                 <field name="server_id"/>
                 <filter string="Linux Templates" name="linux_templates" domain="[('platform', '=', 'linux')]"/>
                 <filter string="Windows Templates" name="windows_templates" domain="[('platform', '=', 'windows')]"/>
-                <filter string="Containers" name="container_templates" domain="[('template_type', '=', '1')]"/>
-                <filter string="Stacks" name="stack_templates" domain="[('template_type', '=', '2')]"/>
-                <filter string="App Templates" name="app_templates" domain="[('template_type', '=', '3')]"/>
+                <filter string="Swarm" name="swarm_templates" domain="[('template_type', '=', '1')]"/>
+                <filter string="Compose" name="compose_templates" domain="[('template_type', '=', '2')]"/>
+                <filter string="Podman" name="podman_templates" domain="[('template_type', '=', '3')]"/>
                 <group expand="0" string="Group By">
                     <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
                     <filter string="Type" name="group_by_type" domain="[]" context="{'group_by': 'template_type'}"/>
