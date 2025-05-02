@@ -1242,8 +1242,16 @@ class PortainerServer(models.Model):
             for template in custom_templates:
                 try:
                     _logger.info(f"Pushing template '{template.title}' to Portainer")
-                    # Use the template's method to push to Portainer
-                    response = template.action_create_in_portainer()
+                    
+                    # Check if this template already exists in Portainer
+                    if template.template_id:
+                        # Update existing template
+                        _logger.info(f"Updating existing template with ID: {template.template_id}")
+                        response = template._sync_to_portainer(method='put')
+                    else:
+                        # Create a new template
+                        _logger.info("Creating new template in Portainer")
+                        response = template.action_create_in_portainer()
                     
                     # Check if successful
                     if response and isinstance(response, dict) and (
@@ -1286,64 +1294,73 @@ class PortainerServer(models.Model):
             self.sync_custom_templates()
             
             # Step 2: Push templates from Odoo to Portainer
-            # Get all custom templates for this server that don't have a template_id yet
-            # (meaning they exist in Odoo but not in Portainer)
-            new_templates = self.env['j_portainer.customtemplate'].search([
+            # Get all custom templates for this server that should be synchronized
+            custom_templates = self.env['j_portainer.customtemplate'].search([
                 ('server_id', '=', self.id),
-                ('template_id', '=', False),
                 ('skip_portainer_create', '=', False)
             ])
             
-            success_count = 0
-            error_count = 0
-            
-            for template in new_templates:
-                try:
-                    _logger.info(f"Pushing new template '{template.title}' to Portainer")
-                    # Use the template's method to push to Portainer
-                    response = template.action_create_in_portainer()
-                    
-                    # Check if successful
-                    if response and isinstance(response, dict) and (
-                        'Id' in response or 'id' in response or 'success' in response):
-                        success_count += 1
-                        
-                        # Log new template ID if one was assigned
-                        template_id = response.get('Id') or response.get('id')
-                        if template_id and not template.template_id:
-                            _logger.info(f"Template '{template.title}' created with ID: {template_id}")
-                    else:
-                        error_count += 1
-                        _logger.warning(f"Failed to push template '{template.title}': {response}")
-                except Exception as e:
-                    error_count += 1
-                    _logger.error(f"Error pushing template '{template.title}': {str(e)}")
-            
-            self.write({'last_sync': fields.Datetime.now()})
-            
-            # Return a message about the bidirectional sync
-            if success_count > 0:
+            if not custom_templates:
+                self.write({'last_sync': fields.Datetime.now()})
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
                         'title': _('Bidirectional Template Sync Complete'),
-                        'message': _('Pulled templates from Portainer and pushed %d new templates (with %d errors)') % (success_count, error_count),
-                        'sticky': False,
-                        'type': 'success' if error_count == 0 else 'warning',
-                    }
-                }
-            else:
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': _('Bidirectional Template Sync Complete'),
-                        'message': _('Pulled templates from Portainer. No new templates to push.'),
+                        'message': _('Pulled templates from Portainer. No templates to push.'),
                         'sticky': False,
                         'type': 'success',
                     }
                 }
+            
+            created_count = 0
+            updated_count = 0
+            error_count = 0
+            
+            for template in custom_templates:
+                try:
+                    if template.template_id:
+                        # Update existing template
+                        _logger.info(f"Updating existing template '{template.title}' (ID: {template.template_id})")
+                        response = template._sync_to_portainer(method='put')
+                        if response and isinstance(response, dict) and (
+                            'Id' in response or 'id' in response or 'success' in response):
+                            updated_count += 1
+                        else:
+                            error_count += 1
+                            _logger.warning(f"Failed to update template '{template.title}': {response}")
+                    else:
+                        # Create new template
+                        _logger.info(f"Creating new template '{template.title}' in Portainer")
+                        response = template.action_create_in_portainer()
+                        if response and isinstance(response, dict) and (
+                            'Id' in response or 'id' in response or 'success' in response):
+                            created_count += 1
+                            # Log new template ID if one was assigned
+                            template_id = response.get('Id') or response.get('id')
+                            if template_id and not template.template_id:
+                                _logger.info(f"Template '{template.title}' created with ID: {template_id}")
+                        else:
+                            error_count += 1
+                            _logger.warning(f"Failed to create template '{template.title}': {response}")
+                except Exception as e:
+                    error_count += 1
+                    _logger.error(f"Error processing template '{template.title}': {str(e)}")
+            
+            self.write({'last_sync': fields.Datetime.now()})
+            
+            # Return a message about the bidirectional sync
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Bidirectional Template Sync Complete'),
+                    'message': _('Synced with Portainer: Created %d templates, Updated %d templates (%d errors)') % 
+                        (created_count, updated_count, error_count),
+                    'sticky': False,
+                    'type': 'success' if error_count == 0 else 'warning',
+                }
+            }
         except Exception as e:
             _logger.error(f"Error during bidirectional template sync: {str(e)}")
             raise UserError(_("Error during bidirectional template sync: %s") % str(e))
