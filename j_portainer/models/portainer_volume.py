@@ -101,7 +101,8 @@ class PortainerVolume(models.Model):
             if result:
                 # Delete the record
                 self.unlink()
-                
+                self.env.cr.commit()
+
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
