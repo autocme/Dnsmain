@@ -38,8 +38,6 @@
                             confirm="Are you sure you want to remove this custom template?"/>
                     <button name="action_refresh" string="Refresh Custom Templates" type="object" class="oe_link"
                             help="Refresh custom templates from Portainer"/>
-                    <button name="action_refresh_file_content" string="Refresh File Content" type="object" class="oe_link"
-                            help="Refresh file content for this template from Portainer"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
