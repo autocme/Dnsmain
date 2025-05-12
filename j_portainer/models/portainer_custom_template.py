@@ -148,7 +148,7 @@ class PortainerCustomTemplate(models.Model):
             template_response = self.server_id._make_api_request(
                 f'/api/custom_templates/{self.template_id}', 
                 'GET',
-                operation_type='sync_custom_template'
+                environment_id=self.environment_id.environment_id if self.environment_id else None
             )
             
             if template_response.status_code != 200:
@@ -179,7 +179,7 @@ class PortainerCustomTemplate(models.Model):
                 file_response = self.server_id._make_api_request(
                     f'/api/custom_templates/{self.template_id}/file', 
                     'GET',
-                    operation_type='sync_custom_template'
+                    environment_id=self.environment_id.environment_id if self.environment_id else None
                 )
                 
                 if file_response.status_code == 200:

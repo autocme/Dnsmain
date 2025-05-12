@@ -256,7 +256,7 @@ class PortainerServer(models.Model):
         # Format header value for X-API-Key authentication
         return f"{self.api_key}"
 
-    def _make_api_request(self, endpoint, method='GET', data=None, params=None, headers=None, use_multipart=False, operation_type='other', environment_id=None):
+    def _make_api_request(self, endpoint, method='GET', data=None, params=None, headers=None, use_multipart=False, environment_id=None):
         """Make a request to the Portainer API
         
         Args:
@@ -266,7 +266,6 @@ class PortainerServer(models.Model):
             params (dict, optional): URL parameters
             headers (dict, optional): Additional headers to include with the request
             use_multipart (bool, optional): Whether to use multipart form data instead of JSON
-            operation_type (str, optional): Type of operation being performed (for logging)
             environment_id (int, optional): Environment ID related to this request (for logging)
             
         Returns:
@@ -284,6 +283,43 @@ class PortainerServer(models.Model):
             ], limit=1)
             if env:
                 environment_name = env.name
+        
+        # If environment_id is in the URL but not provided as param, try to extract it
+        elif not environment_id:
+            # Check for common URL patterns where environment ID is present
+            # Pattern 1: /api/endpoints/3/... (environment ID directly in path)
+            # Pattern 2: /api/endpoints/3      (environment ID is the last part)
+            # Pattern 3: /api/stacks?endpointId=3 (environment ID in query string)
+            try:
+                # First try extracting from path
+                if '/endpoints/' in endpoint:
+                    url_parts = endpoint.split('/')
+                    if 'endpoints' in url_parts:
+                        endpoints_index = url_parts.index('endpoints')
+                        if endpoints_index + 1 < len(url_parts) and url_parts[endpoints_index + 1].isdigit():
+                            extracted_env_id = int(url_parts[endpoints_index + 1])
+                            env = self.env['j_portainer.environment'].search([
+                                ('server_id', '=', self.id), 
+                                ('environment_id', '=', extracted_env_id)
+                            ], limit=1)
+                            if env:
+                                environment_id = extracted_env_id
+                                environment_name = env.name
+                
+                # Then try extracting from query parameters
+                elif params and ('endpointId' in params or 'environmentId' in params):
+                    param_env_id = params.get('endpointId') or params.get('environmentId')
+                    if param_env_id and (isinstance(param_env_id, int) or (isinstance(param_env_id, str) and param_env_id.isdigit())):
+                        extracted_env_id = int(param_env_id)
+                        env = self.env['j_portainer.environment'].search([
+                            ('server_id', '=', self.id), 
+                            ('environment_id', '=', extracted_env_id)
+                        ], limit=1)
+                        if env:
+                            environment_id = extracted_env_id
+                            environment_name = env.name
+            except Exception as e:
+                _logger.debug(f"Could not extract environment ID from URL: {str(e)}")
 
         # Default headers
         request_headers = {
@@ -303,9 +339,8 @@ class PortainerServer(models.Model):
             'server_id': self.id,
             'endpoint': endpoint,
             'method': method,
-            'environment_id': environment_id,
-            'environment_name': environment_name,
-            'operation_type': operation_type,
+            'environment_id': environment_id if environment_id else False,
+            'environment_name': environment_name if environment_name else '',
             'request_date': start_time,
         }
         
@@ -426,7 +461,7 @@ class PortainerServer(models.Model):
 
         try:
             # Get all endpoints from Portainer
-            response = self._make_api_request('/api/endpoints', 'GET', operation_type='sync_environment')
+            response = self._make_api_request('/api/endpoints', 'GET')
             if response.status_code != 200:
                 raise UserError(_("Failed to get environments: %s") % response.text)
 
@@ -440,7 +475,7 @@ class PortainerServer(models.Model):
                 env_name = env.get('Name', 'Unknown')
 
                 # Get endpoint details
-                details_response = self._make_api_request(f'/api/endpoints/{env_id}', 'GET', operation_type='sync_environment')
+                details_response = self._make_api_request(f'/api/endpoints/{env_id}', 'GET', environment_id=env_id)
                 details = details_response.json() if details_response.status_code == 200 else {}
 
                 # Check if environment already exists in Odoo
