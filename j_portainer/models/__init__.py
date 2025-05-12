@@ -17,3 +17,4 @@ from . import portainer_git_credentials
 # from . import portainer_template_test
 from . import portainer_stack
 from . import portainer_environment
+from . import portainer_api_log
