@@ -15,11 +15,12 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 _logger = logging.getLogger(__name__)
 
+
 class PortainerServer(models.Model):
     _name = 'j_portainer.server'
     _description = 'Portainer Server'
     _inherit = ['mail.thread', 'mail.activity.mixin']
-    
+
     def _parse_date_value(self, date_value: Any) -> Optional[datetime]:
         """Parse date value from API response
         
@@ -39,7 +40,7 @@ class PortainerServer(models.Model):
         """
         if not date_value:
             return None
-        
+
         # First try with fields.Datetime which is safer for Odoo
         if isinstance(date_value, str):
             try:
@@ -50,7 +51,7 @@ class PortainerServer(models.Model):
                     return fields.Datetime.from_string(simple_date)
             except Exception:
                 pass
-        
+
         # Fall back to more complex parsing if needed
         try:
             if isinstance(date_value, str):
@@ -66,7 +67,7 @@ class PortainerServer(models.Model):
                 return None
         except Exception as e:
             _logger.warning(f"Error parsing date value {date_value}: {str(e)}")
-            
+
             # Last attempt for ISO-format with Z timezone
             if isinstance(date_value, str) and 'T' in date_value and date_value.endswith('Z'):
                 try:
@@ -76,16 +77,16 @@ class PortainerServer(models.Model):
                     return datetime.strptime(simple_str, '%Y-%m-%d %H:%M:%S')
                 except Exception as simple_error:
                     _logger.warning(f"Simple date parsing also failed: {str(simple_error)}")
-            
+
             return None
-    
+
     name = fields.Char('Name', required=True, tracking=True)
     url = fields.Char('URL', required=True, tracking=True,
-                     help="URL to Portainer server (e.g., https://portainer.example.com:9443)")
-    api_key = fields.Char('API Key', required=True, tracking=True, 
-                       help="Portainer API key for authentication")
+                      help="URL to Portainer server (e.g., https://portainer.example.com:9443)")
+    api_key = fields.Char('API Key', required=True, tracking=True,
+                          help="Portainer API key for authentication")
     verify_ssl = fields.Boolean('Verify SSL', default=False, tracking=True,
-                               help="Verify SSL certificates when connecting (disable for self-signed certificates)")
+                                help="Verify SSL certificates when connecting (disable for self-signed certificates)")
     status = fields.Selection([
         ('unknown', 'Unknown'),
         ('connecting', 'Connecting'),
@@ -97,7 +98,7 @@ class PortainerServer(models.Model):
     portainer_version = fields.Char('Portainer Version', readonly=True)
     portainer_info = fields.Text('Server Info', readonly=True)
     environment_count = fields.Integer('Environments', readonly=True)
-    
+
     # Related Resources
     container_ids = fields.One2many('j_portainer.container', 'server_id', string='Containers')
     image_ids = fields.One2many('j_portainer.image', 'server_id', string='Images')
@@ -107,18 +108,18 @@ class PortainerServer(models.Model):
     custom_template_ids = fields.One2many('j_portainer.customtemplate', 'server_id', string='Custom Templates')
     stack_ids = fields.One2many('j_portainer.stack', 'server_id', string='Stacks')
     environment_ids = fields.One2many('j_portainer.environment', 'server_id', string='Environments')
-    
+
     _sql_constraints = [
         ('name_unique', 'UNIQUE(name)', 'Server name must be unique!')
     ]
-    
+
     @api.model_create_multi
     def create(self, vals_list):
         records = super().create(vals_list)
         for record in records:
             record.test_connection()
         return records
-    
+
     def write(self, vals):
         # If connection parameters changed, test connection
         if 'url' in vals or 'api_key' in vals or 'verify_ssl' in vals:
@@ -126,30 +127,30 @@ class PortainerServer(models.Model):
             self.test_connection()
             return result
         return super().write(vals)
-    
+
     def test_connection(self):
         """Test connection to the Portainer server"""
         self.ensure_one()
-        
+
         try:
             self.status = 'connecting'
             self._cr.commit()  # Commit the transaction to update the UI
-            
+
             # Make API request to get system status
             response = self._make_api_request('/api/system/status', 'GET')
-            
+
             if response.status_code == 200:
                 status_data = response.json()
                 version = status_data.get('Version', 'Unknown')
-                
+
                 # Get additional system info
                 info_response = self._make_api_request('/api/system/info', 'GET')
                 info_data = info_response.json() if info_response.status_code == 200 else {}
-                
+
                 # Get endpoints (environments) count
                 endpoints_response = self._make_api_request('/api/endpoints', 'GET')
                 endpoints_data = endpoints_response.json() if endpoints_response.status_code == 200 else []
-                
+
                 # Update server info
                 self.write({
                     'status': 'connected',
@@ -159,7 +160,7 @@ class PortainerServer(models.Model):
                     'portainer_info': json.dumps(info_data, indent=2) if info_data else '',
                     'environment_count': len(endpoints_data),
                 })
-                
+
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
@@ -177,7 +178,7 @@ class PortainerServer(models.Model):
                     'error_message': error_msg
                 })
                 raise UserError(error_msg)
-                
+
         except Exception as e:
             _logger.error(f"Connection error: {str(e)}")
             self.write({
@@ -185,7 +186,7 @@ class PortainerServer(models.Model):
                 'error_message': str(e)
             })
             raise UserError(_("Connection error: %s") % str(e))
-    
+
     def _get_api_key_header(self):
         """Get the API key header for authentication
         
@@ -194,10 +195,10 @@ class PortainerServer(models.Model):
         """
         if not self.api_key:
             return None
-            
+
         # Format header value for X-API-Key authentication
         return f"{self.api_key}"
-        
+
     def _make_api_request(self, endpoint, method='GET', data=None, params=None, headers=None, use_multipart=False):
         """Make a request to the Portainer API
         
@@ -213,91 +214,92 @@ class PortainerServer(models.Model):
             requests.Response: API response
         """
         url = self.url.rstrip('/') + endpoint
-        
+
         # Default headers
         request_headers = {
             'X-API-Key': self._get_api_key_header(),
         }
-        
+
         # Set Content-Type if not using multipart (for multipart it's set automatically)
         if not use_multipart and 'Content-Type' not in request_headers:
             request_headers['Content-Type'] = 'application/json'
-        
+
         # Update with any additional headers
         if headers:
             request_headers.update(headers)
-            
+
         try:
             _logger.debug(f"Making {method} request to {url}")
-            
+
             if method == 'GET':
-                response = requests.get(url, headers=request_headers, params=params, 
-                                      verify=self.verify_ssl, timeout=15)
+                response = requests.get(url, headers=request_headers, params=params,
+                                        verify=self.verify_ssl, timeout=15)
             elif method == 'POST':
                 if use_multipart:
                     _logger.debug(f"POST request with multipart data")
                     response = requests.post(url, headers=request_headers, data=data,
-                                           verify=self.verify_ssl, timeout=30)
+                                             verify=self.verify_ssl, timeout=30)
                 else:
                     _logger.debug(f"POST request data: {json.dumps(data, indent=2) if data else None}")
                     response = requests.post(url, headers=request_headers, json=data,
-                                           verify=self.verify_ssl, timeout=15)
+                                             verify=self.verify_ssl, timeout=15)
             elif method == 'PUT':
                 if use_multipart:
                     _logger.debug(f"PUT request with multipart data")
                     response = requests.put(url, headers=request_headers, data=data,
-                                          verify=self.verify_ssl, timeout=30)
+                                            verify=self.verify_ssl, timeout=30)
                 else:
                     response = requests.put(url, headers=request_headers, json=data,
-                                          verify=self.verify_ssl, timeout=15)
+                                            verify=self.verify_ssl, timeout=15)
             elif method == 'DELETE':
                 response = requests.delete(url, headers=request_headers, params=params,
-                                        verify=self.verify_ssl, timeout=15)
+                                           verify=self.verify_ssl, timeout=15)
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
-                
+
             _logger.debug(f"API response status: {response.status_code}")
             return response
-            
+
         except requests.exceptions.ConnectionError as e:
             _logger.error(f"Connection error: {str(e)}")
-            raise UserError(_("Connection error: Could not connect to Portainer server at %s. Please check the URL and network connectivity.") % self.url)
+            raise UserError(
+                _("Connection error: Could not connect to Portainer server at %s. Please check the URL and network connectivity.") % self.url)
         except requests.exceptions.Timeout:
             _logger.error("Connection timeout")
             raise UserError(_("Connection timeout: The request to Portainer server timed out. Please try again later."))
         except requests.exceptions.RequestException as e:
             _logger.error(f"Request error: {str(e)}")
             raise UserError(_("Request error: %s") % str(e))
-            
+
     def sync_environments(self):
         """Sync environments from Portainer"""
         self.ensure_one()
-        
+
         try:
             # Get all endpoints from Portainer
             response = self._make_api_request('/api/endpoints', 'GET')
             if response.status_code != 200:
                 raise UserError(_("Failed to get environments: %s") % response.text)
-                
+
             environments = response.json()
             synced_env_ids = []  # Track which environment IDs we've synced
             created_count = 0
             updated_count = 0
-            
+
             for env in environments:
                 env_id = env.get('Id')
                 env_name = env.get('Name', 'Unknown')
-                
+
                 # Get endpoint details
                 details_response = self._make_api_request(f'/api/endpoints/{env_id}', 'GET')
                 details = details_response.json() if details_response.status_code == 200 else {}
-                
+
                 # Check if environment already exists in Odoo
                 existing_env = self.env['j_portainer.environment'].search([
                     ('server_id', '=', self.id),
                     ('environment_id', '=', env_id)
                 ], limit=1)
-                
+
                 # Prepare environment data
                 env_data = {
                     'server_id': self.id,
@@ -312,7 +314,7 @@ class PortainerServer(models.Model):
                     'tags': ','.join(env.get('Tags', [])) if isinstance(env.get('Tags', []), list) else '',
                     'details': json.dumps(details, indent=2) if details else '',
                 }
-                
+
                 if existing_env:
                     # Update existing environment
                     existing_env.write(env_data)
@@ -323,21 +325,22 @@ class PortainerServer(models.Model):
                     new_env = self.env['j_portainer.environment'].create(env_data)
                     created_count += 1
                     synced_env_ids.append(new_env.id)
-            
+
             # Mark environments that no longer exist in Portainer as inactive
             # Instead of deleting them (which would break foreign key constraints)
             obsolete_envs = self.environment_ids.filtered(lambda e: e.id not in synced_env_ids)
             if obsolete_envs:
                 obsolete_envs.write({'active': False})
                 _logger.info(f"Marked {len(obsolete_envs)} obsolete environments as inactive")
-            
+
             self.write({
                 'last_sync': fields.Datetime.now(),
                 'environment_count': len(environments)
             })
-            
-            _logger.info(f"Environment sync complete: {len(environments)} total environments, {created_count} created, {updated_count} updated")
-            
+
+            _logger.info(
+                f"Environment sync complete: {len(environments)} total environments, {created_count} created, {updated_count} updated")
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -348,11 +351,11 @@ class PortainerServer(models.Model):
                     'type': 'success',
                 }
             }
-            
+
         except Exception as e:
             _logger.error(f"Error syncing environments: {str(e)}")
             raise UserError(_("Error syncing environments: %s") % str(e))
-    
+
     def sync_containers(self, environment_id=None):
         """Sync containers from Portainer
         
@@ -361,62 +364,62 @@ class PortainerServer(models.Model):
                 If not provided, syncs containers for all environments.
         """
         self.ensure_one()
-        
+
         try:
             # Keep track of synced container IDs to mark missing ones as inactive
             synced_container_ids = []
-            
+
             # Get environments to sync
             if environment_id:
                 environments = self.environment_ids.filtered(lambda e: e.environment_id == environment_id)
             else:
                 environments = self.environment_ids
-            
+
             container_count = 0
             updated_count = 0
             created_count = 0
-            
+
             # Sync containers for each environment
             for env in environments:
                 endpoint_id = env.environment_id
-                
+
                 # Get all containers for this endpoint
-                response = self._make_api_request(f'/api/endpoints/{endpoint_id}/docker/containers/json', 'GET', 
-                                              params={'all': True})
-                
+                response = self._make_api_request(f'/api/endpoints/{endpoint_id}/docker/containers/json', 'GET',
+                                                  params={'all': True})
+
                 if response.status_code != 200:
                     _logger.warning(f"Failed to get containers for environment {env.name}: {response.text}")
                     continue
-                    
+
                 containers = response.json()
-                
+
                 for container in containers:
                     container_id = container.get('Id')
                     container_name = container.get('Names', ['Unknown'])[0].lstrip('/')
-                    
+
                     # Check if container already exists in Odoo
                     existing_container = self.env['j_portainer.container'].search([
                         ('server_id', '=', self.id),
                         ('environment_id', '=', endpoint_id),
                         ('container_id', '=', container_id)
                     ], limit=1)
-                    
+
                     # Get container details
                     details_response = self._make_api_request(
                         f'/api/endpoints/{endpoint_id}/docker/containers/{container_id}/json', 'GET')
-                    
+
                     details = details_response.json() if details_response.status_code == 200 else {}
-                    
+
                     # Get container state 
                     state = details.get('State', {})
                     status = state.get('Status', 'unknown')
-                    
+
                     # Extract volume information from container details
                     volumes_data = []
                     mounts = details.get('Mounts', [])
                     if mounts:
                         volumes_data = mounts
-                    
+
                     # Prepare data for create/update
                     container_data = {
                         'server_id': self.id,
@@ -434,7 +437,7 @@ class PortainerServer(models.Model):
                         'details': json.dumps(details, indent=2) if details else '',
                         'volumes': json.dumps(volumes_data),
                     }
-                    
+
                     if existing_container:
                         # Update existing container record
                         existing_container.write(container_data)
@@ -443,15 +446,16 @@ class PortainerServer(models.Model):
                         # Create new container record
                         self.env['j_portainer.container'].create(container_data)
                         created_count += 1
-                    
+
                     synced_container_ids.append(container_id)
                     container_count += 1
-                    
+
             # Log the statistics
-            _logger.info(f"Container sync complete: {container_count} total containers, {created_count} created, {updated_count} updated")
-            
+            _logger.info(
+                f"Container sync complete: {container_count} total containers, {created_count} created, {updated_count} updated")
+
             self.write({'last_sync': fields.Datetime.now()})
-            
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -462,11 +466,11 @@ class PortainerServer(models.Model):
                     'type': 'success',
                 }
             }
-            
+
         except Exception as e:
             _logger.error(f"Error syncing containers: {str(e)}")
             raise UserError(_("Error syncing containers: %s") % str(e))
-            
+
     def sync_images(self, environment_id=None):
         """Sync images from Portainer
         
@@ -475,46 +479,48 @@ class PortainerServer(models.Model):
                 If not provided, syncs images for all environments.
         """
         self.ensure_one()
-        
+
         try:
             # Keep track of synced image IDs 
             synced_image_ids = []
-            
+
             # Get environments to sync
             if environment_id:
                 environments = self.environment_ids.filtered(lambda e: e.environment_id == environment_id)
             else:
                 environments = self.environment_ids
-            
+
             image_count = 0
             updated_count = 0
             created_count = 0
-            
+
             # Sync images for each environment
             for env in environments:
                 endpoint_id = env.environment_id
-                
+
                 # Get all images for this endpoint
+                # response = self._make_api_request(f'/api/docker/{endpoint_id}/images', 'GET')
                 response = self._make_api_request(f'/api/endpoints/{endpoint_id}/docker/images/json', 'GET')
-                
+                print('response, ', response)
                 if response.status_code != 200:
                     _logger.warning(f"Failed to get images for environment {env.name}: {response.text}")
                     continue
-                    
+
                 images = response.json()
-                
+                print('images, ', images)
+
                 for image in images:
                     image_id = image.get('Id')
-                    
+
                     # Get tags (repos)
                     repos = image.get('RepoTags', [])
-                    
+
                     # Get image details
                     details_response = self._make_api_request(
                         f'/api/endpoints/{endpoint_id}/docker/images/{image_id}/json', 'GET')
-                    
+
                     details = details_response.json() if details_response.status_code == 200 else {}
-                    
+
                     # Prepare base image data
                     base_image_data = {
                         'server_id': self.id,
@@ -528,7 +534,7 @@ class PortainerServer(models.Model):
                         'labels': json.dumps(image.get('Labels', {})),
                         'details': json.dumps(details, indent=2) if details else '',
                     }
-                    
+
                     # Process images - one for each repo tag
                     if repos and repos[0] != '<none>:<none>':
                         for repo in repos:
@@ -536,7 +542,7 @@ class PortainerServer(models.Model):
                                 repository, tag = repo.split(':', 1)
                             else:
                                 repository, tag = repo, 'latest'
-                                
+
                             # Check if this image already exists in Odoo
                             existing_image = self.env['j_portainer.image'].search([
                                 ('server_id', '=', self.id),
@@ -545,14 +551,14 @@ class PortainerServer(models.Model):
                                 ('repository', '=', repository),
                                 ('tag', '=', tag)
                             ], limit=1)
-                            
+
                             # Prepare specific image data with repository and tag
                             image_data = dict(base_image_data)
                             image_data.update({
                                 'repository': repository,
                                 'tag': tag
                             })
-                            
+
                             if existing_image:
                                 # Update existing image record
                                 existing_image.write(image_data)
@@ -561,7 +567,7 @@ class PortainerServer(models.Model):
                                 # Create new image record
                                 self.env['j_portainer.image'].create(image_data)
                                 created_count += 1
-                                
+
                             image_count += 1
                             synced_image_ids.append((image_id, repository, tag))
                     else:
@@ -574,14 +580,14 @@ class PortainerServer(models.Model):
                             ('repository', '=', '<none>'),
                             ('tag', '=', '<none>')
                         ], limit=1)
-                        
+
                         # Prepare untagged image data
                         image_data = dict(base_image_data)
                         image_data.update({
                             'repository': '<none>',
                             'tag': '<none>'
                         })
-                        
+
                         if existing_image:
                             # Update existing image record
                             existing_image.write(image_data)
@@ -590,15 +596,16 @@ class PortainerServer(models.Model):
                             # Create new image record
                             self.env['j_portainer.image'].create(image_data)
                             created_count += 1
-                            
+
                         image_count += 1
                         synced_image_ids.append((image_id, '<none>', '<none>'))
-            
+
             # Log the statistics
-            _logger.info(f"Image sync complete: {image_count} total images, {created_count} created, {updated_count} updated")
-            
+            _logger.info(
+                f"Image sync complete: {image_count} total images, {created_count} created, {updated_count} updated")
+
             self.write({'last_sync': fields.Datetime.now()})
-            
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -609,11 +616,11 @@ class PortainerServer(models.Model):
                     'type': 'success',
                 }
             }
-            
+
         except Exception as e:
             _logger.error(f"Error syncing images: {str(e)}")
             raise UserError(_("Error syncing images: %s") % str(e))
-    
+
     def sync_volumes(self, environment_id=None):
         """Sync volumes from Portainer
         
@@ -622,51 +629,53 @@ class PortainerServer(models.Model):
                 If not provided, syncs volumes for all environments.
         """
         self.ensure_one()
-        
+
         try:
             # Keep track of synced volumes
             synced_volume_names = []
-            
+
             # Get environments to sync
             if environment_id:
                 environments = self.environment_ids.filtered(lambda e: e.environment_id == environment_id)
             else:
                 environments = self.environment_ids
-            
+
             volume_count = 0
             updated_count = 0
             created_count = 0
-            
+
             # Sync volumes for each environment
             for env in environments:
                 endpoint_id = env.environment_id
-                
+
                 # Get all volumes for this endpoint
                 response = self._make_api_request(f'/api/endpoints/{endpoint_id}/docker/volumes', 'GET')
-                
+
                 if response.status_code != 200:
                     _logger.warning(f"Failed to get volumes for environment {env.name}: {response.text}")
                     continue
-                    
+
                 volumes_data = response.json()
+                print('volumes_data .... ', volumes_data)
                 volumes = volumes_data.get('Volumes', [])
-                
+                print('volumes .... ', volumes)
+
                 for volume in volumes:
                     volume_name = volume.get('Name')
-                    
+
                     # Check if this volume already exists in Odoo
                     existing_volume = self.env['j_portainer.volume'].search([
                         ('server_id', '=', self.id),
                         ('environment_id', '=', endpoint_id),
                         ('name', '=', volume_name)
                     ], limit=1)
-                    
+
                     # Get detailed info for this volume
                     details_response = self._make_api_request(
                         f'/api/endpoints/{endpoint_id}/docker/volumes/{volume_name}', 'GET')
-                    
+
                     details = details_response.json() if details_response.status_code == 200 else {}
-                    
+
                     # Prepare volume data
                     volume_data = {
                         'server_id': self.id,
@@ -674,12 +683,13 @@ class PortainerServer(models.Model):
                         'environment_name': env.name,
                         'name': volume_name,
                         'driver': volume.get('Driver', ''),
+                        'created': volume.get('CreatedAt', ''),
                         'mountpoint': volume.get('Mountpoint', ''),
                         'scope': volume.get('Scope', 'local'),
                         'labels': json.dumps(volume.get('Labels', {})),
                         'details': json.dumps(details, indent=2) if details else '',
                     }
-                    
+
                     if existing_volume:
                         # Update existing volume - don't update created date for existing records
                         existing_volume.write(volume_data)
@@ -689,15 +699,16 @@ class PortainerServer(models.Model):
                         volume_data['created'] = datetime.now()  # Docker volumes don't have created date
                         self.env['j_portainer.volume'].create(volume_data)
                         created_count += 1
-                    
+
                     synced_volume_names.append((endpoint_id, volume_name))
                     volume_count += 1
-            
+
             # Log the statistics
-            _logger.info(f"Volume sync complete: {volume_count} total volumes, {created_count} created, {updated_count} updated")
-            
+            _logger.info(
+                f"Volume sync complete: {volume_count} total volumes, {created_count} created, {updated_count} updated")
+
             self.write({'last_sync': fields.Datetime.now()})
-            
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -708,11 +719,11 @@ class PortainerServer(models.Model):
                     'type': 'success',
                 }
             }
-            
+
         except Exception as e:
             _logger.error(f"Error syncing volumes: {str(e)}")
             raise UserError(_("Error syncing volumes: %s") % str(e))
-            
+
     def sync_networks(self, environment_id=None):
         """Sync networks from Portainer
         
@@ -721,50 +732,50 @@ class PortainerServer(models.Model):
                 If not provided, syncs networks for all environments.
         """
         self.ensure_one()
-        
+
         try:
             # Keep track of synced networks
             synced_network_ids = []
-            
+
             # Get environments to sync
             if environment_id:
                 environments = self.environment_ids.filtered(lambda e: e.environment_id == environment_id)
             else:
                 environments = self.environment_ids
-            
+
             network_count = 0
             updated_count = 0
             created_count = 0
-            
+
             # Sync networks for each environment
             for env in environments:
                 endpoint_id = env.environment_id
-                
+
                 # Get all networks for this endpoint
                 response = self._make_api_request(f'/api/endpoints/{endpoint_id}/docker/networks', 'GET')
-                
+
                 if response.status_code != 200:
                     _logger.warning(f"Failed to get networks for environment {env.name}: {response.text}")
                     continue
-                    
+
                 networks = response.json()
-                
+
                 for network in networks:
                     network_id = network.get('Id')
-                    
+
                     # Check if this network already exists in Odoo
                     existing_network = self.env['j_portainer.network'].search([
                         ('server_id', '=', self.id),
                         ('environment_id', '=', endpoint_id),
                         ('network_id', '=', network_id)
                     ], limit=1)
-                    
+
                     # Get detailed info for this network
                     details_response = self._make_api_request(
                         f'/api/endpoints/{endpoint_id}/docker/networks/{network_id}', 'GET')
-                    
+
                     details = details_response.json() if details_response.status_code == 200 else {}
-                    
+
                     # Prepare network data
                     network_data = {
                         'server_id': self.id,
@@ -779,7 +790,7 @@ class PortainerServer(models.Model):
                         'containers': json.dumps(network.get('Containers', {})),
                         'details': json.dumps(details, indent=2) if details else '',
                     }
-                    
+
                     if existing_network:
                         # Update existing network record
                         existing_network.write(network_data)
@@ -788,15 +799,16 @@ class PortainerServer(models.Model):
                         # Create new network record
                         self.env['j_portainer.network'].create(network_data)
                         created_count += 1
-                    
+
                     synced_network_ids.append((endpoint_id, network_id))
                     network_count += 1
-            
+
             # Log the statistics
-            _logger.info(f"Network sync complete: {network_count} total networks, {created_count} created, {updated_count} updated")
-            
+            _logger.info(
+                f"Network sync complete: {network_count} total networks, {created_count} created, {updated_count} updated")
+
             self.write({'last_sync': fields.Datetime.now()})
-            
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -807,29 +819,29 @@ class PortainerServer(models.Model):
                     'type': 'success',
                 }
             }
-            
+
         except Exception as e:
             _logger.error(f"Error syncing networks: {str(e)}")
             raise UserError(_("Error syncing networks: %s") % str(e))
-    
+
     def sync_standard_templates(self):
         """Sync standard application templates from Portainer"""
         self.ensure_one()
-        
+
         try:
             # Keep track of synced templates
             synced_template_ids = []
-            
+
             # Get templates
             response = self._make_api_request('/api/templates', 'GET')
-            
+
             if response.status_code != 200:
                 raise UserError(_("Failed to get templates: %s") % response.text)
-                
+
             # Parse the response - it could be a dict with 'templates' key or a direct array
             response_data = response.json()
             templates = []
-            
+
             if isinstance(response_data, dict) and 'templates' in response_data:
                 # New API format: {"version": "2", "templates": [...]}
                 templates = response_data.get('templates', [])
@@ -843,19 +855,19 @@ class PortainerServer(models.Model):
                 if isinstance(response_data, dict):
                     _logger.warning(f"Template response keys: {list(response_data.keys())}")
                 templates = []
-            
+
             template_count = 0
             updated_count = 0
             created_count = 0
-            
+
             for template in templates:
                 # Skip if template is not a dictionary (sometimes API returns strings)
                 if not isinstance(template, dict):
                     _logger.warning(f"Skipping non-dict template: {template}")
                     continue
-                
+
                 template_id = template.get('id')
-                
+
                 # Check if this template already exists in Odoo
                 existing_template = False
                 if template_id:
@@ -863,7 +875,7 @@ class PortainerServer(models.Model):
                         ('server_id', '=', self.id),
                         ('template_id', '=', template_id)
                     ], limit=1)
-                
+
                 # Prepare template data
                 template_data = {
                     'server_id': self.id,
@@ -875,8 +887,10 @@ class PortainerServer(models.Model):
                     'logo': template.get('logo', ''),
                     'registry': template.get('registry', ''),
                     'image': template.get('image', ''),
-                    'repository': json.dumps(template.get('repository', {})) if isinstance(template.get('repository', {}), dict) else '',
-                    'categories': ','.join(template.get('categories', [])) if isinstance(template.get('categories', []), list) else '',
+                    'repository': json.dumps(template.get('repository', {})) if isinstance(
+                        template.get('repository', {}), dict) else '',
+                    'categories': ','.join(template.get('categories', [])) if isinstance(template.get('categories', []),
+                                                                                         list) else '',
                     'environment_variables': json.dumps(template.get('env', [])),
                     'volumes': json.dumps(template.get('volumes', [])),
                     'ports': json.dumps(template.get('ports', [])),
@@ -884,7 +898,7 @@ class PortainerServer(models.Model):
                     'is_custom': False,
                     'details': json.dumps(template, indent=2),
                 }
-                
+
                 if existing_template:
                     # Update existing template
                     existing_template.write(template_data)
@@ -894,30 +908,30 @@ class PortainerServer(models.Model):
                     template_data['skip_portainer_create'] = True
                     self.env['j_portainer.template'].create(template_data)
                     created_count += 1
-                
+
                 if isinstance(template_id, (int, str)) and str(template_id).isdigit():
                     synced_template_ids.append(int(template_id))
                 template_count += 1
-            
+
             # Clean up templates that no longer exist in Portainer
             # Get all standard templates for this server
             all_templates = self.env['j_portainer.template'].search([
                 ('server_id', '=', self.id),
                 ('is_custom', '=', False)
             ])
-            
+
             # Make sure all IDs are integers for proper comparison
             synced_ids = []
             for template_id in synced_template_ids:
                 if isinstance(template_id, int) or (isinstance(template_id, str) and template_id.isdigit()):
                     synced_ids.append(int(template_id))
-            
+
             # Templates to remove - those not in synced_template_ids
             # Handle template_id type conversion for comparison (some might be strings, some integers)
             templates_to_remove = all_templates.filtered(
                 lambda t: (int(t.template_id) not in synced_ids) if t.template_id else True
             )
-            
+
             # Remove obsolete templates
             if templates_to_remove:
                 removed_count = len(templates_to_remove)
@@ -925,12 +939,13 @@ class PortainerServer(models.Model):
                 templates_to_remove.unlink()
             else:
                 removed_count = 0
-            
+
             # Log the statistics
-            _logger.info(f"Standard template sync complete: {template_count} total templates, {created_count} created, {updated_count} updated, {removed_count} removed")
-            
+            _logger.info(
+                f"Standard template sync complete: {template_count} total templates, {created_count} created, {updated_count} updated, {removed_count} removed")
+
             self.write({'last_sync': fields.Datetime.now()})
-            
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -941,31 +956,31 @@ class PortainerServer(models.Model):
                     'type': 'success',
                 }
             }
-            
+
         except Exception as e:
             _logger.error(f"Error syncing standard templates: {str(e)}")
             raise UserError(_("Error syncing standard templates: %s") % str(e))
-    
+
     def sync_custom_templates(self):
         """Sync custom templates from Portainer"""
         self.ensure_one()
-        
+
         try:
             # Keep track of synced custom template IDs
             synced_template_ids = []
-            
+
             # For statistics
             template_count = 0
             updated_count = 0
             created_count = 0
-            
+
             # Don't try to create templates in Portainer, just sync existing ones
             # We'll use skip_portainer_create flag for this
-            
+
             # Get custom templates - try different API endpoints for different Portainer versions
             custom_templates = []
             custom_response = None
-            
+
             # Use Portainer v2 API endpoint for custom templates
             try:
                 custom_response = self._make_api_request('/api/custom_templates', 'GET')
@@ -979,17 +994,18 @@ class PortainerServer(models.Model):
                     else:
                         _logger.info(f"Custom templates data has unexpected format: {data}")
                 else:
-                    _logger.warning(f"Failed to get custom templates from v2 API endpoint: {custom_response.status_code} - {custom_response.text}")
+                    _logger.warning(
+                        f"Failed to get custom templates from v2 API endpoint: {custom_response.status_code} - {custom_response.text}")
             except Exception as e:
                 _logger.error(f"Error getting custom templates from v2 API: {str(e)}")
-            
+
             # Process custom templates
             for template in custom_templates:
                 # Skip if template is not a dictionary (sometimes API returns strings)
                 if not isinstance(template, dict):
                     _logger.warning(f"Skipping non-dict custom template: {template}")
                     continue
-                
+
                 # Function to get field value regardless of capitalization
                 def get_field_value(data, field_names, default=None):
                     """Get a field value from a dict using multiple possible field names in any capitalization"""
@@ -997,18 +1013,18 @@ class PortainerServer(models.Model):
                     for name in field_names:
                         if name in data:
                             return data[name]
-                    
+
                     # Try case-insensitive matches
                     lowercase_data = {k.lower(): v for k, v in data.items()}
                     for name in field_names:
                         if name.lower() in lowercase_data:
                             return lowercase_data[name.lower()]
-                    
+
                     return default
-                
+
                 # Handle different ID field names with case insensitivity
                 template_id = get_field_value(template, ['id', 'Id', 'ID'])
-                
+
                 # Check if this custom template already exists in Odoo
                 existing_template = False
                 if template_id:
@@ -1016,11 +1032,12 @@ class PortainerServer(models.Model):
                         ('server_id', '=', self.id),
                         ('template_id', '=', template_id)
                     ], limit=1)
-                
+
                 # Platform mapping function to handle numeric values
                 def map_platform(platform_value):
                     """Map platform value to appropriate string value"""
-                    if isinstance(platform_value, int) or (isinstance(platform_value, str) and platform_value.isdigit()):
+                    if isinstance(platform_value, int) or (
+                            isinstance(platform_value, str) and platform_value.isdigit()):
                         # Portainer sometimes uses numeric values for platform
                         platform_map = {
                             '1': 'linux',
@@ -1035,42 +1052,46 @@ class PortainerServer(models.Model):
                             return platform_value.lower()
                     # Default fallback
                     return 'linux'
-                
+
                 # Get platform value with case-insensitive lookup
                 platform_value = get_field_value(template, ['Platform', 'platform'])
-                
+
                 # Get environment ID from template or resource control
                 portainer_environment_id = get_field_value(template, ['EndpointId', 'endpointId'], None)
-                
+
                 # Try to get environment ID from ResourceControl if available
                 resource_control = get_field_value(template, ['ResourceControl', 'resourceControl'], None)
                 if not portainer_environment_id and resource_control and isinstance(resource_control, dict):
                     portainer_environment_id = get_field_value(resource_control, ['EndpointId', 'endpointId'], None)
-                
+
                 # Ensure environment_id is numeric for comparison
                 if isinstance(portainer_environment_id, str) and portainer_environment_id.isdigit():
                     portainer_environment_id = int(portainer_environment_id)
-                    
+
                 # Map the Portainer environment ID to Odoo environment record ID
                 environment_id_value = None
                 if portainer_environment_id:
                     # Log all environments for debugging
                     env_data = [(e.id, e.environment_id, e.name) for e in self.environment_ids]
-                    _logger.info(f"Looking for environment ID {portainer_environment_id} in available environments: {env_data}")
-                    
+                    _logger.info(
+                        f"Looking for environment ID {portainer_environment_id} in available environments: {env_data}")
+
                     # Find the matching environment record in Odoo based on Portainer's environment_id
-                    matching_env = self.environment_ids.filtered(lambda e: str(e.environment_id) == str(portainer_environment_id))
+                    matching_env = self.environment_ids.filtered(
+                        lambda e: str(e.environment_id) == str(portainer_environment_id))
                     if matching_env:
                         environment_id_value = matching_env[0].id
-                        _logger.info(f"Mapped Portainer environment ID {portainer_environment_id} to Odoo environment record ID {environment_id_value}")
+                        _logger.info(
+                            f"Mapped Portainer environment ID {portainer_environment_id} to Odoo environment record ID {environment_id_value}")
                     else:
                         _logger.warning(f"No matching environment found for Portainer ID {portainer_environment_id}")
-                
+
                 # If still no environment ID found, use first available environment as fallback
                 if not environment_id_value and self.environment_ids:
                     environment_id_value = self.environment_ids[0].id
-                    _logger.warning(f"No environment ID found in template {template_id}, using first environment as fallback: {environment_id_value}")
-                
+                    _logger.warning(
+                        f"No environment ID found in template {template_id}, using first environment as fallback: {environment_id_value}")
+
                 # Prepare custom template data with case-insensitive field extraction
                 template_data = {
                     'server_id': self.id,
@@ -1082,8 +1103,10 @@ class PortainerServer(models.Model):
                     'template_id': template_id,
                     'logo': get_field_value(template, ['Logo', 'logo'], ''),
                     'image': get_field_value(template, ['Image', 'image'], ''),
-                    'repository': json.dumps(get_field_value(template, ['Repository', 'repository'], {})) if isinstance(get_field_value(template, ['Repository', 'repository'], {}), dict) else '',
-                    'categories': ','.join(get_field_value(template, ['Categories', 'categories'], [])) if isinstance(get_field_value(template, ['Categories', 'categories'], []), list) else '',
+                    'repository': json.dumps(get_field_value(template, ['Repository', 'repository'], {})) if isinstance(
+                        get_field_value(template, ['Repository', 'repository'], {}), dict) else '',
+                    'categories': ','.join(get_field_value(template, ['Categories', 'categories'], [])) if isinstance(
+                        get_field_value(template, ['Categories', 'categories'], []), list) else '',
                     'environment_variables': json.dumps(get_field_value(template, ['Env', 'env'], [])),
                     'volumes': json.dumps(get_field_value(template, ['Volumes', 'volumes'], [])),
                     'ports': json.dumps(get_field_value(template, ['Ports', 'ports'], [])),
@@ -1093,51 +1116,61 @@ class PortainerServer(models.Model):
                     # Additional fields from Portainer with case-insensitive lookup
                     'project_path': get_field_value(template, ['ProjectPath', 'projectPath', 'projectpath'], ''),
                     'entry_point': get_field_value(template, ['EntryPoint', 'entryPoint', 'entrypoint'], ''),
-                    'created_by_user_id': get_field_value(template, ['CreatedByUserId', 'createdByUserId', 'createdbyuserid'], 0),
+                    'created_by_user_id': get_field_value(template,
+                                                          ['CreatedByUserId', 'createdByUserId', 'createdbyuserid'], 0),
                     'registry_url': get_field_value(template, ['Registry', 'registry'], ''),
                 }
-                
+
                 # Add Git repository information if available
                 repo_url = get_field_value(template, ['repositoryURL', 'RepositoryURL'])
                 if repo_url:
                     template_data['build_method'] = 'repository'
                     template_data['git_repository_url'] = repo_url
-                    template_data['git_repository_reference'] = get_field_value(template, ['repositoryReferenceName', 'RepositoryReferenceName'], '')
-                    template_data['git_compose_path'] = get_field_value(template, ['composeFilePath', 'ComposeFilePath'], '')
+                    template_data['git_repository_reference'] = get_field_value(template, ['repositoryReferenceName',
+                                                                                           'RepositoryReferenceName'],
+                                                                                '')
+                    template_data['git_compose_path'] = get_field_value(template,
+                                                                        ['composeFilePath', 'ComposeFilePath'], '')
                     template_data['git_skip_tls'] = get_field_value(template, ['skipTLSVerify', 'SkipTLSVerify'], False)
-                    template_data['git_authentication'] = get_field_value(template, ['repositoryAuthentication', 'RepositoryAuthentication'], False)
+                    template_data['git_authentication'] = get_field_value(template, ['repositoryAuthentication',
+                                                                                     'RepositoryAuthentication'], False)
                 # Check for compose file content in any of the possible field names
-                compose_content = get_field_value(template, ['fileContent', 'FileContent', 'composeFileContent', 'ComposeFileContent'], '')
-                
+                compose_content = get_field_value(template, ['fileContent', 'FileContent', 'composeFileContent',
+                                                             'ComposeFileContent'], '')
+
                 # If no file content in the template data, try to get it from the file API endpoint
                 if not compose_content and template_id:
                     try:
-                        _logger.info(f"No file content found in template data, fetching from file API endpoint for template ID: {template_id}")
+                        _logger.info(
+                            f"No file content found in template data, fetching from file API endpoint for template ID: {template_id}")
                         file_response = self._make_api_request(f'/api/custom_templates/{template_id}/file', 'GET')
-                        
+
                         if file_response.status_code == 200:
                             file_data = file_response.json()
                             # Try different possible field names for the file content
                             for field_name in ['FileContent', 'StackFileContent', 'Content', 'stackFileContent']:
                                 if field_name in file_data:
                                     compose_content = file_data[field_name]
-                                    _logger.info(f"Retrieved file content (field: {field_name}) from API for template '{template_data['title']}'. Content length: {len(compose_content)} chars")
+                                    _logger.info(
+                                        f"Retrieved file content (field: {field_name}) from API for template '{template_data['title']}'. Content length: {len(compose_content)} chars")
                                     break
-                            
+
                             # If we still don't have content, log the entire response
                             if not compose_content:
                                 _logger.warning(f"File content not found in response: {file_data}")
                         else:
-                            _logger.warning(f"Failed to get file content for custom template {template_id}: {file_response.status_code} - {file_response.text}")
+                            _logger.warning(
+                                f"Failed to get file content for custom template {template_id}: {file_response.status_code} - {file_response.text}")
                     except Exception as e:
                         _logger.error(f"Error fetching file content for template {template_id}: {str(e)}")
-                
+
                 if compose_content:
-                    _logger.info(f"Using file content for template '{template_data['title']}' (ID: {template_id}). Content length: {len(compose_content)} chars")
+                    _logger.info(
+                        f"Using file content for template '{template_data['title']}' (ID: {template_id}). Content length: {len(compose_content)} chars")
                     template_data['build_method'] = 'editor'  # Web editor method
                     template_data['fileContent'] = compose_content  # Use fileContent field instead of compose_file
                     template_data['compose_file'] = compose_content  # Keep compose_file for backward compatibility
-                
+
                 if existing_template:
                     # Update existing custom template
                     existing_template.write(template_data)
@@ -1145,46 +1178,47 @@ class PortainerServer(models.Model):
                 else:
                     # Create new custom template - skip Portainer creation since we're just syncing
                     template_data['skip_portainer_create'] = True
-                    
+
                     # Double check that environment_id is set and is a valid ID
                     if not template_data.get('environment_id'):
                         # Find the first valid environment as fallback
                         if self.environment_ids:
                             template_data['environment_id'] = self.environment_ids[0].id
-                            _logger.warning(f"No environment ID found for template {template_id}, using first environment {self.environment_ids[0].id} as fallback")
+                            _logger.warning(
+                                f"No environment ID found for template {template_id}, using first environment {self.environment_ids[0].id} as fallback")
                         else:
                             _logger.error(f"Cannot create custom template {template_id}: No environment found")
                             continue
-                            
+
                     try:
                         self.env['j_portainer.customtemplate'].create(template_data)
                         created_count += 1
                     except Exception as e:
                         _logger.error(f"Error creating custom template: {str(e)}")
                         # Continue with next template instead of failing the entire sync
-                
+
                 if isinstance(template_id, (int, str)) and str(template_id).isdigit():
                     synced_template_ids.append(int(template_id))
                 template_count += 1
-            
+
             # Clean up custom templates that no longer exist in Portainer
             # Get all custom templates for this server
             all_custom_templates = self.env['j_portainer.customtemplate'].search([
                 ('server_id', '=', self.id)
             ])
-            
+
             # Make sure all IDs are integers for proper comparison
             synced_ids = []
             for template_id in synced_template_ids:
                 if isinstance(template_id, int) or (isinstance(template_id, str) and template_id.isdigit()):
                     synced_ids.append(int(template_id))
-            
+
             # Templates to remove - those not in synced_template_ids
             # Handle template_id type conversion for comparison (some might be strings, some integers)
             templates_to_remove = all_custom_templates.filtered(
                 lambda t: (int(t.template_id) not in synced_ids) if t.template_id else True
             )
-            
+
             # Remove obsolete custom templates
             if templates_to_remove:
                 removed_count = len(templates_to_remove)
@@ -1192,12 +1226,13 @@ class PortainerServer(models.Model):
                 templates_to_remove.unlink()
             else:
                 removed_count = 0
-            
+
             # Log the statistics
-            _logger.info(f"Custom template sync complete: {template_count} total custom templates, {created_count} created, {updated_count} updated, {removed_count} removed")
-            
+            _logger.info(
+                f"Custom template sync complete: {template_count} total custom templates, {created_count} created, {updated_count} updated, {removed_count} removed")
+
             self.write({'last_sync': fields.Datetime.now()})
-            
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -1208,22 +1243,22 @@ class PortainerServer(models.Model):
                     'type': 'success',
                 }
             }
-            
+
         except Exception as e:
             _logger.error(f"Error syncing custom templates: {str(e)}")
             raise UserError(_("Error syncing custom templates: %s") % str(e))
-            
+
     def push_custom_templates_to_portainer(self):
         """Push custom templates from Odoo to Portainer"""
         self.ensure_one()
-        
+
         try:
             # Get all custom templates for this server that are not marked to skip creation
             custom_templates = self.env['j_portainer.customtemplate'].search([
                 ('server_id', '=', self.id),
                 ('skip_portainer_create', '=', False)
             ])
-            
+
             if not custom_templates:
                 return {
                     'type': 'ir.actions.client',
@@ -1235,14 +1270,14 @@ class PortainerServer(models.Model):
                         'type': 'info',
                     }
                 }
-            
+
             success_count = 0
             error_count = 0
-            
+
             for template in custom_templates:
                 try:
                     _logger.info(f"Pushing template '{template.title}' to Portainer")
-                    
+
                     # Check if this template already exists in Portainer
                     if template.template_id:
                         # Update existing template
@@ -1252,12 +1287,12 @@ class PortainerServer(models.Model):
                         # Create a new template
                         _logger.info("Creating new template in Portainer")
                         response = template.action_create_in_portainer()
-                    
+
                     # Check if successful
                     if response and isinstance(response, dict) and (
-                        'Id' in response or 'id' in response or 'success' in response):
+                            'Id' in response or 'id' in response or 'success' in response):
                         success_count += 1
-                        
+
                         # Log new template ID if one was assigned
                         template_id = response.get('Id') or response.get('id')
                         if template_id and not template.template_id:
@@ -1268,9 +1303,9 @@ class PortainerServer(models.Model):
                 except Exception as e:
                     error_count += 1
                     _logger.error(f"Error pushing template '{template.title}': {str(e)}")
-            
+
             self.write({'last_sync': fields.Datetime.now()})
-            
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -1284,22 +1319,22 @@ class PortainerServer(models.Model):
         except Exception as e:
             _logger.error(f"Error pushing templates to Portainer: {str(e)}")
             raise UserError(_("Error pushing templates to Portainer: %s") % str(e))
-            
+
     def sync_all_custom_templates(self):
         """Bidirectional synchronization of custom templates"""
         self.ensure_one()
-        
+
         try:
             # Step 1: Pull templates from Portainer to Odoo
             self.sync_custom_templates()
-            
+
             # Step 2: Push templates from Odoo to Portainer
             # Get all custom templates for this server that should be synchronized
             custom_templates = self.env['j_portainer.customtemplate'].search([
                 ('server_id', '=', self.id),
                 ('skip_portainer_create', '=', False)
             ])
-            
+
             if not custom_templates:
                 self.write({'last_sync': fields.Datetime.now()})
                 return {
@@ -1312,11 +1347,11 @@ class PortainerServer(models.Model):
                         'type': 'success',
                     }
                 }
-            
+
             created_count = 0
             updated_count = 0
             error_count = 0
-            
+
             for template in custom_templates:
                 try:
                     if template.template_id:
@@ -1324,7 +1359,7 @@ class PortainerServer(models.Model):
                         _logger.info(f"Updating existing template '{template.title}' (ID: {template.template_id})")
                         response = template._sync_to_portainer(method='put')
                         if response and isinstance(response, dict) and (
-                            'Id' in response or 'id' in response or 'success' in response):
+                                'Id' in response or 'id' in response or 'success' in response):
                             updated_count += 1
                         else:
                             error_count += 1
@@ -1334,7 +1369,7 @@ class PortainerServer(models.Model):
                         _logger.info(f"Creating new template '{template.title}' in Portainer")
                         response = template.action_create_in_portainer()
                         if response and isinstance(response, dict) and (
-                            'Id' in response or 'id' in response or 'success' in response):
+                                'Id' in response or 'id' in response or 'success' in response):
                             created_count += 1
                             # Log new template ID if one was assigned
                             template_id = response.get('Id') or response.get('id')
@@ -1346,17 +1381,17 @@ class PortainerServer(models.Model):
                 except Exception as e:
                     error_count += 1
                     _logger.error(f"Error processing template '{template.title}': {str(e)}")
-            
+
             self.write({'last_sync': fields.Datetime.now()})
-            
+
             # Return a message about the bidirectional sync
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Bidirectional Template Sync Complete'),
-                    'message': _('Synced with Portainer: Created %d templates, Updated %d templates (%d errors)') % 
-                        (created_count, updated_count, error_count),
+                    'message': _('Synced with Portainer: Created %d templates, Updated %d templates (%d errors)') %
+                               (created_count, updated_count, error_count),
                     'sticky': False,
                     'type': 'success' if error_count == 0 else 'warning',
                 }
@@ -1364,15 +1399,15 @@ class PortainerServer(models.Model):
         except Exception as e:
             _logger.error(f"Error during bidirectional template sync: {str(e)}")
             raise UserError(_("Error during bidirectional template sync: %s") % str(e))
-            
+
     def fetch_missing_template_file_content(self):
         """Public method to fetch missing file content for templates"""
         return self._fetch_missing_template_file_content()
-        
+
     def _fetch_missing_template_file_content(self):
         """Private implementation to fetch missing file content for templates that have a template_id but no file content"""
         self.ensure_one()
-        
+
         try:
             # Find all custom templates for this server with a template_id but no file content
             templates_without_content = self.env['j_portainer.customtemplate'].search([
@@ -1382,7 +1417,7 @@ class PortainerServer(models.Model):
                 ('fileContent', '=', False),
                 ('fileContent', '=', '')
             ])
-            
+
             if not templates_without_content:
                 _logger.info("No templates missing file content")
                 return {
@@ -1395,27 +1430,28 @@ class PortainerServer(models.Model):
                         'type': 'info',
                     }
                 }
-                
+
             _logger.info(f"Found {len(templates_without_content)} templates missing file content")
             success_count = 0
             total_count = len(templates_without_content)
-            
+
             for template in templates_without_content:
                 try:
                     _logger.info(f"Fetching file content for template '{template.title}' (ID: {template.template_id})")
                     file_response = self._make_api_request(f'/api/custom_templates/{template.template_id}/file', 'GET')
-                    
+
                     if file_response.status_code == 200:
                         file_data = file_response.json()
                         compose_content = None
-                        
+
                         # Try different possible field names for the file content
                         for field_name in ['FileContent', 'StackFileContent', 'Content', 'stackFileContent']:
                             if field_name in file_data:
                                 compose_content = file_data[field_name]
-                                _logger.info(f"Retrieved file content (field: {field_name}) for template '{template.title}'. Content length: {len(compose_content)} chars")
+                                _logger.info(
+                                    f"Retrieved file content (field: {field_name}) for template '{template.title}'. Content length: {len(compose_content)} chars")
                                 break
-                        
+
                         if compose_content:
                             template.write({
                                 'fileContent': compose_content,
@@ -1424,14 +1460,16 @@ class PortainerServer(models.Model):
                             })
                             success_count += 1
                         else:
-                            _logger.warning(f"No file content found in response for template {template.template_id}: {file_data}")
+                            _logger.warning(
+                                f"No file content found in response for template {template.template_id}: {file_data}")
                     else:
-                        _logger.warning(f"Failed to get file content for template {template.template_id}: {file_response.status_code} - {file_response.text}")
+                        _logger.warning(
+                            f"Failed to get file content for template {template.template_id}: {file_response.status_code} - {file_response.text}")
                 except Exception as e:
                     _logger.error(f"Error fetching file content for template {template.template_id}: {str(e)}")
-                    
+
             _logger.info(f"Successfully fetched file content for {success_count} of {total_count} templates")
-            
+
             # Return notification for the user
             return {
                 'type': 'ir.actions.client',
@@ -1443,25 +1481,25 @@ class PortainerServer(models.Model):
                     'type': 'success',
                 }
             }
-            
+
         except Exception as e:
             _logger.error(f"Error fetching template file content: {str(e)}")
             raise UserError(_("Error fetching template file content: %s") % str(e))
-        
+
     def sync_templates(self):
         """Sync all templates (standard and custom) from Portainer"""
         self.ensure_one()
-        
+
         try:
             # First sync standard templates
             self.sync_standard_templates()
-            
+
             # Then sync custom templates
             self.sync_custom_templates()
-            
+
             # Fetch missing file content for any templates that still need it
-            self._fetch_missing_template_file_content() # Use private method to avoid duplicate notifications
-            
+            self._fetch_missing_template_file_content()  # Use private method to avoid duplicate notifications
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -1472,11 +1510,11 @@ class PortainerServer(models.Model):
                     'type': 'success',
                 }
             }
-            
+
         except Exception as e:
             _logger.error(f"Error syncing all templates: {str(e)}")
             raise UserError(_("Error syncing all templates: %s") % str(e))
-            
+
     def sync_stacks(self, environment_id=None):
         """Sync stacks from Portainer
         
@@ -1485,54 +1523,54 @@ class PortainerServer(models.Model):
                 If not provided, syncs stacks for all environments.
         """
         self.ensure_one()
-        
+
         try:
             # Keep track of synced stacks
             synced_stack_ids = []
-            
+
             # Get environments to sync
             if environment_id:
                 environments = self.environment_ids.filtered(lambda e: e.environment_id == environment_id)
             else:
                 environments = self.environment_ids
-            
+
             stack_count = 0
             updated_count = 0
             created_count = 0
-            
+
             # Sync stacks for each environment
             for env in environments:
                 endpoint_id = env.environment_id
-                
+
                 # Get all stacks
                 response = self._make_api_request('/api/stacks', 'GET')
-                
+
                 if response.status_code != 200:
                     _logger.warning(f"Failed to get stacks: {response.text}")
                     continue
-                    
+
                 stacks = response.json()
-                
+
                 # Filter stacks for this environment
                 env_stacks = [s for s in stacks if s.get('EndpointId') == endpoint_id]
-                
+
                 for stack in env_stacks:
                     stack_id = stack.get('Id')
-                    
+
                     # Check if this stack already exists in Odoo
                     existing_stack = self.env['j_portainer.stack'].search([
                         ('server_id', '=', self.id),
                         ('environment_id', '=', endpoint_id),
                         ('stack_id', '=', stack_id)
                     ], limit=1)
-                    
+
                     # Get stack file content if available
                     file_content = ''
                     file_response = self._make_api_request(f'/api/stacks/{stack_id}/file', 'GET')
                     if file_response.status_code == 200:
                         file_data = file_response.json()
                         file_content = file_data.get('StackFileContent', '')
-                    
+
                     # Prepare stack data
                     stack_data = {
                         'server_id': self.id,
@@ -1546,25 +1584,27 @@ class PortainerServer(models.Model):
                         'file_content': file_content,
                         'details': json.dumps(stack, indent=2),
                     }
-                    
+
                     if existing_stack:
                         # Update existing stack - don't update creation date for existing records
                         existing_stack.write(stack_data)
                         updated_count += 1
                     else:
                         # Create new stack record - set creation date
-                        stack_data['creation_date'] = self._parse_date_value(stack.get('CreationDate')) or datetime.now()
+                        stack_data['creation_date'] = self._parse_date_value(
+                            stack.get('CreationDate')) or datetime.now()
                         self.env['j_portainer.stack'].create(stack_data)
                         created_count += 1
-                    
+
                     synced_stack_ids.append((endpoint_id, stack_id))
                     stack_count += 1
-            
+
             # Log the statistics
-            _logger.info(f"Stack sync complete: {stack_count} total stacks, {created_count} created, {updated_count} updated")
-            
+            _logger.info(
+                f"Stack sync complete: {stack_count} total stacks, {created_count} created, {updated_count} updated")
+
             self.write({'last_sync': fields.Datetime.now()})
-            
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -1575,19 +1615,19 @@ class PortainerServer(models.Model):
                     'type': 'success',
                 }
             }
-            
+
         except Exception as e:
             _logger.error(f"Error syncing stacks: {str(e)}")
             raise UserError(_("Error syncing stacks: %s") % str(e))
-    
+
     def sync_all(self):
         """Sync all resources from Portainer"""
         self.ensure_one()
-        
+
         try:
             # Sync environments first
             self.sync_environments()
-            
+
             # Sync all other resources
             self.sync_containers()
             self.sync_images()
@@ -1595,12 +1635,12 @@ class PortainerServer(models.Model):
             self.sync_networks()
             self.sync_standard_templates()
             self.sync_custom_templates()
-            
+
             # Fetch missing file content for any templates
-            self._fetch_missing_template_file_content() # Use private method to avoid duplicate notifications
-            
+            self._fetch_missing_template_file_content()  # Use private method to avoid duplicate notifications
+
             self.sync_stacks()
-            
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -1611,7 +1651,7 @@ class PortainerServer(models.Model):
                     'type': 'success',
                 }
             }
-            
+
         except Exception as e:
             _logger.error(f"Error during full sync: {str(e)}")
             raise UserError(_("Error during full sync: %s") % str(e))

@@ -7,37 +7,50 @@
         <field name="arch" type="xml">
             <form string="Container">
                 <header>
-                    <button name="start" string="Start" type="object" 
-                            invisible="state == 'running'" 
+                    <button name="start" string="Start" type="object"
+                            invisible="state == 'running'"
                             class="btn-primary"/>
-                    <button name="stop" string="Stop" type="object" 
-                            invisible="state != 'running'" 
+                    <button name="stop" string="Stop" type="object"
+                            invisible="state != 'running'"
                             class="btn-warning"/>
-                    <button name="restart" string="Restart" type="object" 
+                    <button name="restart" string="Restart" type="object"
                             invisible="state != 'running'"
                             class="btn-info"/>
-                    <button name="pause" string="Pause" type="object" 
+                    <button name="pause" string="Pause" type="object"
                             invisible="state != 'running'"
                             class="btn-secondary"/>
-                    <button name="unpause" string="Unpause" type="object" 
+                    <button name="unpause" string="Unpause" type="object"
                             invisible="state != 'paused'"
                             class="btn-info"/>
-                    <button name="kill" string="Kill" type="object" 
+                    <button name="kill" string="Kill" type="object"
                             invisible="state != 'running'"
-                            class="btn-danger" 
+                            class="btn-danger"
                             confirm="Are you sure you want to kill this container?"/>
-                    <button name="action_remove_with_options" string="Remove" type="object" 
-                            class="btn-danger" 
+                    <button name="action_remove_with_options" string="Remove" type="object"
+                            class="btn-danger"
                             confirm="Are you sure you want to remove this container?"/>
-                    <button name="action_refresh" string="Refresh" type="object" 
+                    <button name="action_refresh" string="Refresh" type="object"
                             class="btn-secondary"/>
                 </header>
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+
+                        <button name="action_view_logs" string="Logs" type="object" class="oe_stat_button"
+                                icon="fa-tasks">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Log</span>
+                            </div>
+                        </button>
+                    </div>
+
+
                     <div class="oe_title">
                         <label for="name" class="oe_edit_only"/>
-                        <h1><field name="name"/></h1>
+                        <h1>
+                            <field name="name"/>
+                        </h1>
                     </div>
-                    
+
                     <group>
                         <group>
                             <field name="container_id" readonly="1"/>
@@ -49,7 +62,7 @@
                             <field name="image" readonly="1"/>
                             <field name="image_id" readonly="1"/>
                             <field name="created" readonly="1"/>
-                            <field name="state" widget="badge" 
+                            <field name="state" widget="badge"
                                    decoration-success="state == 'running'"
                                    decoration-warning="state == 'paused'"
                                    decoration-danger="state in ['stopped', 'exited', 'dead']"
@@ -57,26 +70,26 @@
                             <field name="status" readonly="1"/>
                         </group>
                     </group>
-                    
+
                     <notebook>
                         <page string="Ports" name="ports">
                             <field name="ports" widget="html" readonly="1"/>
                         </page>
-                        
+
                         <page string="Volumes" name="volumes">
                             <field name="volumes" invisible="1"/>
                             <field name="get_formatted_volumes" widget="html"/>
                         </page>
-                        
+
                         <page string="Labels" name="labels">
                             <field name="labels" widget="html" readonly="1"/>
                         </page>
-                        
-                        <page string="Logs" name="logs">
-                            <button name="action_view_logs" string="View Logs" type="object" 
-                                    class="btn-primary"/>
-                        </page>
-                        
+
+                        <!--                        <page string="Logs" name="logs">-->
+                        <!--                            <button name="action_view_logs" string="View Logs" type="object" -->
+                        <!--                                    class="btn-primary"/>-->
+                        <!--                        </page>-->
+
                         <page string="Details" name="details">
                             <field name="details" widget="html" readonly="1"/>
                         </page>
@@ -85,7 +98,7 @@
             </form>
         </field>
     </record>
-    
+
     <!-- Portainer Container Tree View -->
     <record id="view_portainer_container_tree" model="ir.ui.view">
         <field name="name">j_portainer.container.tree</field>
@@ -93,7 +106,7 @@
         <field name="arch" type="xml">
             <tree string="Containers">
                 <field name="name"/>
-                <field name="state" widget="badge" 
+                <field name="state" widget="badge"
                        decoration-success="state == 'running'"
                        decoration-warning="state == 'paused'"
                        decoration-danger="state in ['stopped', 'exited', 'dead']"/>
@@ -101,19 +114,19 @@
                 <field name="server_id"/>
                 <field name="environment_name"/>
                 <field name="created"/>
-                <button name="start" string="Start" type="object" 
+                <button name="start" string="Start" type="object"
                         icon="fa-play"
                         invisible="state == 'running'"/>
-                <button name="stop" string="Stop" type="object" 
+                <button name="stop" string="Stop" type="object"
                         icon="fa-stop"
                         invisible="state != 'running'"/>
-                <button name="restart" string="Restart" type="object" 
+                <button name="restart" string="Restart" type="object"
                         icon="fa-refresh"
                         invisible="state != 'running'"/>
             </tree>
         </field>
     </record>
-    
+
     <!-- Portainer Container Search View -->
     <record id="view_portainer_container_search" model="ir.ui.view">
         <field name="name">j_portainer.container.search</field>
@@ -131,14 +144,15 @@
                 <filter string="Exited" name="exited" domain="[('state', '=', 'exited')]"/>
                 <group expand="0" string="Group By">
                     <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
-                    <filter string="Environment" name="group_by_environment" domain="[]" context="{'group_by': 'environment_name'}"/>
+                    <filter string="Environment" name="group_by_environment" domain="[]"
+                            context="{'group_by': 'environment_name'}"/>
                     <filter string="State" name="group_by_state" domain="[]" context="{'group_by': 'state'}"/>
                     <filter string="Image" name="group_by_image" domain="[]" context="{'group_by': 'image'}"/>
                 </group>
             </search>
         </field>
     </record>
-    
+
     <!-- Portainer Container Action -->
     <record id="action_portainer_container" model="ir.actions.act_window">
         <field name="name">Containers</field>
@@ -155,5 +169,5 @@
             </p>
         </field>
     </record>
-    
+
 </odoo>

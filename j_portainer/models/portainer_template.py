@@ -20,7 +20,8 @@ class PortainerTemplate(models.Model):
     description = fields.Text('Description')
     template_type = fields.Selection([
         ('1', 'Standalone / Podman'),
-        ('2', 'Swarm')
+        ('2', 'Swarm'),
+        ('3', 'Compose stack'),
     ], string='Type', default='1', required=True)
     platform = fields.Selection([
         ('linux', 'Linux'),

@@ -7,24 +7,84 @@
         <field name="arch" type="xml">
             <form string="Portainer Environment">
                 <header>
-                    <button name="sync_resources" string="Sync Resources" type="object" 
+                    <button name="sync_resources" string="Sync Resources" type="object"
                             class="btn-primary"/>
                 </header>
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_containers" string="Containers" type="object"
+                                class="oe_stat_button" icon="fa-cubes">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="container_count"/>
+                                </span>
+                                <span class="o_stat_text">Total</span>
+                            </div>
+                        </button>
+                        <button name="action_view_containers" string="Running Containers" type="object"
+                                class="oe_stat_button" icon="fa-play">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="running_container_count"/>
+                                </span>
+                                <span class="o_stat_text">Running</span>
+                            </div>
+                        </button>
+                        <button name="action_view_networks" string="Networks" type="object"
+                                class="oe_stat_button" icon="fa-sitemap">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="network_count"/>
+                                </span>
+                                <span class="o_stat_text">Networks</span>
+                            </div>
+                        </button>
+                        <button name="action_view_stacks" string="Stacks" type="object"
+                                class="oe_stat_button" icon="fa-tasks">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="stack_count"/>
+                                </span>
+                                <span class="o_stat_text">Stacks</span>
+                            </div>
+                        </button>
+                        <button name="action_view_images" string="Images" type="object"
+                                class="oe_stat_button" icon="fa-file-image-o">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="image_count"/>
+                                </span>
+                                <span class="o_stat_text">Images</span>
+                            </div>
+                        </button>
+                        <button name="action_view_volumes" string="Volumes" type="object"
+                                class="oe_stat_button" icon="fa-database">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_value">
+                                    <field name="volume_count"/>
+                                </span>
+                                <span class="o_stat_text">Volumes</span>
+                            </div>
+                        </button>
+
+                    </div>
+
                     <div class="oe_title">
                         <label for="name" class="oe_edit_only"/>
-                        <h1><field name="name"/></h1>
+                        <h1>
+                            <field name="name"/>
+                        </h1>
                     </div>
                     <div class="oe_button_box" name="button_box">
                         <widget name="web_ribbon" title="Archived" bg_color="bg-danger" invisible="active"/>
                     </div>
-                    
+
                     <group>
                         <group>
                             <field name="server_id" readonly="1"/>
                             <field name="environment_id" readonly="1"/>
                             <field name="type" readonly="1"/>
-                            <field name="status" widget="badge" 
+                            <field name="status" widget="badge"
                                    decoration-success="status == 'up'"
                                    decoration-danger="status == 'down'"/>
                             <field name="active"/>
@@ -37,61 +97,8 @@
                             <field name="tags" readonly="1"/>
                         </group>
                     </group>
-                    
+
                     <notebook>
-                        <page string="Resources" name="resources">
-                            <group>
-                                <group>
-                                    <button name="action_view_containers" string="Containers" type="object" 
-                                            class="oe_stat_button" icon="fa-cubes">
-                                        <div class="o_field_widget o_stat_info">
-                                            <span class="o_stat_value"><field name="container_count"/></span>
-                                            <span class="o_stat_text">Total</span>
-                                        </div>
-                                    </button>
-                                    <button name="action_view_containers" string="Running Containers" type="object" 
-                                            class="oe_stat_button" icon="fa-play">
-                                        <div class="o_field_widget o_stat_info">
-                                            <span class="o_stat_value"><field name="running_container_count"/></span>
-                                            <span class="o_stat_text">Running</span>
-                                        </div>
-                                    </button>
-                                </group>
-                                <group>
-                                    <button name="action_view_images" string="Images" type="object" 
-                                            class="oe_stat_button" icon="fa-file-image-o">
-                                        <div class="o_field_widget o_stat_info">
-                                            <span class="o_stat_value"><field name="image_count"/></span>
-                                            <span class="o_stat_text">Images</span>
-                                        </div>
-                                    </button>
-                                    <button name="action_view_volumes" string="Volumes" type="object" 
-                                            class="oe_stat_button" icon="fa-database">
-                                        <div class="o_field_widget o_stat_info">
-                                            <span class="o_stat_value"><field name="volume_count"/></span>
-                                            <span class="o_stat_text">Volumes</span>
-                                        </div>
-                                    </button>
-                                </group>
-                                <group>
-                                    <button name="action_view_networks" string="Networks" type="object" 
-                                            class="oe_stat_button" icon="fa-sitemap">
-                                        <div class="o_field_widget o_stat_info">
-                                            <span class="o_stat_value"><field name="network_count"/></span>
-                                            <span class="o_stat_text">Networks</span>
-                                        </div>
-                                    </button>
-                                    <button name="action_view_stacks" string="Stacks" type="object" 
-                                            class="oe_stat_button" icon="fa-tasks">
-                                        <div class="o_field_widget o_stat_info">
-                                            <span class="o_stat_value"><field name="stack_count"/></span>
-                                            <span class="o_stat_text">Stacks</span>
-                                        </div>
-                                    </button>
-                                </group>
-                            </group>
-                        </page>
-                        
                         <page string="Details" name="details">
                             <field name="details" widget="html" readonly="1"/>
                         </page>
@@ -100,7 +107,7 @@
             </form>
         </field>
     </record>
-    
+
     <!-- Portainer Environment Tree View -->
     <record id="view_portainer_environment_tree" model="ir.ui.view">
         <field name="name">j_portainer.environment.tree</field>
@@ -109,7 +116,7 @@
             <tree string="Portainer Environments">
                 <field name="name"/>
                 <field name="server_id"/>
-                <field name="status" widget="badge" 
+                <field name="status" widget="badge"
                        decoration-success="status == 'up'"
                        decoration-danger="status == 'down'"/>
                 <field name="type"/>
@@ -119,12 +126,12 @@
                 <field name="volume_count" sum="Total Volumes"/>
                 <field name="network_count" sum="Total Networks"/>
                 <field name="stack_count" sum="Total Stacks"/>
-                <button name="sync_resources" string="Sync" type="object" 
+                <button name="sync_resources" string="Sync" type="object"
                         icon="fa-refresh"/>
             </tree>
         </field>
     </record>
-    
+
     <!-- Portainer Environment Search View -->
     <record id="view_portainer_environment_search" model="ir.ui.view">
         <field name="name">j_portainer.environment.search</field>
@@ -150,7 +157,7 @@
             </search>
         </field>
     </record>
-    
+
     <!-- Portainer Environment Action -->
     <record id="action_portainer_environment" model="ir.actions.act_window">
         <field name="name">Portainer Environments</field>
@@ -167,5 +174,5 @@
             </p>
         </field>
     </record>
-    
+
 </odoo>
