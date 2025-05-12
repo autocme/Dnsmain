@@ -28,8 +28,8 @@ class PortainerCustomTemplate(models.Model):
     title = fields.Char('Title', required=True)
     description = fields.Text('Description')
     template_type = fields.Selection([
-        ('1', 'Standalone / Podman'),
-        ('2', 'Swarm')
+        ('1', 'Swarm'),
+        ('2', 'Standalone / Podman')
     ], string='Type', default='1', required=True)
     platform = fields.Selection([
         ('linux', 'Linux'),
@@ -235,9 +235,11 @@ class PortainerCustomTemplate(models.Model):
         result = api.template_action(self.server_id.id, self.template_id, 'delete')
         
         if result:
+            print('result mmmm', result)
+            self.env.cr.commit()
             # Refresh templates
             self.server_id.sync_custom_templates()
-            
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -290,7 +292,7 @@ class PortainerCustomTemplate(models.Model):
         self.ensure_one()
         import requests
         import json
-        
+
         if not self.server_id:
             raise UserError(_("Server is required for template creation"))
             
