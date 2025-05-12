@@ -82,7 +82,7 @@
                             </group>
                         </page>
                         <page string="Environment Variables" name="env_vars">
-                            <field name="environment_variables" widget="CodeEditor" options="{'language': 'json'}" placeholder="Environment variables in JSON format..."/>
+                            <field name="environment_variables" options="{'language': 'json'}" placeholder="Environment variables in JSON format..."/>
                             <div class="text-muted">
                                 Environment Variables Preview:
                                 <pre><field name="get_formatted_env" readonly="1"/></pre>

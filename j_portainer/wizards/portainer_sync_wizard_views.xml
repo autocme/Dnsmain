@@ -66,36 +66,35 @@
     </record>
     
     <!-- Server Form View Sync Button -->
-    <record id="view_portainer_server_form_sync_button" model="ir.ui.view">
-        <field name="name">j_portainer.server.form.sync.button</field>
-        <field name="model">j_portainer.server</field>
-        <field name="inherit_id" ref="view_portainer_server_form"/>
-        <field name="arch" type="xml">
-            <xpath expr="//header" position="inside">
-                <button name="%(action_portainer_sync_wizard)d" string="Synchronize" type="action" 
-                        context="{'default_server_id': active_id, 'readonly_server': True}" 
-                        class="btn-primary"/>
-                <button name="test_connection" string="Test Connection" type="object" 
-                        class="btn-secondary"/>
-            </xpath>
-        </field>
-    </record>
+<!--    <record id="view_portainer_server_form_sync_button" model="ir.ui.view">-->
+<!--        <field name="name">j_portainer.server.form.sync.button</field>-->
+<!--        <field name="model">j_portainer.server</field>-->
+<!--        <field name="inherit_id" ref="view_portainer_server_form"/>-->
+<!--        <field name="arch" type="xml">-->
+<!--            <xpath expr="//header" position="inside">-->
+<!--                <button name="%(action_portainer_sync_wizard)d" string="Synchronize" type="action" -->
+<!--                        context="{'default_server_id': active_id, 'readonly_server': True}" -->
+<!--                        class="btn-primary"/>-->
+<!--                <button name="test_connection" string="Test Connection" type="object" -->
+<!--                        class="btn-secondary"/>-->
+<!--            </xpath>-->
+<!--        </field>-->
+<!--    </record>-->
     
     <!-- Environment Form View Sync Button -->
-    <record id="view_portainer_environment_form_sync_button" model="ir.ui.view">
-        <field name="name">j_portainer.environment.form.sync.button</field>
-        <field name="model">j_portainer.environment</field>
-        <field name="inherit_id" ref="view_portainer_environment_form"/>
-        <field name="arch" type="xml">
-            <xpath expr="//header" position="inside">
-                <button name="%(action_portainer_sync_wizard)d" string="Synchronize Resources" type="action" 
-                        context="{'default_server_id': server_id, 'readonly_server': True, 'default_environment_specific': True, 'default_environment_id': id}" 
-                        class="btn-primary"/>
-                <button name="sync_resources" string="Quick Sync" type="object" 
-                        class="btn-secondary"/>
-            </xpath>
-        </field>
-    </record>
+<!--    <record id="view_portainer_environment_form_sync_button" model="ir.ui.view">-->
+<!--        <field name="name">j_portainer.environment.form.sync.button</field>-->
+<!--        <field name="model">j_portainer.environment</field>-->
+<!--        <field name="inherit_id" ref="view_portainer_environment_form"/>-->
+<!--        <field name="arch" type="xml">-->
+<!--            <xpath expr="//header" position="inside">-->
+<!--                <button name="%(action_portainer_sync_wizard)d" string="Synchronize Resources" type="action" -->
+<!--                        context="{'default_server_id': server_id, 'readonly_server': True, 'default_environment_specific': True, 'default_environment_id': id}" -->
+<!--                        class="btn-primary"/>-->
+<!--                <button name="sync_resources" string="Quick Sync" type="object" -->
+<!--                        class="btn-secondary"/>-->
+<!--            </xpath>-->
+<!--        </field>-->
+<!--    </record>-->
     
-    <!-- Menu Item has been moved to menu_views.xml for centralization -->
 </odoo>
