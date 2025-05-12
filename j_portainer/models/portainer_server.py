@@ -725,7 +725,7 @@ class PortainerServer(models.Model):
                         'environment_name': env.name,
                         'name': volume_name,
                         'driver': volume.get('Driver', ''),
-                        'created': datetime.now(),  # Default to now since date format can vary
+                        'created': self._safe_parse_timestamp(volume.get('CreatedAt', 0)),
                         'mountpoint': volume.get('Mountpoint', ''),
                         'scope': volume.get('Scope', 'local'),
                         'labels': json.dumps(volume.get('Labels', {})),
