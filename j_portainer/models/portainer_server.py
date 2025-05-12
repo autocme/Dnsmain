@@ -144,6 +144,17 @@ class PortainerServer(models.Model):
     portainer_version = fields.Char('Portainer Version', readonly=True)
     portainer_info = fields.Text('Server Info', readonly=True)
     environment_count = fields.Integer('Environments', readonly=True)
+    
+    # API logs relationship
+    api_log_ids = fields.One2many('j_portainer.api_log', 'server_id', string='API Logs')
+    api_log_count = fields.Integer('API Log Count', compute='_compute_api_log_count')
+    
+    def _compute_api_log_count(self):
+        """Compute the number of API logs related to this server"""
+        for server in self:
+            server.api_log_count = self.env['j_portainer.api_log'].search_count([
+                ('server_id', '=', server.id)
+            ])
 
     # Related Resources
     container_ids = fields.One2many('j_portainer.container', 'server_id', string='Containers')
@@ -245,7 +256,7 @@ class PortainerServer(models.Model):
         # Format header value for X-API-Key authentication
         return f"{self.api_key}"
 
-    def _make_api_request(self, endpoint, method='GET', data=None, params=None, headers=None, use_multipart=False):
+    def _make_api_request(self, endpoint, method='GET', data=None, params=None, headers=None, use_multipart=False, operation_type='other', environment_id=None):
         """Make a request to the Portainer API
         
         Args:
@@ -255,11 +266,24 @@ class PortainerServer(models.Model):
             params (dict, optional): URL parameters
             headers (dict, optional): Additional headers to include with the request
             use_multipart (bool, optional): Whether to use multipart form data instead of JSON
+            operation_type (str, optional): Type of operation being performed (for logging)
+            environment_id (int, optional): Environment ID related to this request (for logging)
             
         Returns:
             requests.Response: API response
         """
         url = self.url.rstrip('/') + endpoint
+        start_time = datetime.now()
+        environment_name = None
+        
+        # Try to determine environment name if environment_id is provided
+        if environment_id:
+            env = self.env['j_portainer.environment'].search([
+                ('server_id', '=', self.id), 
+                ('environment_id', '=', environment_id)
+            ], limit=1)
+            if env:
+                environment_name = env.name
 
         # Default headers
         request_headers = {
@@ -273,7 +297,37 @@ class PortainerServer(models.Model):
         # Update with any additional headers
         if headers:
             request_headers.update(headers)
-
+            
+        # Prepare log data
+        log_vals = {
+            'server_id': self.id,
+            'endpoint': endpoint,
+            'method': method,
+            'environment_id': environment_id,
+            'environment_name': environment_name,
+            'operation_type': operation_type,
+            'request_date': start_time,
+        }
+        
+        # Sanitize request data for logging (remove API keys, passwords)
+        if data and not use_multipart:
+            # Create a copy of data to avoid modifying the original
+            log_data = data.copy() if isinstance(data, dict) else data
+            
+            # Mask sensitive data if it's a dictionary
+            if isinstance(log_data, dict):
+                if 'api_key' in log_data:
+                    log_data['api_key'] = '******'
+                if 'password' in log_data:
+                    log_data['password'] = '******'
+                if 'apiKey' in log_data:
+                    log_data['apiKey'] = '******'
+            
+            log_vals['request_data'] = json.dumps(log_data, indent=2) if log_data else None
+        
+        # Create API log record
+        api_log = self.env['j_portainer.api_log'].create(log_vals)
+        
         try:
             _logger.debug(f"Making {method} request to {url}")
 
@@ -303,14 +357,54 @@ class PortainerServer(models.Model):
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
 
+            # Calculate response time
+            end_time = datetime.now()
+            response_time_ms = int((end_time - start_time).total_seconds() * 1000)
+            
+            # Update log with response data
+            try:
+                # Try to get response as JSON for logging
+                response_json = response.json()
+                response_data = json.dumps(response_json, indent=2)
+            except Exception:
+                # If response is not JSON, use text
+                response_data = response.text[:5000]  # Limit size to avoid massive logs
+            
+            # Update the log record with response info
+            api_log.write({
+                'status_code': response.status_code,
+                'response_time_ms': response_time_ms,
+                'response_data': response_data if response.status_code < 300 else None,
+                'error_message': response_data if response.status_code >= 300 else None,
+            })
+            
             _logger.debug(f"API response status: {response.status_code}")
             return response
 
         except requests.exceptions.ConnectionError as e:
+            # Update log with error
+            end_time = datetime.now()
+            response_time_ms = int((end_time - start_time).total_seconds() * 1000)
+            api_log.write({
+                'status_code': 0,
+                'response_time_ms': response_time_ms,
+                'error_message': f"Connection error: {str(e)}"
+            })
+            
             _logger.error(f"Connection error: {str(e)}")
             raise UserError(
                 _("Connection error: Could not connect to Portainer server at %s. Please check the URL and network connectivity.") % self.url)
-        except requests.exceptions.Timeout:
+                
+        except requests.exceptions.Timeout as e:
+            # Update log with timeout error
+            end_time = datetime.now()
+            response_time_ms = int((end_time - start_time).total_seconds() * 1000)
+            api_log.write({
+                'status_code': 0,
+                'response_time_ms': response_time_ms,
+                'error_message': f"Connection timeout: {str(e)}"
+            })
+            
             _logger.error("Connection timeout")
             raise UserError(_("Connection timeout: The request to Portainer server timed out. Please try again later."))
         except requests.exceptions.RequestException as e:
@@ -1694,6 +1788,18 @@ class PortainerServer(models.Model):
             _logger.error(f"Error syncing stacks: {str(e)}")
             raise UserError(_("Error syncing stacks: %s") % str(e))
 
+    def action_view_api_logs(self):
+        """Open the API logs for this server"""
+        self.ensure_one()
+        return {
+            'name': _('API Logs'),
+            'view_mode': 'tree,form',
+            'res_model': 'j_portainer.api_log',
+            'domain': [('server_id', '=', self.id)],
+            'type': 'ir.actions.act_window',
+            'context': {'default_server_id': self.id}
+        }
+    
     def sync_all(self):
         """Sync all resources from Portainer"""
         self.ensure_one()

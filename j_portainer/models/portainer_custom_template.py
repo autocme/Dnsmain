@@ -132,21 +132,90 @@ class PortainerCustomTemplate(models.Model):
     # The ports formatting function is now inherited from j_portainer.template.mixin
     
     def action_refresh(self):
-        """Refresh custom templates from Portainer"""
-        for template in self:
-            if template.server_id:
-                template.server_id.sync_custom_templates()
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': _('Custom Templates Refreshed'),
-                        'message': _("Custom templates have been refreshed from Portainer"),
-                        'sticky': False,
-                    }
-                }
+        """Refresh this specific custom template from Portainer"""
+        self.ensure_one()
         
-        raise UserError(_("No server found to refresh custom templates"))
+        if not self.server_id:
+            raise UserError(_("Server is required to refresh custom template"))
+            
+        if not self.template_id:
+            raise UserError(_("Template ID is required to refresh custom template"))
+        
+        try:
+            _logger.info(f"Refreshing custom template '{self.title}' (ID: {self.template_id})")
+            
+            # Get the specific template from Portainer
+            template_response = self.server_id._make_api_request(
+                f'/api/custom_templates/{self.template_id}', 
+                'GET',
+                operation_type='sync_custom_template'
+            )
+            
+            if template_response.status_code != 200:
+                raise UserError(_("Failed to fetch template: %s") % template_response.text)
+                
+            # Parse the template data
+            template_data = template_response.json()
+            
+            # Prepare update values
+            update_vals = {
+                'title': template_data.get('Title', self.title),
+                'description': template_data.get('Description', ''),
+                'note': template_data.get('Note', ''),
+                'platform': template_data.get('Platform', 'linux').lower(),
+                'logo': template_data.get('Logo', ''),
+                'categories': ','.join(template_data.get('Categories', [])),
+            }
+            
+            # Handle type (convert integer to string if needed)
+            template_type = template_data.get('Type', 1)
+            if isinstance(template_type, int):
+                template_type = str(template_type)
+            update_vals['template_type'] = template_type
+            
+            # Also get file content if build method is editor
+            if self.build_method == 'editor' or not self.fileContent:
+                # Get the template file content
+                file_response = self.server_id._make_api_request(
+                    f'/api/custom_templates/{self.template_id}/file', 
+                    'GET',
+                    operation_type='sync_custom_template'
+                )
+                
+                if file_response.status_code == 200:
+                    file_data = file_response.json()
+                    compose_content = None
+                    
+                    # Try different possible field names for the file content
+                    for field_name in ['FileContent', 'StackFileContent', 'Content', 'stackFileContent']:
+                        if field_name in file_data:
+                            compose_content = file_data[field_name]
+                            _logger.info(f"Retrieved file content (field: {field_name}). Content length: {len(compose_content)} chars")
+                            break
+                    
+                    if compose_content:
+                        update_vals.update({
+                            'fileContent': compose_content,
+                            'compose_file': compose_content,
+                            'build_method': 'editor'
+                        })
+            
+            # Update the template
+            self.write(update_vals)
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Template Refreshed'),
+                    'message': _("Custom template '%s' has been refreshed from Portainer") % self.title,
+                    'sticky': False,
+                }
+            }
+                
+        except Exception as e:
+            _logger.error(f"Error refreshing custom template {self.template_id}: {str(e)}")
+            raise UserError(_("Error refreshing template: %s") % str(e))
         
     def action_refresh_file_content(self):
         """Refresh file content for this template from Portainer"""
@@ -220,48 +289,131 @@ class PortainerCustomTemplate(models.Model):
             raise UserError(_("Error fetching file content: %s") % str(e))
     
     def remove_custom_template(self):
-        """Remove this custom template from Portainer"""
+        """Remove this custom template from both Portainer and Odoo"""
         self.ensure_one()
         
+        # Store template title for messages before potentially unlinking record
+        template_title = self.title
+        template_id = self.template_id
+        server_id = self.server_id
+        
         # Check that the server is connected
-        if self.server_id.status != 'connected':
+        if server_id.status != 'connected':
             raise UserError(_("Cannot remove template: Server is not connected"))
             
-        if not self.template_id:
-            raise UserError(_("Cannot remove template: No template ID found"))
-            
-        # Call the API to remove the template
-        api = self.env['j_portainer.api']
-        result = api.template_action(self.server_id.id, self.template_id, 'delete')
-        
-        if result:
-            print('result mmmm', result)
-            self.env.cr.commit()
-            # Refresh templates
-            self.server_id.sync_custom_templates()
-
+        if not template_id:
+            # If no template_id, just remove from Odoo without contacting Portainer
+            self.unlink()
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Template Removed'),
-                    'message': _("Custom template '%s' has been removed from Portainer") % self.title,
+                    'message': _("Custom template '%s' has been removed from Odoo (no Portainer ID)") % template_title,
                     'sticky': False,
                     'next': {'type': 'ir.actions.act_window_close'}
                 }
             }
-        else:
+            
+        try:
+            # Call the API to remove the template from Portainer
+            api = self.env['j_portainer.api']
+            result = api.template_action(server_id.id, template_id, 'delete')
+            
+            if result:
+                # Log successful Portainer deletion
+                _logger.info(f"Custom template {template_title} (ID: {template_id}) removed from Portainer")
+                
+                # Now unlink the record from Odoo
+                self.unlink()
+                
+                # Commit the transaction - important!
+                self.env.cr.commit()
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Template Completely Removed'),
+                        'message': _("Custom template '%s' has been removed from both Portainer and Odoo") % template_title,
+                        'sticky': False,
+                        'next': {'type': 'ir.actions.act_window_close'}
+                    }
+                }
+            else:
+                # If Portainer API call failed but we still want to remove from Odoo
+                if self.env.context.get('force_remove', False):
+                    self.unlink()
+                    self.env.cr.commit()
+                    
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Template Removed from Odoo'),
+                            'message': _("Custom template '%s' could not be removed from Portainer but was removed from Odoo") % template_title,
+                            'sticky': False,
+                            'type': 'warning',
+                            'next': {'type': 'ir.actions.act_window_close'}
+                        }
+                    }
+                else:
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Error'),
+                            'message': _("Failed to remove custom template from Portainer. Template remains in Odoo."),
+                            'sticky': True,
+                            'type': 'danger',
+                        }
+                    }
+        except Exception as e:
+            _logger.error(f"Error removing custom template: {str(e)}")
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Error'),
-                    'message': _("Failed to remove custom template from Portainer"),
+                    'message': _("Error removing template: %s") % str(e),
                     'sticky': True,
                     'type': 'danger',
                 }
             }
         
+    def force_remove_from_odoo(self):
+        """Force remove custom template from Odoo regardless of Portainer status"""
+        self.ensure_one()
+        
+        # Store template title for messages before potentially unlinking record
+        template_title = self.title
+        
+        try:
+            # Directly unlink the record from Odoo
+            self.unlink()
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Template Removed'),
+                    'message': _("Custom template '%s' has been forcibly removed from Odoo only") % template_title,
+                    'sticky': False,
+                    'next': {'type': 'ir.actions.act_window_close'}
+                }
+            }
+        except Exception as e:
+            _logger.error(f"Error force removing custom template: {str(e)}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Error'),
+                    'message': _("Error removing template from Odoo: %s") % str(e),
+                    'sticky': True,
+                    'type': 'danger',
+                }
+            }
+    
     def action_deploy(self):
         """Open the deploy wizard for this template"""
         self.ensure_one()

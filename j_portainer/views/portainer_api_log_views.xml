@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- API Log Tree View -->
+    <record id="view_portainer_api_log_tree" model="ir.ui.view">
+        <field name="name">j_portainer.api_log.tree</field>
+        <field name="model">j_portainer.api_log</field>
+        <field name="arch" type="xml">
+            <tree string="Portainer API Logs" decoration-success="status == 'success'" decoration-danger="status == 'error'" decoration-info="status == 'warning'">
+                <field name="server_id"/>
+                <field name="environment_name"/>
+                <field name="method"/>
+                <field name="endpoint"/>
+                <field name="operation_type"/>
+                <field name="request_date"/>
+                <field name="status"/>
+                <field name="status_code"/>
+                <field name="response_time_ms"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- API Log Form View -->
+    <record id="view_portainer_api_log_form" model="ir.ui.view">
+        <field name="name">j_portainer.api_log.form</field>
+        <field name="model">j_portainer.api_log</field>
+        <field name="arch" type="xml">
+            <form string="Portainer API Log">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="method"/> <field name="endpoint" class="oe_inline"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="server_id"/>
+                            <field name="environment_id"/>
+                            <field name="environment_name"/>
+                            <field name="operation_type"/>
+                            <field name="request_date"/>
+                        </group>
+                        <group>
+                            <field name="status" widget="badge"
+                                    decoration-success="status == 'success'"
+                                    decoration-danger="status == 'error'"
+                                    decoration-info="status == 'warning'"/>
+                            <field name="status_code"/>
+                            <field name="response_time_ms" widget="integer"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Request Data" name="request_data">
+                            <field name="request_data" readonly="1"/>
+                        </page>
+                        <page string="Response Data" name="response_data">
+                            <field name="response_data" readonly="1"/>
+                        </page>
+                        <page string="Error Details" name="error_details">
+                            <field name="error_message" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- API Log Search View -->
+    <record id="view_portainer_api_log_search" model="ir.ui.view">
+        <field name="name">j_portainer.api_log.search</field>
+        <field name="model">j_portainer.api_log</field>
+        <field name="arch" type="xml">
+            <search string="Search API Logs">
+                <field name="server_id"/>
+                <field name="endpoint"/>
+                <field name="environment_name"/>
+                <field name="operation_type"/>
+                <field name="error_message"/>
+                <separator/>
+                <filter string="Success" name="success" domain="[('status', '=', 'success')]"/>
+                <filter string="Error" name="error" domain="[('status', '=', 'error')]"/>
+                <filter string="Warning" name="warning" domain="[('status', '=', 'warning')]"/>
+                <separator/>
+                <filter string="GET Requests" name="get_requests" domain="[('method', '=', 'GET')]"/>
+                <filter string="POST Requests" name="post_requests" domain="[('method', '=', 'POST')]"/>
+                <filter string="PUT Requests" name="put_requests" domain="[('method', '=', 'PUT')]"/>
+                <filter string="DELETE Requests" name="delete_requests" domain="[('method', '=', 'DELETE')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
+                    <filter string="Environment" name="group_by_environment" domain="[]" context="{'group_by': 'environment_name'}"/>
+                    <filter string="Method" name="group_by_method" domain="[]" context="{'group_by': 'method'}"/>
+                    <filter string="Operation Type" name="group_by_operation" domain="[]" context="{'group_by': 'operation_type'}"/>
+                    <filter string="Status" name="group_by_status" domain="[]" context="{'group_by': 'status'}"/>
+                    <filter string="Request Date" name="group_by_date" domain="[]" context="{'group_by': 'request_date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- API Log Action -->
+    <record id="action_portainer_api_log" model="ir.actions.act_window">
+        <field name="name">Portainer API Logs</field>
+        <field name="res_model">j_portainer.api_log</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_portainer_api_log_search"/>
+        <field name="context">{'search_default_group_by_server': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No API logs found
+            </p>
+            <p>
+                This view shows logs of all API requests made to Portainer servers.
+            </p>
+        </field>
+    </record>
+
+    <!-- API Log Action for Server -->
+    <record id="action_portainer_api_log_by_server" model="ir.actions.act_window">
+        <field name="name">API Logs</field>
+        <field name="res_model">j_portainer.api_log</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('server_id', '=', active_id)]</field>
+        <field name="context">{'default_server_id': active_id}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No API logs found for this server
+            </p>
+            <p>
+                Logs will appear here after API requests are made to the server.
+            </p>
+        </field>
+    </record>
+</odoo>
