@@ -131,7 +131,7 @@
 
                         <page string="Templates" name="templates">
                             <group>
-                                <h3>Standard Templates</h3>
+<!--                                <h3>Standard Templates</h3>-->
                                 <field name="template_ids">
                                     <tree string="Standard Templates">
                                         <field name="title"/>
@@ -141,7 +141,7 @@
                                         <field name="categories"/>
                                     </tree>
                                 </field>
-                                <h3>Custom Templates</h3>
+<!--                                <h3>Custom Templates</h3>-->
                                 <field name="custom_template_ids">
                                     <tree string="Custom Templates">
                                         <field name="title"/>
