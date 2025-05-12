@@ -326,7 +326,7 @@ class PortainerServer(models.Model):
             log_vals['request_data'] = json.dumps(log_data, indent=2) if log_data else None
         
         # Create API log record
-        api_log = self.env['j_portainer.api_log'].create(log_vals)
+        api_log = self.env['j_portainer.api_log'].sudo().create(log_vals)
         
         try:
             _logger.debug(f"Making {method} request to {url}")
@@ -371,7 +371,7 @@ class PortainerServer(models.Model):
                 response_data = response.text[:5000]  # Limit size to avoid massive logs
             
             # Update the log record with response info
-            api_log.write({
+            api_log.sudo().write({
                 'status_code': response.status_code,
                 'response_time_ms': response_time_ms,
                 'response_data': response_data if response.status_code < 300 else None,
@@ -385,7 +385,7 @@ class PortainerServer(models.Model):
             # Update log with error
             end_time = datetime.now()
             response_time_ms = int((end_time - start_time).total_seconds() * 1000)
-            api_log.write({
+            api_log.sudo().write({
                 'status_code': 0,
                 'response_time_ms': response_time_ms,
                 'error_message': f"Connection error: {str(e)}"
@@ -399,7 +399,7 @@ class PortainerServer(models.Model):
             # Update log with timeout error
             end_time = datetime.now()
             response_time_ms = int((end_time - start_time).total_seconds() * 1000)
-            api_log.write({
+            api_log.sudo().write({
                 'status_code': 0,
                 'response_time_ms': response_time_ms,
                 'error_message': f"Connection timeout: {str(e)}"
@@ -408,6 +408,15 @@ class PortainerServer(models.Model):
             _logger.error("Connection timeout")
             raise UserError(_("Connection timeout: The request to Portainer server timed out. Please try again later."))
         except requests.exceptions.RequestException as e:
+            # Update log with general request error
+            end_time = datetime.now()
+            response_time_ms = int((end_time - start_time).total_seconds() * 1000)
+            api_log.sudo().write({
+                'status_code': 0,
+                'response_time_ms': response_time_ms,
+                'error_message': f"Request error: {str(e)}"
+            })
+            
             _logger.error(f"Request error: {str(e)}")
             raise UserError(_("Request error: %s") % str(e))
 
@@ -417,7 +426,7 @@ class PortainerServer(models.Model):
 
         try:
             # Get all endpoints from Portainer
-            response = self._make_api_request('/api/endpoints', 'GET')
+            response = self._make_api_request('/api/endpoints', 'GET', operation_type='sync_environment')
             if response.status_code != 200:
                 raise UserError(_("Failed to get environments: %s") % response.text)
 
@@ -431,7 +440,7 @@ class PortainerServer(models.Model):
                 env_name = env.get('Name', 'Unknown')
 
                 # Get endpoint details
-                details_response = self._make_api_request(f'/api/endpoints/{env_id}', 'GET')
+                details_response = self._make_api_request(f'/api/endpoints/{env_id}', 'GET', operation_type='sync_environment')
                 details = details_response.json() if details_response.status_code == 200 else {}
 
                 # Check if environment already exists in Odoo

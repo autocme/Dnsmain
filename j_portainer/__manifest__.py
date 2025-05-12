@@ -17,9 +17,11 @@
         * Custom Templates
         * Stacks
         * Environments & Host Details
+        * API Logs & Operations Tracking
         
         Uses API Key authentication method for secure communication with Portainer.
         Exclusively uses Portainer v2 API endpoints for full compatibility with CE 2.9.0+ and 2.27.4 LTS.
+        Includes comprehensive API logging system for all Portainer operations.
     """,
     'author': 'Your Company',
     'category': 'Administration',
@@ -37,6 +39,7 @@
         'views/portainer_custom_template_views.xml',
         'views/portainer_git_credentials_views.xml',
         'views/portainer_stack_views.xml',
+        'views/portainer_api_log_views.xml',
         'wizards/portainer_sync_wizard_views.xml',
         'wizards/container_logs_wizard_view.xml',
         'wizards/container_remove_wizard_view.xml',

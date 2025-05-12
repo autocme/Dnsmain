@@ -1,6 +1,8 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_j_portainer_server_user,j_portainer.server.user,model_j_portainer_server,j_portainer.group_j_portainer_user,1,0,0,0
 access_j_portainer_server_admin,j_portainer.server.admin,model_j_portainer_server,j_portainer.group_j_portainer_manager,1,1,1,1
+access_j_portainer_api_log_user,j_portainer.api_log.user,model_j_portainer_api_log,j_portainer.group_j_portainer_user,1,0,0,0
+access_j_portainer_api_log_admin,j_portainer.api_log.admin,model_j_portainer_api_log,j_portainer.group_j_portainer_manager,1,1,1,1
 access_j_portainer_environment_user,j_portainer.environment.user,model_j_portainer_environment,j_portainer.group_j_portainer_user,1,0,0,0
 access_j_portainer_environment_admin,j_portainer.environment.admin,model_j_portainer_environment,j_portainer.group_j_portainer_manager,1,1,1,1
 access_j_portainer_container_user,j_portainer.container.user,model_j_portainer_container,j_portainer.group_j_portainer_user,1,0,0,0

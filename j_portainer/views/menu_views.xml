@@ -94,4 +94,12 @@
               parent="menu_j_portainer_configuration" 
               action="action_portainer_git_credentials"
               sequence="30"/>
+              
+    <!-- API Logs Menu -->
+    <menuitem id="menu_j_portainer_api_logs" 
+              name="API Logs" 
+              parent="menu_j_portainer_configuration" 
+              action="action_portainer_api_log"
+              sequence="40"
+              groups="j_portainer.group_j_portainer_manager"/>
 </odoo>
