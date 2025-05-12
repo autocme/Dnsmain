@@ -527,7 +527,7 @@ class PortainerServer(models.Model):
                         'environment_id': endpoint_id,
                         'environment_name': env.name,
                         'image_id': image_id,
-                        'created': datetime.fromtimestamp(image.get('Created', 0)),
+                        'created': datetime.fromtimestamp(min(image.get('Created', 0), 2147483647)),
                         'size': image.get('Size', 0),
                         'shared_size': image.get('SharedSize', 0),
                         'virtual_size': image.get('VirtualSize', 0),
@@ -683,7 +683,7 @@ class PortainerServer(models.Model):
                         'environment_name': env.name,
                         'name': volume_name,
                         'driver': volume.get('Driver', ''),
-                        'created': volume.get('CreatedAt', ''),
+                        'created': datetime.now(),  # Default to now since date format can vary
                         'mountpoint': volume.get('Mountpoint', ''),
                         'scope': volume.get('Scope', 'local'),
                         'labels': json.dumps(volume.get('Labels', {})),
@@ -695,8 +695,7 @@ class PortainerServer(models.Model):
                         existing_volume.write(volume_data)
                         updated_count += 1
                     else:
-                        # Create new volume record - set created date
-                        volume_data['created'] = datetime.now()  # Docker volumes don't have created date
+                        # Create new volume record
                         self.env['j_portainer.volume'].create(volume_data)
                         created_count += 1
 
@@ -1510,10 +1509,39 @@ class PortainerServer(models.Model):
                     'type': 'success',
                 }
             }
-
+            
         except Exception as e:
-            _logger.error(f"Error syncing all templates: {str(e)}")
-            raise UserError(_("Error syncing all templates: %s") % str(e))
+            _logger.error(f"Error syncing templates: {str(e)}")
+            raise UserError(_("Error syncing templates: %s") % str(e))
+            
+    def sync_all_templates_bidirectional(self):
+        """Complete bidirectional synchronization of all templates (standard and custom)"""
+        self.ensure_one()
+        
+        try:
+            # First sync standard templates (one way only, from Portainer to Odoo)
+            self.sync_standard_templates()
+            
+            # Then do bidirectional sync of custom templates
+            self.sync_all_custom_templates()
+            
+            # Finally fetch any missing file content
+            self._fetch_missing_template_file_content()
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('All Templates Fully Synchronized'),
+                    'message': _('All templates have been synchronized in both directions where applicable.'),
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"Error in bidirectional template sync: {str(e)}")
+            raise UserError(_("Error in bidirectional template synchronization: %s") % str(e))
 
     def sync_stacks(self, environment_id=None):
         """Sync stacks from Portainer

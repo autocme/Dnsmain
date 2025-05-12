@@ -21,16 +21,8 @@
                             class="btn-secondary"/>
                     <button name="sync_networks" string="Sync Networks" type="object"
                             class="btn-secondary"/>
-                    <button name="sync_standard_templates" string="Sync Templates" type="object"
+                    <button name="sync_all_templates_bidirectional" string="Sync All Templates (Bidirectional)" type="object"
                             class="btn-secondary"/>
-                    <button name="sync_custom_templates" string="Sync Custom Templates (from Portainer)" type="object"
-                            class="btn-secondary"/>
-                    <!--                    <button name="push_custom_templates_to_portainer" string="Push Custom Templates (to Portainer)" type="object" -->
-                    <!--                            class="btn-secondary"/>-->
-                    <!--                    <button name="sync_all_custom_templates" string="Bidirectional Custom Template Sync" type="object" -->
-                    <!--                            class="btn-secondary"/>-->
-                    <!--                    <button name="fetch_missing_template_file_content" string="Fetch Missing Template File Content" type="object" -->
-                    <!--                            class="btn-secondary"/>-->
                     <button name="sync_stacks" string="Sync Stacks" type="object"
                             class="btn-secondary"/>
                 </header>
