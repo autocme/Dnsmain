@@ -59,9 +59,9 @@ class PortainerServer(models.Model):
                 dt_with_tz = datetime.fromisoformat(date_value.replace('Z', '+00:00'))
                 # Return naive datetime (no timezone info) for Odoo compatibility
                 return dt_with_tz.replace(tzinfo=None)
-            elif isinstance(date_value, int):
-                # Handle timestamp (always returns naive datetime)
-                return datetime.fromtimestamp(date_value)
+            elif isinstance(date_value, (int, float)):
+                # Use the safe timestamp parsing method instead
+                return self._safe_parse_timestamp(date_value)
             else:
                 _logger.warning(f"Unsupported date format: {date_value} ({type(date_value)})")
                 return None
@@ -87,10 +87,11 @@ class PortainerServer(models.Model):
             timestamp_value: A timestamp value that could be an integer, float, or string
             
         Returns:
-            datetime object or current time if parsing fails
+            naive datetime object (without timezone info) or current time if parsing fails
             
         Note:
             This method handles large timestamp values that could cause integer overflow
+            Always returns naive datetime objects (without timezone info) as required by Odoo
         """
         try:
             # Check if timestamp_value is an integer or float and is within safe range
@@ -101,14 +102,17 @@ class PortainerServer(models.Model):
                 
                 # If still too large, use a fixed date
                 if timestamp_value > 2147483647:
-                    return datetime.now()
+                    return datetime.now().replace(tzinfo=None)
                 
                 return datetime.fromtimestamp(timestamp_value)
             
             # If it's a string, try to parse it as a date string
             elif isinstance(timestamp_value, str):
                 try:
-                    return datetime.fromisoformat(timestamp_value.replace('Z', '+00:00').replace('z', '+00:00'))
+                    # Parse ISO format string, then remove timezone
+                    dt = datetime.fromisoformat(timestamp_value.replace('Z', '+00:00').replace('z', '+00:00'))
+                    # Return naive datetime (remove timezone)
+                    return dt.replace(tzinfo=None)
                 except ValueError:
                     # Try parsing as a float and convert to timestamp
                     try:
@@ -119,8 +123,8 @@ class PortainerServer(models.Model):
         except Exception as e:
             _logger.warning(f"Error parsing timestamp {timestamp_value}: {str(e)}")
         
-        # Default fallback to current time
-        return datetime.now()
+        # Default fallback to current time (naive datetime)
+        return datetime.now().replace(tzinfo=None)
 
     name = fields.Char('Name', required=True, tracking=True)
     url = fields.Char('URL', required=True, tracking=True,
