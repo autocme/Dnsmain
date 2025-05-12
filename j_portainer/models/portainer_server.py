@@ -80,6 +80,48 @@ class PortainerServer(models.Model):
 
             return None
 
+    def _safe_parse_timestamp(self, timestamp_value):
+        """Safely parse a timestamp value to a datetime object
+        
+        Args:
+            timestamp_value: A timestamp value that could be an integer, float, or string
+            
+        Returns:
+            datetime object or current time if parsing fails
+            
+        Note:
+            This method handles large timestamp values that could cause integer overflow
+        """
+        try:
+            # Check if timestamp_value is an integer or float and is within safe range
+            if isinstance(timestamp_value, (int, float)):
+                # If timestamp is too large (e.g., nanoseconds), convert to seconds
+                if timestamp_value > 2147483647:  # Max safe 32-bit integer
+                    timestamp_value = timestamp_value / 1000000000  # Convert nanoseconds to seconds
+                
+                # If still too large, use a fixed date
+                if timestamp_value > 2147483647:
+                    return datetime.now()
+                
+                return datetime.fromtimestamp(timestamp_value)
+            
+            # If it's a string, try to parse it as a date string
+            elif isinstance(timestamp_value, str):
+                try:
+                    return datetime.fromisoformat(timestamp_value.replace('Z', '+00:00').replace('z', '+00:00'))
+                except ValueError:
+                    # Try parsing as a float and convert to timestamp
+                    try:
+                        float_value = float(timestamp_value)
+                        return self._safe_parse_timestamp(float_value)
+                    except ValueError:
+                        pass
+        except Exception as e:
+            _logger.warning(f"Error parsing timestamp {timestamp_value}: {str(e)}")
+        
+        # Default fallback to current time
+        return datetime.now()
+
     name = fields.Char('Name', required=True, tracking=True)
     url = fields.Char('URL', required=True, tracking=True,
                       help="URL to Portainer server (e.g., https://portainer.example.com:9443)")
@@ -429,7 +471,7 @@ class PortainerServer(models.Model):
                         'name': container_name,
                         'image': container.get('Image', ''),
                         'image_id': container.get('ImageID', ''),
-                        'created': datetime.fromtimestamp(container.get('Created', 0)),
+                        'created': self._safe_parse_timestamp(container.get('Created', 0)),
                         'status': status,
                         'state': 'running' if state.get('Running', False) else 'stopped',
                         'ports': json.dumps(container.get('Ports', [])),
@@ -527,7 +569,7 @@ class PortainerServer(models.Model):
                         'environment_id': endpoint_id,
                         'environment_name': env.name,
                         'image_id': image_id,
-                        'created': datetime.fromtimestamp(min(image.get('Created', 0), 2147483647)),
+                        'created': self._safe_parse_timestamp(image.get('Created', 0)),
                         'size': image.get('Size', 0),
                         'shared_size': image.get('SharedSize', 0),
                         'virtual_size': image.get('VirtualSize', 0),
