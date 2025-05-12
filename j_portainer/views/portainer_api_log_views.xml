@@ -10,7 +10,6 @@
                 <field name="environment_name"/>
                 <field name="method"/>
                 <field name="endpoint"/>
-                <field name="operation_type"/>
                 <field name="request_date"/>
                 <field name="status"/>
                 <field name="status_code"/>
@@ -36,7 +35,6 @@
                             <field name="server_id"/>
                             <field name="environment_id"/>
                             <field name="environment_name"/>
-                            <field name="operation_type"/>
                             <field name="request_date"/>
                         </group>
                         <group>
@@ -73,7 +71,6 @@
                 <field name="server_id"/>
                 <field name="endpoint"/>
                 <field name="environment_name"/>
-                <field name="operation_type"/>
                 <field name="error_message"/>
                 <separator/>
                 <filter string="Success" name="success" domain="[('status', '=', 'success')]"/>
@@ -88,7 +85,6 @@
                     <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
                     <filter string="Environment" name="group_by_environment" domain="[]" context="{'group_by': 'environment_name'}"/>
                     <filter string="Method" name="group_by_method" domain="[]" context="{'group_by': 'method'}"/>
-                    <filter string="Operation Type" name="group_by_operation" domain="[]" context="{'group_by': 'operation_type'}"/>
                     <filter string="Status" name="group_by_status" domain="[]" context="{'group_by': 'status'}"/>
                     <filter string="Request Date" name="group_by_date" domain="[]" context="{'group_by': 'request_date:day'}"/>
                 </group>

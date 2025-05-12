@@ -39,22 +39,7 @@ class PortainerApiLog(models.Model):
     request_data = fields.Text('Request Data', help="Data sent with the request")
     response_data = fields.Text('Response Data', help="Data received in the response")
     
-    operation_type = fields.Selection([
-        ('sync_environment', 'Sync Environments'),
-        ('sync_container', 'Sync Containers'),
-        ('sync_image', 'Sync Images'),
-        ('sync_volume', 'Sync Volumes'),
-        ('sync_network', 'Sync Networks'),
-        ('sync_template', 'Sync Templates'),
-        ('sync_custom_template', 'Sync Custom Templates'),
-        ('sync_stack', 'Sync Stacks'),
-        ('create_template', 'Create Template'),
-        ('update_template', 'Update Template'),
-        ('delete_template', 'Delete Template'),
-        ('deploy_template', 'Deploy Template'),
-        ('test_connection', 'Test Connection'),
-        ('other', 'Other Operation')
-    ], string='Operation Type', default='other')
+    # Operation type field has been removed as requested
     
     @api.depends('status_code')
     def _compute_status(self):
