@@ -161,11 +161,10 @@ class PortainerContainer(models.Model):
             api = self._get_api()
             result = api.container_action(
                 self.server_id.id, self.environment_id, self.container_id, 'start')
-                
+
             if result:
                 # Update container state
                 self.write({'state': 'running', 'status': 'Up'})
-                
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
