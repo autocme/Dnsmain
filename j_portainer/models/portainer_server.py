@@ -799,6 +799,23 @@ class PortainerServer(models.Model):
 
                     details = details_response.json() if details_response.status_code == 200 else {}
 
+                    # Get containers to check if image is in use
+                    containers_response = self._make_api_request(
+                        f'/api/endpoints/{endpoint_id}/docker/containers/json', 'GET',
+                        params={'all': True}  # Get all containers, including stopped ones
+                    )
+                    
+                    containers = containers_response.json() if containers_response.status_code == 200 else []
+                    
+                    # Check if this image is used by any container
+                    in_use = False
+                    for container in containers:
+                        container_image_id = container.get('ImageID', '')
+                        # Docker sometimes uses short IDs in containers, so check if the image ID is contained
+                        if image_id in container_image_id or container_image_id in image_id:
+                            in_use = True
+                            break
+                    
                     # Prepare base image data
                     # Use size values directly from the API response without any conversion
                     base_image_data = {
@@ -812,6 +829,7 @@ class PortainerServer(models.Model):
                         'virtual_size': image.get('VirtualSize', 0),
                         'labels': json.dumps(image.get('Labels', {})),
                         'details': json.dumps(details, indent=2) if details else '',
+                        'in_use': in_use,  # Add in_use field based on container usage
                     }
 
                     # Process images - one for each repo tag
@@ -955,6 +973,25 @@ class PortainerServer(models.Model):
 
                     details = details_response.json() if details_response.status_code == 200 else {}
 
+                    # Get containers to check if volume is in use
+                    containers_response = self._make_api_request(
+                        f'/api/endpoints/{endpoint_id}/docker/containers/json', 'GET',
+                        params={'all': True}  # Get all containers, including stopped ones
+                    )
+                    
+                    containers = containers_response.json() if containers_response.status_code == 200 else []
+                    
+                    # Check if this volume is used by any container
+                    in_use = False
+                    for container in containers:
+                        mounts = container.get('Mounts', [])
+                        for mount in mounts:
+                            if mount.get('Type') == 'volume' and mount.get('Name') == volume_name:
+                                in_use = True
+                                break
+                        if in_use:
+                            break
+                    
                     # Prepare volume data
                     volume_data = {
                         'server_id': self.id,
@@ -967,6 +1004,7 @@ class PortainerServer(models.Model):
                         'scope': volume.get('Scope', 'local'),
                         'labels': json.dumps(volume.get('Labels', {})),
                         'details': json.dumps(details, indent=2) if details else '',
+                        'in_use': in_use,  # Add in_use field based on container usage
                     }
 
                     if existing_volume:
