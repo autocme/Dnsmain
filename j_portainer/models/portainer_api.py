@@ -80,12 +80,17 @@ class PortainerAPI(models.AbstractModel):
             # Create the exec instance
             response = server._make_api_request(exec_endpoint, 'POST', data=exec_data)
             
+            # Log the result
+            _logger.info(f"Container exec create operation - status: {response.status_code}, container_id: {container_id}")
+            
             if response.status_code != 201:
+                _logger.error(f"Failed to create exec instance for container {container_id}: {response.text}")
                 return {'error': f'Failed to create exec instance: {response.text}'}
                 
             # Get the exec ID
             exec_id = response.json().get('Id')
             if not exec_id:
+                _logger.error(f"No exec ID returned for container {container_id}")
                 return {'error': 'No exec ID returned'}
                 
             # Start the exec instance
@@ -97,12 +102,17 @@ class PortainerAPI(models.AbstractModel):
             
             start_response = server._make_api_request(start_endpoint, 'POST', data=start_data)
             
+            # Log the result
+            _logger.info(f"Container exec start operation - status: {start_response.status_code}, exec_id: {exec_id}")
+            
             if start_response.status_code == 200:
                 # If we're in attached mode, return the output
                 if not params.get('detach', False):
+                    _logger.info(f"Successfully executed command in container {container_id}")
                     return {'success': True, 'output': start_response.text}
                 return {'success': True, 'exec_id': exec_id}
             else:
+                _logger.error(f"Failed to start exec instance {exec_id} for container {container_id}: {start_response.text}")
                 return {'error': f'Failed to start exec instance: {start_response.text}'}
         
         elif action == 'logs':
@@ -129,19 +139,28 @@ class PortainerAPI(models.AbstractModel):
             response = server._make_api_request(logs_endpoint, 'GET', params=query_params, 
                                               headers={'Accept': 'text/plain'})
             
+            # Log the result
+            _logger.info(f"Container logs operation - status: {response.status_code}, container_id: {container_id}")
+            
             if response.status_code == 200:
                 return {'success': True, 'logs': response.text}
             else:
+                _logger.error(f"Failed to get logs for container {container_id}: {response.text}")
                 return {'error': f'Failed to get logs: {response.text}'}
         
         elif action == 'rename':
             if not params or 'name' not in params:
+                # Log this error 
+                _logger.error(f"Rename container failed: No name parameter provided")
                 return {'error': 'New name is required for rename action'}
                 
             rename_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/rename'
             query_params = {'name': params['name']}
             
             response = server._make_api_request(rename_endpoint, 'POST', params=query_params)
+            
+            # Log the result
+            _logger.info(f"Container rename operation - status: {response.status_code}, container_id: {container_id}")
             
             return response.status_code in [200, 201, 204]
             
@@ -155,9 +174,13 @@ class PortainerAPI(models.AbstractModel):
                 
             response = server._make_api_request(inspect_endpoint, 'GET', params=query_params)
             
+            # Log the result
+            _logger.info(f"Container inspect operation - status: {response.status_code}, container_id: {container_id}")
+            
             if response.status_code == 200:
                 return response.json()
             else:
+                _logger.error(f"Failed to inspect container {container_id}: {response.text}")
                 return {'error': f'Failed to inspect container: {response.text}'}
 
         else:
@@ -165,7 +188,16 @@ class PortainerAPI(models.AbstractModel):
             endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/{action}'
             query_params = params if params else {}
             response = server._make_api_request(endpoint, 'POST', params=query_params)
-            return response.status_code in [200, 201, 204]
+            
+            # Log the result
+            _logger.info(f"Container {action} operation - status: {response.status_code}, container_id: {container_id}")
+            
+            # Check response status
+            if response.status_code in [200, 201, 204]:
+                return True
+            else:
+                _logger.error(f"Container {action} failed for {container_id}: {response.text}")
+                return {'error': response.text, 'status_code': response.status_code}
 
     def remove_container(self, server_id, environment_id, container_id, force=False, volumes=False):
         """Remove a container
@@ -212,7 +244,11 @@ class PortainerAPI(models.AbstractModel):
                 data=remove_data  # This is for logging only as DELETE requests don't have body
             )
             
+            # Log the result
+            _logger.info(f"Container remove operation - status: {response.status_code}, container_id: {container_id}")
+            
             if response.status_code in [200, 201, 204]:
+                _logger.info(f"Successfully removed container {container_id}")
                 return {'success': True, 'message': 'Container removed successfully'}
             else:
                 # Try to extract error message from response
@@ -222,9 +258,11 @@ class PortainerAPI(models.AbstractModel):
                         error_msg = f"{error_msg}: {response.text}"
                 except:
                     pass
-                    
+                
+                _logger.error(f"Failed to remove container {container_id}: {error_msg}")
                 return {'success': False, 'message': error_msg}
         except Exception as e:
+            _logger.error(f"Exception while removing container {container_id}: {str(e)}")
             return {'success': False, 'message': f'Error removing container: {str(e)}'}
     
     def image_action(self, server_id, action, image_id=None, environment_id=None, endpoint=None, params=None):
@@ -281,9 +319,17 @@ class PortainerAPI(models.AbstractModel):
                         query_params['platform'] = params['platform']
                 
                 response = server._make_api_request(api_endpoint, 'POST', params=query_params)
+                
+                # Log the result
+                image_name = params.get('fromImage', 'unknown') if params else 'unknown'
+                _logger.info(f"Image pull operation - status: {response.status_code}, image: {image_name}")
+                
                 if response.status_code in [200, 201, 204]:
+                    _logger.info(f"Successfully pulled image {image_name}")
                     return {'success': True, 'message': 'Image pulled successfully'}
-                return {'error': f'API error: {response.status_code} - {response.text}'}
+                else:
+                    _logger.error(f"Failed to pull image {image_name}: {response.text}")
+                    return {'error': f'API error: {response.status_code} - {response.text}'}
             
             elif action == 'list':
                 query_params = {}
@@ -296,12 +342,19 @@ class PortainerAPI(models.AbstractModel):
                         query_params['digests'] = params['digests']
                 
                 response = server._make_api_request(api_endpoint, 'GET', params=query_params)
+                
+                # Log the result
+                _logger.info(f"Image list operation - status: {response.status_code}, environment_id: {environment_id}")
+                
                 if response.status_code == 200:
                     try:
                         return response.json()
                     except Exception as e:
+                        _logger.error(f"Failed to parse response for image list: {str(e)}")
                         return {'error': f'Failed to parse response: {str(e)}'}
-                return {'error': f'API error: {response.status_code} - {response.text}'}
+                else:
+                    _logger.error(f"Failed to list images from environment {environment_id}: {response.text}")
+                    return {'error': f'API error: {response.status_code} - {response.text}'}
                 
             elif action in ['delete', 'remove']:
                 query_params = {}
@@ -312,31 +365,55 @@ class PortainerAPI(models.AbstractModel):
                         query_params['noprune'] = params['noprune']
                 
                 response = server._make_api_request(api_endpoint, 'DELETE', params=query_params)
+                
+                # Log the result
+                _logger.info(f"Image {action} operation - status: {response.status_code}, image_id: {image_id}")
+                
                 if response.status_code in [200, 201, 204]:
                     try:
                         # Some versions return a JSON response with deletion info
+                        _logger.info(f"Successfully removed image {image_id}")
                         return response.json() 
                     except:
+                        _logger.info(f"Successfully removed image {image_id}")
                         return {'success': True, 'message': 'Image removed successfully'}
-                return {'error': f'API error: {response.status_code} - {response.text}'}
+                else:
+                    _logger.error(f"Failed to remove image {image_id}: {response.text}")
+                    return {'error': f'API error: {response.status_code} - {response.text}'}
                 
             elif action == 'inspect':
                 response = server._make_api_request(api_endpoint, 'GET')
+                
+                # Log the result
+                _logger.info(f"Image inspect operation - status: {response.status_code}, image_id: {image_id}")
+                
                 if response.status_code == 200:
                     try:
+                        _logger.info(f"Successfully inspected image {image_id}")
                         return response.json()
                     except Exception as e:
+                        _logger.error(f"Failed to parse inspect response for image {image_id}: {str(e)}")
                         return {'error': f'Failed to parse response: {str(e)}'}
-                return {'error': f'API error: {response.status_code} - {response.text}'}
+                else:
+                    _logger.error(f"Failed to inspect image {image_id}: {response.text}")
+                    return {'error': f'API error: {response.status_code} - {response.text}'}
             
             elif action == 'history':
                 response = server._make_api_request(api_endpoint, 'GET')
+                
+                # Log the result
+                _logger.info(f"Image history operation - status: {response.status_code}, image_id: {image_id}")
+                
                 if response.status_code == 200:
                     try:
+                        _logger.info(f"Successfully retrieved history for image {image_id}")
                         return response.json()
                     except Exception as e:
+                        _logger.error(f"Failed to parse history response for image {image_id}: {str(e)}")
                         return {'error': f'Failed to parse response: {str(e)}'}
-                return {'error': f'API error: {response.status_code} - {response.text}'}
+                else:
+                    _logger.error(f"Failed to get history for image {image_id}: {response.text}")
+                    return {'error': f'API error: {response.status_code} - {response.text}'}
             
             elif action == 'tag':
                 if not params or not params.get('repo'):
@@ -347,9 +424,17 @@ class PortainerAPI(models.AbstractModel):
                     query_params['tag'] = params['tag']
                 
                 response = server._make_api_request(api_endpoint, 'POST', params=query_params)
+                
+                # Log the result
+                repo_tag = f"{params['repo']}:{params.get('tag', 'latest')}"
+                _logger.info(f"Image tag operation - status: {response.status_code}, image_id: {image_id}, tag: {repo_tag}")
+                
                 if response.status_code in [200, 201, 204]:
+                    _logger.info(f"Successfully tagged image {image_id} as {repo_tag}")
                     return {'success': True, 'message': 'Image tagged successfully'}
-                return {'error': f'API error: {response.status_code} - {response.text}'}
+                else:
+                    _logger.error(f"Failed to tag image {image_id} as {repo_tag}: {response.text}")
+                    return {'error': f'API error: {response.status_code} - {response.text}'}
             
             elif action == 'push':
                 if not params:
@@ -361,9 +446,16 @@ class PortainerAPI(models.AbstractModel):
                     headers['X-Registry-Auth'] = params['X-Registry-Auth']
                 
                 response = server._make_api_request(api_endpoint, 'POST', headers=headers)
+                
+                # Log the result
+                _logger.info(f"Image push operation - status: {response.status_code}, image_id: {image_id}")
+                
                 if response.status_code in [200, 201, 204]:
+                    _logger.info(f"Successfully pushed image {image_id}")
                     return {'success': True, 'message': 'Image pushed successfully'}
-                return {'error': f'API error: {response.status_code} - {response.text}'}
+                else:
+                    _logger.error(f"Failed to push image {image_id}: {response.text}")
+                    return {'error': f'API error: {response.status_code} - {response.text}'}
             
             elif action == 'prune':
                 query_params = {}
@@ -371,16 +463,25 @@ class PortainerAPI(models.AbstractModel):
                     query_params['filters'] = params['filters']
                 
                 response = server._make_api_request(api_endpoint, 'POST', params=query_params)
+                
+                # Log the result
+                _logger.info(f"Image prune operation - status: {response.status_code}, environment_id: {environment_id}")
+                
                 if response.status_code in [200, 201, 204]:
                     try:
+                        _logger.info(f"Successfully pruned images in environment {environment_id}")
                         return response.json()  # Returns {"ImagesDeleted": [], "SpaceReclaimed": 0}
                     except Exception as e:
+                        _logger.error(f"Failed to parse prune response for environment {environment_id}: {str(e)}")
                         return {'success': True, 'message': 'Images pruned successfully'}
-                return {'error': f'API error: {response.status_code} - {response.text}'}
+                else:
+                    _logger.error(f"Failed to prune images in environment {environment_id}: {response.text}")
+                    return {'error': f'API error: {response.status_code} - {response.text}'}
                 
             return {'error': f'Unsupported action: {action}'}
             
         except Exception as e:
+            _logger.error(f"Exception in image_action {action}: {str(e)}")
             return {'error': str(e)}
     
     def volume_action(self, server_id, environment_id, volume_name=None, action=None, params=None):
@@ -396,11 +497,13 @@ class PortainerAPI(models.AbstractModel):
         Returns:
             dict or bool: API response data or success status
         """
-        server = self.env['j_portainer.server'].browse(server_id)
-        if not server:
-            return {'error': 'Server not found'}
-        
-        if action == 'create':
+        try:
+            server = self.env['j_portainer.server'].browse(server_id)
+            if not server:
+                _logger.error(f"Server not found for volume_action, server_id: {server_id}")
+                return {'error': 'Server not found'}
+            
+            if action == 'create':
             # Create a new volume
             endpoint = f'/api/endpoints/{environment_id}/docker/volumes/create'
             
@@ -417,12 +520,21 @@ class PortainerAPI(models.AbstractModel):
                     data['Labels'] = params['Labels']
             
             response = server._make_api_request(endpoint, 'POST', data=data)
+            
+            # Log the result
+            volume_name_str = params.get('Name', 'unnamed') if params else 'unnamed'
+            _logger.info(f"Volume create operation - status: {response.status_code}, volume: {volume_name_str}")
+            
             if response.status_code in [201, 200]:
                 try:
+                    _logger.info(f"Successfully created volume {volume_name_str}")
                     return response.json()
                 except Exception as e:
+                    _logger.error(f"Failed to parse volume create response: {str(e)}")
                     return {'error': f'Failed to parse response: {str(e)}'}
-            return {'error': f'Failed to create volume: {response.text}'}
+            else:
+                _logger.error(f"Failed to create volume {volume_name_str}: {response.text}")
+                return {'error': f'Failed to create volume: {response.text}'}
             
         elif action == 'list':
             # List all volumes
@@ -434,23 +546,39 @@ class PortainerAPI(models.AbstractModel):
                 query_params['filters'] = params['filters']
                 
             response = server._make_api_request(endpoint, 'GET', params=query_params)
+            
+            # Log the result
+            _logger.info(f"Volume list operation - status: {response.status_code}, environment_id: {environment_id}")
+            
             if response.status_code == 200:
                 try:
+                    _logger.info(f"Successfully listed volumes for environment {environment_id}")
                     return response.json()
                 except Exception as e:
+                    _logger.error(f"Failed to parse volume list response: {str(e)}")
                     return {'error': f'Failed to parse response: {str(e)}'}
-            return {'error': f'Failed to list volumes: {response.text}'}
+            else:
+                _logger.error(f"Failed to list volumes: {response.text}")
+                return {'error': f'Failed to list volumes: {response.text}'}
             
         elif action == 'inspect' and volume_name:
             # Inspect a specific volume
             endpoint = f'/api/endpoints/{environment_id}/docker/volumes/{volume_name}'
             response = server._make_api_request(endpoint, 'GET')
+            
+            # Log the result
+            _logger.info(f"Volume inspect operation - status: {response.status_code}, volume: {volume_name}")
+            
             if response.status_code == 200:
                 try:
+                    _logger.info(f"Successfully inspected volume {volume_name}")
                     return response.json()
                 except Exception as e:
+                    _logger.error(f"Failed to parse volume inspect response for {volume_name}: {str(e)}")
                     return {'error': f'Failed to parse response: {str(e)}'}
-            return {'error': f'Failed to inspect volume: {response.text}'}
+            else:
+                _logger.error(f"Failed to inspect volume {volume_name}: {response.text}")
+                return {'error': f'Failed to inspect volume: {response.text}'}
             
         elif action == 'delete' and volume_name:
             # Delete a volume
@@ -462,9 +590,16 @@ class PortainerAPI(models.AbstractModel):
                 query_params['force'] = params['force']
                 
             response = server._make_api_request(endpoint, 'DELETE', params=query_params)
+            
+            # Log the result
+            _logger.info(f"Volume delete operation - status: {response.status_code}, volume: {volume_name}")
+            
             if response.status_code in [200, 201, 204]:
+                _logger.info(f"Successfully deleted volume {volume_name}")
                 return {'success': True, 'message': f'Volume {volume_name} deleted successfully'}
-            return {'error': f'Failed to delete volume: {response.text}'}
+            else:
+                _logger.error(f"Failed to delete volume {volume_name}: {response.text}")
+                return {'error': f'Failed to delete volume: {response.text}'}
             
         elif action == 'prune':
             # Prune unused volumes
@@ -476,14 +611,26 @@ class PortainerAPI(models.AbstractModel):
                 query_params['filters'] = params['filters']
                 
             response = server._make_api_request(endpoint, 'POST', params=query_params)
+            
+            # Log the result
+            _logger.info(f"Volume prune operation - status: {response.status_code}, environment_id: {environment_id}")
+            
             if response.status_code in [200, 201]:
                 try:
+                    _logger.info(f"Successfully pruned volumes in environment {environment_id}")
                     return response.json()  # Returns {"VolumesDeleted": [], "SpaceReclaimed": 0}
                 except Exception as e:
+                    _logger.error(f"Failed to parse volume prune response for environment {environment_id}: {str(e)}")
                     return {'success': True, 'message': 'Volumes pruned successfully'}
-            return {'error': f'Failed to prune volumes: {response.text}'}
+            else:
+                _logger.error(f"Failed to prune volumes in environment {environment_id}: {response.text}")
+                return {'error': f'Failed to prune volumes: {response.text}'}
             
-        return {'error': f'Unsupported action: {action}'}
+            return {'error': f'Unsupported action: {action}'}
+        
+        except Exception as e:
+            _logger.error(f"Exception in volume_action {action}: {str(e)}")
+            return {'error': str(e)}
     
     def network_action(self, server_id, environment_id, network_id=None, action=None, params=None):
         """Perform action on a network
