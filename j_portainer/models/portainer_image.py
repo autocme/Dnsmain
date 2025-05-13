@@ -17,9 +17,9 @@ class PortainerImage(models.Model):
     tag = fields.Char('Tag', required=True)
     image_id = fields.Char('Image ID', required=True)
     created = fields.Datetime('Created')
-    size = fields.Float('Size')
-    shared_size = fields.Float('Shared Size')
-    virtual_size = fields.Float('Virtual Size')
+    size = fields.Float('Size (bytes)')
+    shared_size = fields.Float('Shared Size (bytes)')
+    virtual_size = fields.Float('Virtual Size (bytes)')
     labels = fields.Text('Labels')
     details = fields.Text('Details')
     in_use = fields.Boolean('In Use', default=False, help='Whether this image is being used by any containers')
@@ -43,24 +43,6 @@ class PortainerImage(models.Model):
             else:
                 image.display_name = image.repository
                 
-    def _format_size(self, size_in_bytes):
-        """Convert bytes to GB with 2 decimal precision
-        
-        Args:
-            size_in_bytes (float): Size in bytes
-            
-        Returns:
-            float: Size in GB with 2 decimal precision
-        """
-        if not size_in_bytes or size_in_bytes < 0:
-            return 0.0
-            
-        # Convert bytes to GB (1 GB = 1024^3 bytes)
-        gb_size = size_in_bytes / (1024.0 * 1024.0 * 1024.0)
-        
-        # Round to 2 decimal places
-        return round(gb_size, 2)
-    
     @api.depends('repository', 'tag')
     def _compute_tags(self):
         """Compute HTML formated tags for this image"""
@@ -137,9 +119,8 @@ class PortainerImage(models.Model):
                         # Calculate a relative size - this is approximate since Docker doesn't expose layer sizes directly
                         size = entry.get('Size', total_size // (len(history) or 1))
                         
-                        # Convert size from bytes to GB
-                        size_in_gb = round(size / (1024.0 * 1024.0 * 1024.0), 2) if size else 0.0
-                        size_str = str(size_in_gb)
+                        # Use the raw size value
+                        size_str = str(size)
                             
                         layers.append({
                             'order': i + 1,
@@ -209,11 +190,6 @@ class PortainerImage(models.Model):
         except Exception as e:
             _logger.error(f"Error formatting labels: {str(e)}")
             return self.labels
-    
-    def get_size_human(self):
-        """Get human-readable size"""
-        self.ensure_one()
-        return str(self.size)
     
     def pull(self):
         """Pull the latest version of the image"""
