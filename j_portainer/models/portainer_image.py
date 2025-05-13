@@ -17,14 +17,9 @@ class PortainerImage(models.Model):
     tag = fields.Char('Tag', required=True)
     image_id = fields.Char('Image ID', required=True)
     created = fields.Datetime('Created')
-    size = fields.Float('Size (bytes)', help='Raw size in bytes')
-    shared_size = fields.Float('Shared Size (bytes)', help='Raw shared size in bytes')
-    virtual_size = fields.Float('Virtual Size (bytes)', help='Raw virtual size in bytes')
-    
-    # Human-readable size fields
-    size_human = fields.Char('Size', compute='_compute_human_sizes', store=True, help='Human-readable size')
-    shared_size_human = fields.Char('Shared Size', compute='_compute_human_sizes', store=True, help='Human-readable shared size')
-    virtual_size_human = fields.Char('Virtual Size', compute='_compute_human_sizes', store=True, help='Human-readable virtual size')
+    size = fields.Float('Size')
+    shared_size = fields.Float('Shared Size')
+    virtual_size = fields.Float('Virtual Size')
     labels = fields.Text('Labels')
     details = fields.Text('Details')
     in_use = fields.Boolean('In Use', default=False, help='Whether this image is being used by any containers')
@@ -48,46 +43,23 @@ class PortainerImage(models.Model):
             else:
                 image.display_name = image.repository
                 
-    @api.depends('size', 'shared_size', 'virtual_size')
-    def _compute_human_sizes(self):
-        """Convert raw byte sizes to human-readable format with units (KB, MB, GB, etc.)"""
-        for image in self:
-            image.size_human = self._format_size(image.size)
-            image.shared_size_human = self._format_size(image.shared_size)
-            image.virtual_size_human = self._format_size(image.virtual_size)
-            
     def _format_size(self, size_in_bytes):
-        """Format size in bytes to human-readable string with appropriate unit
+        """Convert bytes to GB with 2 decimal precision
         
         Args:
             size_in_bytes (float): Size in bytes
             
         Returns:
-            str: Human-readable size string (e.g., "1.5 GB", "720.4 MB")
+            float: Size in GB with 2 decimal precision
         """
         if not size_in_bytes or size_in_bytes < 0:
-            return "0 B"
+            return 0.0
             
-        # Define size units and thresholds
-        units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
-        size = float(size_in_bytes)
-        unit_index = 0
+        # Convert bytes to GB (1 GB = 1024^3 bytes)
+        gb_size = size_in_bytes / (1024.0 * 1024.0 * 1024.0)
         
-        # Find appropriate unit
-        while size >= 1024.0 and unit_index < len(units) - 1:
-            size /= 1024.0
-            unit_index += 1
-            
-        # Format with 1 decimal place if size >= 0.1, otherwise with 2 decimal places
-        if size >= 100:
-            # For large numbers, no decimal places (e.g., "128 MB")
-            return f"{int(size)} {units[unit_index]}"
-        elif size >= 10:
-            # For medium numbers, 1 decimal place (e.g., "15.7 MB")
-            return f"{size:.1f} {units[unit_index]}"
-        else:
-            # For small numbers, 2 decimal places (e.g., "2.35 MB")
-            return f"{size:.2f} {units[unit_index]}"
+        # Round to 2 decimal places
+        return round(gb_size, 2)
     
     @api.depends('repository', 'tag')
     def _compute_tags(self):
@@ -165,8 +137,9 @@ class PortainerImage(models.Model):
                         # Calculate a relative size - this is approximate since Docker doesn't expose layer sizes directly
                         size = entry.get('Size', total_size // (len(history) or 1))
                         
-                        # Format size using the same method as image size
-                        size_str = self._format_size(size)
+                        # Convert size from bytes to GB
+                        size_in_gb = round(size / (1024.0 * 1024.0 * 1024.0), 2) if size else 0.0
+                        size_str = str(size_in_gb)
                             
                         layers.append({
                             'order': i + 1,
@@ -240,8 +213,7 @@ class PortainerImage(models.Model):
     def get_size_human(self):
         """Get human-readable size"""
         self.ensure_one()
-        # Use the same format method for consistency
-        return self.size_human
+        return str(self.size)
     
     def pull(self):
         """Pull the latest version of the image"""
