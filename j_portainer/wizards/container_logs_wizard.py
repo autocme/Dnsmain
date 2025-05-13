@@ -34,7 +34,25 @@ class PortainerContainerLogsWizard(models.TransientModel):
             # Auto-fetch logs when wizard opens
             try:
                 logs = self._fetch_logs(container, lines=100)
+                # Extra safety check for NUL characters
+                if logs and isinstance(logs, str):
+                    logs = logs.replace('\x00', '')
                 res['logs'] = logs
+            except ValueError as ve:
+                if "NUL" in str(ve):
+                    # Specific handling for NUL characters
+                    _logger.error(f"NUL character detected in logs: {str(ve)}")
+                    error_msg = _("""Error: Container logs contain NUL (0x00) characters that cannot be displayed.
+                    
+Suggestions:
+1. Try reducing the number of lines
+2. For binary logs, you may need to use the Portainer UI directly
+3. Check if the container outputs binary data instead of text logs
+""")
+                    res['logs'] = error_msg
+                else:
+                    _logger.error(f"ValueError processing logs: {str(ve)}")
+                    res['logs'] = f"Error processing logs: {str(ve)}"
             except Exception as e:
                 _logger.error(f"Error fetching logs: {str(e)}")
                 res['logs'] = f"Error fetching logs: {str(e)}"
@@ -53,16 +71,22 @@ class PortainerContainerLogsWizard(models.TransientModel):
         try:
             # Try to decode as UTF-8 first
             if isinstance(data, bytes):
+                # First remove any NUL bytes from the binary data
+                data = data.replace(b'\x00', b'')
                 text = data.decode('utf-8', errors='replace')
             else:
                 text = str(data)
                 
-            # Remove NUL characters
+            # Remove NUL characters - double check as a safety measure
             text = text.replace('\x00', '')
             
             # Replace other control characters except newlines and tabs
             text = re.sub(r'[\x01-\x08\x0b\x0c\x0e-\x1f\x7f]', ' ', text)
             
+            # Final check for any remaining NUL characters (just to be extra safe)
+            if '\x00' in text:
+                text = text.replace('\x00', '')
+                
             return text
         except Exception as e:
             _logger.error(f"Error cleaning binary data: {str(e)}")
@@ -121,10 +145,16 @@ class PortainerContainerLogsWizard(models.TransientModel):
         try:
             logs = self._fetch_logs(self.container_id, lines=self.lines)
             
-            # Additional safety check before writing to database
+            # Multiple safety checks before writing to database
             if logs and isinstance(logs, str):
-                # Final check for NUL bytes that might have been missed
+                # Remove any remaining NUL characters at every level
                 logs = logs.replace('\x00', '')
+                
+                # Check again - if there are still NUL characters somehow,
+                # handle it with a more explicit approach
+                if '\x00' in logs:
+                    _logger.warning("NUL characters still detected after cleaning, using stronger replacement")
+                    logs = ''.join(char for char in logs if char != '\x00')
             
             self.write({'logs': logs})
         except ValueError as ve:
