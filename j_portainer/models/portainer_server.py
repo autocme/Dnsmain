@@ -99,13 +99,13 @@ class PortainerServer(models.Model):
                 # If timestamp is too large (e.g., nanoseconds), convert to seconds
                 if timestamp_value > 2147483647:  # Max safe 32-bit integer
                     timestamp_value = timestamp_value / 1000000000  # Convert nanoseconds to seconds
-                
+
                 # If still too large, use a fixed date
                 if timestamp_value > 2147483647:
                     return datetime.now().replace(tzinfo=None)
-                
+
                 return datetime.fromtimestamp(timestamp_value)
-            
+
             # If it's a string, try to parse it as a date string
             elif isinstance(timestamp_value, str):
                 try:
@@ -122,7 +122,7 @@ class PortainerServer(models.Model):
                         pass
         except Exception as e:
             _logger.warning(f"Error parsing timestamp {timestamp_value}: {str(e)}")
-        
+
         # Default fallback to current time (naive datetime)
         return datetime.now().replace(tzinfo=None)
 
@@ -144,11 +144,11 @@ class PortainerServer(models.Model):
     portainer_version = fields.Char('Portainer Version', readonly=True)
     portainer_info = fields.Text('Server Info', readonly=True)
     environment_count = fields.Integer('Environments', readonly=True)
-    
+
     # API logs relationship
     api_log_ids = fields.One2many('j_portainer.api_log', 'server_id', string='API Logs')
     api_log_count = fields.Integer('API Log Count', compute='_compute_api_log_count')
-    
+
     def _compute_api_log_count(self):
         """Compute the number of API logs related to this server"""
         for server in self:
@@ -256,7 +256,8 @@ class PortainerServer(models.Model):
         # Format header value for X-API-Key authentication
         return f"{self.api_key}"
 
-    def _make_api_request(self, endpoint, method='GET', data=None, params=None, headers=None, use_multipart=False, environment_id=None):
+    def _make_api_request(self, endpoint, method='GET', data=None, params=None, headers=None, use_multipart=False,
+                          environment_id=None):
         """Make a request to the Portainer API
         
         Args:
@@ -274,16 +275,16 @@ class PortainerServer(models.Model):
         url = self.url.rstrip('/') + endpoint
         start_time = datetime.now()
         environment_name = None
-        
+
         # Try to determine environment name if environment_id is provided
         if environment_id:
             env = self.env['j_portainer.environment'].search([
-                ('server_id', '=', self.id), 
+                ('server_id', '=', self.id),
                 ('environment_id', '=', environment_id)
             ], limit=1)
             if env:
                 environment_name = env.name
-        
+
         # If environment_id is in the URL but not provided as param, try to extract it
         elif not environment_id:
             # Check for common URL patterns where environment ID is present
@@ -299,20 +300,21 @@ class PortainerServer(models.Model):
                         if endpoints_index + 1 < len(url_parts) and url_parts[endpoints_index + 1].isdigit():
                             extracted_env_id = int(url_parts[endpoints_index + 1])
                             env = self.env['j_portainer.environment'].search([
-                                ('server_id', '=', self.id), 
+                                ('server_id', '=', self.id),
                                 ('environment_id', '=', extracted_env_id)
                             ], limit=1)
                             if env:
                                 environment_id = extracted_env_id
                                 environment_name = env.name
-                
+
                 # Then try extracting from query parameters
                 elif params and ('endpointId' in params or 'environmentId' in params):
                     param_env_id = params.get('endpointId') or params.get('environmentId')
-                    if param_env_id and (isinstance(param_env_id, int) or (isinstance(param_env_id, str) and param_env_id.isdigit())):
+                    if param_env_id and (isinstance(param_env_id, int) or (
+                            isinstance(param_env_id, str) and param_env_id.isdigit())):
                         extracted_env_id = int(param_env_id)
                         env = self.env['j_portainer.environment'].search([
-                            ('server_id', '=', self.id), 
+                            ('server_id', '=', self.id),
                             ('environment_id', '=', extracted_env_id)
                         ], limit=1)
                         if env:
@@ -333,7 +335,7 @@ class PortainerServer(models.Model):
         # Update with any additional headers
         if headers:
             request_headers.update(headers)
-            
+
         # Prepare log data
         log_vals = {
             'server_id': self.id,
@@ -343,15 +345,15 @@ class PortainerServer(models.Model):
             'environment_name': environment_name if environment_name else '',
             'request_date': start_time,
         }
-        
+
         # Sanitize and log request data (for both data and params)
         request_log_data = {}
-        
+
         # Add JSON body data for logging if present
         if data and not use_multipart:
             # Create a copy of data to avoid modifying the original
             log_data = data.copy() if isinstance(data, dict) else data
-            
+
             # Mask sensitive data if it's a dictionary
             if isinstance(log_data, dict):
                 if 'api_key' in log_data:
@@ -360,34 +362,34 @@ class PortainerServer(models.Model):
                     log_data['password'] = '******'
                 if 'apiKey' in log_data:
                     log_data['apiKey'] = '******'
-            
+
             request_log_data['body'] = log_data
-        
+
         # Add query parameters for logging if present
         if params:
             log_params = params.copy() if isinstance(params, dict) else params
-            
+
             # Mask sensitive data in params if it's a dictionary
             if isinstance(log_params, dict):
                 if 'api_key' in log_params:
                     log_params['api_key'] = '******'
                 if 'apiKey' in log_params:
                     log_params['apiKey'] = '******'
-                
+
             request_log_data['params'] = log_params
-        
+
         # Include URL in log data
         request_log_data['url'] = url
-        
+
         # Add HTTP method info
         request_log_data['method'] = method
-        
+
         # Set the request_data field with all captured information
         log_vals['request_data'] = json.dumps(request_log_data, indent=2) if request_log_data else None
-        
+
         # Create API log record
         api_log = self.env['j_portainer.api_log'].sudo().create(log_vals)
-        
+
         try:
             _logger.debug(f"Making {method} request to {url}")
 
@@ -420,14 +422,14 @@ class PortainerServer(models.Model):
             # Calculate response time
             end_time = datetime.now()
             response_time_ms = int((end_time - start_time).total_seconds() * 1000)
-            
+
             # Create structured response log with enhanced information
             response_log_data = {
                 'status_code': response.status_code,
                 'headers': dict(response.headers),
                 'url': response.url
             }
-            
+
             # Process and format response data for logging
             response_data = ""
             try:
@@ -443,14 +445,14 @@ class PortainerServer(models.Model):
                         # If not JSON, use text content (with length limit)
                         response_text = response.text[:5000] if response.text else ""
                         response_log_data['body'] = response_text
-                
+
                 # Convert the complete response log to JSON format for storage
                 response_data = json.dumps(response_log_data, indent=2)
             except Exception as e:
                 # Fallback in case of any error during response processing
                 _logger.warning(f"Error formatting response data: {str(e)}")
                 response_data = f"{{\"status_code\": {response.status_code}, \"error\": \"Error formatting response data: {str(e)}\"}}"
-            
+
             # Update the log record with response info
             api_log.sudo().write({
                 'status_code': response.status_code,
@@ -458,7 +460,7 @@ class PortainerServer(models.Model):
                 'response_data': response_data,  # Always log response data
                 'error_message': response_data if response.status_code >= 300 else None,
             })
-            
+
             _logger.debug(f"API response status: {response.status_code}")
             return response
 
@@ -466,7 +468,7 @@ class PortainerServer(models.Model):
             # Update log with error including request details
             end_time = datetime.now()
             response_time_ms = int((end_time - start_time).total_seconds() * 1000)
-            
+
             # Create detailed error information
             error_data = {
                 'error_type': 'ConnectionError',
@@ -479,23 +481,23 @@ class PortainerServer(models.Model):
                     'endpoint': endpoint
                 }
             }
-            
+
             api_log.sudo().write({
                 'status_code': 0,
                 'response_time_ms': response_time_ms,
                 'error_message': json.dumps(error_data, indent=2),
                 'response_data': json.dumps(error_data, indent=2)  # Include in response data for consistency
             })
-            
+
             _logger.error(f"Connection error: {str(e)}")
             raise UserError(
                 _("Connection error: Could not connect to Portainer server at %s. Please check the URL and network connectivity.") % self.url)
-                
+
         except requests.exceptions.Timeout as e:
             # Update log with timeout error including request details
             end_time = datetime.now()
             response_time_ms = int((end_time - start_time).total_seconds() * 1000)
-            
+
             # Create detailed error information
             error_data = {
                 'error_type': 'Timeout',
@@ -508,22 +510,22 @@ class PortainerServer(models.Model):
                     'endpoint': endpoint
                 }
             }
-            
+
             api_log.sudo().write({
                 'status_code': 0,
                 'response_time_ms': response_time_ms,
                 'error_message': json.dumps(error_data, indent=2),
                 'response_data': json.dumps(error_data, indent=2)  # Include in response data for consistency
             })
-            
+
             _logger.error("Connection timeout")
             raise UserError(_("Connection timeout: The request to Portainer server timed out. Please try again later."))
-            
+
         except requests.exceptions.RequestException as e:
             # Update log with general request error including request details
             end_time = datetime.now()
             response_time_ms = int((end_time - start_time).total_seconds() * 1000)
-            
+
             # Create detailed error information
             error_data = {
                 'error_type': 'RequestException',
@@ -536,14 +538,14 @@ class PortainerServer(models.Model):
                     'endpoint': endpoint
                 }
             }
-            
+
             api_log.sudo().write({
                 'status_code': 0,
                 'response_time_ms': response_time_ms,
                 'error_message': json.dumps(error_data, indent=2),
                 'response_data': json.dumps(error_data, indent=2)  # Include in response data for consistency
             })
-            
+
             _logger.error(f"Request error: {str(e)}")
             raise UserError(_("Request error: %s") % str(e))
 
@@ -1786,25 +1788,25 @@ class PortainerServer(models.Model):
                     'type': 'success',
                 }
             }
-            
+
         except Exception as e:
             _logger.error(f"Error syncing templates: {str(e)}")
             raise UserError(_("Error syncing templates: %s") % str(e))
-            
+
     def sync_all_templates_bidirectional(self):
         """Complete bidirectional synchronization of all templates (standard and custom)"""
         self.ensure_one()
-        
+
         try:
             # First sync standard templates (one way only, from Portainer to Odoo)
             self.sync_standard_templates()
-            
+
             # Then do bidirectional sync of custom templates
             self.sync_all_custom_templates()
-            
+
             # Finally fetch any missing file content
             self._fetch_missing_template_file_content()
-            
+
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -1815,7 +1817,7 @@ class PortainerServer(models.Model):
                     'type': 'success',
                 }
             }
-            
+
         except Exception as e:
             _logger.error(f"Error in bidirectional template sync: {str(e)}")
             raise UserError(_("Error in bidirectional template synchronization: %s") % str(e))
@@ -1936,7 +1938,7 @@ class PortainerServer(models.Model):
             'type': 'ir.actions.act_window',
             'context': {'default_server_id': self.id}
         }
-    
+
     def sync_all(self):
         """Sync all resources from Portainer"""
         self.ensure_one()
