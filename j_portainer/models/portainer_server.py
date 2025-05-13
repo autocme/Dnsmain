@@ -344,7 +344,10 @@ class PortainerServer(models.Model):
             'request_date': start_time,
         }
         
-        # Sanitize request data for logging (remove API keys, passwords)
+        # Sanitize and log request data (for both data and params)
+        request_log_data = {}
+        
+        # Add JSON body data for logging if present
         if data and not use_multipart:
             # Create a copy of data to avoid modifying the original
             log_data = data.copy() if isinstance(data, dict) else data
@@ -358,7 +361,29 @@ class PortainerServer(models.Model):
                 if 'apiKey' in log_data:
                     log_data['apiKey'] = '******'
             
-            log_vals['request_data'] = json.dumps(log_data, indent=2) if log_data else None
+            request_log_data['body'] = log_data
+        
+        # Add query parameters for logging if present
+        if params:
+            log_params = params.copy() if isinstance(params, dict) else params
+            
+            # Mask sensitive data in params if it's a dictionary
+            if isinstance(log_params, dict):
+                if 'api_key' in log_params:
+                    log_params['api_key'] = '******'
+                if 'apiKey' in log_params:
+                    log_params['apiKey'] = '******'
+                
+            request_log_data['params'] = log_params
+        
+        # Include URL in log data
+        request_log_data['url'] = url
+        
+        # Add HTTP method info
+        request_log_data['method'] = method
+        
+        # Set the request_data field with all captured information
+        log_vals['request_data'] = json.dumps(request_log_data, indent=2) if request_log_data else None
         
         # Create API log record
         api_log = self.env['j_portainer.api_log'].sudo().create(log_vals)
@@ -396,20 +421,41 @@ class PortainerServer(models.Model):
             end_time = datetime.now()
             response_time_ms = int((end_time - start_time).total_seconds() * 1000)
             
-            # Update log with response data
+            # Create structured response log with enhanced information
+            response_log_data = {
+                'status_code': response.status_code,
+                'headers': dict(response.headers),
+                'url': response.url
+            }
+            
+            # Process and format response data for logging
+            response_data = ""
             try:
-                # Try to get response as JSON for logging
-                response_json = response.json()
-                response_data = json.dumps(response_json, indent=2)
-            except Exception:
-                # If response is not JSON, use text
-                response_data = response.text[:5000]  # Limit size to avoid massive logs
+                # Process response body based on content type
+                if response.status_code in [204, 304]:  # No content or Not modified
+                    response_log_data['body'] = f"Empty response body (status {response.status_code})"
+                else:
+                    try:
+                        # Try to parse as JSON
+                        response_json = response.json()
+                        response_log_data['body'] = response_json
+                    except Exception:
+                        # If not JSON, use text content (with length limit)
+                        response_text = response.text[:5000] if response.text else ""
+                        response_log_data['body'] = response_text
+                
+                # Convert the complete response log to JSON format for storage
+                response_data = json.dumps(response_log_data, indent=2)
+            except Exception as e:
+                # Fallback in case of any error during response processing
+                _logger.warning(f"Error formatting response data: {str(e)}")
+                response_data = f"{{\"status_code\": {response.status_code}, \"error\": \"Error formatting response data: {str(e)}\"}}"
             
             # Update the log record with response info
             api_log.sudo().write({
                 'status_code': response.status_code,
                 'response_time_ms': response_time_ms,
-                'response_data': response_data if response.status_code < 300 else None,
+                'response_data': response_data,  # Always log response data
                 'error_message': response_data if response.status_code >= 300 else None,
             })
             
@@ -417,13 +463,28 @@ class PortainerServer(models.Model):
             return response
 
         except requests.exceptions.ConnectionError as e:
-            # Update log with error
+            # Update log with error including request details
             end_time = datetime.now()
             response_time_ms = int((end_time - start_time).total_seconds() * 1000)
+            
+            # Create detailed error information
+            error_data = {
+                'error_type': 'ConnectionError',
+                'url': url,
+                'method': method,
+                'message': str(e),
+                'request': {
+                    'params': params,
+                    'headers': {k: v for k, v in request_headers.items() if k.lower() != 'x-api-key'},
+                    'endpoint': endpoint
+                }
+            }
+            
             api_log.sudo().write({
                 'status_code': 0,
                 'response_time_ms': response_time_ms,
-                'error_message': f"Connection error: {str(e)}"
+                'error_message': json.dumps(error_data, indent=2),
+                'response_data': json.dumps(error_data, indent=2)  # Include in response data for consistency
             })
             
             _logger.error(f"Connection error: {str(e)}")
@@ -431,25 +492,56 @@ class PortainerServer(models.Model):
                 _("Connection error: Could not connect to Portainer server at %s. Please check the URL and network connectivity.") % self.url)
                 
         except requests.exceptions.Timeout as e:
-            # Update log with timeout error
+            # Update log with timeout error including request details
             end_time = datetime.now()
             response_time_ms = int((end_time - start_time).total_seconds() * 1000)
+            
+            # Create detailed error information
+            error_data = {
+                'error_type': 'Timeout',
+                'url': url,
+                'method': method,
+                'message': str(e),
+                'request': {
+                    'params': params,
+                    'headers': {k: v for k, v in request_headers.items() if k.lower() != 'x-api-key'},
+                    'endpoint': endpoint
+                }
+            }
+            
             api_log.sudo().write({
                 'status_code': 0,
                 'response_time_ms': response_time_ms,
-                'error_message': f"Connection timeout: {str(e)}"
+                'error_message': json.dumps(error_data, indent=2),
+                'response_data': json.dumps(error_data, indent=2)  # Include in response data for consistency
             })
             
             _logger.error("Connection timeout")
             raise UserError(_("Connection timeout: The request to Portainer server timed out. Please try again later."))
+            
         except requests.exceptions.RequestException as e:
-            # Update log with general request error
+            # Update log with general request error including request details
             end_time = datetime.now()
             response_time_ms = int((end_time - start_time).total_seconds() * 1000)
+            
+            # Create detailed error information
+            error_data = {
+                'error_type': 'RequestException',
+                'url': url,
+                'method': method,
+                'message': str(e),
+                'request': {
+                    'params': params,
+                    'headers': {k: v for k, v in request_headers.items() if k.lower() != 'x-api-key'},
+                    'endpoint': endpoint
+                }
+            }
+            
             api_log.sudo().write({
                 'status_code': 0,
                 'response_time_ms': response_time_ms,
-                'error_message': f"Request error: {str(e)}"
+                'error_message': json.dumps(error_data, indent=2),
+                'response_data': json.dumps(error_data, indent=2)  # Include in response data for consistency
             })
             
             _logger.error(f"Request error: {str(e)}")

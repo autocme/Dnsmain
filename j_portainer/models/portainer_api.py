@@ -163,9 +163,23 @@ class PortainerAPI(models.AbstractModel):
         else:
             # Standard actions: start, stop, restart, kill, pause, unpause
             endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/{action}'
+            
+            # Create detailed parameters with actionable information
+            action_data = {
+                'containerId': container_id,
+                'action': action
+            }
+            
+            # Add any additional parameters
             query_params = params if params else {}
             
-            response = server._make_api_request(endpoint, 'POST', params=query_params)
+            # Use both query params and proper data for better logging
+            response = server._make_api_request(
+                endpoint=endpoint, 
+                method='POST', 
+                data=action_data,  # Include action data for proper logging
+                params=query_params
+            )
             
             return response.status_code in [200, 201, 204]
     
@@ -186,15 +200,33 @@ class PortainerAPI(models.AbstractModel):
         if not server:
             return {'success': False, 'message': 'Server not found'}
             
+        # Build query parameters
         params = {
             'force': force,
             'v': volumes
         }
         
+        # Create detailed request information for logging purposes
+        remove_data = {
+            'containerId': container_id,
+            'operation': 'remove',
+            'options': {
+                'force': force,
+                'removeVolumes': volumes
+            },
+            'environment_id': environment_id
+        }
+        
         endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}'
         
         try:
-            response = server._make_api_request(endpoint, 'DELETE', params=params)
+            # Pass both params (for URL query) and data (for logging)
+            response = server._make_api_request(
+                endpoint=endpoint, 
+                method='DELETE', 
+                params=params,
+                data=remove_data  # This is for logging only as DELETE requests don't have body
+            )
             
             if response.status_code in [200, 201, 204]:
                 return {'success': True, 'message': 'Container removed successfully'}
