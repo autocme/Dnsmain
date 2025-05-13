@@ -706,25 +706,16 @@ class PortainerServer(models.Model):
                     details = details_response.json() if details_response.status_code == 200 else {}
 
                     # Prepare base image data
-                    # Convert size values from bytes to GB with 2 decimal places
-                    size_bytes = image.get('Size', 0)
-                    shared_size_bytes = image.get('SharedSize', 0)
-                    virtual_size_bytes = image.get('VirtualSize', 0)
-                    
-                    # Convert bytes to GB (1 GB = 1024^3 bytes)
-                    size_gb = round(size_bytes / (1024.0 * 1024.0 * 1024.0), 2) if size_bytes else 0.0
-                    shared_size_gb = round(shared_size_bytes / (1024.0 * 1024.0 * 1024.0), 2) if shared_size_bytes else 0.0
-                    virtual_size_gb = round(virtual_size_bytes / (1024.0 * 1024.0 * 1024.0), 2) if virtual_size_bytes else 0.0
-                    
+                    # Use size values directly from the API response without any conversion
                     base_image_data = {
                         'server_id': self.id,
                         'environment_id': endpoint_id,
                         'environment_name': env.name,
                         'image_id': image_id,
                         'created': self._safe_parse_timestamp(image.get('Created', 0)),
-                        'size': size_gb,
-                        'shared_size': shared_size_gb,
-                        'virtual_size': virtual_size_gb,
+                        'size': image.get('Size', 0),
+                        'shared_size': image.get('SharedSize', 0),
+                        'virtual_size': image.get('VirtualSize', 0),
                         'labels': json.dumps(image.get('Labels', {})),
                         'details': json.dumps(details, indent=2) if details else '',
                     }
