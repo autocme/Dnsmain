@@ -351,7 +351,8 @@ class PortainerContainer(models.Model):
                 if result['success']:
                     # Delete the record
                     self.unlink()
-                    
+                    self.env.cr.commit()
+
                     return {
                         'type': 'ir.actions.client',
                         'tag': 'display_notification',
@@ -370,6 +371,7 @@ class PortainerContainer(models.Model):
             elif result:
                 # Legacy boolean True result
                 self.unlink()
+                self.env.cr.commit()
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
