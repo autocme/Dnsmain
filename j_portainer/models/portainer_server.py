@@ -786,6 +786,44 @@ class PortainerServer(models.Model):
                         
                     if volume_records:
                         self.env['j_portainer.container.volume'].create(volume_records)
+                        
+                    # Process container network connections as separate records
+                    # First, remove existing network connections for this container to avoid duplicates
+                    existing_networks = self.env['j_portainer.container.network'].search([
+                        ('container_id', '=', container_record.id)
+                    ])
+                    if existing_networks:
+                        existing_networks.unlink()
+                        
+                    # Extract network information from container details
+                    networks_data = details.get('NetworkSettings', {}).get('Networks', {})
+                    network_records = []
+                    
+                    # Check if we have custom template networks
+                    for network_name, network_info in networks_data.items():
+                        # Find the corresponding network record in Odoo
+                        network_id = network_info.get('NetworkID', '')
+                        
+                        # Only process if we have a network ID
+                        if network_id:
+                            # Find the network in Odoo
+                            network_record = self.env['j_portainer.network'].search([
+                                ('server_id', '=', self.id),
+                                ('network_id', '=', network_id)
+                            ], limit=1)
+                            
+                            # If network found, create the connection record
+                            if network_record:
+                                network_records.append({
+                                    'container_id': container_record.id,
+                                    'network_id': network_record.id,
+                                    'ip_address': network_info.get('IPAddress', ''),
+                                    'gateway': network_info.get('Gateway', ''),
+                                    'mac_address': network_info.get('MacAddress', ''),
+                                })
+                            
+                    if network_records:
+                        self.env['j_portainer.container.network'].create(network_records)
 
                     synced_container_ids.append(container_id)
                     container_count += 1

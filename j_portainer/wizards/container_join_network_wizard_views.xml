@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Container Join Network Wizard Form View -->
+    <record id="view_container_join_network_wizard_form" model="ir.ui.view">
+        <field name="name">j_portainer.container.join.network.wizard.form</field>
+        <field name="model">j_portainer.container.join.network.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Join Network">
+                <sheet>
+                    <group>
+                        <field name="container_id" invisible="1"/>
+                        <field name="server_id" invisible="1"/>
+                        <field name="environment_id" invisible="1"/>
+                        <field name="environment_name" invisible="1"/>
+                        <field name="network_id" options="{'no_create': True}"/>
+                        <field name="ip_address" placeholder="e.g., 172.20.0.2"/>
+                        <field name="aliases" placeholder="e.g., web, app, service1"/>
+                    </group>
+                    <div class="alert alert-info" role="alert">
+                        <p>Connecting a container to a network allows it to communicate with other containers on the same network.</p>
+                        <p>Leave IP Address empty for automatic IP assignment.</p>
+                    </div>
+                </sheet>
+                <footer>
+                    <button name="action_join_network" string="Join Network" type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
