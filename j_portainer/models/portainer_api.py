@@ -1717,26 +1717,173 @@ class PortainerAPI(models.AbstractModel):
             labels (dict): Container labels to set
             
         Returns:
-            bool: Operation success
+            dict: Result with success status and message
         """
+        import logging
+        import time
+        _logger = logging.getLogger(__name__)
+        
+        result = {
+            'success': False,
+            'message': ''
+        }
+        
         server = self.env['j_portainer.server'].browse(server_id)
         
-        # First, we need to get the current container configuration
+        # Get detailed container information
+        _logger.info(f"Getting container info for container {container_id}")
         endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/json'
         response = server._make_api_request(endpoint, method='GET', environment_id=environment_id)
         
         if response.status_code != 200:
-            return False
+            result['message'] = f"Failed to get container info: {response.status_code} - {response.text}"
+            _logger.error(result['message'])
+            return result
             
         container_info = response.json()
         
-        # Create container update configuration
-        config = {
-            "Labels": labels
-        }
+        # Container must be recreated to update labels
+        # Strategy 1: Use Docker update API - may not work for labels on all versions
+        try:
+            _logger.info(f"Updating container {container_id} labels via update API")
+            endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/update'
+            
+            # Create container update configuration
+            config = {
+                "Labels": labels
+            }
+            
+            # Try updating using API
+            update_response = server._make_api_request(endpoint, method='POST', data=config, environment_id=environment_id)
+            
+            if update_response.status_code == 200:
+                _logger.info(f"Successfully updated container {container_id} labels via update API")
+                result['success'] = True
+                result['message'] = "Labels updated successfully"
+                return result
+            
+            # Log debug info
+            _logger.warning(f"Container update API failed: {update_response.status_code} - {update_response.text}")
+        except Exception as e:
+            _logger.warning(f"Error using update API: {str(e)}")
         
-        # Now update container with new labels
-        endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/update'
-        response = server._make_api_request(endpoint, method='POST', data=config, environment_id=environment_id)
-        
-        return response.status_code == 200
+        # If we get here, the first approach failed, try the commit/recreate approach
+        # Strategy 2: Commit container changes, then recreate with same config but new labels
+        try:
+            _logger.info(f"Trying to update container {container_id} labels via commit/recreate")
+            
+            # Check if container is running
+            is_running = container_info.get('State', {}).get('Running', False)
+            
+            # Extract container configuration
+            config = container_info.get('Config', {})
+            host_config = container_info.get('HostConfig', {})
+            network_settings = container_info.get('NetworkSettings', {})
+            
+            # Apply new labels - this is the change we want
+            config['Labels'] = labels
+            
+            # Step 1: If running, stop the container
+            if is_running:
+                _logger.info(f"Stopping container {container_id}")
+                stop_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/stop'
+                stop_response = server._make_api_request(stop_endpoint, method='POST', environment_id=environment_id)
+                if stop_response.status_code not in [204, 304]:
+                    result['message'] = f"Failed to stop container: {stop_response.status_code} - {stop_response.text}"
+                    _logger.error(result['message'])
+                    return result
+            
+            # Step 2: Rename the old container with a temporary name
+            _logger.info(f"Renaming container {container_id}")
+            old_name = container_info.get('Name', '').lstrip('/')
+            new_name = f"{old_name}_old_{int(time.time())}"
+            rename_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/rename'
+            rename_params = {'name': new_name}
+            rename_response = server._make_api_request(rename_endpoint, method='POST', params=rename_params, environment_id=environment_id)
+            if rename_response.status_code != 204:
+                # Restart container if it was running
+                if is_running:
+                    _logger.info(f"Restarting container {container_id}")
+                    start_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/start'
+                    server._make_api_request(start_endpoint, method='POST', environment_id=environment_id)
+                result['message'] = f"Failed to rename container: {rename_response.status_code} - {rename_response.text}"
+                _logger.error(result['message'])
+                return result
+            
+            # Step 3: Create a new container with the same configuration but new labels
+            _logger.info(f"Creating new container with updated labels")
+            create_endpoint = f'/api/endpoints/{environment_id}/docker/containers/create'
+            create_params = {'name': old_name}
+            
+            # Prepare create configuration
+            create_config = {
+                'Image': config.get('Image'),
+                'Entrypoint': config.get('Entrypoint'),
+                'Cmd': config.get('Cmd'),
+                'Env': config.get('Env'),
+                'Labels': labels,  # New labels
+                'ExposedPorts': config.get('ExposedPorts'),
+                'HostConfig': host_config,
+                'NetworkingConfig': {
+                    'EndpointsConfig': network_settings.get('Networks', {})
+                }
+            }
+            
+            create_response = server._make_api_request(create_endpoint, method='POST', params=create_params, 
+                                                     data=create_config, environment_id=environment_id)
+            
+            if create_response.status_code != 201:
+                # Rename back the old container
+                rename_back_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/rename'
+                rename_back_params = {'name': old_name}
+                server._make_api_request(rename_back_endpoint, method='POST', params=rename_back_params, 
+                                      environment_id=environment_id)
+                # Restart if it was running
+                if is_running:
+                    start_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/start'
+                    server._make_api_request(start_endpoint, method='POST', environment_id=environment_id)
+                
+                result['message'] = f"Failed to create new container: {create_response.status_code} - {create_response.text}"
+                _logger.error(result['message'])
+                return result
+            
+            # Step 4: Get the new container ID
+            new_container = create_response.json()
+            new_container_id = new_container.get('Id')
+            
+            # Step 5: Start the new container if the old one was running
+            if is_running:
+                _logger.info(f"Starting new container {new_container_id}")
+                start_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{new_container_id}/start'
+                start_response = server._make_api_request(start_endpoint, method='POST', environment_id=environment_id)
+                if start_response.status_code != 204:
+                    result['message'] = f"Failed to start new container: {start_response.status_code} - {start_response.text}"
+                    _logger.error(result['message'])
+                    return result
+            
+            # Step 6: Remove the old container
+            _logger.info(f"Removing old container {container_id}")
+            remove_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}'
+            remove_params = {'force': True}
+            remove_response = server._make_api_request(remove_endpoint, method='DELETE', params=remove_params, 
+                                                     environment_id=environment_id)
+            
+            if remove_response.status_code != 204:
+                _logger.warning(f"Failed to remove old container: {remove_response.status_code} - {remove_response.text}")
+                # We don't return error here, as the new container is already running
+            
+            # Success! Labels have been updated
+            result['success'] = True
+            result['message'] = "Labels updated successfully via container recreation"
+            _logger.info(f"Successfully updated container labels via commit/recreate")
+            return result
+            
+        except Exception as e:
+            _logger.error(f"Error in commit/recreate approach: {str(e)}")
+            result['message'] = f"Error updating labels: {str(e)}"
+            return result
+            
+        # If we get here, both approaches failed
+        result['message'] = "Failed to update container labels using multiple approaches"
+        _logger.error(result['message'])
+        return result

@@ -3,6 +3,7 @@
 
 from odoo import models, fields, api, _
 import logging
+import json
 
 _logger = logging.getLogger(__name__)
 
@@ -75,6 +76,9 @@ class PortainerContainerLabel(models.Model):
         
         Args:
             container: Container record to sync labels for
+            
+        Returns:
+            bool: True if sync was successful, False otherwise
         """
         try:
             # Get all current labels for this container
@@ -94,8 +98,26 @@ class PortainerContainerLabel(models.Model):
                 label_dict
             )
             
-            if not result:
+            # Handle the enhanced API response
+            if isinstance(result, dict):
+                if result.get('success'):
+                    _logger.info(f"Successfully synced labels for container {container.name}: {result.get('message', '')}")
+                    # After successful sync, also update the parent container's labels JSON field for completeness
+                    container.write({'labels': json.dumps(label_dict)})
+                    return True
+                else:
+                    _logger.warning(
+                        f"Failed to sync labels for container {container.name}: {result.get('message', 'Unknown error')}"
+                    )
+                    return False
+            elif result:  # For backward compatibility
+                _logger.info(f"Successfully synced labels for container {container.name}")
+                container.write({'labels': json.dumps(label_dict)})
+                return True
+            else:
                 _logger.warning(f"Failed to sync labels for container {container.name}")
+                return False
                 
         except Exception as e:
             _logger.error(f"Error syncing labels for container {container.name}: {str(e)}")
+            return False

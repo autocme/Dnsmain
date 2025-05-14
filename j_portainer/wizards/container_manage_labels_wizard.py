@@ -110,17 +110,49 @@ class ContainerManageLabelsWizard(models.TransientModel):
             for label, new_value in labels_to_update:
                 label.write({'value': new_value})
                 
-            # Return success notification
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Labels Updated'),
-                    'message': _('Container labels have been updated and synced to Portainer'),
-                    'sticky': False,
-                    'type': 'success',
+            # Explicitly sync changes to Portainer
+            _logger.info(f"Syncing label changes to Portainer for container {self.container_id.name}")
+            try:
+                # Call sync method on the container
+                sync_result = self.container_id.sync_labels_to_portainer()
+                
+                if isinstance(sync_result, dict) and sync_result.get('params', {}).get('type') == 'success':
+                    # Sync was successful
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Labels Updated'),
+                            'message': _('Container labels have been updated and synced to Portainer successfully'),
+                            'sticky': False,
+                            'type': 'success',
+                        }
+                    }
+                else:
+                    # Sync failed but Odoo updates succeeded
+                    _logger.warning(f"Sync to Portainer failed: {sync_result}")
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Labels Updated Partially'),
+                            'message': _('Container labels were updated in Odoo but sync to Portainer may have failed. Check server logs for details.'),
+                            'sticky': True,
+                            'type': 'warning',
+                        }
+                    }
+            except Exception as sync_err:
+                _logger.error(f"Error syncing to Portainer: {str(sync_err)}")
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Labels Updated Partially'),
+                        'message': _('Container labels were updated in Odoo but sync to Portainer failed: %s') % str(sync_err),
+                        'sticky': True,
+                        'type': 'warning',
+                    }
                 }
-            }
             
         except json.JSONDecodeError:
             raise UserError(_("Invalid JSON format. Please check your input."))
