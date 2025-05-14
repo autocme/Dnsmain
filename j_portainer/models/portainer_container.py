@@ -46,29 +46,6 @@ class PortainerContainer(models.Model):
         """Get API client"""
         return self.env['j_portainer.api']
     
-    def get_formatted_ports(self):
-        """Get formatted port mappings"""
-        self.ensure_one()
-        if not self.ports:
-            return ''
-            
-        try:
-            ports_data = json.loads(self.ports)
-            formatted_ports = []
-            
-            for port in ports_data:
-                # Check if it has a public port
-                if 'PublicPort' in port:
-                    mapping = f"{port.get('IP', '0.0.0.0')}:{port.get('PublicPort')} → {port.get('PrivatePort')}/{port.get('Type', 'tcp')}"
-                else:
-                    mapping = f"{port.get('PrivatePort')}/{port.get('Type', 'tcp')}"
-                formatted_ports.append(mapping)
-                
-            return ', '.join(formatted_ports)
-        except Exception as e:
-            _logger.error(f"Error formatting ports: {str(e)}")
-            return self.ports
-    
     def get_formatted_labels(self):
         """Get formatted container labels"""
         self.ensure_one()
