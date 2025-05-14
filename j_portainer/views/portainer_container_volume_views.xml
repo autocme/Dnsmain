@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Container Volume Form View -->
+    <record id="view_portainer_container_volume_form" model="ir.ui.view">
+        <field name="name">j_portainer.container.volume.form</field>
+        <field name="model">j_portainer.container.volume</field>
+        <field name="arch" type="xml">
+            <form string="Container Volume Mapping">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="type"/>
+                            <field name="name"/>
+                            <field name="container_path"/>
+                        </group>
+                        <group>
+                            <field name="mode"/>
+                            <field name="driver"/>
+                            <field name="container_id" options="{'no_create': True}"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Container Volume Tree View -->
+    <record id="view_portainer_container_volume_tree" model="ir.ui.view">
+        <field name="name">j_portainer.container.volume.tree</field>
+        <field name="model">j_portainer.container.volume</field>
+        <field name="arch" type="xml">
+            <tree string="Container Volume Mappings">
+                <field name="container_path"/>
+                <field name="type"/>
+                <field name="name"/>
+                <field name="mode"/>
+                <field name="container_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Container Volume Search View -->
+    <record id="view_portainer_container_volume_search" model="ir.ui.view">
+        <field name="name">j_portainer.container.volume.search</field>
+        <field name="model">j_portainer.container.volume</field>
+        <field name="arch" type="xml">
+            <search string="Search Container Volume Mappings">
+                <field name="name"/>
+                <field name="container_path"/>
+                <field name="container_id"/>
+                <field name="type"/>
+                <group expand="0" string="Group By">
+                    <filter string="Container" name="group_by_container" domain="[]" context="{'group_by': 'container_id'}"/>
+                    <filter string="Volume Type" name="group_by_type" domain="[]" context="{'group_by': 'type'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

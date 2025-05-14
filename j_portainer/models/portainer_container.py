@@ -39,8 +39,9 @@ class PortainerContainer(models.Model):
     environment_id = fields.Integer('Environment ID', required=True)
     environment_name = fields.Char('Environment', required=True)
     
-    # One2many relationship to container labels
+    # One2many relationships
     label_ids = fields.One2many('j_portainer.container.label', 'container_id', string='Container Labels')
+    volume_ids = fields.One2many('j_portainer.container.volume', 'container_id', string='Volume Mappings')
     
     def _get_api(self):
         """Get API client"""
@@ -108,10 +109,25 @@ class PortainerContainer(models.Model):
                 _logger.error(f"Error formatting ports for container {record.name}: {str(e)}")
                 record.get_formatted_ports = f'<p>Error formatting ports: {str(e)}</p>'
     
-    @api.depends('volumes')
+    @api.depends('volumes', 'volume_ids')
     def _compute_formatted_volumes(self):
-        """Compute formatted container volumes HTML"""
+        """Compute formatted container volumes HTML
+        
+        Note: This method is kept for backward compatibility.
+        The preferred approach is to use the structured volume_ids records.
+        """
         for record in self:
+            # If we have volume mappings in the structured format, use that as primary source
+            if record.volume_ids:
+                html = [
+                    '<div class="alert alert-info">',
+                    '<strong>Note:</strong> Volume information is now available in structured format in the table below.',
+                    '</div>'
+                ]
+                record.get_formatted_volumes = ''.join(html)
+                continue
+                
+            # Fall back to the old JSON-based format if no structured records are available
             if not record.volumes:
                 record.get_formatted_volumes = '<p>No volumes attached to this container</p>'
                 continue
@@ -122,16 +138,21 @@ class PortainerContainer(models.Model):
                     record.get_formatted_volumes = '<p>No volumes attached to this container</p>'
                     continue
                     
-                html = ['<table class="table table-sm table-hover">',
-                        '<thead>',
-                        '<tr>',
-                        '<th>Type</th>',
-                        '<th>Name/Source</th>',
-                        '<th>Container Path</th>',
-                        '<th>Mode</th>',
-                        '</tr>',
-                        '</thead>',
-                        '<tbody>']
+                html = [
+                    '<div class="alert alert-warning">',
+                    '<strong>Legacy format:</strong> This information is shown in the old format. Please synchronize the container to get the structured volume data.',
+                    '</div>',
+                    '<table class="table table-sm table-hover">',
+                    '<thead>',
+                    '<tr>',
+                    '<th>Type</th>',
+                    '<th>Name/Source</th>',
+                    '<th>Container Path</th>',
+                    '<th>Mode</th>',
+                    '</tr>',
+                    '</thead>',
+                    '<tbody>'
+                ]
                         
                 for volume in volumes_data:
                     # Determine volume type
