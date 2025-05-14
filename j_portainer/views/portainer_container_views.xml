@@ -73,7 +73,8 @@
 
                     <notebook>
                         <page string="Ports" name="ports">
-                            <field name="ports" widget="html" readonly="1"/>
+                            <field name="ports" invisible="1"/>
+                            <field name="get_formatted_ports" widget="html"/>
                         </page>
 
                         <page string="Volumes" name="volumes">

@@ -33,6 +33,7 @@ class PortainerContainer(models.Model):
     details = fields.Text('Details')
     volumes = fields.Text('Volumes')
     get_formatted_volumes = fields.Html('Formatted Volumes', compute='_compute_formatted_volumes')
+    get_formatted_ports = fields.Html('Formatted Ports', compute='_compute_formatted_ports')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
@@ -79,6 +80,54 @@ class PortainerContainer(models.Model):
             _logger.error(f"Error formatting labels: {str(e)}")
             return self.labels
             
+    @api.depends('ports')
+    def _compute_formatted_ports(self):
+        """Compute formatted port mappings HTML table"""
+        for record in self:
+            if not record.ports:
+                record.get_formatted_ports = '<p>No port mappings for this container</p>'
+                continue
+                
+            try:
+                ports_data = json.loads(record.ports)
+                if not ports_data:
+                    record.get_formatted_ports = '<p>No port mappings for this container</p>'
+                    continue
+                    
+                html = ['<table class="table table-sm table-hover">',
+                        '<thead>',
+                        '<tr>',
+                        '<th>Host IP</th>',
+                        '<th>Host Port</th>',
+                        '<th>Container Port</th>',
+                        '<th>Protocol</th>',
+                        '</tr>',
+                        '</thead>',
+                        '<tbody>']
+                        
+                for port in ports_data:
+                    # Extract port mapping data
+                    host_ip = port.get('IP', '0.0.0.0')
+                    host_port = port.get('PublicPort', '-')
+                    container_port = port.get('PrivatePort', '-')
+                    protocol = port.get('Type', 'tcp')
+                    
+                    # Create a row for this port mapping
+                    html.append('<tr>')
+                    html.append(f'<td>{host_ip}</td>')
+                    html.append(f'<td>{host_port}</td>')
+                    html.append(f'<td>{container_port}</td>')
+                    html.append(f'<td>{protocol}</td>')
+                    html.append('</tr>')
+                    
+                html.append('</tbody>')
+                html.append('</table>')
+                
+                record.get_formatted_ports = ''.join(html)
+            except Exception as e:
+                _logger.error(f"Error formatting ports for container {record.name}: {str(e)}")
+                record.get_formatted_ports = f'<p>Error formatting ports: {str(e)}</p>'
+    
     @api.depends('volumes')
     def _compute_formatted_volumes(self):
         """Compute formatted container volumes HTML"""
