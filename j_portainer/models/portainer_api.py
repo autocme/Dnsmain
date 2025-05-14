@@ -1706,3 +1706,37 @@ class PortainerAPI(models.AbstractModel):
         response = server._make_api_request(endpoint, method='POST', data=data, environment_id=environment_id)
         
         return response.status_code in (200, 204)
+        
+    def update_container_labels(self, server_id, environment_id, container_id, labels):
+        """Update container labels in Portainer
+        
+        Args:
+            server_id (int): Portainer server ID
+            environment_id (int): Environment ID
+            container_id (str): Container ID
+            labels (dict): Container labels to set
+            
+        Returns:
+            bool: Operation success
+        """
+        server = self.env['j_portainer.server'].browse(server_id)
+        
+        # First, we need to get the current container configuration
+        endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/json'
+        response = server._make_api_request(endpoint, method='GET', environment_id=environment_id)
+        
+        if response.status_code != 200:
+            return False
+            
+        container_info = response.json()
+        
+        # Create container update configuration
+        config = {
+            "Labels": labels
+        }
+        
+        # Now update container with new labels
+        endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/update'
+        response = server._make_api_request(endpoint, method='POST', data=config, environment_id=environment_id)
+        
+        return response.status_code == 200
