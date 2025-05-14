@@ -42,6 +42,7 @@ class PortainerContainer(models.Model):
     # One2many relationships
     label_ids = fields.One2many('j_portainer.container.label', 'container_id', string='Container Labels')
     volume_ids = fields.One2many('j_portainer.container.volume', 'container_id', string='Volume Mappings')
+    network_ids = fields.One2many('j_portainer.container.network', 'container_id', string='Connected Networks')
     
     def _get_api(self):
         """Get API client"""
@@ -489,5 +490,20 @@ class PortainerContainer(models.Model):
             'context': {
                 'active_id': self.id,
                 'active_model': 'j_portainer.container',
+            }
+        }
+        
+    def action_join_network(self):
+        """Open wizard to join a network"""
+        self.ensure_one()
+        
+        return {
+            'name': _('Join Network'),
+            'type': 'ir.actions.act_window',
+            'view_mode': 'form',
+            'res_model': 'j_portainer.container.join.network.wizard',
+            'target': 'new',
+            'context': {
+                'default_container_id': self.id,
             }
         }

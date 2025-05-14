@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Container Network Form View -->
+    <record id="view_portainer_container_network_form" model="ir.ui.view">
+        <field name="name">j_portainer.container.network.form</field>
+        <field name="model">j_portainer.container.network</field>
+        <field name="arch" type="xml">
+            <form string="Container Network Connection">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="disconnect_network" type="object"
+                                string="Disconnect" class="oe_stat_button"
+                                icon="fa-unlink"
+                                confirm="Are you sure you want to disconnect this container from the network?"/>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="network_id" options="{'no_create': True}"/>
+                            <field name="container_id" options="{'no_create': True}"/>
+                            <field name="ip_address"/>
+                        </group>
+                        <group>
+                            <field name="mac_address"/>
+                            <field name="gateway"/>
+                            <field name="driver"/>
+                            <field name="scope"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Container Network Tree View -->
+    <record id="view_portainer_container_network_tree" model="ir.ui.view">
+        <field name="name">j_portainer.container.network.tree</field>
+        <field name="model">j_portainer.container.network</field>
+        <field name="arch" type="xml">
+            <tree string="Container Network Connections">
+                <field name="network_name"/>
+                <field name="ip_address"/>
+                <field name="gateway"/>
+                <field name="mac_address"/>
+                <field name="driver"/>
+                <field name="container_id"/>
+                <button name="disconnect_network" type="object" 
+                        string="Disconnect" class="btn btn-sm btn-danger"
+                        confirm="Are you sure you want to disconnect this container from the network?"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Container Network Search View -->
+    <record id="view_portainer_container_network_search" model="ir.ui.view">
+        <field name="name">j_portainer.container.network.search</field>
+        <field name="model">j_portainer.container.network</field>
+        <field name="arch" type="xml">
+            <search string="Search Container Network Connections">
+                <field name="network_name"/>
+                <field name="container_id"/>
+                <field name="ip_address"/>
+                <field name="driver"/>
+                <group expand="0" string="Group By">
+                    <filter string="Container" name="group_by_container" domain="[]" context="{'group_by': 'container_id'}"/>
+                    <filter string="Network" name="group_by_network" domain="[]" context="{'group_by': 'network_id'}"/>
+                    <filter string="Driver" name="group_by_driver" domain="[]" context="{'group_by': 'driver'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

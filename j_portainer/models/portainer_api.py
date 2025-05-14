@@ -1649,3 +1649,60 @@ class PortainerAPI(models.AbstractModel):
                 features[feature] = False  # Use False instead of None to avoid type issues
                 
         return features
+        
+    def connect_container_to_network(self, server_id, environment_id, network_id, container_id, config=None):
+        """Connect container to a network
+        
+        Args:
+            server_id (int): Portainer server ID
+            environment_id (int): Environment ID
+            network_id (str): Network ID
+            container_id (str): Container ID
+            config (dict, optional): Network connection configuration (IPv4Address, Aliases, etc.)
+            
+        Returns:
+            bool: Operation success
+        """
+        server = self.env['j_portainer.server'].browse(server_id)
+        
+        if config is None:
+            config = {}
+            
+        data = {
+            "Container": container_id,
+            "EndpointID": str(environment_id),
+            "NetworkID": network_id,
+            "Config": config
+        }
+        
+        endpoint = f'/api/endpoints/{environment_id}/docker/networks/{network_id}/connect'
+        response = server._make_api_request(endpoint, method='POST', data=data, environment_id=environment_id)
+        
+        return response.status_code in (200, 204)
+        
+    def disconnect_container_from_network(self, server_id, environment_id, network_id, container_id, force=False):
+        """Disconnect container from a network
+        
+        Args:
+            server_id (int): Portainer server ID
+            environment_id (int): Environment ID
+            network_id (str): Network ID
+            container_id (str): Container ID
+            force (bool, optional): Force disconnect
+            
+        Returns:
+            bool: Operation success
+        """
+        server = self.env['j_portainer.server'].browse(server_id)
+        
+        data = {
+            "Container": container_id,
+            "EndpointID": str(environment_id),
+            "NetworkID": network_id,
+            "Force": force
+        }
+        
+        endpoint = f'/api/endpoints/{environment_id}/docker/networks/{network_id}/disconnect'
+        response = server._make_api_request(endpoint, method='POST', data=data, environment_id=environment_id)
+        
+        return response.status_code in (200, 204)

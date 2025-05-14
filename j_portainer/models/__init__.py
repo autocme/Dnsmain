@@ -20,3 +20,4 @@ from . import portainer_environment
 from . import portainer_api_log
 from . import portainer_container_label
 from . import portainer_container_volume
+from . import portainer_container_network

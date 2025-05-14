@@ -99,6 +99,25 @@
                                 </tree>
                             </field>
                         </page>
+                        
+                        <page string="Networks" name="networks">
+                            <div class="oe_button_box">
+                                <button name="action_join_network" string="Join Network" type="object" 
+                                        class="btn btn-primary" icon="fa-plug"/>
+                            </div>
+                            <field name="network_ids">
+                                <tree>
+                                    <field name="network_name"/>
+                                    <field name="ip_address"/>
+                                    <field name="gateway"/>
+                                    <field name="mac_address"/>
+                                    <field name="driver"/>
+                                    <button name="disconnect_network" type="object" 
+                                            string="Disconnect" class="btn btn-sm btn-danger"
+                                            confirm="Are you sure you want to disconnect this container from the network?"/>
+                                </tree>
+                            </field>
+                        </page>
 
                         <!--                        <page string="Logs" name="logs">-->
                         <!--                            <button name="action_view_logs" string="View Logs" type="object" -->
