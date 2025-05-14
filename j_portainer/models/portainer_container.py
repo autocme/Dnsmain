@@ -507,3 +507,66 @@ class PortainerContainer(models.Model):
                 'default_container_id': self.id,
             }
         }
+        
+    def action_manage_labels(self):
+        """Open wizard to manage container labels"""
+        self.ensure_one()
+        
+        return {
+            'name': _('Manage Labels'),
+            'type': 'ir.actions.act_window',
+            'view_mode': 'form',
+            'res_model': 'j_portainer.container.manage.labels.wizard',
+            'target': 'new',
+            'context': {
+                'active_id': self.id,
+                'active_model': 'j_portainer.container',
+            }
+        }
+        
+    def sync_labels_to_portainer(self):
+        """Sync container labels to Portainer"""
+        self.ensure_one()
+        
+        # Get container labels
+        labels = self.env['j_portainer.container.label'].search([
+            ('container_id', '=', self.id)
+        ])
+        
+        if not labels:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('No Labels'),
+                    'message': _('This container has no labels to sync'),
+                    'sticky': False,
+                    'type': 'warning',
+                }
+            }
+            
+        # Perform sync
+        try:
+            labels[0]._sync_container_labels_to_portainer(self)
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Labels Synchronized'),
+                    'message': _('Container labels have been synced to Portainer'),
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+        except Exception as e:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Sync Failed'),
+                    'message': str(e),
+                    'sticky': True,
+                    'type': 'danger',
+                }
+            }

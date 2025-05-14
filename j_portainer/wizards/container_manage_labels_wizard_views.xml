@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Container Manage Labels Wizard Form View -->
+    <record id="view_container_manage_labels_wizard_form" model="ir.ui.view">
+        <field name="name">j_portainer.container.manage.labels.wizard.form</field>
+        <field name="model">j_portainer.container.manage.labels.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Manage Container Labels">
+                <sheet>
+                    <div class="alert alert-info" role="alert">
+                        <p>Edit container labels in JSON format. Changes will be synchronized with Portainer.</p>
+                        <p>Example: {"com.example.description": "My application", "version": "1.0"}</p>
+                    </div>
+                    <group>
+                        <field name="container_id" invisible="1"/>
+                        <field name="server_id" invisible="1"/>
+                        <field name="environment_id" invisible="1"/>
+                        <field name="environment_name" invisible="1"/>
+                        <field name="operation" invisible="1"/>
+                        <field name="labels_json" widget="ace" options="{'mode': 'json'}" style="min-height: 300px;"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_apply_labels" string="Apply Labels" type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
