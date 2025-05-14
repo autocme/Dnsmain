@@ -547,19 +547,51 @@ class PortainerContainer(models.Model):
             
         # Perform sync
         try:
-            labels[0]._sync_container_labels_to_portainer(self)
+            import logging
+            _logger = logging.getLogger(__name__)
             
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Labels Synchronized'),
-                    'message': _('Container labels have been synced to Portainer'),
-                    'sticky': False,
-                    'type': 'success',
+            # First, log the labels being synced for debugging
+            label_dict = {label.name: label.value for label in labels}
+            _logger.info(f"Syncing labels for container {self.name}: {label_dict}")
+            
+            # Perform the sync operation
+            result = labels[0]._sync_container_labels_to_portainer(self)
+            
+            if result:
+                # Verify that the container ID in Odoo is still valid
+                self.refresh()
+                    
+                # Refresh the container record from Portainer to capture any changes in the container ID
+                refreshed = self.action_refresh()
+                if isinstance(refreshed, dict) and refreshed.get('params', {}).get('type') == 'danger':
+                    _logger.warning(f"Container refresh failed after label sync for container {self.name}")
+                    # Even if refresh fails, the label sync was successful
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Labels Synchronized'),
+                        'message': _('Container labels have been synced to Portainer successfully. Refresh the page to see any container ID changes.'),
+                        'sticky': False,
+                        'type': 'success',
+                    }
                 }
-            }
+            else:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Sync Failed'),
+                        'message': _('Failed to sync labels to Portainer. Check server logs for details.'),
+                        'sticky': True,
+                        'type': 'danger',
+                    }
+                }
         except Exception as e:
+            import traceback
+            _logger.error(f"Error syncing container labels: {str(e)}\n{traceback.format_exc()}")
+            
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
