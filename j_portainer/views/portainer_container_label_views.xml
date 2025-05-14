@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Container Label Form View -->
+    <record id="view_portainer_container_label_form" model="ir.ui.view">
+        <field name="name">j_portainer.container.label.form</field>
+        <field name="model">j_portainer.container.label</field>
+        <field name="arch" type="xml">
+            <form string="Container Label">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="value"/>
+                        </group>
+                        <group>
+                            <field name="container_id" options="{'no_create': True}"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Container Label Tree View -->
+    <record id="view_portainer_container_label_tree" model="ir.ui.view">
+        <field name="name">j_portainer.container.label.tree</field>
+        <field name="model">j_portainer.container.label</field>
+        <field name="arch" type="xml">
+            <tree string="Container Labels">
+                <field name="name"/>
+                <field name="value"/>
+                <field name="container_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Container Label Search View -->
+    <record id="view_portainer_container_label_search" model="ir.ui.view">
+        <field name="name">j_portainer.container.label.search</field>
+        <field name="model">j_portainer.container.label</field>
+        <field name="arch" type="xml">
+            <search string="Search Container Labels">
+                <field name="name"/>
+                <field name="value"/>
+                <field name="container_id"/>
+                <group expand="0" string="Group By">
+                    <filter string="Container" name="group_by_container" domain="[]" context="{'group_by': 'container_id'}"/>
+                    <filter string="Label Name" name="group_by_name" domain="[]" context="{'group_by': 'name'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

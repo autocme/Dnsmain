@@ -39,6 +39,9 @@ class PortainerContainer(models.Model):
     environment_id = fields.Integer('Environment ID', required=True)
     environment_name = fields.Char('Environment', required=True)
     
+    # One2many relationship to container labels
+    label_ids = fields.One2many('j_portainer.container.label', 'container_id', string='Container Labels')
+    
     def _get_api(self):
         """Get API client"""
         return self.env['j_portainer.api']
