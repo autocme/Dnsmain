@@ -79,7 +79,15 @@
 
                         <page string="Volumes" name="volumes">
                             <field name="volumes" invisible="1"/>
-                            <field name="get_formatted_volumes" widget="html"/>
+                            <field name="get_formatted_volumes" invisible="1"/>
+                            <field name="volume_ids">
+                                <tree editable="bottom">
+                                    <field name="container_path"/>
+                                    <field name="type"/>
+                                    <field name="name"/>
+                                    <field name="mode"/>
+                                </tree>
+                            </field>
                         </page>
 
                         <page string="Labels" name="labels">
