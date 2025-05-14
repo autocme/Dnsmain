@@ -83,7 +83,13 @@
                         </page>
 
                         <page string="Labels" name="labels">
-                            <field name="labels" widget="html" readonly="1"/>
+                            <field name="labels" invisible="1"/>
+                            <field name="label_ids">
+                                <tree editable="bottom">
+                                    <field name="name"/>
+                                    <field name="value"/>
+                                </tree>
+                            </field>
                         </page>
 
                         <!--                        <page string="Logs" name="logs">-->

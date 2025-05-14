@@ -716,14 +716,37 @@ class PortainerServer(models.Model):
                         'volumes': json.dumps(volumes_data),
                     }
 
+                    # Process container creation/update
                     if existing_container:
                         # Update existing container record
                         existing_container.write(container_data)
+                        container_record = existing_container
                         updated_count += 1
                     else:
                         # Create new container record
-                        self.env['j_portainer.container'].create(container_data)
+                        container_record = self.env['j_portainer.container'].create(container_data)
                         created_count += 1
+                        
+                    # Process container labels as separate records
+                    # First, remove existing labels for this container to avoid duplicates
+                    existing_labels = self.env['j_portainer.container.label'].search([
+                        ('container_id', '=', container_record.id)
+                    ])
+                    if existing_labels:
+                        existing_labels.unlink()
+                        
+                    # Create new label records
+                    labels_dict = container.get('Labels', {})
+                    label_records = []
+                    for label_name, label_value in labels_dict.items():
+                        label_records.append({
+                            'container_id': container_record.id,
+                            'name': label_name,
+                            'value': label_value,
+                        })
+                        
+                    if label_records:
+                        self.env['j_portainer.container.label'].create(label_records)
 
                     synced_container_ids.append(container_id)
                     container_count += 1
