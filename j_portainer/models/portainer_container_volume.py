@@ -68,3 +68,15 @@ class PortainerContainerVolume(models.Model):
                 volume.display_name = f"{volume.container_path} → host: {volume.name}"
             else:
                 volume.display_name = f"{volume.container_path} → {volume.type}: {volume.name}"
+                
+    def view_related_container(self):
+        """Open the related container form view"""
+        self.ensure_one()
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'j_portainer.container',
+            'res_id': self.container_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
