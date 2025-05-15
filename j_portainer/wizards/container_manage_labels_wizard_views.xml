@@ -17,7 +17,7 @@
                         <field name="environment_id" invisible="1"/>
                         <field name="environment_name" invisible="1"/>
                         <field name="operation" invisible="1"/>
-                        <field name="labels_json" style="min-height: 300px;"/>
+                        <field name="labels_json" widget="ace" style="min-height: 300px;"/>
                     </group>
                 </sheet>
                 <footer>
