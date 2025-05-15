@@ -28,7 +28,7 @@ class PortainerContainerLabel(models.Model):
             
     @api.model_create_multi
     def create(self, vals_list):
-        """Override create to sync new labels to Portainer"""
+        """Override create to sync new labels to Portainer immediately"""
         records = super(PortainerContainerLabel, self).create(vals_list)
         
         # Group records by container for efficiency
@@ -39,35 +39,48 @@ class PortainerContainerLabel(models.Model):
                 container_labels[container_id] = []
             container_labels[container_id].append(record)
             
-        # Sync labels for each container
+        # Sync labels for each container immediately
         for container_id, labels in container_labels.items():
-            self._sync_container_labels_to_portainer(labels[0].container_id)
+            container = labels[0].container_id
+            try:
+                self._sync_container_labels_to_portainer(container)
+                _logger.info(f"Successfully synced new labels to Portainer for container {container.name}")
+            except Exception as e:
+                _logger.error(f"Failed to sync new labels to Portainer for container {container.name}: {str(e)}")
             
         return records
         
     def write(self, vals):
-        """Override write to sync updated labels to Portainer"""
+        """Override write to sync updated labels to Portainer immediately"""
         result = super(PortainerContainerLabel, self).write(vals)
         
         # Get unique containers that need updating
         containers = self.mapped('container_id')
         
-        # Sync labels for each container
+        # Sync labels for each container immediately
         for container in containers:
-            self._sync_container_labels_to_portainer(container)
+            try:
+                self._sync_container_labels_to_portainer(container)
+                _logger.info(f"Successfully synced updated labels to Portainer for container {container.name}")
+            except Exception as e:
+                _logger.error(f"Failed to sync updated labels to Portainer for container {container.name}: {str(e)}")
             
         return result
         
     def unlink(self):
-        """Override unlink to sync deleted labels to Portainer"""
+        """Override unlink to sync deleted labels to Portainer immediately"""
         # Store containers before deletion
         containers = self.mapped('container_id')
         
         result = super(PortainerContainerLabel, self).unlink()
         
-        # Sync labels for each container
+        # Sync labels for each container immediately
         for container in containers:
-            self._sync_container_labels_to_portainer(container)
+            try:
+                self._sync_container_labels_to_portainer(container)
+                _logger.info(f"Successfully synced label deletion to Portainer for container {container.name}")
+            except Exception as e:
+                _logger.error(f"Failed to sync label deletion to Portainer for container {container.name}: {str(e)}")
             
         return result
         

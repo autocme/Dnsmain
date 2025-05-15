@@ -92,15 +92,13 @@
 
                         <page string="Labels" name="labels">
                             <div class="oe_button_box">
-                                <button name="action_manage_labels" string="Manage Labels" type="object" 
-                                        class="btn btn-primary" icon="fa-tags"/>
                                 <button name="sync_labels_to_portainer" string="Sync to Portainer" type="object" 
                                         class="btn btn-secondary" icon="fa-refresh"
                                         help="Force synchronization of labels to Portainer"/>
                             </div>
                             <field name="labels" invisible="1"/>
                             <field name="label_ids">
-                                <tree editable="bottom">
+                                <tree editable="both">
                                     <field name="name"/>
                                     <field name="value"/>
                                 </tree>
