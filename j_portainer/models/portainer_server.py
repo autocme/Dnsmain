@@ -835,6 +835,37 @@ class PortainerServer(models.Model):
                             
                     if network_records:
                         self.env['j_portainer.container.network'].create(network_records)
+                        
+                    # Process container environment variables
+                    # First, remove existing environment variables for this container to avoid duplicates
+                    existing_envs = self.env['j_portainer.container.env'].search([
+                        ('container_id', '=', container_record.id)
+                    ])
+                    if existing_envs:
+                        existing_envs.unlink()
+                        
+                    # Extract environment variables from container details
+                    env_vars = details.get('Config', {}).get('Env', [])
+                    env_records = []
+                    
+                    for env_var in env_vars:
+                        if '=' in env_var:
+                            name, value = env_var.split('=', 1)
+                            env_records.append({
+                                'container_id': container_record.id,
+                                'name': name,
+                                'value': value
+                            })
+                        else:
+                            # Handle case where there's no value
+                            env_records.append({
+                                'container_id': container_record.id,
+                                'name': env_var,
+                                'value': False
+                            })
+                            
+                    if env_records:
+                        self.env['j_portainer.container.env'].create(env_records)
 
                     synced_container_ids.append(container_id)
                     container_count += 1
