@@ -66,6 +66,7 @@ class PortainerContainer(models.Model):
     volume_ids = fields.One2many('j_portainer.container.volume', 'container_id', string='Volume Mappings')
     network_ids = fields.One2many('j_portainer.container.network', 'container_id', string='Connected Networks')
     env_ids = fields.One2many('j_portainer.container.env', 'container_id', string='Environment Variables')
+    port_ids = fields.One2many('j_portainer.container.port', 'container_id', string='Port Mappings')
     
     def _get_api(self):
         """Get API client"""
@@ -573,6 +574,45 @@ class PortainerContainer(models.Model):
                 'type': 'success',
             }
         }
+        
+
+    def sync_port_mappings(self):
+        """Synchronize container port mappings with Portainer
+        
+        Note: In Docker, updating port mappings requires recreating the container.
+        This function will notify the user about the need to recreate the container.
+        """
+        self.ensure_one()
+        
+        try:
+            # Format the port mappings for display in a message
+            port_list = []
+            for port in self.port_ids:
+                if port.host_port:
+                    if port.host_ip:
+                        port_list.append(f"{port.host_ip}:{port.host_port}->{port.container_port}/{port.protocol}")
+                    else:
+                        port_list.append(f"{port.host_port}->{port.container_port}/{port.protocol}")
+                else:
+                    port_list.append(f"{port.container_port}/{port.protocol} (not published)")
+            
+            port_str = "\n".join(port_list) if port_list else "No port mappings defined"
+            
+            # For now, just show a notification that this would require container recreation
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Port Mappings Ready to Update'),
+                    'message': _('Container %s would need to be recreated to update port mappings. Current mappings:\n%s') % (self.name, port_str),
+                    'sticky': True,
+                    'type': 'warning',
+                }
+            }
+                
+        except Exception as e:
+            _logger.error(f"Error synchronizing port mappings for container {self.name}: {str(e)}")
+            raise UserError(_("Error synchronizing port mappings: %s") % str(e))
 
     def remove(self, force=False, volumes=False):
         """Remove the container

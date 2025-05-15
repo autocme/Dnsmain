@@ -36,6 +36,7 @@
         'views/portainer_container_volume_views.xml',
         'views/portainer_container_network_views.xml',
         'views/portainer_container_env_views.xml',
+        'views/portainer_container_port_views.xml',
         'views/portainer_image_views.xml',
         'views/portainer_volume_views.xml',
         'views/portainer_network_views.xml',
