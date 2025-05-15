@@ -65,6 +65,7 @@ class PortainerContainer(models.Model):
     label_ids = fields.One2many('j_portainer.container.label', 'container_id', string='Container Labels')
     volume_ids = fields.One2many('j_portainer.container.volume', 'container_id', string='Volume Mappings')
     network_ids = fields.One2many('j_portainer.container.network', 'container_id', string='Connected Networks')
+    env_ids = fields.One2many('j_portainer.container.env', 'container_id', string='Environment Variables')
     
     def _get_api(self):
         """Get API client"""
@@ -443,6 +444,135 @@ class PortainerContainer(models.Model):
         except Exception as e:
             _logger.error(f"Error updating restart policy for container {self.name}: {str(e)}")
             raise UserError(_("Error updating restart policy: %s") % str(e))
+            
+    def sync_env_vars(self):
+        """Synchronize container environment variables with Portainer"""
+        self.ensure_one()
+        
+        try:
+            api = self._get_api()
+            
+            # Inspect container to get current environment variables
+            inspect_result = api.container_action(
+                self.server_id.id, self.environment_id, self.container_id, 'inspect')
+                
+            if not inspect_result or isinstance(inspect_result, dict) and inspect_result.get('error'):
+                error_msg = inspect_result.get('error', _("Failed to inspect container")) if isinstance(inspect_result, dict) else _("Failed to inspect container")
+                raise UserError(error_msg)
+                
+            # Extract environment variables
+            env_vars = inspect_result.get('Config', {}).get('Env', [])
+            
+            # First, remove existing env vars to avoid duplicates
+            self.env_ids.unlink()
+            
+            # Create new env records
+            env_records = []
+            for env_var in env_vars:
+                if '=' in env_var:
+                    name, value = env_var.split('=', 1)
+                    env_records.append({
+                        'container_id': self.id,
+                        'name': name,
+                        'value': value
+                    })
+                else:
+                    # Handle case where there's no value
+                    env_records.append({
+                        'container_id': self.id,
+                        'name': env_var,
+                        'value': False
+                    })
+                
+            if env_records:
+                self.env['j_portainer.container.env'].create(env_records)
+                
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Environment Variables Synchronized'),
+                    'message': _('Environment variables for container %s synchronized successfully') % self.name,
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+                
+        except Exception as e:
+            _logger.error(f"Error synchronizing environment variables for container {self.name}: {str(e)}")
+            raise UserError(_("Error synchronizing environment variables: %s") % str(e))
+            
+    def update_env_vars(self):
+        """Update container environment variables in Portainer"""
+        self.ensure_one()
+        
+        try:
+            api = self._get_api()
+            
+            # First get current container configuration
+            inspect_result = api.container_action(
+                self.server_id.id, self.environment_id, self.container_id, 'inspect')
+                
+            if not inspect_result or isinstance(inspect_result, dict) and inspect_result.get('error'):
+                error_msg = inspect_result.get('error', _("Failed to inspect container")) if isinstance(inspect_result, dict) else _("Failed to inspect container")
+                raise UserError(error_msg)
+                
+            # We need to recreate the container with the new environment variables
+            # This is necessary because Docker doesn't allow updating env vars on running containers
+                
+            # Extract necessary data from current container
+            config = inspect_result.get('Config', {})
+            host_config = inspect_result.get('HostConfig', {})
+            network_config = inspect_result.get('NetworkSettings', {})
+            
+            # Prepare environment variables
+            env_vars = []
+            for env in self.env_ids:
+                if env.value:
+                    env_vars.append(f"{env.name}={env.value}")
+                else:
+                    env_vars.append(env.name)
+                    
+            # Warning: This is a simplified implementation that doesn't handle all container parameters
+            # A full implementation would need to extract and reapply all container settings
+            
+            # For now we'll simply show a message about what would be updated
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Environment Variables Ready to Update'),
+                    'message': _('Container %s would need to be recreated to update environment variables. This is not yet implemented.') % self.name,
+                    'sticky': True,
+                    'type': 'warning',
+                }
+            }
+                
+        except Exception as e:
+            _logger.error(f"Error updating environment variables for container {self.name}: {str(e)}")
+            raise UserError(_("Error updating environment variables: %s") % str(e))
+            
+    def create_new_env(self):
+        """Create a new environment variable"""
+        self.ensure_one()
+        
+        # Create the environment variable with empty values for user to fill
+        self.env['j_portainer.container.env'].create({
+            'container_id': self.id,
+            'name': '',
+            'value': ''
+        })
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Environment Variable Created'),
+                'message': _('New environment variable has been created.'),
+                'sticky': False,
+                'type': 'success',
+            }
+        }
     
     def remove(self, force=False, volumes=False):
         """Remove the container
