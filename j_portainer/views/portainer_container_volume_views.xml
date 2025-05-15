@@ -9,12 +9,14 @@
                 <sheet>
                     <group>
                         <group>
-                            <field name="type"/>
                             <field name="container_path" placeholder="Path inside the container (e.g., /app/data)"/>
-                            <field name="volume_id" options="{'no_create': True}" 
-                                  invisible="type != 'volume'" required="type == 'volume'"/>
-                            <field name="name" invisible="type == 'volume'" required="type == 'bind'"
-                                  placeholder="Host path for bind mount (e.g., /host/data)"/>
+                            <field name="type"/>
+                            <field name="volume_id" options="{'no_create': True}"
+                                   invisible="type != 'volume'" required="type == 'volume'"/>
+                            <field name="name" invisible="type != 'bind'"
+                                   placeholder="Host path for bind mount (e.g., /host/data)"/>
+                            <field name="environment_id" invisible="1"/>
+                            <field name="server_id" invisible="1"/>
                         </group>
                         <group>
                             <field name="mode"/>
@@ -53,7 +55,8 @@
                 <field name="container_id"/>
                 <field name="type"/>
                 <group expand="0" string="Group By">
-                    <filter string="Container" name="group_by_container" domain="[]" context="{'group_by': 'container_id'}"/>
+                    <filter string="Container" name="group_by_container" domain="[]"
+                            context="{'group_by': 'container_id'}"/>
                     <filter string="Volume Type" name="group_by_type" domain="[]" context="{'group_by': 'type'}"/>
                 </group>
             </search>
