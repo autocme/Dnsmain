@@ -38,6 +38,19 @@
                     </group>
                     
                     <notebook>
+                        <page string="Containers" name="containers">
+                            <field name="connected_container_ids">
+                                <tree>
+                                    <field name="container_id"/>
+                                    <field name="ip_address"/>
+                                    <field name="gateway"/>
+                                    <field name="mac_address"/>
+                                    <button name="disconnect_network" string="Disconnect" type="object" 
+                                            icon="fa-unlink" confirm="Are you sure you want to disconnect this container from the network?"/>
+                                </tree>
+                            </field>
+                        </page>
+                        
                         <page string="IPAM" name="ipam">
                             <field name="ipam_config" widget="html" readonly="1"/>
                         </page>
