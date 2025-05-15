@@ -35,6 +35,9 @@ class PortainerNetwork(models.Model):
     environment_id = fields.Integer('Environment ID', required=True)
     environment_name = fields.Char('Environment', required=True)
     
+    # Related containers connected to this network
+    connected_container_ids = fields.One2many('j_portainer.container.network', 'network_id', string='Connected Containers')
+    
     def _get_api(self):
         """Get API client"""
         return self.env['j_portainer.api']
