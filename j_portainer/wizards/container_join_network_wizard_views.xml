@@ -13,8 +13,6 @@
                         <field name="environment_id" invisible="1"/>
                         <field name="environment_name" invisible="1"/>
                         <field name="network_id" options="{'no_create': True}"/>
-                        <field name="ip_address" placeholder="e.g., 172.20.0.2"/>
-                        <field name="aliases" placeholder="e.g., web, app, service1"/>
                     </group>
                     <div class="alert alert-info" role="alert">
                         <p>Connecting a container to a network allows it to communicate with other containers on the same network.</p>

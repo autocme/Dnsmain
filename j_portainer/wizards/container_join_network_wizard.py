@@ -21,13 +21,7 @@ class ContainerJoinNetworkWizard(models.TransientModel):
     network_id = fields.Many2one('j_portainer.network', string='Network', required=True,
                                domain="[('server_id', '=', server_id), ('environment_id', '=', environment_id)]")
     
-    # Optional IPv4 address
-    ip_address = fields.Char('IPv4 Address', 
-                           help="Optional IPv4 address (e.g., 172.20.0.2). Leave empty for automatic assignment.")
-    
-    # Optional aliases
-    aliases = fields.Char('Aliases',
-                        help="Optional comma-separated list of network-scoped aliases for the container")
+    # Fields for IP address and aliases have been removed as per requirements
     
     def action_join_network(self):
         """Join the container to the selected network"""
@@ -43,16 +37,8 @@ class ContainerJoinNetworkWizard(models.TransientModel):
             raise UserError(_("This container is already connected to network '%s'") % self.network_id.name)
         
         try:
-            # Prepare network configuration
+            # Network configuration is empty as IP and aliases have been removed
             config = {}
-            if self.ip_address:
-                config['IPv4Address'] = self.ip_address
-                
-            if self.aliases:
-                # Split comma-separated aliases into a list
-                aliases_list = [alias.strip() for alias in self.aliases.split(',') if alias.strip()]
-                if aliases_list:
-                    config['Aliases'] = aliases_list
             
             # Call API to connect container to network
             api = self.env['j_portainer.api']
@@ -65,11 +51,10 @@ class ContainerJoinNetworkWizard(models.TransientModel):
             )
             
             if result:
-                # Create network connection record
+                # Create network connection record (without ip_address)
                 self.env['j_portainer.container.network'].create({
                     'container_id': self.container_id.id,
                     'network_id': self.network_id.id,
-                    'ip_address': self.ip_address,
                 })
                 
                 return {
