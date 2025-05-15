@@ -75,7 +75,7 @@
                                    decoration-primary="restart_policy == 'unless-stopped'"/>
                             <button name="update_restart_policy" string="Update Restart Policy" 
                                     type="object" icon="fa-refresh" class="oe_highlight"
-                                    attrs="{'invisible': [('state', '=', 'running')]}"/>
+                                    invisible="state == 'running'"/>
                         </group>
                     </group>
 
