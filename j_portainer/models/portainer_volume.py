@@ -28,6 +28,16 @@ class PortainerVolume(models.Model):
     environment_id = fields.Integer('Environment ID', required=True)
     environment_name = fields.Char('Environment', required=True)
     
+    # Relation with containers using this volume
+    container_volume_ids = fields.One2many('j_portainer.container.volume', 'volume_name_id', string='Container Mappings')
+    container_count = fields.Integer('Container Count', compute='_compute_container_count')
+    
+    @api.depends('container_volume_ids')
+    def _compute_container_count(self):
+        """Compute the number of containers using this volume"""
+        for record in self:
+            record.container_count = len(record.container_volume_ids)
+    
     def _get_api(self):
         """Get API client"""
         return self.env['j_portainer.api']

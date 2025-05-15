@@ -16,7 +16,7 @@
                     </group>
                     <div class="alert alert-info" role="alert">
                         <p>Connecting a container to a network allows it to communicate with other containers on the same network.</p>
-                        <p>Leave IP Address empty for automatic IP assignment.</p>
+                        <p>IP address will be automatically assigned by Docker.</p>
                     </div>
                 </sheet>
                 <footer>
