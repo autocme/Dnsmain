@@ -145,6 +145,20 @@ class PortainerAPI(models.AbstractModel):
             
             return response.status_code in [200, 201, 204]
             
+        elif action == 'update':
+            # Update container configuration
+            update_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/update'
+            
+            # Prepare update data
+            update_data = params if params else {}
+            
+            response = server._make_api_request(update_endpoint, 'POST', data=update_data)
+            
+            if response.status_code in [200, 201, 204]:
+                return response.json() if response.text else {'success': True}
+            else:
+                return {'error': f'Failed to update container: {response.text}'}
+            
         elif action == 'inspect':
             # Get detailed container information
             inspect_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/json'
