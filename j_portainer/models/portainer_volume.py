@@ -29,7 +29,7 @@ class PortainerVolume(models.Model):
     environment_name = fields.Char('Environment', required=True)
     
     # Relation with containers using this volume
-    container_volume_ids = fields.One2many('j_portainer.container.volume', 'volume_name_id', string='Container Mappings')
+    container_volume_ids = fields.One2many('j_portainer.container.volume', 'volume_id', string='Container Mappings')
     container_count = fields.Integer('Container Count', compute='_compute_container_count', store=True)
     
     @api.depends('container_volume_ids')
