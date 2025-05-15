@@ -13,6 +13,22 @@ class PortainerContainer(models.Model):
     _description = 'Portainer Container'
     _order = 'name'
     
+    def write(self, vals):
+        """Override write to handle restart policy changes"""
+        result = super(PortainerContainer, self).write(vals)
+        
+        # If restart policy is changed, update it in Portainer
+        if 'restart_policy' in vals:
+            for record in self:
+                try:
+                    record.update_restart_policy()
+                except Exception as e:
+                    _logger.warning(f"Failed to update restart policy for container {record.name}: {str(e)}")
+                    # We don't want to block the write operation if the API call fails
+                    pass
+                    
+        return result
+    
     name = fields.Char('Name', required=True)
     container_id = fields.Char('Container ID', required=True)
     image = fields.Char('Image', required=True)
@@ -32,6 +48,12 @@ class PortainerContainer(models.Model):
     labels = fields.Text('Labels')
     details = fields.Text('Details')
     volumes = fields.Text('Volumes')
+    restart_policy = fields.Selection([
+        ('no', 'Never'),
+        ('always', 'Always'),
+        ('on-failure', 'On Failure'),
+        ('unless-stopped', 'Unless Stopped')
+    ], string='Restart Policy', default='no', help="Container restart policy")
     get_formatted_volumes = fields.Html('Formatted Volumes', compute='_compute_formatted_volumes')
     get_formatted_ports = fields.Html('Formatted Ports', compute='_compute_formatted_ports')
     
@@ -376,6 +398,51 @@ class PortainerContainer(models.Model):
         except Exception as e:
             _logger.error(f"Error killing container {self.name}: {str(e)}")
             raise UserError(_("Error killing container: %s") % str(e))
+            
+    def update_restart_policy(self):
+        """Update the container restart policy in Portainer"""
+        self.ensure_one()
+        
+        try:
+            api = self._get_api()
+            
+            # Prepare restart policy data
+            restart_policy = {
+                'Name': self.restart_policy
+            }
+            
+            # For on-failure policy, we can add MaximumRetryCount
+            # In this implementation, we default to 3 retries, but this could be made configurable
+            if self.restart_policy == 'on-failure':
+                restart_policy['MaximumRetryCount'] = 3
+                
+            # Prepare update data for container
+            update_data = {
+                'RestartPolicy': restart_policy
+            }
+            
+            # Call the API to update the container
+            result = api.container_action(
+                self.server_id.id, self.environment_id, self.container_id, 'update', 
+                params=update_data)
+                
+            if result and (not isinstance(result, dict) or (isinstance(result, dict) and not result.get('error'))):
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Restart Policy Updated'),
+                        'message': _('Restart policy for container %s updated successfully') % self.name,
+                        'sticky': False,
+                        'type': 'success',
+                    }
+                }
+            else:
+                error_msg = result.get('error', _("Failed to update restart policy")) if isinstance(result, dict) else _("Failed to update restart policy")
+                raise UserError(error_msg)
+        except Exception as e:
+            _logger.error(f"Error updating restart policy for container {self.name}: {str(e)}")
+            raise UserError(_("Error updating restart policy: %s") % str(e))
     
     def remove(self, force=False, volumes=False):
         """Remove the container

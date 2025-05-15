@@ -691,6 +691,16 @@ class PortainerServer(models.Model):
                     # Get container state 
                     state = details.get('State', {})
                     status = state.get('Status', 'unknown')
+                    
+                    # Get container restart policy
+                    restart_policy = 'no'  # Default to 'no' (Never)
+                    host_config = details.get('HostConfig', {})
+                    if host_config:
+                        restart_policy_data = host_config.get('RestartPolicy', {})
+                        if restart_policy_data:
+                            restart_policy_name = restart_policy_data.get('Name', '')
+                            if restart_policy_name:
+                                restart_policy = restart_policy_name
 
                     # Extract volume information from container details
                     volumes_data = []
@@ -710,6 +720,7 @@ class PortainerServer(models.Model):
                         'created': self._safe_parse_timestamp(container.get('Created', 0)),
                         'status': status,
                         'state': 'running' if state.get('Running', False) else 'stopped',
+                        'restart_policy': restart_policy,
                         'ports': json.dumps(container.get('Ports', [])),
                         'labels': json.dumps(container.get('Labels', {})),
                         'details': json.dumps(details, indent=2) if details else '',

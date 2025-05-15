@@ -68,6 +68,14 @@
                                    decoration-danger="state in ['stopped', 'exited', 'dead']"
                                    readonly="1"/>
                             <field name="status" readonly="1"/>
+                            <field name="restart_policy" widget="badge"
+                                   decoration-info="restart_policy == 'no'"
+                                   decoration-success="restart_policy == 'always'"
+                                   decoration-warning="restart_policy == 'on-failure'"
+                                   decoration-primary="restart_policy == 'unless-stopped'"/>
+                            <button name="update_restart_policy" string="Update Restart Policy" 
+                                    type="object" icon="fa-refresh" class="oe_highlight"
+                                    attrs="{'invisible': [('state', '=', 'running')]}"/>
                         </group>
                     </group>
 
@@ -143,13 +151,18 @@
         <field name="name">j_portainer.container.tree</field>
         <field name="model">j_portainer.container</field>
         <field name="arch" type="xml">
-            <tree string="Containers">
+            <tree string="Containers" default_group_by="restart_policy">
                 <field name="name"/>
                 <field name="state" widget="badge"
                        decoration-success="state == 'running'"
                        decoration-warning="state == 'paused'"
                        decoration-danger="state in ['stopped', 'exited', 'dead']"/>
                 <field name="image"/>
+                <field name="restart_policy" widget="badge"
+                       decoration-info="restart_policy == 'no'"
+                       decoration-success="restart_policy == 'always'"
+                       decoration-warning="restart_policy == 'on-failure'"
+                       decoration-primary="restart_policy == 'unless-stopped'"/>
                 <field name="server_id"/>
                 <field name="environment_name"/>
                 <field name="created"/>
@@ -162,6 +175,9 @@
                 <button name="restart" string="Restart" type="object"
                         icon="fa-refresh"
                         invisible="state != 'running'"/>
+                <button name="update_restart_policy" string="Update Restart Policy" type="object"
+                        icon="fa-recycle"
+                        invisible="state == 'running'"/>
             </tree>
         </field>
     </record>
@@ -181,11 +197,17 @@
                 <filter string="Stopped" name="stopped" domain="[('state', '=', 'stopped')]"/>
                 <filter string="Paused" name="paused" domain="[('state', '=', 'paused')]"/>
                 <filter string="Exited" name="exited" domain="[('state', '=', 'exited')]"/>
+                <separator/>
+                <filter string="Never Restart" name="restart_never" domain="[('restart_policy', '=', 'no')]"/>
+                <filter string="Always Restart" name="restart_always" domain="[('restart_policy', '=', 'always')]"/>
+                <filter string="Restart On Failure" name="restart_on_failure" domain="[('restart_policy', '=', 'on-failure')]"/>
+                <filter string="Restart Unless Stopped" name="restart_unless_stopped" domain="[('restart_policy', '=', 'unless-stopped')]"/>
                 <group expand="0" string="Group By">
                     <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
                     <filter string="Environment" name="group_by_environment" domain="[]"
                             context="{'group_by': 'environment_name'}"/>
                     <filter string="State" name="group_by_state" domain="[]" context="{'group_by': 'state'}"/>
+                    <filter string="Restart Policy" name="group_by_restart_policy" domain="[]" context="{'group_by': 'restart_policy'}"/>
                     <filter string="Image" name="group_by_image" domain="[]" context="{'group_by': 'image'}"/>
                 </group>
             </search>
