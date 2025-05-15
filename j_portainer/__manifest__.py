@@ -49,7 +49,6 @@
         'wizards/image_remove_wizard_view.xml',
         'wizards/template_deploy_wizard_view.xml',
         'wizards/container_join_network_wizard_views.xml',
-        'wizards/container_manage_labels_wizard_views.xml',
         'views/menu_views.xml',
     ],
     'demo': [],
