@@ -81,8 +81,20 @@
 
                     <notebook>
                         <page string="Ports" name="ports">
+                            <div class="oe_button_box">
+                                <button name="sync_port_mappings" string="Sync Port Mappings" type="object"
+                                       class="btn-secondary" icon="fa-refresh"/>
+                            </div>
                             <field name="ports" invisible="1"/>
-                            <field name="get_formatted_ports" widget="html"/>
+                            <field name="get_formatted_ports" widget="html" invisible="1"/>
+                            <field name="port_ids">
+                                <tree editable="bottom">
+                                    <field name="container_port"/>
+                                    <field name="host_port"/>
+                                    <field name="protocol"/>
+                                    <field name="host_ip"/>
+                                </tree>
+                            </field>
                         </page>
 
                         <page string="Volumes" name="volumes">

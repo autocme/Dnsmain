@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Container Port Form View -->
+    <record id="view_portainer_container_port_form" model="ir.ui.view">
+        <field name="name">j_portainer.container.port.form</field>
+        <field name="model">j_portainer.container.port</field>
+        <field name="arch" type="xml">
+            <form string="Container Port Mapping">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="container_port"/>
+                            <field name="host_port"/>
+                            <field name="protocol"/>
+                        </group>
+                        <group>
+                            <field name="host_ip"/>
+                            <field name="container_id" options="{'no_create': True}"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Container Port Tree View -->
+    <record id="view_portainer_container_port_tree" model="ir.ui.view">
+        <field name="name">j_portainer.container.port.tree</field>
+        <field name="model">j_portainer.container.port</field>
+        <field name="arch" type="xml">
+            <tree string="Container Port Mappings">
+                <field name="container_port"/>
+                <field name="host_port"/>
+                <field name="protocol"/>
+                <field name="host_ip"/>
+                <field name="container_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Container Port Search View -->
+    <record id="view_portainer_container_port_search" model="ir.ui.view">
+        <field name="name">j_portainer.container.port.search</field>
+        <field name="model">j_portainer.container.port</field>
+        <field name="arch" type="xml">
+            <search string="Search Container Port Mappings">
+                <field name="container_port"/>
+                <field name="host_port"/>
+                <field name="protocol"/>
+                <field name="container_id"/>
+                <group expand="0" string="Group By">
+                    <filter string="Container" name="group_by_container" domain="[]" context="{'group_by': 'container_id'}"/>
+                    <filter string="Protocol" name="group_by_protocol" domain="[]" context="{'group_by': 'protocol'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

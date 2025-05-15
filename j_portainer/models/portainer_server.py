@@ -866,6 +866,37 @@ class PortainerServer(models.Model):
                             
                     if env_records:
                         self.env['j_portainer.container.env'].create(env_records)
+                        
+                    # Process container port mappings as separate records
+                    # First, remove existing port mappings for this container to avoid duplicates
+                    existing_ports = self.env['j_portainer.container.port'].search([
+                        ('container_id', '=', container_record.id)
+                    ])
+                    if existing_ports:
+                        existing_ports.unlink()
+                        
+                    # Extract port mappings from container details
+                    ports_data = container.get('Ports', [])
+                    port_records = []
+                    
+                    for port in ports_data:
+                        # Only process if we have container port information
+                        container_port = port.get('PrivatePort')
+                        if container_port:
+                            host_port = port.get('PublicPort')
+                            protocol = port.get('Type', 'tcp').lower()
+                            host_ip = port.get('IP', '')
+                            
+                            port_records.append({
+                                'container_id': container_record.id,
+                                'container_port': container_port,
+                                'host_port': host_port or False,  # Use False if no host port (not published)
+                                'protocol': protocol,
+                                'host_ip': host_ip,
+                            })
+                    
+                    if port_records:
+                        self.env['j_portainer.container.port'].create(port_records)
 
                     synced_container_ids.append(container_id)
                     container_count += 1
