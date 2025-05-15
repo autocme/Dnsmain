@@ -547,9 +547,7 @@ class PortainerContainer(models.Model):
             
         # Perform sync
         try:
-            import logging
-            _logger = logging.getLogger(__name__)
-            
+
             # First, log the labels being synced for debugging
             label_dict = {label.name: label.value for label in labels}
             _logger.info(f"Syncing labels for container {self.name}: {label_dict}")
@@ -558,9 +556,7 @@ class PortainerContainer(models.Model):
             result = labels[0]._sync_container_labels_to_portainer(self)
             
             if result:
-                # Verify that the container ID in Odoo is still valid
-                self.refresh()
-                    
+
                 # Refresh the container record from Portainer to capture any changes in the container ID
                 refreshed = self.action_refresh()
                 if isinstance(refreshed, dict) and refreshed.get('params', {}).get('type') == 'danger':
