@@ -38,7 +38,7 @@
                         <group string="Advanced Options">
                             <notebook>
                                 <page string="Environment Variables" name="env_vars">
-                                    <field name="env_vars" placeholder="KEY=value&#10;ANOTHER_KEY=value"/>
+                                    <field name="env_vars" placeholder="KEY=value&#10;ANOTHER_KEY=value" widget="CodeEditor" options="{'language': 'properties'}"/>
                                     <div class="text-muted mt-2">
                                         Format: One environment variable per line in KEY=value format
                                     </div>
@@ -77,7 +77,7 @@
                     <!-- Show Compose file content if available -->
                     <div invisible="compose_file_content == False or template_type != '2'">
                         <h4>Deployed Stack Compose File:</h4>
-                        <field name="compose_file_content" readonly="1"/>
+                        <field name="compose_file_content" widget="CodeEditor" options="{'language': 'yaml'}" readonly="1"/>
                     </div>
                 </div>
                 
