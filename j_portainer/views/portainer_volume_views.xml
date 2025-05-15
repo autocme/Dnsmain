@@ -36,6 +36,18 @@
                     </group>
                     
                     <notebook>
+                        <page string="Containers" name="containers" attrs="{'invisible': [('container_count', '=', 0)]}">
+                            <field name="container_count" invisible="1"/>
+                            <field name="container_volume_ids" readonly="1">
+                                <tree>
+                                    <field name="container_id"/>
+                                    <field name="container_path"/>
+                                    <field name="mode"/>
+                                    <button name="container_id" string="View Container" type="object" icon="fa-external-link"/>
+                                </tree>
+                            </field>
+                        </page>
+                        
                         <page string="Labels" name="labels">
                             <field name="labels" widget="html" readonly="1"/>
                         </page>
@@ -62,6 +74,7 @@
                 <field name="environment_name"/>
                 <field name="created"/>
                 <field name="in_use"/>
+                <field name="container_count" string="Containers"/>
                 <button name="action_remove" string="Remove" type="object" 
                         icon="fa-trash" 
                         invisible="in_use == True"/>
@@ -82,6 +95,9 @@
                 <separator/>
                 <filter string="In Use" name="in_use" domain="[('in_use', '=', True)]"/>
                 <filter string="Not In Use" name="not_in_use" domain="[('in_use', '=', False)]"/>
+                <separator/>
+                <filter string="Has Containers" name="has_containers" domain="[('container_count', '>', 0)]"/>
+                <filter string="No Containers" name="no_containers" domain="[('container_count', '=', 0)]"/>
                 <group expand="0" string="Group By">
                     <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
                     <filter string="Environment" name="group_by_environment" domain="[]" context="{'group_by': 'environment_name'}"/>

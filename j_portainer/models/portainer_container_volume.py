@@ -25,6 +25,30 @@ class PortainerContainerVolume(models.Model):
     
     name = fields.Char('Volume Name/Source', required=True, 
                      help="Name of the volume for named volumes, or path for bind mounts")
+                     
+    # Relation to actual volume object (only for type='volume')
+    volume_name_id = fields.Many2one('j_portainer.volume', string='Volume',
+                                  domain="[('server_id', '=', server_id), ('name', '=', name)]",
+                                  compute='_compute_volume_name_id', store=True)
+    server_id = fields.Many2one(related='container_id.server_id', string='Server', store=True)
+    environment_id = fields.Integer(related='container_id.environment_id', string='Environment ID', store=True)
+    
+    @api.depends('name', 'type', 'container_id.server_id', 'container_id.environment_id')
+    def _compute_volume_name_id(self):
+        """Compute the related volume record based on the name, server, and environment"""
+        for record in self:
+            # Only link to volume records for named volumes (not bind mounts, tmpfs, etc.)
+            if record.type == 'volume' and record.name and record.container_id and record.container_id.server_id:
+                # Find matching volume
+                volume = self.env['j_portainer.volume'].search([
+                    ('name', '=', record.name),
+                    ('server_id', '=', record.container_id.server_id.id),
+                    ('environment_id', '=', record.container_id.environment_id)
+                ], limit=1)
+                
+                record.volume_name_id = volume.id if volume else False
+            else:
+                record.volume_name_id = False
     container_path = fields.Char('Container Path', required=True,
                                help="Path inside the container where the volume is mounted")
     mode = fields.Char('Access Mode', default='rw',
