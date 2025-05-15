@@ -87,9 +87,9 @@
 
                         <page string="Volumes" name="volumes">
                             <div class="oe_button_box">
-                                <button name="create_new_volume" string="Add Volume" type="object" 
-                                        class="btn btn-secondary" icon="fa-plus"
-                                        help="Add a new volume mapping"/>
+<!--                                <button name="create_new_volume" string="Add Volume" type="object" -->
+<!--                                        class="btn btn-secondary" icon="fa-plus"-->
+<!--                                        help="Add a new volume mapping"/>-->
                             </div>
                             <field name="volumes" invisible="1"/>
                             <field name="get_formatted_volumes" invisible="1"/>

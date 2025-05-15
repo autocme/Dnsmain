@@ -65,9 +65,9 @@
     </record>
 
     <!-- Add Environment Variables to J_Portainer menu -->
-    <menuitem id="menu_portainer_container_env"
-              name="Environment Variables"
-              parent="j_portainer.menu_portainer_resources"
-              action="action_portainer_container_env"
-              sequence="55"/>
+<!--    <menuitem id="menu_portainer_container_env"-->
+<!--              name="Environment Variables"-->
+<!--              parent="j_portainer.menu_portainer_resources"-->
+<!--              action="action_portainer_container_env"-->
+<!--              sequence="55"/>-->
 </odoo>

@@ -12,16 +12,16 @@ class PortainerContainerVolume(models.Model):
     _order = 'container_path'
     
     container_id = fields.Many2one('j_portainer.container', string='Container',
-                                  required=True, ondelete='cascade', index=True)
+                                  required=True, readonly=True, ondelete='cascade', index=True)
     
     # Volume mapping information
     type = fields.Selection([
-        ('volume', 'Named Volume'),
-        ('bind', 'Bind Mount')
+        ('volume', 'Volume'),
+        ('bind', 'Bind')
     ], string='Type', required=True, default='volume')
     
-    name = fields.Char('Volume Name/Source', 
-                     help="Name of the volume for named volumes, or path for bind mounts")
+    name = fields.Char('Path On Host',
+                     help="Name of path for bind mounts")
                      
     # Direct volume selection for type='volume'
     volume_id = fields.Many2one('j_portainer.volume', string='Volume',
