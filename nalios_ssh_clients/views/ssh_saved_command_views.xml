@@ -51,7 +51,7 @@
                     </group>
                     <notebook>
                         <page string="Command" name="command">
-                            <field name="command" widget="ace" options="{'mode': 'sh'}" placeholder="Enter your command here..."/>
+                            <field name="command" placeholder="Enter your command here..."/>
                         </page>
                         <page string="Description" name="description">
                             <field name="description" placeholder="Add a description of what this command does..."/>
