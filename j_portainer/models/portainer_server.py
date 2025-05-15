@@ -774,9 +774,7 @@ class PortainerServer(models.Model):
                     for mount in mounts:
                         # Determine volume type
                         volume_type = mount.get('Type', 'volume').lower()
-                        if volume_type not in ['volume', 'bind', 'tmpfs', 'npipe']:
-                            volume_type = 'other'
-                            
+
                         # Get source/name
                         if volume_type == 'volume':
                             # For named volumes, extract the volume name
@@ -794,7 +792,7 @@ class PortainerServer(models.Model):
                             'mode': mount.get('Mode', 'rw'),
                             'driver': mount.get('Driver', ''),
                         })
-                        
+
                     if volume_records:
                         self.env['j_portainer.container.volume'].create(volume_records)
                         

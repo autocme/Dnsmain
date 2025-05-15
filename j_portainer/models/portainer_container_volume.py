@@ -17,7 +17,7 @@ class PortainerContainerVolume(models.Model):
     # Volume mapping information
     type = fields.Selection([
         ('volume', 'Volume'),
-        ('bind', 'Bind')
+        ('bind', 'Bind'),
     ], string='Type', required=True, default='volume')
     
     name = fields.Char('Path On Host',
@@ -49,7 +49,8 @@ class PortainerContainerVolume(models.Model):
                                help="Path inside the container where the volume is mounted")
     mode = fields.Selection([
         ('rw', 'Writable'),
-        ('ro', 'Read-only')
+        ('ro', 'Read-only'),
+        ('z', 'z'),
     ], string='Access Mode', default='rw',
         help="Access mode of the volume or bind mount")
     
