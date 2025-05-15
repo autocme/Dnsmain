@@ -123,9 +123,6 @@
 
                         <page string="Labels" name="labels">
                             <div class="oe_button_box">
-                                <button name="sync_labels_to_portainer" string="Sync to Portainer" type="object" 
-                                        class="btn btn-secondary" icon="fa-refresh"
-                                        help="Force synchronization of labels to Portainer"/>
                             </div>
                             <field name="labels" invisible="1"/>
                             <field name="label_ids">
@@ -136,17 +133,11 @@
                             </field>
                         </page>
                         
-                        <page string="Environment Variables" name="env_vars">
+                        <page string="Env" name="env_vars">
                             <div class="oe_button_box">
                                 <button name="sync_env_vars" string="Sync Environment Variables" type="object" 
                                         class="btn btn-secondary" icon="fa-refresh"
                                         help="Refresh environment variables from Portainer"/>
-                                <button name="update_env_vars" string="Update in Portainer" type="object" 
-                                        class="btn btn-primary" icon="fa-upload"
-                                        help="Update environment variables in Portainer"/>
-                                <button name="create_new_env" string="Add Env Variable" type="object" 
-                                        class="btn btn-secondary" icon="fa-plus"
-                                        help="Add a new environment variable"/>
                             </div>
                             <field name="env_ids" context="{'hide_container_id': True}">
                                 <tree editable="bottom">

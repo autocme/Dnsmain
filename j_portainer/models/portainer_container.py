@@ -463,7 +463,7 @@ class PortainerContainer(models.Model):
                 
             # Extract environment variables
             env_vars = inspect_result.get('Config', {}).get('Env', [])
-            
+            print('env_vars', env_vars)
             # First, remove existing env vars to avoid duplicates
             self.env_ids.unlink()
             
@@ -503,79 +503,6 @@ class PortainerContainer(models.Model):
             _logger.error(f"Error synchronizing environment variables for container {self.name}: {str(e)}")
             raise UserError(_("Error synchronizing environment variables: %s") % str(e))
             
-    def update_env_vars(self):
-        """Update container environment variables in Portainer"""
-        self.ensure_one()
-        
-        try:
-            api = self._get_api()
-            
-            # First get current container configuration
-            inspect_result = api.container_action(
-                self.server_id.id, self.environment_id, self.container_id, 'inspect')
-                
-            if not inspect_result or isinstance(inspect_result, dict) and inspect_result.get('error'):
-                error_msg = inspect_result.get('error', _("Failed to inspect container")) if isinstance(inspect_result, dict) else _("Failed to inspect container")
-                raise UserError(error_msg)
-                
-            # We need to recreate the container with the new environment variables
-            # This is necessary because Docker doesn't allow updating env vars on running containers
-                
-            # Extract necessary data from current container
-            config = inspect_result.get('Config', {})
-            host_config = inspect_result.get('HostConfig', {})
-            network_config = inspect_result.get('NetworkSettings', {})
-            
-            # Prepare environment variables
-            env_vars = []
-            for env in self.env_ids:
-                if env.value:
-                    env_vars.append(f"{env.name}={env.value}")
-                else:
-                    env_vars.append(env.name)
-                    
-            # Warning: This is a simplified implementation that doesn't handle all container parameters
-            # A full implementation would need to extract and reapply all container settings
-            
-            # For now we'll simply show a message about what would be updated
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Environment Variables Ready to Update'),
-                    'message': _('Container %s would need to be recreated to update environment variables. This is not yet implemented.') % self.name,
-                    'sticky': True,
-                    'type': 'warning',
-                }
-            }
-                
-        except Exception as e:
-            _logger.error(f"Error updating environment variables for container {self.name}: {str(e)}")
-            raise UserError(_("Error updating environment variables: %s") % str(e))
-            
-    def create_new_env(self):
-        """Create a new environment variable"""
-        self.ensure_one()
-        
-        # Create the environment variable with empty values for user to fill
-        self.env['j_portainer.container.env'].create({
-            'container_id': self.id,
-            'name': '',
-            'value': ''
-        })
-        
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Environment Variable Created'),
-                'message': _('New environment variable has been created.'),
-                'sticky': False,
-                'type': 'success',
-            }
-        }
-        
-
     def sync_port_mappings(self):
         """Synchronize container port mappings with Portainer
         
