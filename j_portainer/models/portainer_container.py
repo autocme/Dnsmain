@@ -508,21 +508,7 @@ class PortainerContainer(models.Model):
             }
         }
         
-    def action_manage_labels(self):
-        """Open wizard to manage container labels"""
-        self.ensure_one()
-        
-        return {
-            'name': _('Manage Labels'),
-            'type': 'ir.actions.act_window',
-            'view_mode': 'form',
-            'res_model': 'j_portainer.container.manage.labels.wizard',
-            'target': 'new',
-            'context': {
-                'active_id': self.id,
-                'active_model': 'j_portainer.container',
-            }
-        }
+
         
     def sync_labels_to_portainer(self):
         """Sync container labels to Portainer"""
