@@ -10,12 +10,15 @@
                     <group>
                         <group>
                             <field name="type"/>
-                            <field name="name"/>
-                            <field name="container_path"/>
+                            <field name="container_path" placeholder="Path inside the container (e.g., /app/data)"/>
+                            <field name="volume_id" options="{'no_create': True}" 
+                                  invisible="type != 'volume'" required="type == 'volume'"/>
+                            <field name="name" invisible="type == 'volume'" required="type == 'bind'"
+                                  placeholder="Host path for bind mount (e.g., /host/data)"/>
                         </group>
                         <group>
                             <field name="mode"/>
-                            <field name="driver"/>
+                            <field name="driver" invisible="1"/>
                             <field name="container_id" options="{'no_create': True}"/>
                         </group>
                     </group>

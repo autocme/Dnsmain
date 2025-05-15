@@ -86,16 +86,27 @@
                         </page>
 
                         <page string="Volumes" name="volumes">
+                            <div class="oe_button_box">
+                                <button name="create_new_volume" string="Add Volume" type="object" 
+                                        class="btn btn-secondary" icon="fa-plus"
+                                        help="Add a new volume mapping"/>
+                            </div>
                             <field name="volumes" invisible="1"/>
                             <field name="get_formatted_volumes" invisible="1"/>
                             <field name="volume_ids">
-                                <tree editable="bottom">
+                                <tree>
                                     <field name="container_path"/>
                                     <field name="type"/>
-                                    <field name="name"/>
+                                    <field name="volume_id" invisible="type != 'volume'"/>
+                                    <field name="name" invisible="type == 'volume'"/>
                                     <field name="mode"/>
+                                    <button name="unlink" string="Remove" type="object" 
+                                            icon="fa-trash-o" confirm="Are you sure you want to remove this volume mapping?"/>
                                 </tree>
                             </field>
+                            <div class="alert alert-info" role="alert">
+                                <span class="fa fa-info-circle"/> Volume mappings are typically set when a container is created. Changes here are for documentation purposes only and won't affect the running container.
+                            </div>
                         </page>
 
                         <page string="Labels" name="labels">

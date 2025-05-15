@@ -573,6 +573,29 @@ class PortainerContainer(models.Model):
                 'type': 'success',
             }
         }
+        
+    def create_new_volume(self):
+        """Create a new volume mapping"""
+        self.ensure_one()
+        
+        # Create a new volume mapping with default values
+        self.env['j_portainer.container.volume'].create({
+            'container_id': self.id,
+            'type': 'volume',  # Default to volume type
+            'container_path': '/data',  # Default container path
+            'mode': 'rw'  # Default to writable
+        })
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Volume Mapping Created'),
+                'message': _('New volume mapping has been created. Please configure the details.'),
+                'sticky': False,
+                'type': 'success',
+            }
+        }
     
     def remove(self, force=False, volumes=False):
         """Remove the container
