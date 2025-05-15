@@ -779,19 +779,37 @@ class PortainerServer(models.Model):
                         if volume_type == 'volume':
                             # For named volumes, extract the volume name
                             source = mount.get('Name', mount.get('Source', ''))
+                            
+                            # Try to find matching volume in Odoo
+                            volume_id = False
+                            if source:
+                                volume = self.env['j_portainer.volume'].search([
+                                    ('server_id', '=', self.id),
+                                    ('environment_id', '=', endpoint_id),
+                                    ('name', '=', source)
+                                ], limit=1)
+                                if volume:
+                                    volume_id = volume.id
                         else:
                             # For other types, use the source path
                             source = mount.get('Source', '')
+                            volume_id = False
                             
                         # Create volume record
-                        volume_records.append({
+                        volume_data = {
                             'container_id': container_record.id,
                             'type': volume_type,
                             'name': source,
                             'container_path': mount.get('Destination', ''),
                             'mode': mount.get('Mode', 'rw'),
                             'driver': mount.get('Driver', ''),
-                        })
+                        }
+                        
+                        # Add volume_id reference if found
+                        if volume_type == 'volume' and volume_id:
+                            volume_data['volume_id'] = volume_id
+                            
+                        volume_records.append(volume_data)
 
                     if volume_records:
                         self.env['j_portainer.container.volume'].create(volume_records)
