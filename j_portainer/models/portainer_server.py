@@ -775,39 +775,16 @@ class PortainerServer(models.Model):
                         'cap_wake_alarm': False
                     }
                     
-                    # Check if container is privileged
-                    is_privileged = host_config.get('Privileged', False)
-                    
-                    # If container is privileged, it has all capabilities
-                    if is_privileged:
-                        for cap_key in capabilities:
-                            capabilities[cap_key] = True
-                    else:
-                        # Extract capability information from HostConfig
-                        cap_add = host_config.get('CapAdd', [])
-                        if cap_add and isinstance(cap_add, list):
-                            for cap in cap_add:
-                                # Docker API returns capabilities with 'CAP_' prefix
-                                if cap and isinstance(cap, str):
-                                    # Convert to lowercase and strip any prefix
-                                    cap_clean = cap.lower()
-                                    if cap_clean.startswith('cap_'):
-                                        cap_clean = cap_clean[4:]  # Remove 'cap_' prefix
-                                    
-                                    # Map to model field
-                                    field_name = f'cap_{cap_clean}'
-                                    if field_name in capabilities:
-                                        capabilities[field_name] = True
-                    
-                        # Get CapDrop to handle negation of ALL
-                        cap_drop = host_config.get('CapDrop', [])
-                        if cap_drop and isinstance(cap_drop, list):
-                            for cap in cap_drop:
-                                if cap and isinstance(cap, str) and cap.upper() == 'ALL':
-                                    # If 'ALL' is in CapDrop, reset all capabilities to False
-                                    for cap_key in capabilities:
-                                        capabilities[cap_key] = False
-                                    break
+                    # Extract capability information from HostConfig
+                    cap_add = host_config.get('CapAdd', [])
+                    if cap_add:
+                        for cap in cap_add:
+                            # Docker API returns capabilities with 'CAP_' prefix
+                            if cap and isinstance(cap, str):
+                                cap_lower = cap.lower().replace('cap_', '')
+                                field_name = f'cap_{cap_lower}'
+                                if field_name in capabilities:
+                                    capabilities[field_name] = True
                     
                     # Prepare data for create/update
                     container_data = {
