@@ -1294,6 +1294,19 @@ class PortainerServer(models.Model):
                         'labels': json.dumps(network.get('Labels', {})),
                         'containers': json.dumps(network.get('Containers', {})),
                         'details': json.dumps(details, indent=2) if details else '',
+                        
+                        # Get config options from details
+                        'options': json.dumps(details.get('Options', {})),
+                        
+                        # Additional boolean attributes
+                        'public': details.get('ConfigOnly', False) is False,
+                        'administrators_only': details.get('AdministratorsOnly', False),
+                        'system': details.get('System', False),
+                        
+                        # Existing boolean attributes updated from details
+                        'is_ipv6': details.get('EnableIPv6', False),
+                        'internal': details.get('Internal', False),
+                        'attachable': details.get('Attachable', False),
                     }
 
                     if existing_network:
