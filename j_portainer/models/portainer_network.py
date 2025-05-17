@@ -30,6 +30,14 @@ class PortainerNetwork(models.Model):
                              help="Whether the network is internal (no external connectivity)")
     attachable = fields.Boolean('Attachable', default=False,
                                help="Whether containers can be attached to this network")
+    public = fields.Boolean('Public', default=True,
+                          help="Whether the network is publicly accessible")
+    administrators_only = fields.Boolean('Administrators Only', default=False,
+                                      help="Whether only administrators can use this network")
+    system = fields.Boolean('System', default=False,
+                          help="Whether this is a system-managed network")
+    options = fields.Text('Options')
+    options_html = fields.Html('Options HTML', compute='_compute_options_html')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
@@ -202,6 +210,33 @@ class PortainerNetwork(models.Model):
         except Exception as e:
             _logger.error(f"Error refreshing network {self.name}: {str(e)}")
             raise UserError(_("Error refreshing network: %s") % str(e))
+    
+    @api.depends('options')
+    def _compute_options_html(self):
+        """Format network options as HTML table"""
+        for record in self:
+            if not record.options or record.options == '{}':
+                record.options_html = '<p>No options available</p>'
+                continue
+                
+            try:
+                options_data = json.loads(record.options)
+                if not options_data:
+                    record.options_html = '<p>No options available</p>'
+                    continue
+                    
+                html = ['<table class="table table-sm table-bordered">',
+                        '<thead><tr><th>Option</th><th>Value</th></tr></thead>',
+                        '<tbody>']
+                        
+                for key, value in options_data.items():
+                    html.append(f'<tr><td>{key}</td><td>{value}</td></tr>')
+                    
+                html.append('</tbody></table>')
+                record.options_html = ''.join(html)
+            except Exception as e:
+                _logger.error(f"Error formatting options HTML: {str(e)}")
+                record.options_html = f'<p>Error formatting options: {str(e)}</p>'
     
     @api.model
     def create_network(self, server_id, environment_id, name, driver='bridge', subnet=None, gateway=None, internal=False, attachable=False, enable_ipv6=False, labels=None):

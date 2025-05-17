@@ -34,6 +34,9 @@
                             <field name="internal" readonly="1"/>
                             <field name="is_default_network" readonly="1"/>
                             <field name="attachable" readonly="1"/>
+                            <field name="public" readonly="1"/>
+                            <field name="administrators_only" readonly="1"/>
+                            <field name="system" readonly="1"/>
                         </group>
                     </group>
                     
@@ -61,6 +64,11 @@
                         
                         <page string="Details" name="details">
                             <field name="details" widget="html" readonly="1"/>
+                        </page>
+                        
+                        <page string="Options" name="options">
+                            <field name="options" invisible="1"/>
+                            <field name="options_html" widget="html" readonly="1"/>
                         </page>
                     </notebook>
                 </sheet>
