@@ -68,22 +68,22 @@
                                    decoration-danger="state in ['stopped', 'exited', 'dead']"
                                    readonly="1"/>
                             <field name="status" readonly="1"/>
-                            <field name="restart_policy" widget="badge"
+                            <field name="restart_policy"
                                    decoration-info="restart_policy == 'no'"
                                    decoration-success="restart_policy == 'always'"
                                    decoration-warning="restart_policy == 'on-failure'"
                                    decoration-primary="restart_policy == 'unless-stopped'"/>
-                            <button name="update_restart_policy" string="Update Restart Policy" 
-                                    type="object" icon="fa-refresh" class="oe_highlight"
-                                    invisible="state == 'running'"/>
+<!--                            <button name="update_restart_policy" string="Update Restart Policy" -->
+<!--                                    type="object" icon="fa-refresh" class="oe_highlight"-->
+<!--                                    invisible="state == 'running'"/>-->
                         </group>
                     </group>
 
                     <notebook>
                         <page string="Ports" name="ports">
                             <div class="oe_button_box">
-                                <button name="sync_port_mappings" string="Sync Port Mappings" type="object"
-                                       class="btn-secondary" icon="fa-refresh"/>
+<!--                                <button name="sync_port_mappings" string="Sync Port Mappings" type="object"-->
+<!--                                       class="btn-secondary" icon="fa-refresh"/>-->
                             </div>
                             <field name="ports" invisible="1"/>
                             <field name="get_formatted_ports" widget="html" invisible="1"/>
@@ -135,9 +135,9 @@
                         
                         <page string="Env" name="env_vars">
                             <div class="oe_button_box">
-                                <button name="sync_env_vars" string="Sync Environment Variables" type="object" 
-                                        class="btn btn-secondary" icon="fa-refresh"
-                                        help="Refresh environment variables from Portainer"/>
+<!--                                <button name="sync_env_vars" string="Sync Environment Variables" type="object" -->
+<!--                                        class="btn btn-secondary" icon="fa-refresh"-->
+<!--                                        help="Refresh environment variables from Portainer"/>-->
                             </div>
                             <field name="env_ids" context="{'hide_container_id': True}">
                                 <tree editable="bottom">
@@ -159,17 +159,12 @@
                                     <field name="gateway"/>
                                     <field name="mac_address"/>
                                     <field name="driver"/>
-                                    <button name="disconnect_network" type="object" 
+                                    <button name="disconnect_network" type="object"
                                             string="Leave Network" class="btn btn-sm btn-danger"
                                             confirm="Are you sure you want to disconnect this container from the network?"/>
                                 </tree>
                             </field>
                         </page>
-
-                        <!--                        <page string="Logs" name="logs">-->
-                        <!--                            <button name="action_view_logs" string="View Logs" type="object" -->
-                        <!--                                    class="btn-primary"/>-->
-                        <!--                        </page>-->
 
                         <page string="Details" name="details">
                             <field name="details" widget="html" readonly="1"/>
