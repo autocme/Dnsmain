@@ -184,7 +184,7 @@
                         </page>
                         
                         <page string="Capabilities" name="capabilities">
-                            <group string="Container capabilities" name="linux_capabilities">
+                            <group string="Linux Capabilities" name="linux_capabilities">
                                 <group>
                                     <field name="cap_audit_control" widget="boolean_toggle"/>
                                     <field name="cap_audit_write" widget="boolean_toggle"/>
