@@ -58,8 +58,7 @@ class PortainerContainer(models.Model):
     ], string='Restart Policy', default='no', help="Container restart policy")
     
     # Network port configuration
-    publish_all_ports = fields.Boolean('Publish All Ports', default=False,
-                                   help="Publish all exposed ports to random host ports")
+    publish_all_ports = fields.Boolean('Publish all exposed ports to random host ports', default=False, help="Publish all exposed ports to random host ports")
                                    
     # Runtime & Resources fields
     privileged = fields.Boolean('Privileged Mode', default=False,
