@@ -160,7 +160,7 @@
                                     <field name="mac_address"/>
                                     <field name="driver"/>
                                     <button name="disconnect_network" type="object"
-                                            string="Disconnect" class="btn btn-sm btn-danger"
+                                            string="Leave Network" class="btn btn-sm btn-danger"
                                             confirm="Are you sure you want to disconnect this container from the network?"/>
                                 </tree>
                             </field>
