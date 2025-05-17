@@ -733,6 +733,59 @@ class PortainerServer(models.Model):
                         if shm_size_bytes > 0:
                             shm_size = int(shm_size_bytes / (1024 * 1024))  # Convert from bytes to MB
                     
+                    # Process Linux capabilities
+                    # Initialize with default values (False for all)
+                    capabilities = {
+                        'cap_audit_control': False,
+                        'cap_audit_write': False,
+                        'cap_block_suspend': False,
+                        'cap_chown': False,
+                        'cap_dac_override': False,
+                        'cap_dac_read_search': False,
+                        'cap_fowner': False,
+                        'cap_fsetid': False,
+                        'cap_ipc_lock': False,
+                        'cap_ipc_owner': False,
+                        'cap_kill': False,
+                        'cap_lease': False,
+                        'cap_linux_immutable': False,
+                        'cap_mac_admin': False,
+                        'cap_mac_override': False,
+                        'cap_mknod': False,
+                        'cap_net_admin': False,
+                        'cap_net_bind_service': False,
+                        'cap_net_broadcast': False,
+                        'cap_net_raw': False,
+                        'cap_setfcap': False,
+                        'cap_setgid': False,
+                        'cap_setpcap': False,
+                        'cap_setuid': False,
+                        'cap_syslog': False,
+                        'cap_sys_admin': False,
+                        'cap_sys_boot': False,
+                        'cap_sys_chroot': False,
+                        'cap_sys_module': False,
+                        'cap_sys_nice': False,
+                        'cap_sys_pacct': False,
+                        'cap_sys_ptrace': False,
+                        'cap_sys_rawio': False,
+                        'cap_sys_resource': False,
+                        'cap_sys_time': False,
+                        'cap_sys_tty_config': False,
+                        'cap_wake_alarm': False
+                    }
+                    
+                    # Extract capability information from HostConfig
+                    cap_add = host_config.get('CapAdd', [])
+                    if cap_add:
+                        for cap in cap_add:
+                            # Docker API returns capabilities with 'CAP_' prefix
+                            if cap and isinstance(cap, str):
+                                cap_lower = cap.lower().replace('cap_', '')
+                                field_name = f'cap_{cap_lower}'
+                                if field_name in capabilities:
+                                    capabilities[field_name] = True
+                    
                     # Prepare data for create/update
                     container_data = {
                         'server_id': self.id,
@@ -765,7 +818,46 @@ class PortainerServer(models.Model):
                         'cpu_limit': cpu_limit,
                         
                         # Image pull policy - not directly available from API, keep default
-                        'always_pull_image': False
+                        'always_pull_image': False,
+                        
+                        # Linux Capabilities
+                        'cap_audit_control': capabilities.get('cap_audit_control', False),
+                        'cap_audit_write': capabilities.get('cap_audit_write', False),
+                        'cap_block_suspend': capabilities.get('cap_block_suspend', False),
+                        'cap_chown': capabilities.get('cap_chown', False),
+                        'cap_dac_override': capabilities.get('cap_dac_override', False),
+                        'cap_dac_read_search': capabilities.get('cap_dac_read_search', False),
+                        'cap_fowner': capabilities.get('cap_fowner', False),
+                        'cap_fsetid': capabilities.get('cap_fsetid', False),
+                        'cap_ipc_lock': capabilities.get('cap_ipc_lock', False),
+                        'cap_ipc_owner': capabilities.get('cap_ipc_owner', False),
+                        'cap_kill': capabilities.get('cap_kill', False),
+                        'cap_lease': capabilities.get('cap_lease', False),
+                        'cap_linux_immutable': capabilities.get('cap_linux_immutable', False),
+                        'cap_mac_admin': capabilities.get('cap_mac_admin', False),
+                        'cap_mac_override': capabilities.get('cap_mac_override', False),
+                        'cap_mknod': capabilities.get('cap_mknod', False),
+                        'cap_net_admin': capabilities.get('cap_net_admin', False),
+                        'cap_net_bind_service': capabilities.get('cap_net_bind_service', False),
+                        'cap_net_broadcast': capabilities.get('cap_net_broadcast', False),
+                        'cap_net_raw': capabilities.get('cap_net_raw', False),
+                        'cap_setfcap': capabilities.get('cap_setfcap', False),
+                        'cap_setgid': capabilities.get('cap_setgid', False),
+                        'cap_setpcap': capabilities.get('cap_setpcap', False),
+                        'cap_setuid': capabilities.get('cap_setuid', False),
+                        'cap_syslog': capabilities.get('cap_syslog', False),
+                        'cap_sys_admin': capabilities.get('cap_sys_admin', False),
+                        'cap_sys_boot': capabilities.get('cap_sys_boot', False),
+                        'cap_sys_chroot': capabilities.get('cap_sys_chroot', False),
+                        'cap_sys_module': capabilities.get('cap_sys_module', False),
+                        'cap_sys_nice': capabilities.get('cap_sys_nice', False),
+                        'cap_sys_pacct': capabilities.get('cap_sys_pacct', False),
+                        'cap_sys_ptrace': capabilities.get('cap_sys_ptrace', False),
+                        'cap_sys_rawio': capabilities.get('cap_sys_rawio', False),
+                        'cap_sys_resource': capabilities.get('cap_sys_resource', False),
+                        'cap_sys_time': capabilities.get('cap_sys_time', False),
+                        'cap_sys_tty_config': capabilities.get('cap_sys_tty_config', False),
+                        'cap_wake_alarm': capabilities.get('cap_wake_alarm', False)
                     }
 
                     # Process container creation/update

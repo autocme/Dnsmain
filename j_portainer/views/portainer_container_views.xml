@@ -183,6 +183,52 @@
                             </group>
                         </page>
                         
+                        <page string="Capabilities" name="capabilities">
+                            <group string="Linux Capabilities" name="linux_capabilities">
+                                <group>
+                                    <field name="cap_audit_control" widget="boolean_toggle"/>
+                                    <field name="cap_audit_write" widget="boolean_toggle"/>
+                                    <field name="cap_block_suspend" widget="boolean_toggle"/>
+                                    <field name="cap_chown" widget="boolean_toggle"/>
+                                    <field name="cap_dac_override" widget="boolean_toggle"/>
+                                    <field name="cap_dac_read_search" widget="boolean_toggle"/>
+                                    <field name="cap_fowner" widget="boolean_toggle"/>
+                                    <field name="cap_fsetid" widget="boolean_toggle"/>
+                                    <field name="cap_ipc_lock" widget="boolean_toggle"/>
+                                    <field name="cap_ipc_owner" widget="boolean_toggle"/>
+                                    <field name="cap_kill" widget="boolean_toggle"/>
+                                    <field name="cap_lease" widget="boolean_toggle"/>
+                                    <field name="cap_linux_immutable" widget="boolean_toggle"/>
+                                    <field name="cap_mac_admin" widget="boolean_toggle"/>
+                                    <field name="cap_mac_override" widget="boolean_toggle"/>
+                                    <field name="cap_mknod" widget="boolean_toggle"/>
+                                    <field name="cap_net_admin" widget="boolean_toggle"/>
+                                    <field name="cap_net_bind_service" widget="boolean_toggle"/>
+                                </group>
+                                <group>
+                                    <field name="cap_net_broadcast" widget="boolean_toggle"/>
+                                    <field name="cap_net_raw" widget="boolean_toggle"/>
+                                    <field name="cap_setfcap" widget="boolean_toggle"/>
+                                    <field name="cap_setgid" widget="boolean_toggle"/>
+                                    <field name="cap_setpcap" widget="boolean_toggle"/>
+                                    <field name="cap_setuid" widget="boolean_toggle"/>
+                                    <field name="cap_syslog" widget="boolean_toggle"/>
+                                    <field name="cap_sys_admin" widget="boolean_toggle"/>
+                                    <field name="cap_sys_boot" widget="boolean_toggle"/>
+                                    <field name="cap_sys_chroot" widget="boolean_toggle"/>
+                                    <field name="cap_sys_module" widget="boolean_toggle"/>
+                                    <field name="cap_sys_nice" widget="boolean_toggle"/>
+                                    <field name="cap_sys_pacct" widget="boolean_toggle"/>
+                                    <field name="cap_sys_ptrace" widget="boolean_toggle"/>
+                                    <field name="cap_sys_rawio" widget="boolean_toggle"/>
+                                    <field name="cap_sys_resource" widget="boolean_toggle"/>
+                                    <field name="cap_sys_time" widget="boolean_toggle"/>
+                                    <field name="cap_sys_tty_config" widget="boolean_toggle"/>
+                                    <field name="cap_wake_alarm" widget="boolean_toggle"/>
+                                </group>
+                            </group>
+                        </page>
+                        
                         <page string="Details" name="details">
                             <field name="details" widget="html" readonly="1"/>
                         </page>
