@@ -33,6 +33,8 @@ class PortainerContainer(models.Model):
     container_id = fields.Char('Container ID', required=True)
     image = fields.Char('Image', required=True)
     image_id = fields.Char('Image ID')
+    always_pull_image = fields.Boolean('Always Pull Image', default=False,
+                                    help="Always pull the latest version of the image")
     created = fields.Datetime('Created')
     status = fields.Char('Status')
     state = fields.Selection([
@@ -54,6 +56,24 @@ class PortainerContainer(models.Model):
         ('on-failure', 'On Failure'),
         ('unless-stopped', 'Unless Stopped')
     ], string='Restart Policy', default='no', help="Container restart policy")
+    
+    # Network port configuration
+    publish_all_ports = fields.Boolean('Publish All Ports', default=False,
+                                   help="Publish all exposed ports to random host ports")
+                                   
+    # Runtime & Resources fields
+    privileged = fields.Boolean('Privileged Mode', default=False,
+                             help="Give extended privileges to this container")
+    init_process = fields.Boolean('Init', default=False,
+                               help="Run an init inside the container that forwards signals and reaps processes")
+    shm_size = fields.Integer('Shared Memory Size (MB)', default=64,
+                           help="Size of /dev/shm in MB")
+    memory_reservation = fields.Integer('Memory Reservation (MB)', default=0,
+                                     help="Memory soft limit in MB")
+    memory_limit = fields.Integer('Memory Limit (MB)', default=0,
+                               help="Memory hard limit in MB")
+    cpu_limit = fields.Float('Maximum CPU Usage', default=0.0,
+                          help="CPU usage limit (e.g., 0.5 for 50% of a CPU)")
     get_formatted_volumes = fields.Html('Formatted Volumes', compute='_compute_formatted_volumes')
     get_formatted_ports = fields.Html('Formatted Ports', compute='_compute_formatted_ports')
     

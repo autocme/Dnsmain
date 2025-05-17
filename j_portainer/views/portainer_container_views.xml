@@ -61,6 +61,7 @@
                         <group>
                             <field name="image" readonly="1"/>
                             <field name="image_id" readonly="1"/>
+                            <field name="always_pull_image" readonly="1"/>
                             <field name="created" readonly="1"/>
                             <field name="state" widget="badge"
                                    decoration-success="state == 'running'"
@@ -85,6 +86,9 @@
 <!--                                <button name="sync_port_mappings" string="Sync Port Mappings" type="object"-->
 <!--                                       class="btn-secondary" icon="fa-refresh"/>-->
                             </div>
+                            <group>
+                                <field name="publish_all_ports" readonly="1"/>
+                            </group>
                             <field name="ports" invisible="1"/>
                             <field name="get_formatted_ports" widget="html" invisible="1"/>
                             <field name="port_ids">
@@ -166,6 +170,19 @@
                             </field>
                         </page>
 
+                        <page string="Runtime &amp; Resources" name="runtime_resources">
+                            <group string="Runtime">
+                                <field name="privileged" readonly="1"/>
+                                <field name="init_process" readonly="1"/>
+                                <field name="shm_size" readonly="1"/>
+                            </group>
+                            <group string="Resources">
+                                <field name="memory_reservation" readonly="1"/>
+                                <field name="memory_limit" readonly="1"/>
+                                <field name="cpu_limit" readonly="1"/>
+                            </group>
+                        </page>
+                        
                         <page string="Details" name="details">
                             <field name="details" widget="html" readonly="1"/>
                         </page>
