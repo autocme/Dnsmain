@@ -48,7 +48,7 @@
                                     <field name="ip_address"/>
                                     <field name="gateway"/>
                                     <field name="mac_address"/>
-                                    <button name="disconnect_network" string="Disconnect" type="object" 
+                                    <button name="disconnect_network" string="Leave Network" type="object" 
                                             icon="fa-unlink" confirm="Are you sure you want to disconnect this container from the network?"/>
                                 </tree>
                             </field>
@@ -63,13 +63,13 @@
                             <field name="labels_html" widget="html" readonly="1"/>
                         </page>
                         
-                        <page string="Details" name="details">
-                            <field name="details" widget="html" readonly="1"/>
-                        </page>
-                        
                         <page string="Options" name="options">
                             <field name="options" invisible="1"/>
                             <field name="options_html" widget="html" readonly="1"/>
+                        </page>
+                        
+                        <page string="Details" name="details">
+                            <field name="details" widget="html" readonly="1"/>
                         </page>
                     </notebook>
                 </sheet>
