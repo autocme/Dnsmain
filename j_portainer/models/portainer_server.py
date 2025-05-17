@@ -708,6 +708,31 @@ class PortainerServer(models.Model):
                     if mounts:
                         volumes_data = mounts
 
+                    # Extract runtime & resource configuration
+                    host_config = details.get('HostConfig', {})
+                    
+                    # Get memory limits - convert from bytes to MB
+                    memory_reservation = host_config.get('MemoryReservation', 0)
+                    if memory_reservation > 0:
+                        memory_reservation = int(memory_reservation / (1024 * 1024))
+                        
+                    memory_limit = host_config.get('Memory', 0)
+                    if memory_limit > 0:
+                        memory_limit = int(memory_limit / (1024 * 1024))
+                    
+                    # Get CPU limit
+                    nano_cpus = host_config.get('NanoCpus', 0)
+                    cpu_limit = 0.0
+                    if nano_cpus > 0:
+                        cpu_limit = round(nano_cpus / 1000000000.0, 2)  # Convert from nano to full CPUs
+                        
+                    # Get shared memory size
+                    shm_size = 64  # Default value
+                    if 'ShmSize' in host_config:
+                        shm_size_bytes = host_config.get('ShmSize', 0)
+                        if shm_size_bytes > 0:
+                            shm_size = int(shm_size_bytes / (1024 * 1024))  # Convert from bytes to MB
+                    
                     # Prepare data for create/update
                     container_data = {
                         'server_id': self.id,
@@ -725,6 +750,22 @@ class PortainerServer(models.Model):
                         'labels': json.dumps(container.get('Labels', {})),
                         'details': json.dumps(details, indent=2) if details else '',
                         'volumes': json.dumps(volumes_data),
+                        
+                        # Network port configuration
+                        'publish_all_ports': host_config.get('PublishAllPorts', False),
+                        
+                        # Runtime configuration
+                        'privileged': host_config.get('Privileged', False),
+                        'init_process': host_config.get('Init', False),
+                        'shm_size': shm_size,
+                        
+                        # Resource limits
+                        'memory_reservation': memory_reservation,
+                        'memory_limit': memory_limit,
+                        'cpu_limit': cpu_limit,
+                        
+                        # Image pull policy - not directly available from API, keep default
+                        'always_pull_image': False
                     }
 
                     # Process container creation/update
