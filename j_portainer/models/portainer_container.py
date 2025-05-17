@@ -118,6 +118,7 @@ class PortainerContainer(models.Model):
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
     environment_name = fields.Char('Environment', required=True)
+    stack_id = fields.Many2one('j_portainer.stack', string='Stack', ondelete='set null')
     
     # One2many relationships
     label_ids = fields.One2many('j_portainer.container.label', 'container_id', string='Container Labels')

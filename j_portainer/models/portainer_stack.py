@@ -34,6 +34,9 @@ class PortainerStack(models.Model):
     environment_id = fields.Integer('Environment ID', required=True)
     environment_name = fields.Char('Environment', required=True)
     
+    # Related containers in this stack
+    container_ids = fields.One2many('j_portainer.container', 'stack_id', string='Containers')
+    
     @api.depends('file_content')
     def _compute_content(self):
         """Compute content field from file_content"""

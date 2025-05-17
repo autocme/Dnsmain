@@ -49,6 +49,27 @@
                                    placeholder="Stack content will be displayed here"/>
                         </page>
                         
+                        <page string="Containers" name="containers">
+                            <field name="container_ids">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="image"/>
+                                    <field name="state" widget="badge"
+                                           decoration-success="state == 'running'"
+                                           decoration-warning="state == 'paused'"
+                                           decoration-danger="state in ['stopped', 'exited']"/>
+                                    <field name="status"/>
+                                    <field name="created"/>
+                                    <button name="start" string="Start" type="object" icon="fa-play"
+                                            attrs="{'invisible': [('state', '=', 'running')]}"/>
+                                    <button name="stop" string="Stop" type="object" icon="fa-stop"
+                                            attrs="{'invisible': [('state', '!=', 'running')]}"/>
+                                    <button name="restart" string="Restart" type="object" icon="fa-refresh"
+                                            attrs="{'invisible': [('state', '!=', 'running')]}"/>
+                                </tree>
+                            </field>
+                        </page>
+                        
                         <page string="Details" name="details">
                             <field name="details" widget="html" readonly="1"/>
                         </page>
