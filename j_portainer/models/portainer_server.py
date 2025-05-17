@@ -1413,8 +1413,7 @@ class PortainerServer(models.Model):
                         f'/api/endpoints/{endpoint_id}/docker/networks/{network_id}', 'GET')
 
                     details = details_response.json() if details_response.status_code == 200 else {}
-                    print("details.get('Portainer', False)", details.get('Portainer'))
-
+                    
                     # Prepare network data
                     network_data = {
                         'server_id': self.id,
@@ -1432,9 +1431,9 @@ class PortainerServer(models.Model):
                         # Get config options from details
                         'options': json.dumps(details.get('Options', {})),
                         # Additional boolean attributes from Portainer metadata
-                        'public': details.get('Portainer', {}).get('Public', True),
-                        'administrators_only': details.get('Portainer', {}).get('AdministratorsOnly', False),
-                        'system': details.get('Portainer', {}).get('System', False),
+                        'public': details.get('Portainer', {}).get('ResourceControl', {}).get('Public', True),
+                        'administrators_only': details.get('Portainer', {}).get('ResourceControl', {}).get('AdministratorsOnly', False),
+                        'system': details.get('Portainer', {}).get('ResourceControl', {}).get('System', False),
                         
                         # Existing boolean attributes updated from details
                         'is_ipv6': details.get('EnableIPv6', False),
