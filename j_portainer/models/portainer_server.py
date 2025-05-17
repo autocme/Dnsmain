@@ -1431,10 +1431,10 @@ class PortainerServer(models.Model):
                         
                         # Get config options from details
                         'options': json.dumps(details.get('Options', {})),
-                        # Additional boolean attributes
-                        'public': details.get('ConfigOnly', False) is False,
-                        'administrators_only': details.get('AdministratorsOnly', False),
-                        'system': details.get('System', False),
+                        # Additional boolean attributes from Portainer metadata
+                        'public': details.get('Portainer', {}).get('Public', True),
+                        'administrators_only': details.get('Portainer', {}).get('AdministratorsOnly', False),
+                        'system': details.get('Portainer', {}).get('System', False),
                         
                         # Existing boolean attributes updated from details
                         'is_ipv6': details.get('EnableIPv6', False),
