@@ -701,6 +701,22 @@ class PortainerServer(models.Model):
                             restart_policy_name = restart_policy_data.get('Name', '')
                             if restart_policy_name:
                                 restart_policy = restart_policy_name
+                    
+                    # Determine if container is part of a stack
+                    stack_id = False
+                    container_labels = container.get('Labels', {})
+                    if container_labels:
+                        # Portainer stacks use 'com.docker.compose.project' or 'com.docker.stack.namespace' label
+                        stack_name = container_labels.get('com.docker.compose.project') or container_labels.get('com.docker.stack.namespace')
+                        if stack_name:
+                            # Find matching stack in this environment
+                            stack = self.env['j_portainer.stack'].search([
+                                ('server_id', '=', self.id),
+                                ('environment_id', '=', endpoint_id),
+                                ('name', '=', stack_name)
+                            ], limit=1)
+                            if stack:
+                                stack_id = stack.id
 
                     # Extract volume information from container details
                     volumes_data = []
@@ -803,6 +819,7 @@ class PortainerServer(models.Model):
                         'labels': json.dumps(container.get('Labels', {})),
                         'details': json.dumps(details, indent=2) if details else '',
                         'volumes': json.dumps(volumes_data),
+                        'stack_id': stack_id,
                         
                         # Network port configuration
                         'publish_all_ports': host_config.get('PublishAllPorts', False),
