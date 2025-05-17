@@ -1413,6 +1413,7 @@ class PortainerServer(models.Model):
                         f'/api/endpoints/{endpoint_id}/docker/networks/{network_id}', 'GET')
 
                     details = details_response.json() if details_response.status_code == 200 else {}
+                    print("details.get('Portainer', False)", details.get('Portainer'))
 
                     # Prepare network data
                     network_data = {
@@ -1430,23 +1431,10 @@ class PortainerServer(models.Model):
                         
                         # Get config options from details
                         'options': json.dumps(details.get('Options', {})),
-                        
-                        # Additional boolean attributes - properly handle different formats
-                        # Public networks are those that aren't ConfigOnly and are available for container connections
-                        'public': not details.get('ConfigOnly', False) and not details.get('Internal', False),
-                        # AdministratorsOnly might be in network labels or as a direct property
-                        'administrators_only': (
-                            details.get('AdministratorsOnly', False) or 
-                            details.get('Labels', {}).get('com.docker.network.administrators_only', 'false').lower() == 'true'
-                        ),
-                        # System networks are usually marked with a specific label or property
-                        'system': (
-                            details.get('System', False) or 
-                            details.get('Labels', {}).get('com.docker.network.system', 'false').lower() == 'true' or
-                            network.get('Name', '').startswith('bridge') or
-                            network.get('Name', '').startswith('host') or
-                            network.get('Name', '').startswith('none')
-                        ),
+                        # Additional boolean attributes
+                        'public': details.get('ConfigOnly', False) is False,
+                        'administrators_only': details.get('AdministratorsOnly', False),
+                        'system': details.get('System', False),
                         
                         # Existing boolean attributes updated from details
                         'is_ipv6': details.get('EnableIPv6', False),
