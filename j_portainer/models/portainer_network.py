@@ -21,6 +21,7 @@ class PortainerNetwork(models.Model):
     ipam_config = fields.Text('IPAM Configuration') # Field to hold formatted IPAM configuration for display
     containers = fields.Text('Containers')
     labels = fields.Text('Labels')
+    labels_html = fields.Html('Labels HTML', compute='_compute_labels_html')
     details = fields.Text('Details')
     is_default_network = fields.Boolean('Default Network', default=False, 
                                        help="Default networks like 'bridge' and 'host' cannot be removed")
@@ -156,6 +157,33 @@ class PortainerNetwork(models.Model):
         except Exception as e:
             _logger.error(f"Error formatting labels: {str(e)}")
             return self.labels
+            
+    @api.depends('labels')
+    def _compute_labels_html(self):
+        """Format network labels as HTML table"""
+        for record in self:
+            if not record.labels or record.labels == '{}':
+                record.labels_html = '<p>No labels available</p>'
+                continue
+                
+            try:
+                labels_data = json.loads(record.labels)
+                if not labels_data:
+                    record.labels_html = '<p>No labels available</p>'
+                    continue
+                    
+                html = ['<table class="table table-sm table-bordered">',
+                        '<thead><tr><th>Label</th><th>Value</th></tr></thead>',
+                        '<tbody>']
+                        
+                for key, value in labels_data.items():
+                    html.append(f'<tr><td>{key}</td><td>{value}</td></tr>')
+                    
+                html.append('</tbody></table>')
+                record.labels_html = ''.join(html)
+            except Exception as e:
+                _logger.error(f"Error formatting labels HTML: {str(e)}")
+                record.labels_html = f'<p>Error formatting labels: {str(e)}</p>'
     
     def remove(self):
         """Remove the network"""

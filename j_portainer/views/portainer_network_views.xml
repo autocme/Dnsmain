@@ -59,7 +59,8 @@
                         </page>
                         
                         <page string="Labels" name="labels">
-                            <field name="labels" widget="html" readonly="1"/>
+                            <field name="labels" invisible="1"/>
+                            <field name="labels_html" widget="html" readonly="1"/>
                         </page>
                         
                         <page string="Details" name="details">
