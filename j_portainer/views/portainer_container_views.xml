@@ -61,7 +61,7 @@
                         <group>
                             <field name="image" readonly="1"/>
                             <field name="image_id" readonly="1"/>
-                            <field name="always_pull_image" readonly="1"/>
+                            <field name="always_pull_image" widget="boolean_toggle"/>
                             <field name="created" readonly="1"/>
                             <field name="state" widget="badge"
                                    decoration-success="state == 'running'"
@@ -87,7 +87,7 @@
 <!--                                       class="btn-secondary" icon="fa-refresh"/>-->
                             </div>
                             <group>
-                                <field name="publish_all_ports" readonly="1"/>
+                                <field name="publish_all_ports" widget="boolean_toggle"/>
                             </group>
                             <field name="ports" invisible="1"/>
                             <field name="get_formatted_ports" widget="html" invisible="1"/>
@@ -172,14 +172,14 @@
 
                         <page string="Runtime &amp; Resources" name="runtime_resources">
                             <group string="Runtime">
-                                <field name="privileged" readonly="1"/>
-                                <field name="init_process" readonly="1"/>
-                                <field name="shm_size" readonly="1"/>
+                                <field name="privileged" widget="boolean_toggle"/>
+                                <field name="init_process" widget="boolean_toggle"/>
+                                <field name="shm_size"/>
                             </group>
                             <group string="Resources">
-                                <field name="memory_reservation" readonly="1"/>
-                                <field name="memory_limit" readonly="1"/>
-                                <field name="cpu_limit" readonly="1"/>
+                                <field name="memory_reservation"/>
+                                <field name="memory_limit"/>
+                                <field name="cpu_limit"/>
                             </group>
                         </page>
                         
