@@ -82,9 +82,10 @@ class PortainerStack(models.Model):
             api = self._get_api()
             result = api.stack_action(
                 self.server_id.id, self.stack_id, 'start', environment_id=self.environment_id)
-                
-            if result:
-                # Update status
+            
+            # Check if the result is True (success) or a dict with error info
+            if result is True:
+                # Only update status if the operation was successful
                 self.write({'status': '1'})
                 
                 return {
@@ -98,7 +99,10 @@ class PortainerStack(models.Model):
                     }
                 }
             else:
-                raise UserError(_("Failed to start stack"))
+                # If result is a dict, it contains error information
+                error_msg = result.get('error', 'Unknown error') if isinstance(result, dict) else str(result)
+                _logger.error(f"Failed to start stack {self.name}: {error_msg}")
+                raise UserError(_("Failed to start stack: %s") % error_msg)
         except Exception as e:
             _logger.error(f"Error starting stack {self.name}: {str(e)}")
             raise UserError(_("Error starting stack: %s") % str(e))
@@ -111,9 +115,10 @@ class PortainerStack(models.Model):
             api = self._get_api()
             result = api.stack_action(
                 self.server_id.id, self.stack_id, 'stop', environment_id=self.environment_id)
-                
-            if result:
-                # Update status
+            
+            # Check if the result is True (success) or a dict with error info
+            if result is True:
+                # Only update status if the operation was successful
                 self.write({'status': '2'})
                 
                 return {
@@ -127,7 +132,10 @@ class PortainerStack(models.Model):
                     }
                 }
             else:
-                raise UserError(_("Failed to stop stack"))
+                # If result is a dict, it contains error information
+                error_msg = result.get('error', 'Unknown error') if isinstance(result, dict) else str(result)
+                _logger.error(f"Failed to stop stack {self.name}: {error_msg}")
+                raise UserError(_("Failed to stop stack: %s") % error_msg)
         except Exception as e:
             _logger.error(f"Error stopping stack {self.name}: {str(e)}")
             raise UserError(_("Error stopping stack: %s") % str(e))
