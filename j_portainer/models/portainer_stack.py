@@ -81,7 +81,7 @@ class PortainerStack(models.Model):
         try:
             api = self._get_api()
             result = api.stack_action(
-                self.server_id.id, self.stack_id, 'start')
+                self.server_id.id, self.stack_id, 'start', environment_id=self.environment_id)
                 
             if result:
                 # Update status
@@ -110,7 +110,7 @@ class PortainerStack(models.Model):
         try:
             api = self._get_api()
             result = api.stack_action(
-                self.server_id.id, self.stack_id, 'stop')
+                self.server_id.id, self.stack_id, 'stop', environment_id=self.environment_id)
                 
             if result:
                 # Update status
@@ -197,27 +197,7 @@ class PortainerStack(models.Model):
     def action_remove(self):
         """Action to remove the stack (wrapper for remove method)"""
         return self.remove()
-        
-    def action_refresh(self):
-        """Refresh stack information"""
-        self.ensure_one()
-        
-        try:
-            self.server_id.sync_stacks(self.environment_id)
-            
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Stack Refreshed'),
-                    'message': _('Stack information refreshed successfully'),
-                    'sticky': False,
-                    'type': 'success',
-                }
-            }
-        except Exception as e:
-            _logger.error(f"Error refreshing stack {self.name}: {str(e)}")
-            raise UserError(_("Error refreshing stack: %s") % str(e))
+
     
     @api.model
     def create_stack(self, server_id, environment_id, name, stack_file_content, deployment_method=1):

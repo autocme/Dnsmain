@@ -718,8 +718,13 @@ class PortainerAPI(models.AbstractModel):
             return {'error': f'Failed to delete stack: {response.text}'}
             
         elif action in ['start', 'stop']:
+            # Create query parameters with endpointId for start/stop operations
+            action_params = {}
+            if environment_id:
+                action_params['endpointId'] = environment_id
+                
             endpoint = f'/api/stacks/{stack_id}/' + ('start' if action == 'start' else 'stop')
-            response = server._make_api_request(endpoint, 'POST')
+            response = server._make_api_request(endpoint, 'POST', params=action_params)
             if response.status_code in [200, 201, 204]:
                 return True
             return {'error': f'Failed to {action} stack: {response.text}'}
