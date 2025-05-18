@@ -717,79 +717,115 @@ class PortainerContainer(models.Model):
         }
         
     def deploy(self):
-        """Deploy a new container with the same configuration as this one
-        
-        This method creates a new container based on the current container's
-        configuration using the Portainer API.
-        
-        Returns:
-            dict: Result with notification about success or failure
-        """
+        """Deploy a new container with the same configuration as this one"""
         self.ensure_one()
         
         # Log the deployment attempt
-        _logger.info(f"Attempting to deploy container based on: {self.name} (Image: {self.image})")
+        _logger.info(f"Deploying container based on: {self.name} (Image: {self.image})")
         
         try:
-            api = self._get_api()
+            # Build container creation parameters
+            container_name = f"{self.name}-deploy"  # Add suffix to avoid name conflict
             
-            # Build basic container creation parameters
-            # Use only essential information from current container to keep it simple
-            deploy_config = {
+            # Create container config following Docker API format
+            container_config = {
                 'Image': self.image,
-                'name': f"{self.name}-deploy",  # Add suffix to avoid name conflict
+                'name': container_name,
                 'HostConfig': {
-                    'RestartPolicy': {'Name': self.restart_policy or 'no'},
+                    'RestartPolicy': {
+                        'Name': self.restart_policy or 'no'
+                    },
                     'Privileged': self.privileged,
                     'PublishAllPorts': self.publish_all_ports
-                },
-                'start': True  # Start the container after creation
+                }
             }
             
-            # Log the deployment configuration
-            _logger.info(f"Deploying container with config: {deploy_config}")
-            
-            # Call the API to create and start the container
-            result = api.template_action(
-                self.server_id.id, 
-                self.environment_id,
-                action='deploy',
-                data=deploy_config
-            )
-            
-            # Process the result
-            if isinstance(result, dict) and (result.get('success', False) or 'container_id' in result):
-                # Deployment was successful
-                container_id = result.get('container_id', '')
-                message = _('Container deployed successfully')
-                if container_id:
-                    message += f" (ID: {container_id[:12]})"
-                    
-                _logger.info(f"Container deployed successfully: {result}")
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': _('Container Deployed'),
-                        'message': message,
-                        'sticky': False,
-                        'type': 'success',
-                    }
-                }
-            else:
-                # Deployment failed
-                error_msg = result.get('error', _("Unknown error")) if isinstance(result, dict) else _("Failed to deploy container")
-                _logger.error(f"Failed to deploy container: {error_msg}")
+            # Get server object
+            server = self.env['j_portainer.server'].browse(self.server_id.id)
+            if not server:
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
                         'title': _('Deployment Failed'),
-                        'message': _('Failed to deploy container: %s') % error_msg,
+                        'message': _('Server not found'),
                         'sticky': True,
                         'type': 'danger',
                     }
                 }
+            
+            # Use Docker API endpoint to create container
+            _logger.info(f"Creating container with name: {container_name}")
+            create_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/create'
+            response = server._make_api_request(create_endpoint, 'POST', data=container_config)
+            
+            if response.status_code not in [200, 201, 204]:
+                error_msg = f"Failed to create container: {response.text}"
+                _logger.error(error_msg)
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Deployment Failed'),
+                        'message': error_msg,
+                        'sticky': True,
+                        'type': 'danger',
+                    }
+                }
+            
+            # Parse response to get container ID
+            result = response.json()
+            container_id = result.get('Id')
+            
+            if not container_id:
+                _logger.error("No container ID in response")
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Deployment Failed'),
+                        'message': _('No container ID returned from API'),
+                        'sticky': True,
+                        'type': 'danger',
+                    }
+                }
+            
+            # Start the container
+            _logger.info(f"Starting container with ID: {container_id}")
+            start_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{container_id}/start'
+            start_response = server._make_api_request(start_endpoint, 'POST')
+            
+            if start_response.status_code not in [200, 201, 204]:
+                error_msg = f"Container created but failed to start: {start_response.text}"
+                _logger.warning(error_msg)
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Partial Success'),
+                        'message': error_msg,
+                        'sticky': True,
+                        'type': 'warning',
+                    }
+                }
+            
+            # Successfully created and started container
+            message = _('Container deployed successfully')
+            if container_id:
+                message += f" (ID: {container_id[:12]})"
+            
+            _logger.info(f"Container deployed successfully: {container_id}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Container Deployed'),
+                    'message': message,
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+            
         except Exception as e:
             _logger.error(f"Error deploying container {self.name}: {str(e)}")
             return {
