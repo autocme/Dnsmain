@@ -402,8 +402,11 @@ class PortainerServer(models.Model):
                     response = requests.post(url, headers=request_headers, data=data,
                                              verify=self.verify_ssl, timeout=30)
                 else:
+                    # Include params in debug log to see what's being sent
                     _logger.debug(f"POST request data: {json.dumps(data, indent=2) if data else None}")
-                    response = requests.post(url, headers=request_headers, json=data,
+                    _logger.debug(f"POST request params: {params}")
+                    # Include params in the POST request for operations like stack start/stop
+                    response = requests.post(url, headers=request_headers, json=data, params=params,
                                              verify=self.verify_ssl, timeout=15)
             elif method == 'PUT':
                 if use_multipart:
