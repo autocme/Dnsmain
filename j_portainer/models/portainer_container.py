@@ -716,6 +716,93 @@ class PortainerContainer(models.Model):
             }
         }
         
+    def deploy(self):
+        """Deploy a new container with the same configuration as this one
+        
+        This method creates a new container based on the current container's
+        configuration using the Portainer API.
+        
+        Returns:
+            dict: Result with notification about success or failure
+        """
+        self.ensure_one()
+        
+        # Log the deployment attempt
+        _logger.info(f"Attempting to deploy container based on: {self.name} (Image: {self.image})")
+        
+        try:
+            api = self._get_api()
+            
+            # Build basic container creation parameters
+            # Use only essential information from current container to keep it simple
+            deploy_config = {
+                'Image': self.image,
+                'name': f"{self.name}-deploy",  # Add suffix to avoid name conflict
+                'HostConfig': {
+                    'RestartPolicy': {'Name': self.restart_policy or 'no'},
+                    'Privileged': self.privileged,
+                    'PublishAllPorts': self.publish_all_ports
+                },
+                'start': True  # Start the container after creation
+            }
+            
+            # Log the deployment configuration
+            _logger.info(f"Deploying container with config: {deploy_config}")
+            
+            # Call the API to create and start the container
+            result = api.template_action(
+                self.server_id.id, 
+                self.environment_id,
+                action='deploy',
+                data=deploy_config
+            )
+            
+            # Process the result
+            if isinstance(result, dict) and (result.get('success', False) or 'container_id' in result):
+                # Deployment was successful
+                container_id = result.get('container_id', '')
+                message = _('Container deployed successfully')
+                if container_id:
+                    message += f" (ID: {container_id[:12]})"
+                    
+                _logger.info(f"Container deployed successfully: {result}")
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Container Deployed'),
+                        'message': message,
+                        'sticky': False,
+                        'type': 'success',
+                    }
+                }
+            else:
+                # Deployment failed
+                error_msg = result.get('error', _("Unknown error")) if isinstance(result, dict) else _("Failed to deploy container")
+                _logger.error(f"Failed to deploy container: {error_msg}")
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Deployment Failed'),
+                        'message': _('Failed to deploy container: %s') % error_msg,
+                        'sticky': True,
+                        'type': 'danger',
+                    }
+                }
+        except Exception as e:
+            _logger.error(f"Error deploying container {self.name}: {str(e)}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Deployment Error'),
+                    'message': _('Error deploying container: %s') % str(e),
+                    'sticky': True,
+                    'type': 'danger',
+                }
+            }
+        
     def action_join_network(self):
         """Open wizard to join a network"""
         self.ensure_one()
