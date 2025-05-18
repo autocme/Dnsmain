@@ -718,27 +718,36 @@ class PortainerAPI(models.AbstractModel):
             return {'error': f'Failed to delete stack: {response.text}'}
             
         elif action in ['start', 'stop']:
-            # For Portainer API v2, we need to include endpointId as a query parameter
+            # Build the correct endpoint with endpointId as part of the URL itself
+            # Format: /api/stacks/{stack_id}/{start|stop}?endpointId={environment_id}
             action_endpoint = ('start' if action == 'start' else 'stop')
             
-            # Add endpointId as a query parameter in the URL itself
-            endpoint = f'/api/stacks/{stack_id}/{action_endpoint}'
-            
-            # Construct proper query parameters - endpointId must be included
+            # Portainer requires endpointId
             if not environment_id:
                 return {'error': f'Environment ID is required for {action} operation'}
-                
-            # Pass as explicit query parameters in the URL
-            action_params = {'endpointId': environment_id}
             
-            # Make the API request with parameters as URL query
+            # Build endpoint with explicit endpointId parameter
+            endpoint = f'/api/stacks/{stack_id}/{action_endpoint}'
+            
+            # Make API request with endpointId as query parameter
+            action_params = {'endpointId': str(environment_id)}
+            
+            _logger.info(f"Stack {action} request: endpoint={endpoint}, params={action_params}")
+            
+            # Make the API request with parameters properly attached as query parameters
             response = server._make_api_request(endpoint, 'POST', params=action_params)
             
+            # Check for success and return appropriate response
             if response.status_code in [200, 201, 204]:
+                _logger.info(f"Stack {action} successful with status code: {response.status_code}")
                 return True
             
+            # Log detailed error
+            error_message = f"Failed to {action} stack: {response.text} (Status code: {response.status_code})"
+            _logger.error(error_message)
+            
             # Return detailed error information
-            return {'error': f'Failed to {action} stack: {response.text}'}
+            return {'error': error_message}
             
         elif action == 'update':
             if not data:
