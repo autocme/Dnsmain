@@ -102,10 +102,28 @@ class PortainerStack(models.Model):
                 # If result is a dict, it contains error information
                 error_msg = result.get('error', 'Unknown error') if isinstance(result, dict) else str(result)
                 _logger.error(f"Failed to start stack {self.name}: {error_msg}")
-                raise UserError(_("Failed to start stack: %s") % error_msg)
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Start Failed'),
+                        'message': _('Failed to start stack %s: %s') % (self.name, error_msg),
+                        'sticky': True,
+                        'type': 'danger',
+                    }
+                }
         except Exception as e:
             _logger.error(f"Error starting stack {self.name}: {str(e)}")
-            raise UserError(_("Error starting stack: %s") % str(e))
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Error'),
+                    'message': _('Error starting stack %s: %s') % (self.name, str(e)),
+                    'sticky': True,
+                    'type': 'danger',
+                }
+            }
     
     def stop(self):
         """Stop the stack"""
@@ -135,10 +153,28 @@ class PortainerStack(models.Model):
                 # If result is a dict, it contains error information
                 error_msg = result.get('error', 'Unknown error') if isinstance(result, dict) else str(result)
                 _logger.error(f"Failed to stop stack {self.name}: {error_msg}")
-                raise UserError(_("Failed to stop stack: %s") % error_msg)
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Stop Failed'),
+                        'message': _('Failed to stop stack %s: %s') % (self.name, error_msg),
+                        'sticky': True,
+                        'type': 'danger',
+                    }
+                }
         except Exception as e:
             _logger.error(f"Error stopping stack {self.name}: {str(e)}")
-            raise UserError(_("Error stopping stack: %s") % str(e))
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Error'),
+                    'message': _('Error stopping stack %s: %s') % (self.name, str(e)),
+                    'sticky': True,
+                    'type': 'danger',
+                }
+            }
     
     def update(self):
         """Update the stack"""
