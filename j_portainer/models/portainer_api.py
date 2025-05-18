@@ -686,7 +686,7 @@ class PortainerAPI(models.AbstractModel):
         
         return False
     
-    def stack_action(self, server_id, stack_id, action, data=None):
+    def stack_action(self, server_id, stack_id, action, data=None, environment_id=None):
         """Perform action on a stack
         
         Args:
@@ -694,6 +694,7 @@ class PortainerAPI(models.AbstractModel):
             stack_id (int): Stack ID
             action (str): Action to perform (delete, stop, start, redeploy, etc.)
             data (dict, optional): Additional data for the action
+            environment_id (int, optional): Environment ID for the stack
             
         Returns:
             bool or dict: True if successful with no response, or dict with response data
@@ -703,8 +704,15 @@ class PortainerAPI(models.AbstractModel):
             return {'error': 'Server not found'}
             
         if action == 'delete':
+            # For deletion, we need to include the endpoint parameter to avoid the
+            # "unable to find endpoint associated with stack" error
+            delete_params = {}
+            # If environment ID is provided, use it in query params
+            if environment_id:
+                delete_params['endpointId'] = environment_id
+            
             endpoint = f'/api/stacks/{stack_id}'
-            response = server._make_api_request(endpoint, 'DELETE')
+            response = server._make_api_request(endpoint, 'DELETE', params=delete_params)
             if response.status_code in [200, 201, 204]:
                 return True
             return {'error': f'Failed to delete stack: {response.text}'}
