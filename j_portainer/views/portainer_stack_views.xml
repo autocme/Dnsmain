@@ -44,11 +44,6 @@
                     </group>
                     
                     <notebook>
-                        <page string="Content" name="content">
-                            <field name="content" widget="text" readonly="1" 
-                                   placeholder="Stack content will be displayed here"/>
-                        </page>
-                        
                         <page string="Containers" name="containers">
                             <field name="container_ids">
                                 <tree>
@@ -68,6 +63,11 @@
                                             attrs="{'invisible': [('state', '!=', 'running')]}"/>
                                 </tree>
                             </field>
+                        </page>
+                        
+                        <page string="Content" name="content">
+                            <field name="content" widget="text" readonly="1" 
+                                   placeholder="Stack content will be displayed here"/>
                         </page>
                         
                         <page string="Details" name="details">

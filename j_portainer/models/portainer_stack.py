@@ -158,11 +158,9 @@ class PortainerStack(models.Model):
         try:
             api = self._get_api()
             result = api.stack_action(
-                self.server_id.id, self.stack_id, 'delete')
+                self.server_id.id, self.stack_id, 'delete', environment_id=self.environment_id)
                 
             if result:
-                # Delete the record
-                self.unlink()
                 
                 return {
                     'type': 'ir.actions.client',
