@@ -2337,12 +2337,12 @@ class PortainerServer(models.Model):
             self.sync_environments()
 
             # Sync all other resources
-            self.sync_containers()
             self.sync_images()
             self.sync_volumes()
             self.sync_networks()
             self.sync_standard_templates()
             self.sync_custom_templates()
+            self.sync_containers()
 
             # Fetch missing file content for any templates
             self._fetch_missing_template_file_content()  # Use private method to avoid duplicate notifications
