@@ -9,23 +9,17 @@
                 <header>
                     <button name="action_start" string="Start" type="object" 
                             class="btn-primary"
-                            invisible="status == 1"/>
+                            invisible="status == '1'"/>
                     <button name="action_stop" string="Stop" type="object" 
                             class="btn-warning"
-                            invisible="status != 1"/>
+                            invisible="status != '1'"/>
                     <button name="action_remove" string="Remove" type="object" 
                             class="btn-danger" 
                             confirm="Are you sure you want to remove this stack?"/>
-                    
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button name="start" type="object" 
-                                class="oe_stat_button" icon="fa-play-circle"
-                                invisible="status == 1" string="Start"/>
-                        <button name="stop" type="object" 
-                                class="oe_stat_button" icon="fa-stop-circle"
-                                invisible="status != 1" string="Stop"/>
+                        
                     </div>
                     <div class="oe_title">
                         <label for="name" class="oe_edit_only"/>

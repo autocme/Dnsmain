@@ -718,15 +718,26 @@ class PortainerAPI(models.AbstractModel):
             return {'error': f'Failed to delete stack: {response.text}'}
             
         elif action in ['start', 'stop']:
-            # Create query parameters with endpointId for start/stop operations
-            action_params = {}
-            if environment_id:
-                action_params['endpointId'] = environment_id
+            # For Portainer API v2, we need to include endpointId as a query parameter
+            action_endpoint = ('start' if action == 'start' else 'stop')
+            
+            # Add endpointId as a query parameter in the URL itself
+            endpoint = f'/api/stacks/{stack_id}/{action_endpoint}'
+            
+            # Construct proper query parameters - endpointId must be included
+            if not environment_id:
+                return {'error': f'Environment ID is required for {action} operation'}
                 
-            endpoint = f'/api/stacks/{stack_id}/' + ('start' if action == 'start' else 'stop')
+            # Pass as explicit query parameters in the URL
+            action_params = {'endpointId': environment_id}
+            
+            # Make the API request with parameters as URL query
             response = server._make_api_request(endpoint, 'POST', params=action_params)
+            
             if response.status_code in [200, 201, 204]:
                 return True
+            
+            # Return detailed error information
             return {'error': f'Failed to {action} stack: {response.text}'}
             
         elif action == 'update':
