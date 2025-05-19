@@ -720,17 +720,20 @@ class PortainerContainer(models.Model):
         """Deploy a new container with the same configuration as this one"""
         self.ensure_one()
         
+        # Get API client
+        api = self._get_api()
+        
+        # New container name (adding -deploy suffix to avoid conflicts)
+        container_name = f"{self.name}-deploy"
+        
         # Log the deployment attempt
-        _logger.info(f"Deploying container based on: {self.name} (Image: {self.image})")
+        _logger.info(f"Deploying container based on: {self.name} (Image: {self.image}) to {container_name}")
         
         try:
-            # Build container creation parameters
-            container_name = f"{self.name}-deploy"  # Add suffix to avoid name conflict
-            
-            # Create container config following Docker API format
-            container_config = {
+            # Build config from container fields
+            config = {
                 'Image': self.image,
-                'name': container_name,
+                'Hostname': container_name,
                 'HostConfig': {
                     'RestartPolicy': {
                         'Name': self.restart_policy or 'no'
@@ -739,6 +742,57 @@ class PortainerContainer(models.Model):
                     'PublishAllPorts': self.publish_all_ports
                 }
             }
+            
+            # Include environment variables if available
+            env_vars = self.env['j_portainer.container.env'].search([
+                ('container_id', '=', self.id)
+            ])
+            
+            if env_vars:
+                env_list = []
+                for env in env_vars:
+                    if env.value:
+                        env_list.append(f"{env.name}={env.value}")
+                    else:
+                        env_list.append(env.name)
+                
+                config['Env'] = env_list
+            
+            # Include port mappings if available
+            port_mappings = self.env['j_portainer.container.port'].search([
+                ('container_id', '=', self.id)
+            ])
+            
+            if port_mappings:
+                exposed_ports = {}
+                port_bindings = {}
+                
+                for port in port_mappings:
+                    # Format: port/protocol (e.g., 80/tcp)
+                    port_key = f"{port.container_port}/{port.protocol}"
+                    
+                    # Mark as exposed
+                    exposed_ports[port_key] = {}
+                    
+                    # If host port is specified, add binding
+                    if port.host_port:
+                        host_ip = port.host_ip or ''
+                        if port_key not in port_bindings:
+                            port_bindings[port_key] = []
+                        
+                        port_bindings[port_key].append({
+                            'HostIp': host_ip,
+                            'HostPort': str(port.host_port)
+                        })
+                
+                # Add to config
+                if exposed_ports:
+                    config['ExposedPorts'] = exposed_ports
+                
+                if port_bindings:
+                    if 'HostConfig' not in config:
+                        config['HostConfig'] = {}
+                    config['HostConfig']['PortBindings'] = port_bindings
             
             # Get server object
             server = self.env['j_portainer.server'].browse(self.server_id.id)
@@ -754,10 +808,13 @@ class PortainerContainer(models.Model):
                     }
                 }
             
+            # Set name parameter (Docker API requires name as query parameter)
+            params = {'name': container_name}
+            
             # Use Docker API endpoint to create container
-            _logger.info(f"Creating container with name: {container_name}")
+            _logger.info(f"Creating container with config: {json.dumps(config)}")
             create_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/create'
-            response = server._make_api_request(create_endpoint, 'POST', data=container_config)
+            response = server._make_api_request(create_endpoint, 'POST', data=config, params=params)
             
             if response.status_code not in [200, 201, 204]:
                 error_msg = f"Failed to create container: {response.text}"
