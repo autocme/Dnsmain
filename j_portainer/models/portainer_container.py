@@ -723,11 +723,11 @@ class PortainerContainer(models.Model):
         # Get API client
         api = self._get_api()
         
-        # New container name (adding -deploy suffix to avoid conflicts)
-        container_name = f"{self.name}-deploy"
+        # Use the same container name without any suffix
+        container_name = self.name
         
         # Log the deployment attempt
-        _logger.info(f"Deploying container based on: {self.name} (Image: {self.image}) to {container_name}")
+        _logger.info(f"Deploying container based on: {self.name} (Image: {self.image})")
         
         try:
             # Build config from container fields - following exact Portainer format
