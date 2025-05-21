@@ -14,8 +14,27 @@ class PortainerContainer(models.Model):
     _order = 'name'
     
     def write(self, vals):
-        """Override write to handle restart policy changes"""
+        """Override write to handle changes that need to be synchronized to Portainer"""
+        # Store the old name if name is being changed
+        old_names = {}
+        if 'name' in vals:
+            for record in self:
+                old_names[record.id] = record.name
+        
+        # Perform the standard write operation
         result = super(PortainerContainer, self).write(vals)
+        
+        # If name has changed, update the container name in Portainer
+        if 'name' in vals:
+            for record in self:
+                try:
+                    old_name = old_names.get(record.id, record.name)
+                    _logger.info(f"Updating container name from '{old_name}' to '{record.name}'")
+                    record._update_container_name_in_portainer(old_name)
+                except Exception as e:
+                    _logger.warning(f"Failed to update container name for container ID {record.container_id}: {str(e)}")
+                    # We don't want to block the write operation if the API call fails
+                    pass
         
         # If restart policy is changed, update it in Portainer
         if 'restart_policy' in vals:
@@ -338,6 +357,45 @@ class PortainerContainer(models.Model):
         except Exception as e:
             _logger.error(f"Error starting container {self.name}: {str(e)}")
             raise UserError(_("Error starting container: %s") % str(e))
+            
+    def _update_container_name_in_portainer(self, old_name):
+        """Update container name in Portainer
+        
+        Args:
+            old_name (str): The old container name (for logging)
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # Get server and API client
+            server = self.server_id
+            
+            # Use Docker API rename endpoint
+            rename_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{self.container_id}/rename'
+            
+            # Container names in Docker must not include a leading slash
+            new_name = self.name.lstrip('/')
+            
+            # Set query parameters for rename (Docker API expects name as query param)
+            params = {'name': new_name}
+            
+            # Send rename request
+            _logger.info(f"Renaming container {old_name} to {new_name} in Portainer")
+            response = server._make_api_request(rename_endpoint, 'POST', params=params)
+            
+            # Check if request was successful
+            if response.status_code in [200, 201, 204]:
+                _logger.info(f"Successfully renamed container to {new_name} in Portainer")
+                return True
+            else:
+                error_msg = f"Failed to rename container in Portainer: {response.text}"
+                _logger.error(error_msg)
+                return False
+                
+        except Exception as e:
+            _logger.error(f"Error updating container name in Portainer: {str(e)}")
+            return False
             
     def _verify_container_running(self):
         """Verify container is actually running by checking its state directly
