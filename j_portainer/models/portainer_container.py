@@ -13,6 +13,31 @@ class PortainerContainer(models.Model):
     _description = 'Portainer Container'
     _order = 'name'
     
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Override create to create containers in Portainer when created in Odoo"""
+        # First create the records in Odoo
+        records = super(PortainerContainer, self).create(vals_list)
+        
+        # Then try to create the containers in Portainer
+        for record in records:
+            try:
+                # If a container ID is already provided, this is likely a sync operation
+                # so we should not try to create a new container in Portainer
+                if record.container_id:
+                    continue
+                    
+                # Create the container in Portainer
+                result = record._create_container_in_portainer()
+                if not result:
+                    _logger.warning(f"Failed to create container {record.name} in Portainer")
+            except Exception as e:
+                _logger.warning(f"Error creating container {record.name} in Portainer: {str(e)}")
+                # We don't want to block the create operation if the API call fails
+                pass
+                
+        return records
+    
     def write(self, vals):
         """Override write to handle changes that need to be synchronized to Portainer"""
         # Store the old name if name is being changed
@@ -358,6 +383,178 @@ class PortainerContainer(models.Model):
             _logger.error(f"Error starting container {self.name}: {str(e)}")
             raise UserError(_("Error starting container: %s") % str(e))
             
+    def _create_container_in_portainer(self):
+        """Create a new container in Portainer based on the Odoo record
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # Validate required fields
+            if not self.name or not self.image or not self.server_id or not self.environment_id:
+                _logger.error("Cannot create container: missing required fields")
+                return False
+                
+            # Get the server object
+            server = self.server_id
+            
+            # Build container configuration
+            config = {
+                'Image': self.image,
+                'Hostname': self.name,
+                'HostConfig': {
+                    'RestartPolicy': {
+                        'Name': self.restart_policy or 'no'
+                    },
+                    'Privileged': self.privileged,
+                    'PublishAllPorts': self.publish_all_ports,
+                }
+            }
+            
+            # Include memory limits if set
+            if self.memory_limit and self.memory_limit > 0:
+                # Convert MB to bytes as required by Docker API
+                config['HostConfig']['Memory'] = self.memory_limit * 1024 * 1024
+                
+            if self.memory_reservation and self.memory_reservation > 0:
+                # Convert MB to bytes as required by Docker API 
+                config['HostConfig']['MemoryReservation'] = self.memory_reservation * 1024 * 1024
+                
+            # Include CPU limits if set
+            if self.cpu_limit and self.cpu_limit > 0:
+                # Docker API expects fractional CPU values
+                config['HostConfig']['NanoCpus'] = int(self.cpu_limit * 1000000000)
+                
+            # Include shared memory size if set
+            if self.shm_size and self.shm_size > 0:
+                # Convert MB to bytes as required by Docker API
+                config['HostConfig']['ShmSize'] = self.shm_size * 1024 * 1024
+                
+            # Set init process flag if enabled
+            if self.init_process:
+                config['HostConfig']['Init'] = True
+                
+            # Add environment variables if available
+            env_vars = self.env_ids
+            if env_vars:
+                env_list = []
+                for env in env_vars:
+                    if env.value:
+                        env_list.append(f"{env.name}={env.value}")
+                    else:
+                        env_list.append(env.name)
+                
+                config['Env'] = env_list
+                
+            # Add port mappings if available
+            port_mappings = self.port_ids
+            if port_mappings:
+                exposed_ports = {}
+                port_bindings = {}
+                
+                for port in port_mappings:
+                    # Format: port/protocol (e.g., 80/tcp)
+                    port_key = f"{port.container_port}/{port.protocol}"
+                    
+                    # Mark as exposed
+                    exposed_ports[port_key] = {}
+                    
+                    # If host port is specified, add binding
+                    if port.host_port:
+                        host_ip = port.host_ip or ''
+                        if port_key not in port_bindings:
+                            port_bindings[port_key] = []
+                        
+                        port_bindings[port_key].append({
+                            'HostIp': host_ip,
+                            'HostPort': str(port.host_port)
+                        })
+                
+                # Add to config
+                if exposed_ports:
+                    config['ExposedPorts'] = exposed_ports
+                
+                if port_bindings:
+                    config['HostConfig']['PortBindings'] = port_bindings
+                    
+            # Add volume mappings if available
+            volume_mappings = self.volume_ids
+            if volume_mappings:
+                binds = []
+                volumes = {}
+                
+                for volume in volume_mappings:
+                    # Format host:container:mode
+                    if volume.host_path:
+                        # Docker API format for binds
+                        bind_str = f"{volume.host_path}:{volume.container_path}"
+                        if volume.read_only:
+                            bind_str += ":ro"
+                        binds.append(bind_str)
+                    
+                    # Mark container path as a volume
+                    volumes[volume.container_path] = {}
+                
+                if binds:
+                    config['HostConfig']['Binds'] = binds
+                
+                if volumes:
+                    config['Volumes'] = volumes
+                    
+            # Add container labels
+            container_labels = self.label_ids
+            if container_labels:
+                labels = {}
+                for label in container_labels:
+                    labels[label.name] = label.value
+                
+                config['Labels'] = labels
+                
+            # Set name parameter (Docker API requires name as query parameter)
+            params = {'name': self.name}
+            
+            # Create the container in Portainer
+            _logger.info(f"Creating container {self.name} with image {self.image}")
+            create_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/create'
+            response = server._make_api_request(create_endpoint, 'POST', data=config, params=params)
+            
+            if response.status_code not in [200, 201, 204]:
+                error_msg = f"Failed to create container: {response.text}"
+                _logger.error(error_msg)
+                return False
+                
+            # Get the container ID from the response
+            result = response.json()
+            container_id = result.get('Id')
+            
+            if not container_id:
+                _logger.error("No container ID in response")
+                return False
+                
+            # Update the Odoo record with the container ID
+            self.write({'container_id': container_id})
+            
+            # Start the container if specified
+            try:
+                # Start the container
+                start_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{container_id}/start'
+                start_response = server._make_api_request(start_endpoint, 'POST')
+                
+                if start_response.status_code in [200, 201, 204]:
+                    # Verify container is running
+                    self._verify_container_running()
+                    _logger.info(f"Container {self.name} started successfully")
+                else:
+                    _logger.warning(f"Container created but failed to start: {start_response.text}")
+            except Exception as e:
+                _logger.warning(f"Error starting container: {str(e)}")
+                
+            return True
+                
+        except Exception as e:
+            _logger.error(f"Error creating container in Portainer: {str(e)}")
+            return False
+    
     def _update_container_name_in_portainer(self, old_name):
         """Update container name in Portainer
         
