@@ -966,23 +966,23 @@ class PortainerContainer(models.Model):
                         _logger.warning(f"Skipping network connection for {network.network_name}: missing network_id")
                         continue
                         
-                    # Check if the network ID is a record ID or an actual Portainer ID
-                    # Portainer IDs are usually hex strings of 64 characters
-                    network_id = network.network_id
-                    if not isinstance(network_id, str) or len(network_id) < 10:
-                        # This might be an Odoo record ID, get the actual network record
-                        _logger.info(f"Looking up actual network ID for network: {network.network_name}")
-                        network_record = self.env['j_portainer.network'].browse(network_id)
-                        if network_record and network_record.network_id:
-                            network_id = network_record.network_id
-                        else:
-                            _logger.warning(f"Could not determine actual network ID for {network.network_name}")
-                            continue
-                            
-                    _logger.info(f"Connecting container to network: {network.network_name} (ID: {network_id})")
+                    # The network_id in the container.network model is a relation to j_portainer.network
+                    # We need to get the Docker network ID from the related network record
+                    network_relation = network.network_id
+                    if not network_relation:
+                        _logger.warning(f"Missing network relation for: {network.network_name}")
+                        continue
                     
-                    # Connect the container to the network
-                    connect_endpoint = f'/api/endpoints/{self.environment_id}/docker/networks/{network_id}/connect'
+                    # Get the Docker network ID from the related network record
+                    docker_network_id = network_relation.network_id
+                    if not docker_network_id or not isinstance(docker_network_id, str):
+                        _logger.warning(f"Invalid Docker network ID for: {network.network_name}")
+                        continue
+                            
+                    _logger.info(f"Connecting container to network: {network.network_name} (ID: {docker_network_id})")
+                    
+                    # Connect the container to the network using the Docker network ID
+                    connect_endpoint = f'/api/endpoints/{self.environment_id}/docker/networks/{docker_network_id}/connect'
                     connect_payload = {
                         'Container': container_id
                     }
