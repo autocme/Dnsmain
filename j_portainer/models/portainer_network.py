@@ -189,27 +189,37 @@ class PortainerNetwork(models.Model):
         """Remove the network"""
         self.ensure_one()
         
+        # Store network information before attempting to delete
+        network_name = self.name
+        
         try:
             api = self._get_api()
             result = api.network_action(
                 self.server_id.id, self.environment_id, self.network_id, 'delete')
                 
             if result:
-                # Delete the record
-                self.unlink()
-                
-                return {
+                # Only delete the Odoo record if Portainer deletion was successful
+                # Create success notification first, before deleting the record
+                message = {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
                         'title': _('Network Removed'),
-                        'message': _('Network %s removed successfully') % self.name,
+                        'message': _('Network %s removed successfully') % network_name,
                         'sticky': False,
                         'type': 'success',
                     }
                 }
+                
+                # Now delete the record
+                self.unlink()
+                self.env.cr.commit()
+                
+                return message
             else:
-                raise UserError(_("Failed to remove network"))
+                # If Portainer deletion failed, don't delete from Odoo
+                _logger.error(f"Failed to remove network {self.name} from Portainer")
+                raise UserError(_("Failed to remove network from Portainer"))
         except Exception as e:
             _logger.error(f"Error removing network {self.name}: {str(e)}")
             raise UserError(_("Error removing network: %s") % str(e))

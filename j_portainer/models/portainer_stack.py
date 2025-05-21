@@ -198,7 +198,9 @@ class PortainerStack(models.Model):
     def remove(self):
         """Remove the stack"""
         self.ensure_one()
-        stack_name = self.name  # Store name for use in success message after deletion
+        
+        # Store stack information before attempting to delete
+        stack_name = self.name
         
         try:
             api = self._get_api()
@@ -206,15 +208,9 @@ class PortainerStack(models.Model):
                 self.server_id.id, self.stack_id, 'delete', environment_id=self.environment_id)
                 
             if result:
-                # Before deleting the record, clear the stack_id reference on any containers
-                # This ensures we don't have orphaned references
-                if self.container_ids:
-                    self.container_ids.write({'stack_id': False})
-                
-                # Now that the stack is removed from Portainer, we can delete the Odoo record
-                self.unlink()
-                
-                return {
+                # Only delete the Odoo record if Portainer deletion was successful
+                # Create success notification first, before deleting the record
+                message = {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
@@ -224,7 +220,20 @@ class PortainerStack(models.Model):
                         'type': 'success',
                     }
                 }
+                
+                # Before deleting the record, clear the stack_id reference on any containers
+                # This ensures we don't have orphaned references
+                if self.container_ids:
+                    self.container_ids.write({'stack_id': False})
+                
+                # Now delete the record
+                self.unlink()
+                self.env.cr.commit()
+                
+                return message
             else:
+                # If Portainer deletion failed, don't delete from Odoo
+                _logger.error(f"Failed to remove stack {self.name} from Portainer")
                 raise UserError(_("Failed to remove stack from Portainer"))
         except Exception as e:
             _logger.error(f"Error removing stack {self.name}: {str(e)}")
