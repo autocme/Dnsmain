@@ -1036,15 +1036,11 @@ class PortainerContainer(models.Model):
                         }
                     }
                     
-                    # Also create a redirect action to container list view
+                    # Create a page refresh action instead of redirect
+                    # This will refresh the entire page and return to the container list
                     action['next'] = {
-                        'type': 'ir.actions.act_window',
-                        'name': _('Containers'),
-                        'res_model': 'j_portainer.container',
-                        'view_mode': 'tree,form',
-                        'view_type': 'form',
-                        'target': 'current',
-                        'domain': [('server_id', '=', self.server_id.id)]
+                        'type': 'ir.actions.client',
+                        'tag': 'reload',
                     }
                     
                     # Now delete the record
@@ -1075,15 +1071,10 @@ class PortainerContainer(models.Model):
                     }
                 }
                 
-                # Add redirect to container list
+                # Create a page refresh action for a better user experience
                 action['next'] = {
-                    'type': 'ir.actions.act_window',
-                    'name': _('Containers'),
-                    'res_model': 'j_portainer.container',
-                    'view_mode': 'tree,form',
-                    'view_type': 'form', 
-                    'target': 'current',
-                    'domain': [('server_id', '=', server_id)]
+                    'type': 'ir.actions.client',
+                    'tag': 'reload',
                 }
                 
                 # Now delete the record
