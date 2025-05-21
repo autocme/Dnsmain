@@ -230,10 +230,27 @@ class PortainerImage(models.Model):
                 params={'force': True}
             )
             
-            if result.get('error'):
+            # Handle different response formats from Portainer API
+            has_error = False
+            error_message = ""
+            
+            # Check if result is a dictionary with an error key
+            if isinstance(result, dict) and 'error' in result:
+                has_error = True
+                error_message = result.get('error', 'Unknown error')
+            # Check if result is a list (sometimes Docker API returns a list of deleted layers)
+            elif isinstance(result, list):
+                # If it's a list, this usually means success (list of deleted layers)
+                has_error = False
+            # For any other non-success result format
+            elif not result:
+                has_error = True
+                error_message = "Empty or null response from API"
+            
+            if has_error:
                 # If Portainer deletion failed, don't delete from Odoo
-                _logger.error(f"Failed to remove image {image_name} from Portainer: {result.get('error')}")
-                raise UserError(_(f"Failed to remove image: {result.get('error')}"))
+                _logger.error(f"Failed to remove image {image_name} from Portainer: {error_message}")
+                raise UserError(_(f"Failed to remove image: {error_message}"))
                 
             # Only delete the Odoo record if Portainer deletion was successful
             # Create success notification first, before deleting the record
