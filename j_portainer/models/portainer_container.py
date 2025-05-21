@@ -1079,16 +1079,35 @@ class PortainerContainer(models.Model):
                         message += f" (ID: {container_id[:12]})"
                     
                     _logger.info(f"Container deployed successfully: {container_id}")
-                    return {
-                        'type': 'ir.actions.client',
-                        'tag': 'display_notification',
-                        'params': {
-                            'title': _('Container Deployed'),
-                            'message': message,
-                            'sticky': False,
-                            'type': 'success',
+                    
+                    # Sync containers with Portainer to update the list
+                    try:
+                        # Use the sync_containers method from the server
+                        self.server_id.sync_containers()
+                        
+                        # Return to container list view with reload
+                        return {
+                            'name': _('Containers'),
+                            'type': 'ir.actions.act_window',
+                            'res_model': 'j_portainer.container',
+                            'view_mode': 'tree,form',
+                            'view_type': 'form',
+                            'target': 'current',
+                            'context': {'search_default_server_id': self.server_id.id}
                         }
-                    }
+                    except Exception as e:
+                        _logger.error(f"Error syncing containers: {str(e)}")
+                        # Fallback to simple notification
+                        return {
+                            'type': 'ir.actions.client',
+                            'tag': 'display_notification',
+                            'params': {
+                                'title': _('Container Deployed'),
+                                'message': message + _(' - Please refresh the container list'),
+                                'sticky': False,
+                                'type': 'success',
+                            }
+                        }
                     
                 except Exception as e:
                     # If creating Odoo record fails, still return success since container was created in Portainer
