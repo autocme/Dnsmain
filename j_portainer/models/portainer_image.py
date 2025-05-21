@@ -219,6 +219,9 @@ class PortainerImage(models.Model):
         """Remove this image"""
         self.ensure_one()
         
+        # Store image information before attempting to delete
+        image_name = f"{self.repository}:{self.tag}" if self.tag else self.repository
+        
         try:
             api = self._get_api()
             result = api.image_action(
@@ -228,13 +231,31 @@ class PortainerImage(models.Model):
             )
             
             if result.get('error'):
+                # If Portainer deletion failed, don't delete from Odoo
+                _logger.error(f"Failed to remove image {image_name} from Portainer: {result.get('error')}")
                 raise UserError(_(f"Failed to remove image: {result.get('error')}"))
                 
-            # Delete the record
+            # Only delete the Odoo record if Portainer deletion was successful
+            # Create success notification first, before deleting the record
+            message = {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Image Removed'),
+                    'message': _('Image %s removed successfully') % image_name,
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+            
+            # Now delete the record
             self.unlink()
-            return {'type': 'ir.actions.act_window_close'}
+            self.env.cr.commit()
+            
+            return message
             
         except Exception as e:
+            _logger.error(f"Error removing image {image_name}: {str(e)}")
             raise UserError(_(f"Failed to remove image: {str(e)}"))
     
     def action_refresh(self):
