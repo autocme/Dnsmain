@@ -869,10 +869,10 @@ class PortainerContainer(models.Model):
                 
                 for volume in volume_mappings:
                     # Format host:container:mode
-                    if volume.host_path:
+                    if volume.name:
                         # Docker API format for binds
-                        bind_str = f"{volume.host_path}:{volume.container_path}"
-                        if volume.read_only:
+                        bind_str = f"{volume.name}:{volume.container_path}"
+                        if volume.mode == 'ro':
                             bind_str += ":ro"
                         binds.append(bind_str)
                     
@@ -950,27 +950,52 @@ class PortainerContainer(models.Model):
                     }
                 }
             
+            # Connect to the default bridge network first
+            # This ensures the container has at least one network connection
+            
             # Get network connections from the source container
             networks = self.env['j_portainer.container.network'].search([
                 ('container_id', '=', self.id)
             ])
             
-            # Connect the container to the same networks as the source container
-            for network in networks:
-                # Get the network name from the network ID
-                _logger.info(f"Connecting container to network: {network.network_name}")
-                
-                connect_endpoint = f'/api/endpoints/{self.environment_id}/docker/networks/{network.network_id}/connect'
-                connect_payload = {
-                    'Container': container_id,
-                }
-                
-                # Connect the container to the network
-                connect_response = server._make_api_request(connect_endpoint, 'POST', data=connect_payload)
-                
-                if connect_response.status_code not in [200, 201, 204]:
-                    _logger.warning(f"Failed to connect container to network {network.network_name}: {connect_response.text}")
-                    # Continue with other networks - don't abort the whole operation
+            if networks:
+                # Connect the container to the same networks as the source container
+                for network in networks:
+                    # Make sure we're using the correct network ID from Portainer
+                    if not network.network_id:
+                        _logger.warning(f"Skipping network connection for {network.network_name}: missing network_id")
+                        continue
+                        
+                    # Check if the network ID is a record ID or an actual Portainer ID
+                    # Portainer IDs are usually hex strings of 64 characters
+                    network_id = network.network_id
+                    if not isinstance(network_id, str) or len(network_id) < 10:
+                        # This might be an Odoo record ID, get the actual network record
+                        _logger.info(f"Looking up actual network ID for network: {network.network_name}")
+                        network_record = self.env['j_portainer.network'].browse(network_id)
+                        if network_record and network_record.network_id:
+                            network_id = network_record.network_id
+                        else:
+                            _logger.warning(f"Could not determine actual network ID for {network.network_name}")
+                            continue
+                            
+                    _logger.info(f"Connecting container to network: {network.network_name} (ID: {network_id})")
+                    
+                    # Connect the container to the network
+                    connect_endpoint = f'/api/endpoints/{self.environment_id}/docker/networks/{network_id}/connect'
+                    connect_payload = {
+                        'Container': container_id
+                    }
+                    
+                    try:
+                        connect_response = server._make_api_request(connect_endpoint, 'POST', data=connect_payload)
+                        
+                        if connect_response.status_code not in [200, 201, 204]:
+                            _logger.warning(f"Failed to connect container to network {network.network_name}: {connect_response.text}")
+                            # Continue with other networks - don't abort the whole operation
+                    except Exception as e:
+                        _logger.warning(f"Error connecting to network {network.network_name}: {str(e)}")
+                        # Continue with other networks
             
             # Start the container
             _logger.info(f"Starting container with ID: {container_id}")
