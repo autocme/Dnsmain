@@ -680,18 +680,67 @@ class PortainerContainer(models.Model):
         }
     
     def action_refresh(self):
-        """Refresh container information"""
+        """Refresh only this container's information directly from Portainer"""
         self.ensure_one()
         
         try:
-            self.server_id.sync_containers(self.environment_id)
+            # Get the server and environment ID
+            server = self.server_id
+            environment_id = self.environment_id
+            container_id = self.container_id
             
+            # Get container details from Portainer API
+            _logger.info(f"Refreshing container {self.name} ({container_id})")
+            details_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/json'
+            details_response = server._make_api_request(details_endpoint, 'GET')
+            
+            if details_response.status_code != 200:
+                error_msg = f"Failed to get container details: {details_response.text}"
+                _logger.error(error_msg)
+                raise UserError(error_msg)
+                
+            # Parse container details
+            details = details_response.json()
+            
+            # Update container information
+            update_vals = {}
+            
+            # Update container name (without leading /)
+            container_name = details.get('Name', '')
+            if container_name:
+                update_vals['name'] = container_name.lstrip('/')
+                
+            # Update container status and state
+            status = details.get('Status', '')
+            if status:
+                update_vals['status'] = status
+                
+            # Process state information
+            state = details.get('State', {})
+            container_state = 'created'
+            if state.get('Running'):
+                container_state = 'running'
+            elif state.get('Paused'):
+                container_state = 'paused'
+            elif state.get('Restarting'):
+                container_state = 'restarting'
+            elif state.get('OOMKilled') or state.get('Dead'):
+                container_state = 'dead'
+            elif state.get('Status') == 'exited':
+                container_state = 'exited'
+                
+            update_vals['state'] = container_state
+            
+            # Update the container record
+            self.write(update_vals)
+            
+            # Return success notification
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Container Refreshed'),
-                    'message': _('Container information refreshed successfully'),
+                    'message': _('Container information updated successfully'),
                     'sticky': False,
                     'type': 'success',
                 }
@@ -1080,29 +1129,11 @@ class PortainerContainer(models.Model):
                     
                     _logger.info(f"Container deployed successfully: {container_id}")
                     
-                    # Only refresh the newly created container
+                    # Call the action_refresh method on the new container to update its data
                     try:
-                        # Get the container details directly from Portainer
-                        container_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{container_id}/json'
-                        details_response = server._make_api_request(container_endpoint, 'GET')
-                        
-                        if details_response.status_code == 200:
-                            # Update the container record with fresh data from Portainer
-                            details = details_response.json()
-                            
-                            # Update status and state from details
-                            state_info = details.get('State', {})
-                            if state_info.get('Running'):
-                                new_container.write({'state': 'running'})
-                            elif state_info.get('Paused'):
-                                new_container.write({'state': 'paused'})
-                            elif state_info.get('Restarting'):
-                                new_container.write({'state': 'restarting'})
-                                
-                            # Update status from details
-                            status = details.get('Status', '')
-                            if status:
-                                new_container.write({'status': status})
+                        # Refresh the new container from Portainer
+                        _logger.info(f"Refreshing newly deployed container: {new_container.name}")
+                        new_container.action_refresh()
                         
                         # Show the newly created container record
                         return {
