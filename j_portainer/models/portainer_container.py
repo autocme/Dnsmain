@@ -1021,20 +1021,37 @@ class PortainerContainer(models.Model):
             
             if isinstance(result, dict) and 'success' in result:
                 if result['success']:
-                    # Delete the record
-                    self.unlink()
-                    self.env.cr.commit()
-
-                    return {
+                    # Store container name before deletion for use in success message
+                    container_name = self.name
+                    
+                    # Create the return action before deleting the record
+                    action = {
                         'type': 'ir.actions.client',
                         'tag': 'display_notification',
                         'params': {
                             'title': _('Container Removed'),
-                            'message': _('Container %s removed successfully') % self.name,
+                            'message': _('Container %s removed successfully') % container_name,
                             'sticky': False,
                             'type': 'success',
                         }
                     }
+                    
+                    # Also create a redirect action to container list view
+                    action['next'] = {
+                        'type': 'ir.actions.act_window',
+                        'name': _('Containers'),
+                        'res_model': 'j_portainer.container',
+                        'view_mode': 'tree,form',
+                        'view_type': 'form',
+                        'target': 'current',
+                        'domain': [('server_id', '=', self.server_id.id)]
+                    }
+                    
+                    # Now delete the record
+                    self.unlink()
+                    self.env.cr.commit()
+
+                    return action
                 else:
                     # API returned failure with message
                     error_message = result.get('message', _("Failed to remove container"))
@@ -1042,18 +1059,38 @@ class PortainerContainer(models.Model):
                     raise UserError(error_message)
             elif result:
                 # Legacy boolean True result
-                self.unlink()
-                self.env.cr.commit()
-                return {
+                # Store container name before deletion
+                container_name = self.name
+                server_id = self.server_id.id
+                
+                # Create the return action before deleting the record
+                action = {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
                         'title': _('Container Removed'),
-                        'message': _('Container %s removed successfully') % self.name,
+                        'message': _('Container %s removed successfully') % container_name,
                         'sticky': False,
                         'type': 'success',
                     }
                 }
+                
+                # Add redirect to container list
+                action['next'] = {
+                    'type': 'ir.actions.act_window',
+                    'name': _('Containers'),
+                    'res_model': 'j_portainer.container',
+                    'view_mode': 'tree,form',
+                    'view_type': 'form', 
+                    'target': 'current',
+                    'domain': [('server_id', '=', server_id)]
+                }
+                
+                # Now delete the record
+                self.unlink()
+                self.env.cr.commit()
+                
+                return action
             else:
                 # Legacy boolean False result
                 raise UserError(_("Failed to remove container"))
