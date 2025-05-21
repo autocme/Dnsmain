@@ -297,8 +297,11 @@ class PortainerContainer(models.Model):
                 self.server_id.id, self.environment_id, self.container_id, 'start')
 
             if result:
-                # Update container state
-                self.write({'state': 'running', 'status': 'Up'})
+                # Don't immediately update the state - verify container is actually running
+                # Docker API can return success (204) even when the container fails to start
+                # due to application errors inside the container
+                self._verify_container_running()
+                
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
@@ -314,6 +317,59 @@ class PortainerContainer(models.Model):
         except Exception as e:
             _logger.error(f"Error starting container {self.name}: {str(e)}")
             raise UserError(_("Error starting container: %s") % str(e))
+            
+    def _verify_container_running(self):
+        """Verify container is actually running by checking its state directly"""
+        import time
+        
+        # Wait a moment for container to start
+        time.sleep(0.5)
+        
+        try:
+            # Get container details from Docker API
+            server = self.server_id
+            endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{self.container_id}/json'
+            response = server._make_api_request(endpoint, 'GET')
+            
+            if response.status_code != 200:
+                _logger.warning(f"Failed to verify container state: {response.text}")
+                # Default to running if we can't verify (we'll assume it worked)
+                self.write({'state': 'running', 'status': 'Up'})
+                return
+            
+            # Get container state from response
+            container_data = response.json()
+            state = container_data.get('State', {})
+            
+            # Check if container is actually running
+            if state.get('Running', False):
+                self.write({'state': 'running', 'status': 'Up'})
+            elif state.get('Restarting', False):
+                self.write({'state': 'restarting', 'status': 'Restarting'})
+            elif state.get('Paused', False):
+                self.write({'state': 'paused', 'status': 'Paused'})
+            else:
+                # Container is not running - probably exited with error
+                exit_code = state.get('ExitCode', 0)
+                error = state.get('Error', '')
+                
+                if exit_code != 0:
+                    # Container exited with error code
+                    self.write({
+                        'state': 'exited',
+                        'status': f"Exited ({exit_code})" + (f": {error}" if error else "")
+                    })
+                    _logger.warning(f"Container {self.name} started but exited with code {exit_code}: {error}")
+                else:
+                    # Container exited with code 0 (normal exit)
+                    self.write({
+                        'state': 'exited',
+                        'status': 'Exited (0)'
+                    })
+        except Exception as e:
+            _logger.error(f"Error verifying container state: {str(e)}")
+            # Fallback to running state if verification fails
+            self.write({'state': 'running', 'status': 'Up'})
     
     def stop(self):
         """Stop the container"""
