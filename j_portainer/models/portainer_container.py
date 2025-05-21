@@ -292,38 +292,63 @@ class PortainerContainer(models.Model):
         self.ensure_one()
         
         try:
-            api = self._get_api()
-            result = api.container_action(
-                self.server_id.id, self.environment_id, self.container_id, 'start')
-
-            if result:
-                # Don't immediately update the state - verify container is actually running
-                # Docker API can return success (204) even when the container fails to start
-                # due to application errors inside the container
-                self._verify_container_running()
+            # Use direct API call to start the container
+            server = self.server_id
+            start_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{self.container_id}/start'
+            
+            # Start container using direct API call
+            _logger.info(f"Starting container {self.name} ({self.container_id})")
+            response = server._make_api_request(start_endpoint, 'POST')
+            
+            # Check if start command was accepted (not if it actually worked)
+            if response.status_code in [204, 200, 201, 304]:
+                # Status 204 is normal - it means "No Content" but the operation was successful
+                # Now check if the container is actually running
+                running = self._verify_container_running()
                 
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': _('Container Started'),
-                        'message': _('Container %s started successfully') % self.name,
-                        'sticky': False,
-                        'type': 'success',
+                if running:
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Container Started'),
+                            'message': _('Container %s started successfully') % self.name,
+                            'sticky': False,
+                            'type': 'success',
+                        }
                     }
-                }
+                else:
+                    # Container start command succeeded but container exited right away
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Container Start Issue'),
+                            'message': _('Container %s started but exited immediately. Check container logs for details.') % self.name,
+                            'sticky': True,
+                            'type': 'warning',
+                        }
+                    }
             else:
-                raise UserError(_("Failed to start container"))
+                # API returned an error status code
+                error_msg = f"API Error: {response.status_code}"
+                if hasattr(response, 'text') and response.text:
+                    error_msg += f" - {response.text}"
+                raise UserError(_(error_msg))
         except Exception as e:
             _logger.error(f"Error starting container {self.name}: {str(e)}")
             raise UserError(_("Error starting container: %s") % str(e))
             
     def _verify_container_running(self):
-        """Verify container is actually running by checking its state directly"""
+        """Verify container is actually running by checking its state directly
+        
+        Returns:
+            bool: True if container is running, False otherwise
+        """
         import time
         
-        # Wait a moment for container to start
-        time.sleep(0.5)
+        # Wait a moment for container to start (important for containers that might exit immediately)
+        time.sleep(1.0)
         
         try:
             # Get container details from Docker API
@@ -333,21 +358,55 @@ class PortainerContainer(models.Model):
             
             if response.status_code != 200:
                 _logger.warning(f"Failed to verify container state: {response.text}")
-                # Default to running if we can't verify (we'll assume it worked)
-                self.write({'state': 'running', 'status': 'Up'})
-                return
+                # Don't assume it's running if we can't verify
+                self.write({'state': 'unknown', 'status': 'State verification failed'})
+                return False
             
             # Get container state from response
             container_data = response.json()
             state = container_data.get('State', {})
             
+            # Get humanized status from container
+            status_text = container_data.get('State', {}).get('Status', '')
+            
+            # Get uptime for running containers
+            started_at = None
+            if state.get('StartedAt'):
+                try:
+                    # Parse the time string and localize it
+                    started_at = state.get('StartedAt')
+                except Exception:
+                    pass
+                    
+            # Format status message
+            status_message = ''
+            
             # Check if container is actually running
             if state.get('Running', False):
-                self.write({'state': 'running', 'status': 'Up'})
+                status_message = 'Up'
+                if started_at:
+                    status_message += f" (since {started_at})"
+                    
+                self.write({
+                    'state': 'running', 
+                    'status': status_message
+                })
+                return True
+                
             elif state.get('Restarting', False):
-                self.write({'state': 'restarting', 'status': 'Restarting'})
+                self.write({
+                    'state': 'restarting', 
+                    'status': 'Restarting'
+                })
+                return True
+                
             elif state.get('Paused', False):
-                self.write({'state': 'paused', 'status': 'Paused'})
+                self.write({
+                    'state': 'paused', 
+                    'status': 'Paused'
+                })
+                return True
+                
             else:
                 # Container is not running - probably exited with error
                 exit_code = state.get('ExitCode', 0)
@@ -355,21 +414,49 @@ class PortainerContainer(models.Model):
                 
                 if exit_code != 0:
                     # Container exited with error code
+                    exit_message = f"Exited ({exit_code})" 
+                    
+                    # Add error message if available
+                    if error:
+                        exit_message += f": {error}"
+                        
+                    # Format message for UI
                     self.write({
                         'state': 'exited',
-                        'status': f"Exited ({exit_code})" + (f": {error}" if error else "")
+                        'status': exit_message
                     })
+                    
+                    # Log details for troubleshooting
                     _logger.warning(f"Container {self.name} started but exited with code {exit_code}: {error}")
+                    
+                    # Get logs if available for diagnostics
+                    try:
+                        logs_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{self.container_id}/logs'
+                        logs_params = {'stderr': 1, 'stdout': 1, 'tail': 50}
+                        logs_response = server._make_api_request(
+                            logs_endpoint, 'GET', 
+                            params=logs_params,
+                            headers={'Accept': 'text/plain'}
+                        )
+                        
+                        if logs_response.status_code == 200 and logs_response.text:
+                            _logger.warning(f"Container logs: {logs_response.text[:1000]}")
+                    except Exception as log_error:
+                        _logger.error(f"Failed to get container logs: {str(log_error)}")
+                        
+                    return False
                 else:
                     # Container exited with code 0 (normal exit)
                     self.write({
                         'state': 'exited',
                         'status': 'Exited (0)'
                     })
+                    return False
         except Exception as e:
             _logger.error(f"Error verifying container state: {str(e)}")
-            # Fallback to running state if verification fails
-            self.write({'state': 'running', 'status': 'Up'})
+            # Don't assume it's running if verification fails
+            self.write({'state': 'unknown', 'status': f'Verification error: {str(e)}'})
+            return False
     
     def stop(self):
         """Stop the container"""
