@@ -730,7 +730,7 @@ class PortainerContainer(models.Model):
         _logger.info(f"Deploying container based on: {self.name} (Image: {self.image}) to {container_name}")
         
         try:
-            # Build config from container fields
+            # Build config from container fields - following exact Portainer format
             config = {
                 'Image': self.image,
                 'Hostname': container_name,
@@ -739,9 +739,75 @@ class PortainerContainer(models.Model):
                         'Name': self.restart_policy or 'no'
                     },
                     'Privileged': self.privileged,
-                    'PublishAllPorts': self.publish_all_ports
+                    'PublishAllPorts': self.publish_all_ports,
                 }
             }
+            
+            # Include memory limits if set
+            if self.memory_limit and self.memory_limit > 0:
+                # Convert MB to bytes as required by Docker API
+                config['HostConfig']['Memory'] = self.memory_limit * 1024 * 1024
+                
+            if self.memory_reservation and self.memory_reservation > 0:
+                # Convert MB to bytes as required by Docker API 
+                config['HostConfig']['MemoryReservation'] = self.memory_reservation * 1024 * 1024
+                
+            # Include CPU limits if set
+            if self.cpu_limit and self.cpu_limit > 0:
+                # Docker API expects fractional CPU values
+                config['HostConfig']['NanoCpus'] = int(self.cpu_limit * 1000000000)
+                
+            # Include shared memory size if set
+            if self.shm_size and self.shm_size > 0:
+                # Convert MB to bytes as required by Docker API
+                config['HostConfig']['ShmSize'] = self.shm_size * 1024 * 1024
+                
+            # Set init process flag if enabled
+            if self.init_process:
+                config['HostConfig']['Init'] = True
+            
+            # Container capabilities - exactly like Portainer interface
+            cap_add = []
+            if self.cap_audit_control: cap_add.append('AUDIT_CONTROL')
+            if self.cap_audit_write: cap_add.append('AUDIT_WRITE')
+            if self.cap_block_suspend: cap_add.append('BLOCK_SUSPEND')
+            if self.cap_chown: cap_add.append('CHOWN')
+            if self.cap_dac_override: cap_add.append('DAC_OVERRIDE') 
+            if self.cap_dac_read_search: cap_add.append('DAC_READ_SEARCH')
+            if self.cap_fowner: cap_add.append('FOWNER')
+            if self.cap_fsetid: cap_add.append('FSETID')
+            if self.cap_ipc_lock: cap_add.append('IPC_LOCK')
+            if self.cap_ipc_owner: cap_add.append('IPC_OWNER')
+            if self.cap_kill: cap_add.append('KILL')
+            if self.cap_lease: cap_add.append('LEASE')
+            if self.cap_linux_immutable: cap_add.append('LINUX_IMMUTABLE')
+            if self.cap_mac_admin: cap_add.append('MAC_ADMIN')
+            if self.cap_mac_override: cap_add.append('MAC_OVERRIDE')
+            if self.cap_mknod: cap_add.append('MKNOD')
+            if self.cap_net_admin: cap_add.append('NET_ADMIN')
+            if self.cap_net_bind_service: cap_add.append('NET_BIND_SERVICE')
+            if self.cap_net_broadcast: cap_add.append('NET_BROADCAST')
+            if self.cap_net_raw: cap_add.append('NET_RAW')
+            if self.cap_setfcap: cap_add.append('SETFCAP')
+            if self.cap_setgid: cap_add.append('SETGID')
+            if self.cap_setpcap: cap_add.append('SETPCAP')
+            if self.cap_setuid: cap_add.append('SETUID')
+            if self.cap_syslog: cap_add.append('SYSLOG')
+            if self.cap_sys_admin: cap_add.append('SYS_ADMIN')
+            if self.cap_sys_boot: cap_add.append('SYS_BOOT')
+            if self.cap_sys_chroot: cap_add.append('SYS_CHROOT')
+            if self.cap_sys_module: cap_add.append('SYS_MODULE')
+            if self.cap_sys_nice: cap_add.append('SYS_NICE')
+            if self.cap_sys_pacct: cap_add.append('SYS_PACCT')
+            if self.cap_sys_ptrace: cap_add.append('SYS_PTRACE')
+            if self.cap_sys_rawio: cap_add.append('SYS_RAWIO')
+            if self.cap_sys_resource: cap_add.append('SYS_RESOURCE')
+            if self.cap_sys_time: cap_add.append('SYS_TIME')
+            if self.cap_sys_tty_config: cap_add.append('SYS_TTY_CONFIG')
+            if self.cap_wake_alarm: cap_add.append('WAKE_ALARM')
+            
+            if cap_add:
+                config['HostConfig']['CapAdd'] = cap_add
             
             # Include environment variables if available
             env_vars = self.env['j_portainer.container.env'].search([
@@ -790,9 +856,46 @@ class PortainerContainer(models.Model):
                     config['ExposedPorts'] = exposed_ports
                 
                 if port_bindings:
-                    if 'HostConfig' not in config:
-                        config['HostConfig'] = {}
                     config['HostConfig']['PortBindings'] = port_bindings
+            
+            # Include volume mappings
+            volume_mappings = self.env['j_portainer.container.volume'].search([
+                ('container_id', '=', self.id)
+            ])
+            
+            if volume_mappings:
+                binds = []
+                volumes = {}
+                
+                for volume in volume_mappings:
+                    # Format host:container:mode
+                    if volume.host_path:
+                        # Docker API format for binds
+                        bind_str = f"{volume.host_path}:{volume.container_path}"
+                        if volume.read_only:
+                            bind_str += ":ro"
+                        binds.append(bind_str)
+                    
+                    # Mark container path as a volume
+                    volumes[volume.container_path] = {}
+                
+                if binds:
+                    config['HostConfig']['Binds'] = binds
+                
+                if volumes:
+                    config['Volumes'] = volumes
+                    
+            # Add container labels 
+            container_labels = self.env['j_portainer.container.label'].search([
+                ('container_id', '=', self.id)
+            ])
+            
+            if container_labels:
+                labels = {}
+                for label in container_labels:
+                    labels[label.name] = label.value
+                
+                config['Labels'] = labels
             
             # Get server object
             server = self.env['j_portainer.server'].browse(self.server_id.id)
@@ -847,6 +950,28 @@ class PortainerContainer(models.Model):
                     }
                 }
             
+            # Get network connections from the source container
+            networks = self.env['j_portainer.container.network'].search([
+                ('container_id', '=', self.id)
+            ])
+            
+            # Connect the container to the same networks as the source container
+            for network in networks:
+                # Get the network name from the network ID
+                _logger.info(f"Connecting container to network: {network.network_name}")
+                
+                connect_endpoint = f'/api/endpoints/{self.environment_id}/docker/networks/{network.network_id}/connect'
+                connect_payload = {
+                    'Container': container_id,
+                }
+                
+                # Connect the container to the network
+                connect_response = server._make_api_request(connect_endpoint, 'POST', data=connect_payload)
+                
+                if connect_response.status_code not in [200, 201, 204]:
+                    _logger.warning(f"Failed to connect container to network {network.network_name}: {connect_response.text}")
+                    # Continue with other networks - don't abort the whole operation
+            
             # Start the container
             _logger.info(f"Starting container with ID: {container_id}")
             start_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{container_id}/start'
@@ -865,23 +990,106 @@ class PortainerContainer(models.Model):
                         'type': 'warning',
                     }
                 }
+                
+            # Get the new container information to create a record in Odoo
+            _logger.info(f"Getting container details for: {container_id}")
+            details_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{container_id}/json'
+            details_response = server._make_api_request(details_endpoint, 'GET')
             
-            # Successfully created and started container
-            message = _('Container deployed successfully')
-            if container_id:
-                message += f" (ID: {container_id[:12]})"
-            
-            _logger.info(f"Container deployed successfully: {container_id}")
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Container Deployed'),
-                    'message': message,
-                    'sticky': False,
-                    'type': 'success',
+            if details_response.status_code == 200:
+                # Create new container record in Odoo
+                try:
+                    details = details_response.json()
+                    
+                    # Prepare container data
+                    container_name = details.get('Name', '').lstrip('/')
+                    state = details.get('State', {})
+                    status = details.get('Status', '')
+                    
+                    # Determine container state
+                    container_state = 'created'
+                    if state.get('Running'):
+                        container_state = 'running'
+                    elif state.get('Paused'):
+                        container_state = 'paused'
+                    elif state.get('Restarting'):
+                        container_state = 'restarting'
+                    elif state.get('OOMKilled') or state.get('Dead'):
+                        container_state = 'dead'
+                    elif state.get('Status') == 'exited':
+                        container_state = 'exited'
+                    elif state.get('Status') == 'created':
+                        container_state = 'created'
+                    
+                    # Format date if available
+                    created_at = None
+                    if details.get('Created'):
+                        try:
+                            # Use the date parsing method from PortainerServer
+                            created_at = server._parse_date_value(details.get('Created'))
+                        except Exception as e:
+                            _logger.warning(f"Error parsing created date: {str(e)}")
+                    
+                    # Create new container record
+                    new_container = self.env['j_portainer.container'].create({
+                        'name': container_name,
+                        'container_id': container_id,
+                        'image': self.image,
+                        'image_id': details.get('Image', ''),
+                        'created': created_at,
+                        'status': status,
+                        'state': container_state,
+                        'restart_policy': self.restart_policy,
+                        'privileged': self.privileged,
+                        'publish_all_ports': self.publish_all_ports,
+                        'server_id': self.server_id.id,
+                        'environment_id': self.environment_id,
+                        'environment_name': self.environment_name,
+                        'stack_id': self.stack_id.id if self.stack_id else False,
+                    })
+                    
+                    # Successfully created and started container
+                    message = _('Container deployed successfully')
+                    if container_id:
+                        message += f" (ID: {container_id[:12]})"
+                    
+                    _logger.info(f"Container deployed successfully: {container_id}")
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Container Deployed'),
+                            'message': message,
+                            'sticky': False,
+                            'type': 'success',
+                        }
+                    }
+                    
+                except Exception as e:
+                    # If creating Odoo record fails, still return success since container was created in Portainer
+                    _logger.error(f"Error creating container record in Odoo: {str(e)}")
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Container Deployed'),
+                            'message': _('Container deployed in Portainer but failed to create record in Odoo. Refresh the container list.'),
+                            'sticky': True,
+                            'type': 'warning',
+                        }
+                    }
+            else:
+                # Container was created and started, but we couldn't get its details
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Container Deployed'),
+                        'message': _('Container deployed successfully. Please refresh the container list to see it.'),
+                        'sticky': False,
+                        'type': 'success',
+                    }
                 }
-            }
             
         except Exception as e:
             _logger.error(f"Error deploying container {self.name}: {str(e)}")
