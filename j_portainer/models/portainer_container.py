@@ -1021,33 +1021,17 @@ class PortainerContainer(models.Model):
             
             if isinstance(result, dict) and 'success' in result:
                 if result['success']:
-                    # Store container name before deletion for use in success message
+                    # Store container name before deletion for use in logging
                     container_name = self.name
                     
-                    # Create the return action before deleting the record
-                    action = {
-                        'type': 'ir.actions.client',
-                        'tag': 'display_notification',
-                        'params': {
-                            'title': _('Container Removed'),
-                            'message': _('Container %s removed successfully') % container_name,
-                            'sticky': False,
-                            'type': 'success',
-                        }
-                    }
-                    
-                    # Create a page refresh action instead of redirect
-                    # This will refresh the entire page and return to the container list
-                    action['next'] = {
-                        'type': 'ir.actions.client',
-                        'tag': 'reload',
-                    }
+                    # Log the successful removal
+                    _logger.info(f"Container {container_name} removed successfully")
                     
                     # Now delete the record
                     self.unlink()
                     self.env.cr.commit()
-
-                    return action
+                    
+                    # Return nothing, which lets Odoo handle the UI refresh
                 else:
                     # API returned failure with message
                     error_message = result.get('message', _("Failed to remove container"))
@@ -1057,31 +1041,15 @@ class PortainerContainer(models.Model):
                 # Legacy boolean True result
                 # Store container name before deletion
                 container_name = self.name
-                server_id = self.server_id.id
                 
-                # Create the return action before deleting the record
-                action = {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': _('Container Removed'),
-                        'message': _('Container %s removed successfully') % container_name,
-                        'sticky': False,
-                        'type': 'success',
-                    }
-                }
-                
-                # Create a page refresh action for a better user experience
-                action['next'] = {
-                    'type': 'ir.actions.client',
-                    'tag': 'reload',
-                }
+                # Log the successful removal
+                _logger.info(f"Container {container_name} removed successfully")
                 
                 # Now delete the record
                 self.unlink()
                 self.env.cr.commit()
                 
-                return action
+                # Return nothing, which lets Odoo handle the UI refresh
             else:
                 # Legacy boolean False result
                 raise UserError(_("Failed to remove container"))
