@@ -103,28 +103,37 @@ class PortainerVolume(models.Model):
         """Remove the volume"""
         self.ensure_one()
         
+        # Store volume information before attempting to delete
+        volume_name = self.name
+        
         try:
             api = self._get_api()
             result = api.volume_action(
                 self.server_id.id, self.environment_id, self.name, 'delete')
                 
             if result:
-                # Delete the record
-                self.unlink()
-                self.env.cr.commit()
-
-                return {
+                # Only delete the Odoo record if Portainer deletion was successful
+                # Create success notification first, before deleting the record
+                message = {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
                         'title': _('Volume Removed'),
-                        'message': _('Volume %s removed successfully') % self.name,
+                        'message': _('Volume %s removed successfully') % volume_name,
                         'sticky': False,
                         'type': 'success',
                     }
                 }
+                
+                # Now delete the record
+                self.unlink()
+                self.env.cr.commit()
+                
+                return message
             else:
-                raise UserError(_("Failed to remove volume"))
+                # If Portainer deletion failed, don't delete from Odoo
+                _logger.error(f"Failed to remove volume {self.name} from Portainer")
+                raise UserError(_("Failed to remove volume from Portainer"))
         except Exception as e:
             _logger.error(f"Error removing volume {self.name}: {str(e)}")
             raise UserError(_("Error removing volume: %s") % str(e))
