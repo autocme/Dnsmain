@@ -1080,20 +1080,39 @@ class PortainerContainer(models.Model):
                     
                     _logger.info(f"Container deployed successfully: {container_id}")
                     
-                    # Sync containers with Portainer to update the list
+                    # Only refresh the newly created container
                     try:
-                        # Use the sync_containers method from the server
-                        self.server_id.sync_containers()
+                        # Get the container details directly from Portainer
+                        container_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{container_id}/json'
+                        details_response = server._make_api_request(container_endpoint, 'GET')
                         
-                        # Return to container list view with reload
+                        if details_response.status_code == 200:
+                            # Update the container record with fresh data from Portainer
+                            details = details_response.json()
+                            
+                            # Update status and state from details
+                            state_info = details.get('State', {})
+                            if state_info.get('Running'):
+                                new_container.write({'state': 'running'})
+                            elif state_info.get('Paused'):
+                                new_container.write({'state': 'paused'})
+                            elif state_info.get('Restarting'):
+                                new_container.write({'state': 'restarting'})
+                                
+                            # Update status from details
+                            status = details.get('Status', '')
+                            if status:
+                                new_container.write({'status': status})
+                        
+                        # Show the newly created container record
                         return {
-                            'name': _('Containers'),
+                            'name': _('Deployed Container'),
                             'type': 'ir.actions.act_window',
                             'res_model': 'j_portainer.container',
-                            'view_mode': 'tree,form',
+                            'res_id': new_container.id,
+                            'view_mode': 'form',
                             'view_type': 'form',
-                            'target': 'current',
-                            'context': {'search_default_server_id': self.server_id.id}
+                            'target': 'current'
                         }
                     except Exception as e:
                         _logger.error(f"Error syncing containers: {str(e)}")
