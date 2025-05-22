@@ -47,35 +47,49 @@ class PortainerContainerNetwork(models.Model):
         """Disconnect container from this network"""
         self.ensure_one()
         
+        # Store needed values before unlinking the record
+        container_name = self.container_id.name
+        network_name = self.network_id.name
+        server_id = self.container_id.server_id.id
+        environment_id = self.container_id.environment_id
+        network_id = self.network_id.network_id
+        container_id = self.container_id.container_id
+        
         try:
             api = self.env['j_portainer.api']
             result = api.disconnect_container_from_network(
-                self.container_id.server_id.id,
-                self.container_id.environment_id,
-                self.network_id.network_id,
-                self.container_id.container_id
+                server_id,
+                environment_id,
+                network_id,
+                container_id
             )
             
             if result:
-                # Remove the record on success
-                self.unlink()
-                return {
+                # Create success message BEFORE removing the record
+                message = {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
                         'title': _('Network Disconnected'),
-                        'message': _('Container disconnected from network %s successfully') % self.network_id.name,
+                        'message': _('Container %s disconnected from network %s successfully') % (container_name, network_name),
                         'sticky': False,
                         'type': 'success',
                     }
                 }
+                
+                # Remove the record on success
+                self.unlink()
+                self.env.cr.commit()
+                
+                # Return the success message
+                return message
             else:
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
                         'title': _('Network Disconnect Failed'),
-                        'message': _('Failed to disconnect from network %s') % self.network_id.name,
+                        'message': _('Failed to disconnect container %s from network %s') % (container_name, network_name),
                         'sticky': False,
                         'type': 'danger',
                     }

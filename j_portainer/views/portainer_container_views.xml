@@ -159,7 +159,7 @@
                                 <button name="action_join_network" string="Join Network" type="object" 
                                         class="btn btn-primary" icon="fa-plug"/>
                             </div>
-                            <field name="network_ids">
+                            <field name="network_ids" readonly="1">
                                 <tree>
                                     <field name="network_name"/>
                                     <field name="ip_address"/>
