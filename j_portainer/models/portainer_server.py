@@ -1067,12 +1067,31 @@ class PortainerServer(models.Model):
                     if port_records:
                         self.env['j_portainer.container.port'].create(port_records)
 
-                    synced_container_ids.append(container_id)
+                    synced_container_ids.append((endpoint_id, container_id))
                     container_count += 1
+
+            # Clean up containers that no longer exist in Portainer
+            # Get all containers for this server
+            all_containers = self.env['j_portainer.container'].search([
+                ('server_id', '=', self.id)
+            ])
+            
+            # Filter containers that should be removed (not found in Portainer)
+            containers_to_remove = all_containers.filtered(
+                lambda c: (c.environment_id, c.container_id) not in synced_container_ids
+            )
+            
+            # Remove obsolete containers
+            if containers_to_remove:
+                removed_count = len(containers_to_remove)
+                _logger.info(f"Removing {removed_count} obsolete containers from Odoo (already removed from Portainer)")
+                containers_to_remove.unlink()
+            else:
+                removed_count = 0
 
             # Log the statistics
             _logger.info(
-                f"Container sync complete: {container_count} total containers, {created_count} created, {updated_count} updated")
+                f"Container sync complete: {container_count} total containers, {created_count} created, {updated_count} updated, {removed_count} removed")
 
             self.write({'last_sync': fields.Datetime.now()})
 
@@ -1081,7 +1100,8 @@ class PortainerServer(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Containers Synchronized'),
-                    'message': _('%d containers found') % container_count,
+                    'message': _('%d containers found, %d created, %d updated, %d removed') % 
+                        (container_count, created_count, updated_count, removed_count),
                     'sticky': False,
                     'type': 'success',
                 }
@@ -1239,9 +1259,28 @@ class PortainerServer(models.Model):
                         image_count += 1
                         synced_image_ids.append((image_id, '<none>', '<none>'))
 
+            # Clean up images that no longer exist in Portainer
+            # Get all images for this server
+            all_images = self.env['j_portainer.image'].search([
+                ('server_id', '=', self.id)
+            ])
+            
+            # Filter images that should be removed (not found in Portainer)
+            images_to_remove = all_images.filtered(
+                lambda img: (img.image_id, img.repository, img.tag) not in synced_image_ids
+            )
+            
+            # Remove obsolete images
+            if images_to_remove:
+                removed_count = len(images_to_remove)
+                _logger.info(f"Removing {removed_count} obsolete images from Odoo (already removed from Portainer)")
+                images_to_remove.unlink()
+            else:
+                removed_count = 0
+
             # Log the statistics
             _logger.info(
-                f"Image sync complete: {image_count} total images, {created_count} created, {updated_count} updated")
+                f"Image sync complete: {image_count} total images, {created_count} created, {updated_count} updated, {removed_count} removed")
 
             self.write({'last_sync': fields.Datetime.now()})
 
@@ -1250,7 +1289,8 @@ class PortainerServer(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Images Synchronized'),
-                    'message': _('%d images found') % image_count,
+                    'message': _('%d images found, %d created, %d updated, %d removed') % 
+                        (image_count, created_count, updated_count, removed_count),
                     'sticky': False,
                     'type': 'success',
                 }
@@ -1361,9 +1401,28 @@ class PortainerServer(models.Model):
                     synced_volume_names.append((endpoint_id, volume_name))
                     volume_count += 1
 
+            # Clean up volumes that no longer exist in Portainer
+            # Get all volumes for this server
+            all_volumes = self.env['j_portainer.volume'].search([
+                ('server_id', '=', self.id)
+            ])
+            
+            # Filter volumes that should be removed (not found in Portainer)
+            volumes_to_remove = all_volumes.filtered(
+                lambda v: (v.environment_id, v.name) not in synced_volume_names
+            )
+            
+            # Remove obsolete volumes
+            if volumes_to_remove:
+                removed_count = len(volumes_to_remove)
+                _logger.info(f"Removing {removed_count} obsolete volumes from Odoo (already removed from Portainer)")
+                volumes_to_remove.unlink()
+            else:
+                removed_count = 0
+
             # Log the statistics
             _logger.info(
-                f"Volume sync complete: {volume_count} total volumes, {created_count} created, {updated_count} updated")
+                f"Volume sync complete: {volume_count} total volumes, {created_count} created, {updated_count} updated, {removed_count} removed")
 
             self.write({'last_sync': fields.Datetime.now()})
 
@@ -1372,7 +1431,8 @@ class PortainerServer(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Volumes Synchronized'),
-                    'message': _('%d volumes found') % volume_count,
+                    'message': _('%d volumes found, %d created, %d updated, %d removed') % 
+                        (volume_count, created_count, updated_count, removed_count),
                     'sticky': False,
                     'type': 'success',
                 }
@@ -1473,9 +1533,28 @@ class PortainerServer(models.Model):
                     synced_network_ids.append((endpoint_id, network_id))
                     network_count += 1
 
+            # Clean up networks that no longer exist in Portainer
+            # Get all networks for this server
+            all_networks = self.env['j_portainer.network'].search([
+                ('server_id', '=', self.id)
+            ])
+            
+            # Filter networks that should be removed (not found in Portainer)
+            networks_to_remove = all_networks.filtered(
+                lambda n: (n.environment_id, n.network_id) not in synced_network_ids
+            )
+            
+            # Remove obsolete networks
+            if networks_to_remove:
+                removed_count = len(networks_to_remove)
+                _logger.info(f"Removing {removed_count} obsolete networks from Odoo (already removed from Portainer)")
+                networks_to_remove.unlink()
+            else:
+                removed_count = 0
+
             # Log the statistics
             _logger.info(
-                f"Network sync complete: {network_count} total networks, {created_count} created, {updated_count} updated")
+                f"Network sync complete: {network_count} total networks, {created_count} created, {updated_count} updated, {removed_count} removed")
 
             self.write({'last_sync': fields.Datetime.now()})
 
@@ -1484,7 +1563,8 @@ class PortainerServer(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Networks Synchronized'),
-                    'message': _('%d networks found') % network_count,
+                    'message': _('%d networks found, %d created, %d updated, %d removed') % 
+                        (network_count, created_count, updated_count, removed_count),
                     'sticky': False,
                     'type': 'success',
                 }
@@ -2298,9 +2378,28 @@ class PortainerServer(models.Model):
                     synced_stack_ids.append((endpoint_id, stack_id))
                     stack_count += 1
 
+            # Clean up stacks that no longer exist in Portainer
+            # Get all stacks for this server
+            all_stacks = self.env['j_portainer.stack'].search([
+                ('server_id', '=', self.id)
+            ])
+            
+            # Filter stacks that should be removed (not found in Portainer)
+            stacks_to_remove = all_stacks.filtered(
+                lambda s: (s.environment_id, s.stack_id) not in synced_stack_ids
+            )
+            
+            # Remove obsolete stacks
+            if stacks_to_remove:
+                removed_count = len(stacks_to_remove)
+                _logger.info(f"Removing {removed_count} obsolete stacks from Odoo (already removed from Portainer)")
+                stacks_to_remove.unlink()
+            else:
+                removed_count = 0
+
             # Log the statistics
             _logger.info(
-                f"Stack sync complete: {stack_count} total stacks, {created_count} created, {updated_count} updated")
+                f"Stack sync complete: {stack_count} total stacks, {created_count} created, {updated_count} updated, {removed_count} removed")
 
             self.write({'last_sync': fields.Datetime.now()})
 
@@ -2309,7 +2408,8 @@ class PortainerServer(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Stacks Synchronized'),
-                    'message': _('%d stacks found') % stack_count,
+                    'message': _('%d stacks found, %d created, %d updated, %d removed') % 
+                        (stack_count, created_count, updated_count, removed_count),
                     'sticky': False,
                     'type': 'success',
                 }
