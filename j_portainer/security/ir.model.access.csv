@@ -46,3 +46,5 @@ access_j_portainer_container_env_user,j_portainer.container.env.user,model_j_por
 access_j_portainer_container_env_admin,j_portainer.container.env.admin,model_j_portainer_container_env,j_portainer.group_j_portainer_manager,1,1,1,1
 access_j_portainer_container_port_user,j_portainer.container.port.user,model_j_portainer_container_port,j_portainer.group_j_portainer_user,1,0,0,0
 access_j_portainer_container_port_admin,j_portainer.container.port.admin,model_j_portainer_container_port,j_portainer.group_j_portainer_manager,1,1,1,1
+access_j_portainer_image_tag_user,j_portainer.image.tag.user,model_j_portainer_image_tag,j_portainer.group_j_portainer_user,1,0,0,0
+access_j_portainer_image_tag_admin,j_portainer.image.tag.admin,model_j_portainer_image_tag,j_portainer.group_j_portainer_manager,1,1,1,1

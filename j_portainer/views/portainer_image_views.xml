@@ -35,7 +35,7 @@
                     
                     <notebook>
                         <page string="Tags" name="tags">
-                            <field name="tags" widget="html" readonly="1"/>
+                            <field name="image_tag_ids" widget="many2many_tags" options="{'color_field': 'color'}" readonly="1"/>
                         </page>
                         
                         <page string="Layers" name="layers">
@@ -83,6 +83,7 @@
                 <field name="image_id"/>
                 <field name="server_id"/>
                 <field name="environment_name"/>
+                <field name="image_tag_ids" string="Image Tags" filter_domain="[('image_tag_ids.display_name', 'ilike', self)]"/>
                 <separator/>
                 <filter string="In Use" name="in_use" domain="[('in_use', '=', True)]"/>
                 <filter string="Not In Use" name="not_in_use" domain="[('in_use', '=', False)]"/>
