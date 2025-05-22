@@ -52,14 +52,15 @@ class PortainerContainer(models.Model):
         # If name has changed, update the container name in Portainer
         if 'name' in vals:
             for record in self:
-                try:
-                    old_name = old_names.get(record.id, record.name)
-                    _logger.info(f"Updating container name from '{old_name}' to '{record.name}'")
-                    record._update_container_name_in_portainer(old_name)
-                except Exception as e:
-                    _logger.warning(f"Failed to update container name for container ID {record.container_id}: {str(e)}")
-                    # We don't want to block the write operation if the API call fails
-                    pass
+                old_name = old_names.get(record.id, record.name)
+                if old_name != record.name:
+                    try:
+                        _logger.info(f"Updating container name from '{old_name}' to '{record.name}'")
+                        record._update_container_name_in_portainer(old_name)
+                    except Exception as e:
+                        _logger.warning(f"Failed to update container name for container ID {record.container_id}: {str(e)}")
+                        # We don't want to block the write operation if the API call fails
+                        pass
         
         # If restart policy is changed, update it in Portainer
         if 'restart_policy' in vals:
