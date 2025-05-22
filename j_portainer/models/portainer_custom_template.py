@@ -320,7 +320,42 @@ class PortainerCustomTemplate(models.Model):
             api = self.env['j_portainer.api']
             result = api.template_action(server_id.id, template_id, 'delete')
             
-            if result:
+            # Check for errors in the result - be very explicit about this check
+            if isinstance(result, dict) and result.get('error'):
+                error_message = result.get('error')
+                _logger.error(f"Failed to remove template {template_title} from Portainer: {error_message}")
+                
+                # Only remove from Odoo if specifically requested with force_remove
+                if self.env.context.get('force_remove', False):
+                    self.unlink()
+                    self.env.cr.commit()
+                    
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Template Removed from Odoo Only'),
+                            'message': _("Custom template '%s' could not be removed from Portainer but was removed from Odoo: %s") % (template_title, error_message),
+                            'sticky': False,
+                            'type': 'warning',
+                            'next': {'type': 'ir.actions.act_window_close'}
+                        }
+                    }
+                else:
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Error'),
+                            'message': _("Failed to remove custom template from Portainer: %s. Template remains in Odoo.") % error_message,
+                            'sticky': True,
+                            'type': 'danger',
+                        }
+                    }
+            
+            # Only consider it a success if result is a dict with success=True
+            # or if result is True (for backward compatibility)
+            if (isinstance(result, dict) and result.get('success')) or result is True:
                 # Log successful Portainer deletion
                 _logger.info(f"Custom template {template_title} (ID: {template_id}) removed from Portainer")
                 
@@ -341,7 +376,10 @@ class PortainerCustomTemplate(models.Model):
                     }
                 }
             else:
-                # If Portainer API call failed but we still want to remove from Odoo
+                # If result is not explicitly an error but also not a success
+                _logger.error(f"Unexpected result when removing template {template_title} from Portainer: {result}")
+                
+                # Only remove from Odoo if specifically requested with force_remove
                 if self.env.context.get('force_remove', False):
                     self.unlink()
                     self.env.cr.commit()
@@ -350,8 +388,8 @@ class PortainerCustomTemplate(models.Model):
                         'type': 'ir.actions.client',
                         'tag': 'display_notification',
                         'params': {
-                            'title': _('Template Removed from Odoo'),
-                            'message': _("Custom template '%s' could not be removed from Portainer but was removed from Odoo") % template_title,
+                            'title': _('Template Removed from Odoo Only'),
+                            'message': _("Custom template '%s' could not be removed from Portainer (unexpected response) but was removed from Odoo") % template_title,
                             'sticky': False,
                             'type': 'warning',
                             'next': {'type': 'ir.actions.act_window_close'}
@@ -363,7 +401,7 @@ class PortainerCustomTemplate(models.Model):
                         'tag': 'display_notification',
                         'params': {
                             'title': _('Error'),
-                            'message': _("Failed to remove custom template from Portainer. Template remains in Odoo."),
+                            'message': _("Failed to remove custom template from Portainer - unexpected response. Template remains in Odoo."),
                             'sticky': True,
                             'type': 'danger',
                         }

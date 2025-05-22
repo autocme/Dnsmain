@@ -110,8 +110,16 @@ class PortainerVolume(models.Model):
             api = self._get_api()
             result = api.volume_action(
                 self.server_id.id, self.environment_id, self.name, 'delete')
+            
+            # Check for errors in the result - be very explicit about this check
+            if isinstance(result, dict) and result.get('error'):
+                error_message = result.get('error')
+                _logger.error(f"Failed to remove volume {self.name} from Portainer: {error_message}")
+                raise UserError(_(f"Failed to remove volume: {error_message}"))
                 
-            if result:
+            # Only consider it a success if result is a dict with success=True
+            # or if result is True (for backward compatibility)
+            if (isinstance(result, dict) and result.get('success')) or result is True:
                 # Only delete the Odoo record if Portainer deletion was successful
                 # Create success notification first, before deleting the record
                 message = {
@@ -131,9 +139,9 @@ class PortainerVolume(models.Model):
                 
                 return message
             else:
-                # If Portainer deletion failed, don't delete from Odoo
-                _logger.error(f"Failed to remove volume {self.name} from Portainer")
-                raise UserError(_("Failed to remove volume from Portainer"))
+                # If Portainer deletion returned an unexpected result, don't delete from Odoo
+                _logger.error(f"Unexpected result when removing volume {self.name} from Portainer: {result}")
+                raise UserError(_("Failed to remove volume from Portainer - unexpected response"))
         except Exception as e:
             _logger.error(f"Error removing volume {self.name}: {str(e)}")
             raise UserError(_("Error removing volume: %s") % str(e))

@@ -206,8 +206,16 @@ class PortainerStack(models.Model):
             api = self._get_api()
             result = api.stack_action(
                 self.server_id.id, self.stack_id, 'delete', environment_id=self.environment_id)
+            
+            # Check for errors in the result - be very explicit about this check
+            if isinstance(result, dict) and result.get('error'):
+                error_message = result.get('error')
+                _logger.error(f"Failed to remove stack {self.name} from Portainer: {error_message}")
+                raise UserError(_(f"Failed to remove stack: {error_message}"))
                 
-            if result:
+            # Only consider it a success if result is a dict with success=True
+            # or if result is True (for backward compatibility)
+            if (isinstance(result, dict) and result.get('success')) or result is True:
                 # Only delete the Odoo record if Portainer deletion was successful
                 # Create success notification first, before deleting the record
                 message = {
@@ -232,9 +240,9 @@ class PortainerStack(models.Model):
                 
                 return message
             else:
-                # If Portainer deletion failed, don't delete from Odoo
-                _logger.error(f"Failed to remove stack {self.name} from Portainer")
-                raise UserError(_("Failed to remove stack from Portainer"))
+                # If Portainer deletion returned an unexpected result, don't delete from Odoo
+                _logger.error(f"Unexpected result when removing stack {self.name} from Portainer: {result}")
+                raise UserError(_("Failed to remove stack from Portainer - unexpected response"))
         except Exception as e:
             _logger.error(f"Error removing stack {self.name}: {str(e)}")
             raise UserError(_("Error removing stack: %s") % str(e))
