@@ -26,6 +26,7 @@ class PortainerImage(models.Model):
     all_tags = fields.Text('All Tags JSON', help='All tags for this image, stored as JSON array', groups='base.group_system')
     image_tag_ids = fields.One2many('j_portainer.image.tag', 'image_id', string='Image Tags')
     layers = fields.Html('Layers', compute='_compute_layers', store=True, help='Image layers with size information')
+    labels_html = fields.Html('Labels Table', compute='_compute_labels_html', store=True, help='Image labels in table format')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
@@ -230,6 +231,49 @@ class PortainerImage(models.Model):
         except Exception as e:
             _logger.error(f"Error formatting labels: {str(e)}")
             return self.labels
+            
+    @api.depends('labels')
+    def _compute_labels_html(self):
+        """Compute HTML formatted table of labels"""
+        for image in self:
+            if not image.labels:
+                image.labels_html = "<div class='text-muted'>No labels available</div>"
+                continue
+                
+            try:
+                labels_data = json.loads(image.labels)
+                
+                if not labels_data:
+                    image.labels_html = "<div class='text-muted'>No labels available</div>"
+                    continue
+                    
+                # Generate HTML table for labels
+                html = ['<table class="table table-sm table-bordered table-striped">',
+                        '<thead>',
+                        '<tr>',
+                        '<th width="30%">Label Name</th>',
+                        '<th width="70%">Label Value</th>',
+                        '</tr>',
+                        '</thead>',
+                        '<tbody>']
+                
+                for key, value in sorted(labels_data.items()):
+                    # Escape HTML characters to prevent XSS
+                    safe_key = str(key).replace('<', '&lt;').replace('>', '&gt;')
+                    safe_value = str(value).replace('<', '&lt;').replace('>', '&gt;')
+                    
+                    html.append('<tr>')
+                    html.append(f'<td class="text-monospace font-weight-bold">{safe_key}</td>')
+                    html.append(f'<td class="text-monospace">{safe_value}</td>')
+                    html.append('</tr>')
+                    
+                html.append('</tbody>')
+                html.append('</table>')
+                
+                image.labels_html = ''.join(html)
+            except Exception as e:
+                _logger.error(f"Error computing labels HTML for image {image.id}: {str(e)}")
+                image.labels_html = f"<div class='text-danger'>Error computing labels: {str(e)}</div>"
     
     def pull(self):
         """Pull the latest version of the image"""

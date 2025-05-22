@@ -38,6 +38,10 @@
                             <field name="image_tag_ids" widget="many2many_tags" options="{'color_field': 'color'}" readonly="1"/>
                         </page>
                         
+                        <page string="Labels" name="labels">
+                            <field name="labels_html" widget="html" readonly="1" nolabel="1"/>
+                        </page>
+                        
                         <page string="Layers" name="layers">
                             <field name="layers" widget="html" readonly="1"/>
                         </page>
@@ -57,9 +61,8 @@
         <field name="model">j_portainer.image</field>
         <field name="arch" type="xml">
             <tree string="Images">
-                <field name="repository"/>
-                <field name="tag"/>
                 <field name="image_id"/>
+                <field name="image_tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
                 <field name="server_id"/>
                 <field name="environment_name"/>
                 <field name="created"/>
