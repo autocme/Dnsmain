@@ -38,10 +38,6 @@
                             <field name="image_tag_ids" widget="many2many_tags" options="{'color_field': 'color'}" readonly="1"/>
                         </page>
                         
-                        <page string="Labels" name="labels">
-                            <field name="labels_html" widget="html" readonly="1" nolabel="1"/>
-                        </page>
-                        
                         <page string="Layers" name="layers">
                             <field name="layers" widget="html" readonly="1"/>
                         </page>
@@ -82,7 +78,6 @@
         <field name="arch" type="xml">
             <search string="Search Images">
                 <field name="repository"/>
-                <field name="tag"/>
                 <field name="image_id"/>
                 <field name="server_id"/>
                 <field name="environment_name"/>
