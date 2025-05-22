@@ -1195,63 +1195,83 @@ class PortainerServer(models.Model):
                         'in_use': in_use,  # Add in_use field based on container usage
                     }
 
-                    # Process images - one for each repo tag
+                    # Process images - only create one image record per Docker image ID
+                    # Instead of creating multiple records for multiple tags
                     if repos and repos[0] != '<none>:<none>':
+                        # Get the first tag as the primary one
+                        primary_repo = repos[0]
+                        if ':' in primary_repo:
+                            primary_repository, primary_tag = primary_repo.split(':', 1)
+                        else:
+                            primary_repository, primary_tag = primary_repo, 'latest'
+                        
+                        # Check if this image already exists in Odoo
+                        existing_image = self.env['j_portainer.image'].search([
+                            ('server_id', '=', self.id),
+                            ('environment_id', '=', endpoint_id),
+                            ('image_id', '=', image_id)
+                        ], limit=1)
+                        
+                        # Prepare all tags information
+                        tag_list = []
                         for repo in repos:
                             if ':' in repo:
-                                repository, tag = repo.split(':', 1)
+                                repo_name, tag_name = repo.split(':', 1)
                             else:
-                                repository, tag = repo, 'latest'
-
-                            # Check if this image already exists in Odoo
-                            existing_image = self.env['j_portainer.image'].search([
-                                ('server_id', '=', self.id),
-                                ('environment_id', '=', endpoint_id),
-                                ('image_id', '=', image_id),
-                                ('repository', '=', repository),
-                                ('tag', '=', tag)
-                            ], limit=1)
-
-                            # Prepare specific image data with repository and tag
-                            image_data = dict(base_image_data)
-                            image_data.update({
-                                'repository': repository,
-                                'tag': tag
+                                repo_name, tag_name = repo, 'latest'
+                            
+                            tag_list.append({
+                                'repository': repo_name,
+                                'tag': tag_name
                             })
-
-                            if existing_image:
-                                # Update existing image record
-                                existing_image.write(image_data)
-                                updated_count += 1
-                            else:
-                                # Create new image record
-                                self.env['j_portainer.image'].create(image_data)
-                                created_count += 1
-
-                            image_count += 1
-                            synced_image_ids.append((image_id, repository, tag))
+                        
+                        # Prepare image data with primary repository and tag plus all tags
+                        image_data = dict(base_image_data)
+                        image_data.update({
+                            'repository': primary_repository,
+                            'tag': primary_tag,
+                            'all_tags': json.dumps(tag_list)
+                        })
+                        
+                        if existing_image:
+                            # Update existing image record
+                            existing_image.write(image_data)
+                            updated_count += 1
+                        else:
+                            # Create new image record
+                            self.env['j_portainer.image'].create(image_data)
+                            created_count += 1
+                        
+                        image_count += 1
+                        # Add all combinations to synced_image_ids to prevent cleanup of valid images
+                        synced_image_ids.append((image_id, primary_repository, primary_tag))
                     elif repo_digests:
                         # Image has digests but no tags - extract repository from digest
                         # Format is usually repo@sha256:hash
                         for digest in repo_digests:
                             if '@' in digest:
                                 repository = digest.split('@')[0]
-                                tag = 'latest'  # Use 'latest' as tag for images with digest only
+                                tag = '<none>'  # Use '<none>' as tag for images with digest only to match Portainer
                                 
                                 # Check if this image already exists in Odoo
                                 existing_image = self.env['j_portainer.image'].search([
                                     ('server_id', '=', self.id),
                                     ('environment_id', '=', endpoint_id),
-                                    ('image_id', '=', image_id),
-                                    ('repository', '=', repository),
-                                    ('tag', '=', tag)
+                                    ('image_id', '=', image_id)
                                 ], limit=1)
+                                
+                                # Prepare tag information
+                                tag_list = [{
+                                    'repository': repository,
+                                    'tag': tag
+                                }]
                                 
                                 # Prepare specific image data with repository from digest
                                 image_data = dict(base_image_data)
                                 image_data.update({
                                     'repository': repository,
-                                    'tag': tag
+                                    'tag': tag,
+                                    'all_tags': json.dumps(tag_list)
                                 })
                                 
                                 if existing_image:
@@ -1272,16 +1292,21 @@ class PortainerServer(models.Model):
                         existing_image = self.env['j_portainer.image'].search([
                             ('server_id', '=', self.id),
                             ('environment_id', '=', endpoint_id),
-                            ('image_id', '=', image_id),
-                            ('repository', '=', '<none>'),
-                            ('tag', '=', '<none>')
+                            ('image_id', '=', image_id)
                         ], limit=1)
 
+                        # Prepare tag information for untagged image
+                        tag_list = [{
+                            'repository': '<none>',
+                            'tag': '<none>'
+                        }]
+                        
                         # Prepare untagged image data
                         image_data = dict(base_image_data)
                         image_data.update({
                             'repository': '<none>',
-                            'tag': '<none>'
+                            'tag': '<none>',
+                            'all_tags': json.dumps(tag_list)
                         })
 
                         if existing_image:
@@ -1302,9 +1327,14 @@ class PortainerServer(models.Model):
                 ('server_id', '=', self.id)
             ])
             
+            # Collect all synced image IDs (without repository/tag)
+            synced_ids = set()
+            for image_tuple in synced_image_ids:
+                synced_ids.add(image_tuple[0])  # Just extract the image_id part
+            
             # Filter images that should be removed (not found in Portainer)
             images_to_remove = all_images.filtered(
-                lambda img: (img.image_id, img.repository, img.tag) not in synced_image_ids
+                lambda img: img.image_id not in synced_ids
             )
             
             # Remove obsolete images

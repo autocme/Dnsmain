@@ -24,6 +24,7 @@ class PortainerImage(models.Model):
     details = fields.Text('Details')
     in_use = fields.Boolean('In Use', default=False, help='Whether this image is being used by any containers')
     tags = fields.Html('Tags', compute='_compute_tags', store=True)
+    all_tags = fields.Text('All Tags', help='All tags for this image, stored as JSON array')
     layers = fields.Html('Layers', compute='_compute_layers', store=True, help='Image layers with size information')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
@@ -43,17 +44,48 @@ class PortainerImage(models.Model):
             else:
                 image.display_name = image.repository
                 
-    @api.depends('repository', 'tag')
+    @api.depends('repository', 'tag', 'all_tags')
     def _compute_tags(self):
         """Compute HTML formated tags for this image"""
         for image in self:
-            if image.repository and image.tag:
-                html = f"""
+            if image.all_tags:
+                # Parse the JSON array of all tags
+                try:
+                    all_tags = json.loads(image.all_tags)
+                    
+                    # Build HTML for all tags
+                    html = ['<div class="mt-2">']
+                    
+                    for tag_info in all_tags:
+                        if isinstance(tag_info, dict) and 'repository' in tag_info and 'tag' in tag_info:
+                            # New format with repository and tag separately
+                            repo = tag_info['repository']
+                            tag = tag_info['tag']
+                            html.append(f'<span class="badge badge-primary mb-1 mr-1">{repo}:{tag}</span>')
+                        elif isinstance(tag_info, str):
+                            # Old format with full "repo:tag" string
+                            html.append(f'<span class="badge badge-primary mb-1 mr-1">{tag_info}</span>')
+                    
+                    html.append('</div>')
+                    image.tags = ''.join(html)
+                except Exception as e:
+                    # Fallback to simple repository:tag display if JSON parsing fails
+                    _logger.error(f"Error parsing all_tags for image {image.id}: {str(e)}")
+                    if image.repository and image.tag:
+                        image.tags = f"""
+                        <div class="mt-2">
+                            <span class="badge badge-primary mb-1 mr-1">{image.repository}:{image.tag}</span>
+                        </div>
+                        """
+                    else:
+                        image.tags = "<div class='text-muted'>No tags available</div>"
+            elif image.repository and image.tag:
+                # Fallback to simple repository:tag if all_tags is not set
+                image.tags = f"""
                 <div class="mt-2">
                     <span class="badge badge-primary mb-1 mr-1">{image.repository}:{image.tag}</span>
                 </div>
                 """
-                image.tags = html
             else:
                 image.tags = "<div class='text-muted'>No tags available</div>"
                 
