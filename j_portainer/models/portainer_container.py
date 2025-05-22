@@ -1046,30 +1046,11 @@ class PortainerContainer(models.Model):
             # Log the successful removal
             _logger.info(f"Container {container_name} removed successfully from Portainer")
             
-            # Create success message BEFORE deleting the record
-            message = {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Container Removed'),
-                    'message': _('Container %s removed successfully') % container_name,
-                    'sticky': False,
-                    'type': 'success',
-                }
-            }
-            
-            # Add a reload action to refresh the page
-            message['params']['next'] = {
-                'type': 'ir.actions.client',
-                'tag': 'reload',
-            }
-            
             # Now delete the record
             self.unlink()
             self.env.cr.commit()
             
-            # Return the success message
-            return message
+            # Return nothing, which lets Odoo handle the UI refresh
             
         except Exception as e:
             _logger.error(f"Error removing container {container_name}: {str(e)}")
