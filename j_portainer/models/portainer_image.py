@@ -61,6 +61,7 @@ class PortainerImage(models.Model):
     def _compute_layers(self):
         """Compute HTML formatted layers for this image
         Format: Order | Size | Layer Command
+        Starting with Order 0 to match Portainer's display
         """
         for image in self:
             if not image.details:
@@ -75,31 +76,19 @@ class PortainerImage(models.Model):
                 
                 # Different Docker API versions have different fields
                 # Try to get layers from RootFS or History
-                if 'RootFS' in details and 'Layers' in details['RootFS']:
-                    # Just layer IDs, not much to display
-                    layer_ids = details['RootFS']['Layers']
-                    for i, layer_id in enumerate(layer_ids):
-                        # Try to get a size, but we can't reliably get it from RootFS
-                        size = "-"
-                        # Use short layer ID
-                        short_id = layer_id.split(':')[-1][:12]
-                        if len(short_id) > 12:
-                            short_id = short_id[:12]
-                        layers.append({
-                            'order': i + 1,
-                            'size': size,
-                            'command': f"Layer ID: {short_id}"
-                        })
+                # We'll use History for the primary layer info, then fall back to RootFS if needed
+                use_rootfs = True
                 
                 if 'History' in details and isinstance(details['History'], list):
                     # We have history which contains more info
                     history = details['History']
+                    use_rootfs = False
                     
                     # Get the actual image size for accurate layer size calculation
                     total_size = details.get('Size', 0)
                     
-                    layers = []  # Reset layers if we have history
-                    
+                    # Get size information for each layer - try to match Portainer's display
+                    # Portainer typically shows size in MB for layers
                     for i, entry in enumerate(history):
                         # Skip empty layers created by cache or metadata
                         if 'empty_layer' in entry and entry['empty_layer']:
@@ -115,17 +104,40 @@ class PortainerImage(models.Model):
                             created_by = created_by[18:]
                         elif created_by.startswith('/bin/sh -c '):
                             created_by = 'RUN ' + created_by[10:]
-                            
-                        # Calculate a relative size - this is approximate since Docker doesn't expose layer sizes directly
-                        size = entry.get('Size', total_size // (len(history) or 1))
                         
-                        # Use the raw size value
-                        size_str = str(size)
+                        # Get size - if available directly, otherwise estimate
+                        size = entry.get('Size', 0)
+                        if size == 0 and total_size > 0:
+                            # Estimate layer size as a fraction of total size
+                            size = total_size // max(1, len(history))
+                            
+                        # Format size in MB with one decimal place like Portainer does
+                        size_mb = size / (1024 * 1024)  # Convert bytes to MB
+                        if size_mb < 0.1:
+                            size_str = "< 0.1 MB"
+                        else:
+                            size_str = f"{size_mb:.1f} MB"
                             
                         layers.append({
-                            'order': i + 1,
+                            'order': i,  # Start with 0 to match Portainer
                             'size': size_str,
                             'command': created_by
+                        })
+                
+                # If we don't have history or layers is empty, fall back to RootFS
+                if use_rootfs and 'RootFS' in details and 'Layers' in details['RootFS']:
+                    layer_ids = details['RootFS']['Layers']
+                    for i, layer_id in enumerate(layer_ids):
+                        # For RootFS, we can't reliably get size, so show a placeholder
+                        size_str = "Unknown"
+                        
+                        # Get full layer ID
+                        full_id = layer_id.split(':')[-1]
+                        
+                        layers.append({
+                            'order': i,  # Start with 0 to match Portainer
+                            'size': size_str,
+                            'command': full_id  # Use full layer ID for better matching with Portainer
                         })
                 
                 # Generate HTML table for layers
@@ -133,7 +145,7 @@ class PortainerImage(models.Model):
                     html = ['<table class="table table-sm table-hover">',
                             '<thead>',
                             '<tr>',
-                            '<th width="5%">#</th>',
+                            '<th width="5%">Order</th>',
                             '<th width="15%">Size</th>',
                             '<th>Layer</th>',
                             '</tr>',
@@ -149,10 +161,7 @@ class PortainerImage(models.Model):
                         command = layer["command"]
                         command = command.replace('<', '&lt;').replace('>', '&gt;')
                         
-                        # Truncate very long commands
-                        if len(command) > 100:
-                            command = command[:97] + '...'
-                            
+                        # Don't truncate commands to match Portainer's full display
                         html.append(f'<td class="text-monospace">{command}</td>')
                         html.append('</tr>')
                         

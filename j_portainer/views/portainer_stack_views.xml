@@ -46,7 +46,7 @@
                     
                     <notebook>
                         <page string="Containers" name="containers">
-                            <field name="container_ids">
+                            <field name="container_ids" readonly="1">
                                 <tree>
                                     <field name="name"/>
                                     <field name="image"/>
@@ -67,7 +67,7 @@
                         </page>
                         
                         <page string="Content" name="content">
-                            <field name="content" widget="text" readonly="1" 
+                            <field name="content" widget="text" readonly="0" 
                                    placeholder="Stack content will be displayed here"/>
                         </page>
                         

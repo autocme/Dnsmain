@@ -1154,6 +1154,7 @@ class PortainerServer(models.Model):
 
                     # Get tags (repos)
                     repos = image.get('RepoTags', [])
+                    repo_digests = image.get('RepoDigests', [])
 
                     # Get image details
                     details_response = self._make_api_request(
@@ -1229,8 +1230,44 @@ class PortainerServer(models.Model):
 
                             image_count += 1
                             synced_image_ids.append((image_id, repository, tag))
+                    elif repo_digests:
+                        # Image has digests but no tags - extract repository from digest
+                        # Format is usually repo@sha256:hash
+                        for digest in repo_digests:
+                            if '@' in digest:
+                                repository = digest.split('@')[0]
+                                tag = 'latest'  # Use 'latest' as tag for images with digest only
+                                
+                                # Check if this image already exists in Odoo
+                                existing_image = self.env['j_portainer.image'].search([
+                                    ('server_id', '=', self.id),
+                                    ('environment_id', '=', endpoint_id),
+                                    ('image_id', '=', image_id),
+                                    ('repository', '=', repository),
+                                    ('tag', '=', tag)
+                                ], limit=1)
+                                
+                                # Prepare specific image data with repository from digest
+                                image_data = dict(base_image_data)
+                                image_data.update({
+                                    'repository': repository,
+                                    'tag': tag
+                                })
+                                
+                                if existing_image:
+                                    # Update existing image record
+                                    existing_image.write(image_data)
+                                    updated_count += 1
+                                else:
+                                    # Create new image record
+                                    self.env['j_portainer.image'].create(image_data)
+                                    created_count += 1
+                                
+                                image_count += 1
+                                synced_image_ids.append((image_id, repository, tag))
+                                break  # Just use the first digest
                     else:
-                        # Untagged image
+                        # Truly untagged image with no digests either
                         # Check if this untagged image already exists in Odoo
                         existing_image = self.env['j_portainer.image'].search([
                             ('server_id', '=', self.id),
