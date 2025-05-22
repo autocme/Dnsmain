@@ -23,8 +23,8 @@ class PortainerImage(models.Model):
     labels = fields.Text('Labels')
     details = fields.Text('Details')
     in_use = fields.Boolean('In Use', default=False, help='Whether this image is being used by any containers')
-    tags = fields.Html('Tags', compute='_compute_tags', store=True)
-    all_tags = fields.Text('All Tags', help='All tags for this image, stored as JSON array')
+    all_tags = fields.Text('All Tags JSON', help='All tags for this image, stored as JSON array', groups='base.group_system')
+    image_tag_ids = fields.One2many('j_portainer.image.tag', 'image_id', string='Image Tags')
     layers = fields.Html('Layers', compute='_compute_layers', store=True, help='Image layers with size information')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
@@ -44,50 +44,49 @@ class PortainerImage(models.Model):
             else:
                 image.display_name = image.repository
                 
-    @api.depends('repository', 'tag', 'all_tags')
-    def _compute_tags(self):
-        """Compute HTML formated tags for this image"""
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Override create to sync image tags"""
+        records = super(PortainerImage, self).create(vals_list)
+        for record in records:
+            record._sync_image_tags()
+        return records
+    
+    def write(self, vals):
+        """Override write to sync image tags"""
+        result = super(PortainerImage, self).write(vals)
+        if 'all_tags' in vals:
+            self._sync_image_tags()
+        return result
+    
+    def _sync_image_tags(self):
+        """Synchronize image tags from all_tags JSON data to image_tag_ids"""
         for image in self:
-            if image.all_tags:
-                # Parse the JSON array of all tags
-                try:
-                    all_tags = json.loads(image.all_tags)
-                    
-                    # Build HTML for all tags
-                    html = ['<div class="mt-2">']
-                    
-                    for tag_info in all_tags:
-                        if isinstance(tag_info, dict) and 'repository' in tag_info and 'tag' in tag_info:
-                            # New format with repository and tag separately
-                            repo = tag_info['repository']
-                            tag = tag_info['tag']
-                            html.append(f'<span class="badge badge-primary mb-1 mr-1">{repo}:{tag}</span>')
-                        elif isinstance(tag_info, str):
-                            # Old format with full "repo:tag" string
-                            html.append(f'<span class="badge badge-primary mb-1 mr-1">{tag_info}</span>')
-                    
-                    html.append('</div>')
-                    image.tags = ''.join(html)
-                except Exception as e:
-                    # Fallback to simple repository:tag display if JSON parsing fails
-                    _logger.error(f"Error parsing all_tags for image {image.id}: {str(e)}")
-                    if image.repository and image.tag:
-                        image.tags = f"""
-                        <div class="mt-2">
-                            <span class="badge badge-primary mb-1 mr-1">{image.repository}:{image.tag}</span>
-                        </div>
-                        """
-                    else:
-                        image.tags = "<div class='text-muted'>No tags available</div>"
-            elif image.repository and image.tag:
-                # Fallback to simple repository:tag if all_tags is not set
-                image.tags = f"""
-                <div class="mt-2">
-                    <span class="badge badge-primary mb-1 mr-1">{image.repository}:{image.tag}</span>
-                </div>
-                """
-            else:
-                image.tags = "<div class='text-muted'>No tags available</div>"
+            if not image.all_tags:
+                continue
+            
+            try:
+                # Parse the all_tags JSON data
+                all_tags_data = json.loads(image.all_tags)
+                
+                # Delete existing tags
+                image.image_tag_ids.unlink()
+                
+                # Create new tag records
+                tag_vals_list = []
+                for tag_info in all_tags_data:
+                    if isinstance(tag_info, dict) and 'repository' in tag_info and 'tag' in tag_info:
+                        # New format with repository and tag separately
+                        tag_vals_list.append({
+                            'repository': tag_info['repository'],
+                            'tag': tag_info['tag'],
+                            'image_id': image.id
+                        })
+                
+                if tag_vals_list:
+                    self.env['j_portainer.image.tag'].create(tag_vals_list)
+            except Exception as e:
+                _logger.error(f"Error syncing image tags for image {image.id}: {str(e)}")
                 
     @api.depends('details')
     def _compute_layers(self):
