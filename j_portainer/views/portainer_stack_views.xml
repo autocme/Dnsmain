@@ -16,6 +16,8 @@
                     <button name="action_remove" string="Remove" type="object" 
                             class="btn-danger" 
                             confirm="Are you sure you want to remove this stack?"/>
+                    <field name="status" widget="statusbar" statusbar_visible="1,2" 
+                           statusbar_colors='{"1": "success", "2": "danger"}' options="{'clickable': false}"/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
