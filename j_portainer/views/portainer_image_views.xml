@@ -37,6 +37,10 @@
                         <page string="Tags" name="tags">
                             <field name="image_tag_ids" widget="many2many_tags" options="{'color_field': 'color'}" readonly="1"/>
                         </page>
+
+                        <page string="Labels" name="labels">
+                            <field name="labels_html" widget="html" readonly="1" nolabel="1"/>
+                        </page>
                         
                         <page string="Layers" name="layers">
                             <field name="layers" widget="html" readonly="1"/>
