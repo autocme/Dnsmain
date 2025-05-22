@@ -242,6 +242,8 @@ class PortainerImage(models.Model):
             elif isinstance(result, list):
                 # If it's a list, this usually means success (list of deleted layers)
                 has_error = False
+                # Log the successful response for debugging
+                _logger.info(f"Successfully removed image {image_name} from Portainer, response: {result}")
             # For any other non-success result format
             elif not result:
                 has_error = True

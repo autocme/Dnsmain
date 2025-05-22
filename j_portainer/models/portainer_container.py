@@ -1013,48 +1013,46 @@ class PortainerContainer(models.Model):
         """
         self.ensure_one()
         
+        # Store container name before attempting to delete
+        container_name = self.name
+        
         try:
             api = self._get_api()
             result = api.remove_container(
                 self.server_id.id, self.environment_id, self.container_id,
                 force=force, volumes=volumes)
             
+            # Check for errors in the response
+            has_error = False
+            error_message = ""
+            
+            # Handle dictionary response with success/failure indicators
             if isinstance(result, dict) and 'success' in result:
-                if result['success']:
-                    # Store container name before deletion for use in logging
-                    container_name = self.name
-                    
-                    # Log the successful removal
-                    _logger.info(f"Container {container_name} removed successfully")
-                    
-                    # Now delete the record
-                    self.unlink()
-                    self.env.cr.commit()
-                    
-                    # Return nothing, which lets Odoo handle the UI refresh
-                else:
-                    # API returned failure with message
+                if not result['success']:
+                    has_error = True
                     error_message = result.get('message', _("Failed to remove container"))
-                    _logger.error(f"Failed to remove container {self.name}: {error_message}")
-                    raise UserError(error_message)
-            elif result:
-                # Legacy boolean True result
-                # Store container name before deletion
-                container_name = self.name
+            # Handle any non-True, non-dictionary response as an error
+            elif not result:
+                has_error = True
+                error_message = _("Failed to remove container - unexpected response from Portainer")
+            
+            # If there was an error, raise it and don't delete from Odoo
+            if has_error:
+                _logger.error(f"Failed to remove container {container_name} from Portainer: {error_message}")
+                raise UserError(error_message)
                 
-                # Log the successful removal
-                _logger.info(f"Container {container_name} removed successfully")
-                
-                # Now delete the record
-                self.unlink()
-                self.env.cr.commit()
-                
-                # Return nothing, which lets Odoo handle the UI refresh
-            else:
-                # Legacy boolean False result
-                raise UserError(_("Failed to remove container"))
+            # If we made it here, the removal was successful
+            # Log the successful removal
+            _logger.info(f"Container {container_name} removed successfully from Portainer")
+            
+            # Now delete the record
+            self.unlink()
+            self.env.cr.commit()
+            
+            # Return nothing, which lets Odoo handle the UI refresh
+            
         except Exception as e:
-            _logger.error(f"Error removing container {self.name}: {str(e)}")
+            _logger.error(f"Error removing container {container_name}: {str(e)}")
             raise UserError(_("Error removing container: %s") % str(e))
     
     def action_remove_with_options(self):
