@@ -2345,12 +2345,13 @@ class PortainerServer(models.Model):
             self.sync_networks()
             self.sync_standard_templates()
             self.sync_custom_templates()
-            self.sync_containers()
 
             # Fetch missing file content for any templates
             self._fetch_missing_template_file_content()  # Use private method to avoid duplicate notifications
 
             self.sync_stacks()
+            self.sync_containers()
+            self.write({'last_sync': fields.Datetime.now()})
 
             return {
                 'type': 'ir.actions.client',
