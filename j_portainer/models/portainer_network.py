@@ -117,9 +117,20 @@ class PortainerNetwork(models.Model):
                 if record.network_label_ids:
                     data['Labels'] = {label.name: label.value for label in record.network_label_ids}
                 
+                # Include driver options in the request if they exist
+                if record.driver_option_ids:
+                    options = {}
+                    for option in record.driver_option_ids:
+                        options[option.name] = option.value
+                    data['Options'] = options
+
+                # Include isolated_network as Internal if it's enabled
+                if record.isolated_network:
+                    data['Internal'] = True
+
                 # Make API request to create network
                 server = record.server_id
-                environment_id = record.environment_id
+                environment_id = record.environment_id.environment_id  # Get the actual environment ID from the relation
                 endpoint = f'/api/endpoints/{environment_id}/docker/networks/create'
                 response = server._make_api_request(endpoint, 'POST', data=data)
                 
@@ -134,18 +145,19 @@ class PortainerNetwork(models.Model):
                             'network_id': network_id,
                             'last_sync': fields.Datetime.now()
                         })
+                        
+                        # Show success message
+                        self.env.user.notify_success(message=_("Network '%s' successfully created in Portainer") % record.name)
                     else:
                         # Handle case where network ID is not returned
                         raise UserError(_("Network created in Portainer but no ID was returned"))
                 else:
-                    # If creation failed, delete the Odoo record and raise an error
+                    # If creation failed, raise an error
                     error_msg = response.text
-                    record.unlink()
                     raise UserError(_("Failed to create network in Portainer: %s") % error_msg)
                     
             except Exception as e:
-                # If an error occurred, delete the Odoo record and raise the error
-                record.unlink()
+                # If an error occurred, raise the error
                 raise UserError(_("Error creating network in Portainer: %s") % str(e))
         
         return records
@@ -178,16 +190,15 @@ class PortainerNetwork(models.Model):
     attachable = fields.Boolean('Enable manual container attachment', default=False,
                                help="Toggle this option on to allow users to attach the network to running containers.")
     public = fields.Boolean('Public', default=True,
-                          help="Whether the network is publicly accessible")
+                          help="Whether the network is publicly accessible", readonly=True)
     administrators_only = fields.Boolean('Administrators Only', default=False,
-                                      help="Whether only administrators can use this network")
+                                      help="Whether only administrators can use this network", readonly=True)
     system = fields.Boolean('System', default=False,
-                          help="Whether this is a system-managed network")
+                          help="Whether this is a system-managed network", readonly=True)
     options = fields.Text('Options')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
-    environment_id = fields.Integer('Environment ID', required=True)
-    environment_name = fields.Char('Environment', required=True)
+    environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True, ondelete='cascade')
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
     # Related containers connected to this network
