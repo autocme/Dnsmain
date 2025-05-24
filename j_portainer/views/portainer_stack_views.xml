@@ -43,6 +43,7 @@
                                    readonly="1"/>
                             <field name="creation_date" readonly="1"/>
                             <field name="update_date" readonly="1"/>
+                            <field name="last_sync" readonly="1"/>
                         </group>
                     </group>
                     

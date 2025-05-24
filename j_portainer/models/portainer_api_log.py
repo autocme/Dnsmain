@@ -102,7 +102,7 @@ class PortainerApiLog(models.Model):
         
         # Find logs older than the cutoff date (comparing only the date part)
         old_logs = self.search([
-            ('request_date', '<', fields.Datetime.to_string(datetime.datetime.combine(cutoff_date, datetime.time(0, 0, 0))))
+            ('request_date', '<=', cutoff_date)
         ])
         
         # Count records for return value

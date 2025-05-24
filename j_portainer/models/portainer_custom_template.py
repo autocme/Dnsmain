@@ -37,6 +37,7 @@ class PortainerCustomTemplate(models.Model):
     ], string='Platform', default='linux', required=True)
     template_id = fields.Char('Template ID', copy=False)
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
+    last_sync = fields.Datetime('Last Synchronized', readonly=True)
     environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True,
                                 domain="[('server_id', '=', server_id)]")
     logo = fields.Char('Logo URL')
