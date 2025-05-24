@@ -48,6 +48,7 @@ class PortainerNetwork(models.Model):
         """Override create to create networks in Portainer when created in Odoo"""
         # First create the records in Odoo
         records = super(PortainerNetwork, self).create(vals_list)
+        success_messages = []
         
         # Then try to create the networks in Portainer
         for record in records:
@@ -143,12 +144,17 @@ class PortainerNetwork(models.Model):
                             'last_sync': fields.Datetime.now()
                         })
                         
-                        # Show success message using message_post
-                        record.message_post(
-                            body=_("Network '%s' created successfully in Portainer") % record.name,
-                            message_type='notification',
-                            subtype_id=self.env.ref('mail.mt_note').id
-                        )
+                        # Add success message to be displayed after all processing
+                        success_messages.append({
+                            'type': 'ir.actions.client',
+                            'tag': 'display_notification',
+                            'params': {
+                                'title': _('Success'),
+                                'message': _("Network '%s' created successfully in Portainer") % record.name,
+                                'type': 'success',
+                                'sticky': False,
+                            }
+                        })
                     else:
                         # Handle case where network ID is not returned
                         raise UserError(_("Network created in Portainer but no ID was returned"))
@@ -161,6 +167,10 @@ class PortainerNetwork(models.Model):
                 # If an error occurred, raise the error
                 raise UserError(_("Error creating network in Portainer: %s") % str(e))
         
+        # Display success notification for the last network if any were created
+        if success_messages and len(success_messages) > 0:
+            return success_messages[-1]
+            
         return records
     
     name = fields.Char('Name', required=True)
