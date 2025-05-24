@@ -149,10 +149,10 @@ class PortainerNetwork(models.Model):
                             'type': 'ir.actions.client',
                             'tag': 'display_notification',
                             'params': {
-                                'title': _('Success'),
-                                'message': _("Network '%s' created successfully in Portainer") % record.name,
-                                'type': 'success',
+                                'title': _('Network Created'),
+                                'message': _('Network %s created successfully in Portainer') % record.name,
                                 'sticky': False,
+                                'type': 'success',
                             }
                         })
                     else:
@@ -169,7 +169,8 @@ class PortainerNetwork(models.Model):
         
         # Display success notification for the last network if any were created
         if success_messages and len(success_messages) > 0:
-            return success_messages[-1]
+            message = success_messages[-1]
+            return message
             
         return records
     
