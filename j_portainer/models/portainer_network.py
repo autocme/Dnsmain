@@ -56,7 +56,7 @@ class PortainerNetwork(models.Model):
        help="Supported network types: bridge (default), host, macvlan, ipvlan, overlay, null")
     scope = fields.Char('Scope', default='local')
     ipam = fields.Text('IPAM')
-    ipam_config = fields.Text('IPAM Configuration') # Field to hold formatted IPAM configuration for display
+    ipam_config = fields.Html('IPAM Configuration', compute='_compute_ipam_config')
     containers = fields.Text('Containers')
     labels = fields.Text('Labels')
     details = fields.Text('Details')
@@ -108,6 +108,26 @@ class PortainerNetwork(models.Model):
     def _get_api(self):
         """Get API client"""
         return self.env['j_portainer.api']
+    
+    def _compute_ipam_config(self):
+        """Compute formatted IPAM configuration from the ipam field"""
+        for record in self:
+            if not record.ipam:
+                record.ipam_config = '<p>No IPAM configuration available</p>'
+                continue
+                
+            try:
+                # Just display the raw IPAM data in a pre-formatted block
+                ipam_data = json.loads(record.ipam) or {}
+                
+                # Pretty-print the JSON for better readability
+                formatted_json = json.dumps(ipam_data, indent=2)
+                
+                # Convert to HTML-friendly format
+                formatted_html = f'<pre>{formatted_json}</pre>'
+                record.ipam_config = formatted_html
+            except Exception as e:
+                record.ipam_config = f'<p>Error parsing IPAM data: {str(e)}</p>'
     
     def get_formatted_details(self):
         """Get formatted network details"""
