@@ -95,11 +95,14 @@ class PortainerApiLog(models.Model):
         # Calculate cutoff date (current date minus specified days)
         import datetime
         from datetime import timedelta
-        cutoff_date = fields.Datetime.now() - timedelta(days=days)
         
-        # Find logs older than the cutoff date
+        # Get current date without time component
+        today = fields.Date.today()
+        cutoff_date = today - timedelta(days=days)
+        
+        # Find logs older than the cutoff date (comparing only the date part)
         old_logs = self.search([
-            ('request_date', '<', cutoff_date)
+            ('request_date', '<', fields.Datetime.to_string(datetime.datetime.combine(cutoff_date, datetime.time(0, 0, 0))))
         ])
         
         # Count records for return value
