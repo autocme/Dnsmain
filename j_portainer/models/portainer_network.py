@@ -260,7 +260,7 @@ class PortainerNetwork(models.Model):
         try:
             api = self._get_api()
             result = api.network_action(
-                self.server_id.id, self.environment_id, self.network_id, 'delete')
+                self.server_id.id, self.environment_id.environment_id, self.network_id, 'delete')
             
             # Check for errors in the result - be very explicit about this check
             if isinstance(result, dict) and result.get('error'):
@@ -306,7 +306,7 @@ class PortainerNetwork(models.Model):
         self.ensure_one()
         
         try:
-            self.server_id.sync_networks(self.environment_id)
+            self.server_id.sync_networks(self.environment_id.environment_id)
             
             return {
                 'type': 'ir.actions.client',

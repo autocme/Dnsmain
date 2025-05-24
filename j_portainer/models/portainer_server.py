@@ -1596,8 +1596,7 @@ class PortainerServer(models.Model):
                     # Prepare network data
                     network_data = {
                         'server_id': self.id,
-                        'environment_id': endpoint_id,
-                        'environment_name': env.name,
+                        'environment_id': env.id,
                         'network_id': network_id,
                         'name': network.get('Name', ''),
                         'driver': network.get('Driver', 'bridge'),  # Use selection field with default value
