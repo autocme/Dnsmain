@@ -24,7 +24,7 @@ class APILogConfigWizard(models.TransientModel):
         res = super(APILogConfigWizard, self).default_get(fields_list)
         
         # Get current value from system parameters
-        param_days = self.env['ir.config_parameter'].sudo().get_param('j_portainer.api_log_purge_days', '1')
+        param_days = self.env['ir.config_parameter'].sudo().get_param('j_portainer.api_log_delete_days', '1')
         try:
             days = int(param_days)
             if days < 1:
@@ -47,7 +47,7 @@ class APILogConfigWizard(models.TransientModel):
         self.ensure_one()
         
         # Update system parameter
-        self.env['ir.config_parameter'].sudo().set_param('j_portainer.api_log_purge_days', str(self.days))
+        self.env['ir.config_parameter'].sudo().set_param('j_portainer.api_log_delete_days', str(self.days))
         
         # Show success message
         return {
@@ -62,13 +62,13 @@ class APILogConfigWizard(models.TransientModel):
         }
     
     def run_purge_now(self):
-        """Run the purge operation immediately with the specified days"""
+        """Run the delete operation immediately with the specified days"""
         self.ensure_one()
         
         # Update system parameter first
-        self.env['ir.config_parameter'].sudo().set_param('j_portainer.api_log_purge_days', str(self.days))
+        self.env['ir.config_parameter'].sudo().set_param('j_portainer.api_log_delete_days', str(self.days))
         
-        # Run the purge operation
+        # Run the delete operation
         count = self.env['j_portainer.api_log'].purge_old_logs(days=self.days)
         
         # Show success message
@@ -76,8 +76,8 @@ class APILogConfigWizard(models.TransientModel):
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'title': _('Logs Purged'),
-                'message': _('Purged %d API logs older than %d days') % (count, self.days),
+                'title': _('Logs Deleted'),
+                'message': _('Deleted %d API logs older than %d days') % (count, self.days),
                 'sticky': False,
                 'type': 'success',
             }
