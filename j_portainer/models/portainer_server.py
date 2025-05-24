@@ -1592,7 +1592,7 @@ class PortainerServer(models.Model):
                         'environment_name': env.name,
                         'network_id': network_id,
                         'name': network.get('Name', ''),
-                        'driver': network.get('Driver', ''),
+                        'driver': network.get('Driver', 'bridge'),  # Use selection field with default value
                         'scope': network.get('Scope', 'local'),
                         'ipam': json.dumps(network.get('IPAM', {})),
                         'labels': json.dumps(network.get('Labels', {})),
@@ -1606,20 +1606,117 @@ class PortainerServer(models.Model):
                         'administrators_only': details.get('Portainer', {}).get('ResourceControl', {}).get('AdministratorsOnly', False),
                         'system': details.get('Portainer', {}).get('ResourceControl', {}).get('System', False),
                         
-                        # Existing boolean attributes updated from details
+                        # Boolean attributes updated from details
                         'is_ipv6': details.get('EnableIPv6', False),
                         'internal': details.get('Internal', False),
                         'attachable': details.get('Attachable', False),
+                        'isolated_network': details.get('Internal', False),  # Internal networks are isolated
                     }
 
+                    # Create or update the main network record
                     if existing_network:
                         # Update existing network record
                         existing_network.write(network_data)
+                        network_record = existing_network
                         updated_count += 1
                     else:
                         # Create new network record
-                        self.env['j_portainer.network'].create(network_data)
+                        network_record = self.env['j_portainer.network'].create(network_data)
                         created_count += 1
+                    
+                    # Process IPv4 and IPv6 configuration from IPAM
+                    ipam_data = network.get('IPAM', {})
+                    ipam_config = ipam_data.get('Config', [])
+                    
+                    # Process IPv4 and IPv6 configuration fields
+                    for config in ipam_config:
+                        subnet = config.get('Subnet', '')
+                        gateway = config.get('Gateway', '')
+                        ip_range = config.get('IPRange', '')
+                        
+                        # Determine if this is IPv4 or IPv6 config
+                        if subnet and ':' in subnet:  # IPv6 contains colons
+                            network_record.write({
+                                'ipv6_subnet': subnet,
+                                'ipv6_gateway': gateway,
+                                'ipv6_range': ip_range,
+                            })
+                            
+                            # Process excluded IPs if present
+                            excluded_ips = config.get('ExcludedIPs', [])
+                            if excluded_ips:
+                                # Remove existing excluded IPs
+                                existing_excluded = self.env['j_portainer.network.ipv6.excluded'].search([
+                                    ('network_id', '=', network_record.id)
+                                ])
+                                if existing_excluded:
+                                    existing_excluded.unlink()
+                                
+                                # Create new excluded IPs
+                                for ip in excluded_ips:
+                                    self.env['j_portainer.network.ipv6.excluded'].create({
+                                        'network_id': network_record.id,
+                                        'ip_address': ip
+                                    })
+                        else:  # IPv4
+                            network_record.write({
+                                'ipv4_subnet': subnet,
+                                'ipv4_gateway': gateway,
+                                'ipv4_range': ip_range,
+                            })
+                            
+                            # Process excluded IPs if present
+                            excluded_ips = config.get('ExcludedIPs', [])
+                            if excluded_ips:
+                                # Remove existing excluded IPs
+                                existing_excluded = self.env['j_portainer.network.ipv4.excluded'].search([
+                                    ('network_id', '=', network_record.id)
+                                ])
+                                if existing_excluded:
+                                    existing_excluded.unlink()
+                                
+                                # Create new excluded IPs
+                                for ip in excluded_ips:
+                                    self.env['j_portainer.network.ipv4.excluded'].create({
+                                        'network_id': network_record.id,
+                                        'ip_address': ip
+                                    })
+                    
+                    # Process driver options
+                    options_data = details.get('Options', {})
+                    if options_data:
+                        # Remove existing driver options
+                        existing_options = self.env['j_portainer.network.driver.option'].search([
+                            ('network_id', '=', network_record.id)
+                        ])
+                        if existing_options:
+                            existing_options.unlink()
+                        
+                        # Create new driver options
+                        for option_name, option_value in options_data.items():
+                            self.env['j_portainer.network.driver.option'].create({
+                                'network_id': network_record.id,
+                                'name': option_name,
+                                'value': str(option_value)  # Convert any non-string values to string
+                            })
+                    
+                    # Process network labels
+                    labels_data = network.get('Labels', {})
+                    if labels_data:
+                        # Remove existing network labels
+                        existing_labels = self.env['j_portainer.network.label'].search([
+                            ('network_id', '=', network_record.id)
+                        ])
+                        if existing_labels:
+                            existing_labels.unlink()
+                        
+                        # Create new network labels
+                        for label_name, label_value in labels_data.items():
+                            self.env['j_portainer.network.label'].create({
+                                'network_id': network_record.id,
+                                'name': label_name,
+                                'value': str(label_value)  # Convert any non-string values to string
+                            })
 
                     synced_network_ids.append((endpoint_id, network_id))
                     network_count += 1

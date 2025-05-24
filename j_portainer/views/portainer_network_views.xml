@@ -55,13 +55,55 @@
                             </field>
                         </page>
                         
-                        <page string="IPAM" name="ipam">
-                            <field name="ipam_config" widget="html" readonly="1"/>
+                        <page string="Driver Options" name="driver_options">
+                            <field name="driver_option_ids">
+                                <tree editable="bottom">
+                                    <field name="name" placeholder="e.g. com.docker.network.bridge.enable_icc"/>
+                                    <field name="value" placeholder="e.g. true"/>
+                                </tree>
+                            </field>
+                        </page>
+                        
+                        <page string="IPv4 Network Configuration" name="ipv4_config">
+                            <group>
+                                <field name="ipv4_subnet" placeholder="e.g. 172.17.0.0/16"/>
+                                <field name="ipv4_gateway" placeholder="e.g. 172.17.0.1"/>
+                                <field name="ipv4_range" placeholder="e.g. 172.17.0.0/24"/>
+                            </group>
+                            <separator string="Excluded IPs"/>
+                            <field name="ipv4_excluded_ids">
+                                <tree editable="bottom">
+                                    <field name="ip_address" placeholder="e.g. 172.17.0.5"/>
+                                </tree>
+                            </field>
+                        </page>
+                        
+                        <page string="IPv6 Network Configuration" name="ipv6_config">
+                            <group>
+                                <field name="ipv6_subnet" placeholder="e.g. fd00::/64"/>
+                                <field name="ipv6_gateway" placeholder="e.g. fd00::1"/>
+                                <field name="ipv6_range" placeholder="e.g. fd00::/80"/>
+                            </group>
+                            <separator string="Excluded IPs"/>
+                            <field name="ipv6_excluded_ids">
+                                <tree editable="bottom">
+                                    <field name="ip_address" placeholder="e.g. fd00::5"/>
+                                </tree>
+                            </field>
                         </page>
                         
                         <page string="Labels" name="labels">
                             <field name="labels" invisible="1"/>
-                            <field name="labels_html" widget="html" readonly="1"/>
+                            <field name="network_label_ids">
+                                <tree editable="bottom">
+                                    <field name="name" placeholder="Label Name"/>
+                                    <field name="value" placeholder="Label Value"/>
+                                </tree>
+                            </field>
+                        </page>
+                        
+                        <page string="IPAM" name="ipam">
+                            <field name="ipam_config" widget="html" readonly="1"/>
                         </page>
                         
                         <page string="Options" name="options">

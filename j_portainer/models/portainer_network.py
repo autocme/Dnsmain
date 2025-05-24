@@ -8,6 +8,36 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
+class PortainerNetworkDriverOption(models.Model):
+    _name = 'j_portainer.network.driver.option'
+    _description = 'Portainer Network Driver Option'
+    
+    name = fields.Char('Name', required=True, help="Option name, e.g. com.docker.network.bridge.enable_icc")
+    value = fields.Char('Value', required=True, help="Option value, e.g. true")
+    network_id = fields.Many2one('j_portainer.network', string='Network', required=True, ondelete='cascade')
+
+class PortainerNetworkIPv4Excluded(models.Model):
+    _name = 'j_portainer.network.ipv4.excluded'
+    _description = 'Portainer Network IPv4 Excluded IP'
+    
+    ip_address = fields.Char('IP Address', required=True, help="IPv4 address to exclude")
+    network_id = fields.Many2one('j_portainer.network', string='Network', required=True, ondelete='cascade')
+
+class PortainerNetworkIPv6Excluded(models.Model):
+    _name = 'j_portainer.network.ipv6.excluded'
+    _description = 'Portainer Network IPv6 Excluded IP'
+    
+    ip_address = fields.Char('IP Address', required=True, help="IPv6 address to exclude")
+    network_id = fields.Many2one('j_portainer.network', string='Network', required=True, ondelete='cascade')
+
+class PortainerNetworkLabel(models.Model):
+    _name = 'j_portainer.network.label'
+    _description = 'Portainer Network Label'
+    
+    name = fields.Char('Name', required=True, help="Label name")
+    value = fields.Char('Value', required=True, help="Label value")
+    network_id = fields.Many2one('j_portainer.network', string='Network', required=True, ondelete='cascade')
+
 class PortainerNetwork(models.Model):
     _name = 'j_portainer.network'
     _description = 'Portainer Network'
@@ -15,13 +45,19 @@ class PortainerNetwork(models.Model):
     
     name = fields.Char('Name', required=True)
     network_id = fields.Char('Network ID', required=True)
-    driver = fields.Char('Driver', required=True)
+    driver = fields.Selection([
+        ('bridge', 'Bridge'),
+        ('macvlan', 'MAC VLAN'),
+        ('ipvlan', 'IP VLAN'),
+        ('overlay', 'Overlay'),
+        ('null', 'Null'),
+    ], string='Driver', required=True, default='bridge',
+       help="Supported network types: bridge (default), macvlan, ipvlan, overlay, null")
     scope = fields.Char('Scope', default='local')
     ipam = fields.Text('IPAM')
     ipam_config = fields.Text('IPAM Configuration') # Field to hold formatted IPAM configuration for display
     containers = fields.Text('Containers')
     labels = fields.Text('Labels')
-    labels_html = fields.Html('Labels HTML', compute='_compute_labels_html')
     details = fields.Text('Details')
     is_default_network = fields.Boolean('Default Network', default=False, 
                                        help="Default networks like 'bridge' and 'host' cannot be removed")
@@ -29,8 +65,10 @@ class PortainerNetwork(models.Model):
                             help="Whether IPv6 is enabled for this network")
     internal = fields.Boolean('Internal Network', default=False,
                              help="Whether the network is internal (no external connectivity)")
-    attachable = fields.Boolean('Attachable', default=False,
-                               help="Whether containers can be attached to this network")
+    isolated_network = fields.Boolean('Isolated network', default=False, 
+                                  help="Toggle this option on to isolate any containers created in this network to this network only, with no inbound or outbound connectivity.")
+    attachable = fields.Boolean('Enable manual container attachment', default=False,
+                               help="Toggle this option on to allow users to attach the network to running containers.")
     public = fields.Boolean('Public', default=True,
                           help="Whether the network is publicly accessible")
     administrators_only = fields.Boolean('Administrators Only', default=False,
@@ -47,6 +85,24 @@ class PortainerNetwork(models.Model):
     
     # Related containers connected to this network
     connected_container_ids = fields.One2many('j_portainer.container.network', 'network_id', string='Connected Containers')
+    
+    # Driver options
+    driver_option_ids = fields.One2many('j_portainer.network.driver.option', 'network_id', string='Driver Options')
+    
+    # IPv4 Configuration
+    ipv4_subnet = fields.Char('IPv4 Subnet', help="CIDR notation for IPv4 subnet (e.g. 172.17.0.0/16)")
+    ipv4_gateway = fields.Char('IPv4 Gateway', help="IPv4 gateway address")
+    ipv4_range = fields.Char('IPv4 Range', help="IPv4 address range in CIDR notation")
+    ipv4_excluded_ids = fields.One2many('j_portainer.network.ipv4.excluded', 'network_id', string='IPv4 Excluded IPs')
+    
+    # IPv6 Configuration
+    ipv6_subnet = fields.Char('IPv6 Subnet', help="CIDR notation for IPv6 subnet")
+    ipv6_gateway = fields.Char('IPv6 Gateway', help="IPv6 gateway address")
+    ipv6_range = fields.Char('IPv6 Range', help="IPv6 address range in CIDR notation")
+    ipv6_excluded_ids = fields.One2many('j_portainer.network.ipv6.excluded', 'network_id', string='IPv6 Excluded IPs')
+    
+    # Network Labels
+    network_label_ids = fields.One2many('j_portainer.network.label', 'network_id', string='Network Labels')
     
     def _get_api(self):
         """Get API client"""
@@ -159,32 +215,7 @@ class PortainerNetwork(models.Model):
             _logger.error(f"Error formatting labels: {str(e)}")
             return self.labels
             
-    @api.depends('labels')
-    def _compute_labels_html(self):
-        """Format network labels as HTML table"""
-        for record in self:
-            if not record.labels or record.labels == '{}':
-                record.labels_html = '<p>No labels available</p>'
-                continue
-                
-            try:
-                labels_data = json.loads(record.labels)
-                if not labels_data:
-                    record.labels_html = '<p>No labels available</p>'
-                    continue
-                    
-                html = ['<table class="table table-sm table-bordered">',
-                        '<thead><tr><th>Label</th><th>Value</th></tr></thead>',
-                        '<tbody>']
-                        
-                for key, value in labels_data.items():
-                    html.append(f'<tr><td>{key}</td><td>{value}</td></tr>')
-                    
-                html.append('</tbody></table>')
-                record.labels_html = ''.join(html)
-            except Exception as e:
-                _logger.error(f"Error formatting labels HTML: {str(e)}")
-                record.labels_html = f'<p>Error formatting labels: {str(e)}</p>'
+
     
     def remove(self):
         """Remove the network"""
