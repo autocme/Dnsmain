@@ -117,20 +117,9 @@ class PortainerNetwork(models.Model):
                 if record.network_label_ids:
                     data['Labels'] = {label.name: label.value for label in record.network_label_ids}
                 
-                # Include driver options in the request if they exist
-                if record.driver_option_ids:
-                    options = {}
-                    for option in record.driver_option_ids:
-                        options[option.name] = option.value
-                    data['Options'] = options
-
-                # Include isolated_network as Internal if it's enabled
-                if record.isolated_network:
-                    data['Internal'] = True
-
                 # Make API request to create network
                 server = record.server_id
-                environment_id = record.environment_id.environment_id  # Get the actual environment ID from the relation
+                environment_id = record.environment_id
                 endpoint = f'/api/endpoints/{environment_id}/docker/networks/create'
                 response = server._make_api_request(endpoint, 'POST', data=data)
                 
@@ -145,9 +134,6 @@ class PortainerNetwork(models.Model):
                             'network_id': network_id,
                             'last_sync': fields.Datetime.now()
                         })
-                        
-                        # Show success message
-                        self.env.user.notify_success(message=_("Network '%s' successfully created in Portainer") % record.name)
                     else:
                         # Handle case where network ID is not returned
                         raise UserError(_("Network created in Portainer but no ID was returned"))
@@ -190,15 +176,16 @@ class PortainerNetwork(models.Model):
     attachable = fields.Boolean('Enable manual container attachment', default=False,
                                help="Toggle this option on to allow users to attach the network to running containers.")
     public = fields.Boolean('Public', default=True,
-                          help="Whether the network is publicly accessible", readonly=True)
+                          help="Whether the network is publicly accessible")
     administrators_only = fields.Boolean('Administrators Only', default=False,
-                                      help="Whether only administrators can use this network", readonly=True)
+                                      help="Whether only administrators can use this network")
     system = fields.Boolean('System', default=False,
-                          help="Whether this is a system-managed network", readonly=True)
+                          help="Whether this is a system-managed network")
     options = fields.Text('Options')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
-    environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True, ondelete='cascade')
+    environment_id = fields.Integer('Environment ID', required=True)
+    environment_name = fields.Char('Environment', required=True)
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
     # Related containers connected to this network
@@ -260,7 +247,7 @@ class PortainerNetwork(models.Model):
         try:
             api = self._get_api()
             result = api.network_action(
-                self.server_id.id, self.environment_id.environment_id, self.network_id, 'delete')
+                self.server_id.id, self.environment_id, self.network_id, 'delete')
             
             # Check for errors in the result - be very explicit about this check
             if isinstance(result, dict) and result.get('error'):
@@ -306,7 +293,7 @@ class PortainerNetwork(models.Model):
         self.ensure_one()
         
         try:
-            self.server_id.sync_networks(self.environment_id.environment_id)
+            self.server_id.sync_networks(self.environment_id)
             
             return {
                 'type': 'ir.actions.client',
