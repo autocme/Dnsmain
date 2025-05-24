@@ -102,4 +102,12 @@
               action="action_portainer_api_log"
               sequence="40"
               groups="j_portainer.group_j_portainer_manager"/>
+              
+    <!-- API Log Configuration Menu -->
+    <menuitem id="menu_j_portainer_api_log_config" 
+              name="Log Retention Settings" 
+              parent="menu_j_portainer_configuration" 
+              action="action_portainer_api_log_config"
+              sequence="45"
+              groups="j_portainer.group_j_portainer_manager"/>
 </odoo>
