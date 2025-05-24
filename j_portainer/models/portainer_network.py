@@ -117,10 +117,18 @@ class PortainerNetwork(models.Model):
                 if record.network_label_ids:
                     data['Labels'] = {label.name: label.value for label in record.network_label_ids}
                 
+                # Add driver options if present
+                if record.driver_option_ids:
+                    data['Options'] = {option.name: option.value for option in record.driver_option_ids}
+                
                 # Make API request to create network
                 server = record.server_id
                 environment_id = record.environment_id
                 endpoint = f'/api/endpoints/{environment_id}/docker/networks/create'
+                
+                # Log the data being sent for debugging
+                _logger.info(f"Creating network with data: {data}")
+                
                 response = server._make_api_request(endpoint, 'POST', data=data)
                 
                 if response.status_code in [200, 201, 204]:
@@ -134,11 +142,18 @@ class PortainerNetwork(models.Model):
                             'network_id': network_id,
                             'last_sync': fields.Datetime.now()
                         })
+                        
+                        # Show success message using message_post
+                        record.message_post(
+                            body=_("Network '%s' created successfully in Portainer") % record.name,
+                            message_type='notification',
+                            subtype_id=self.env.ref('mail.mt_note').id
+                        )
                     else:
                         # Handle case where network ID is not returned
                         raise UserError(_("Network created in Portainer but no ID was returned"))
                 else:
-                    # If creation failed, raise an error
+                    # If creation failed, raise an error and prevent saving
                     error_msg = response.text
                     raise UserError(_("Failed to create network in Portainer: %s") % error_msg)
                     
