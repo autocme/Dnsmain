@@ -44,7 +44,7 @@ class PortainerNetwork(models.Model):
     _order = 'name'
     
     name = fields.Char('Name', required=True)
-    network_id = fields.Char('Network ID', required=True)
+    network_id = fields.Char('Network ID', readonly=True)
     driver = fields.Selection([
         ('bridge', 'Bridge'),
         ('host', 'Host'),
@@ -77,7 +77,6 @@ class PortainerNetwork(models.Model):
     system = fields.Boolean('System', default=False,
                           help="Whether this is a system-managed network")
     options = fields.Text('Options')
-    options_html = fields.Html('Options HTML', compute='_compute_options_html')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
@@ -129,112 +128,7 @@ class PortainerNetwork(models.Model):
             except Exception as e:
                 record.ipam_config = f'<p>Error parsing IPAM data: {str(e)}</p>'
     
-    def get_formatted_details(self):
-        """Get formatted network details"""
-        self.ensure_one()
-        if not self.details:
-            return ''
-            
-        try:
-            details_data = json.loads(self.details)
-            result = []
-            
-            # Extract key information
-            if 'IPAM' in details_data and 'Config' in details_data['IPAM']:
-                configs = details_data['IPAM']['Config']
-                if configs:
-                    result.append("IPAM Configuration:")
-                    for config in configs:
-                        if 'Subnet' in config:
-                            result.append(f"  Subnet: {config['Subnet']}")
-                        if 'Gateway' in config:
-                            result.append(f"  Gateway: {config['Gateway']}")
-                            
-            # Extract some other useful properties
-            if 'Internal' in details_data and details_data['Internal']:
-                result.append("Internal: Yes")
-                
-            if 'Attachable' in details_data and details_data['Attachable']:
-                result.append("Attachable: Yes")
-                
-            if 'EnableIPv6' in details_data and details_data['EnableIPv6']:
-                result.append("IPv6 Enabled: Yes")
-                
-            return '\n'.join(result)
-        except Exception as e:
-            _logger.error(f"Error formatting details: {str(e)}")
-            return self.details
-    
-    def get_formatted_containers(self):
-        """Get formatted container list"""
-        self.ensure_one()
-        if not self.containers:
-            return ''
-            
-        try:
-            containers_data = json.loads(self.containers)
-            if not containers_data:
-                return ''
-                
-            result = []
-            for container_id, container_info in containers_data.items():
-                name = container_info.get('Name', container_id[:12])
-                ipv4 = container_info.get('IPv4Address', '')
-                ipv6 = container_info.get('IPv6Address', '')
-                
-                if ipv4 and ipv6:
-                    result.append(f"{name}: {ipv4}, {ipv6}")
-                elif ipv4:
-                    result.append(f"{name}: {ipv4}")
-                elif ipv6:
-                    result.append(f"{name}: {ipv6}")
-                else:
-                    result.append(name)
-                    
-            return '\n'.join(result)
-        except Exception as e:
-            _logger.error(f"Error formatting containers: {str(e)}")
-            return self.containers
-            
-    def get_formatted_ipam(self):
-        """Get formatted IPAM configuration"""
-        self.ensure_one()
-        if not self.ipam:
-            return ''
-            
-        try:
-            ipam_data = json.loads(self.ipam)
-            if not ipam_data or 'Config' not in ipam_data:
-                return ''
-                
-            configs = ipam_data['Config']
-            result = []
-            
-            for config in configs:
-                if 'Subnet' in config:
-                    if 'Gateway' in config:
-                        result.append(f"{config['Subnet']} (Gateway: {config['Gateway']})")
-                    else:
-                        result.append(config['Subnet'])
-                        
-            return '\n'.join(result)
-        except Exception as e:
-            _logger.error(f"Error formatting IPAM: {str(e)}")
-            return self.ipam
-            
-    def get_formatted_labels(self):
-        """Get formatted network labels"""
-        self.ensure_one()
-        if not self.labels:
-            return ''
-            
-        try:
-            labels_data = json.loads(self.labels)
-            formatted_labels = [f"{key}: {value}" for key, value in labels_data.items()]
-            return '\n'.join(formatted_labels)
-        except Exception as e:
-            _logger.error(f"Error formatting labels: {str(e)}")
-            return self.labels
+
             
 
     
@@ -310,32 +204,7 @@ class PortainerNetwork(models.Model):
             _logger.error(f"Error refreshing network {self.name}: {str(e)}")
             raise UserError(_("Error refreshing network: %s") % str(e))
     
-    @api.depends('options')
-    def _compute_options_html(self):
-        """Format network options as HTML table"""
-        for record in self:
-            if not record.options or record.options == '{}':
-                record.options_html = '<p>No options available</p>'
-                continue
-                
-            try:
-                options_data = json.loads(record.options)
-                if not options_data:
-                    record.options_html = '<p>No options available</p>'
-                    continue
-                    
-                html = ['<table class="table table-sm table-bordered">',
-                        '<thead><tr><th>Option</th><th>Value</th></tr></thead>',
-                        '<tbody>']
-                        
-                for key, value in options_data.items():
-                    html.append(f'<tr><td>{key}</td><td>{value}</td></tr>')
-                    
-                html.append('</tbody></table>')
-                record.options_html = ''.join(html)
-            except Exception as e:
-                _logger.error(f"Error formatting options HTML: {str(e)}")
-                record.options_html = f'<p>Error formatting options: {str(e)}</p>'
+
     
     @api.model
     def create_network(self, server_id, environment_id, name, driver='bridge', subnet=None, gateway=None, internal=False, attachable=False, enable_ipv6=False, labels=None):
