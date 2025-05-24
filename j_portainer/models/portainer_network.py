@@ -43,6 +43,113 @@ class PortainerNetwork(models.Model):
     _description = 'Portainer Network'
     _order = 'name'
     
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Override create to create networks in Portainer when created in Odoo"""
+        # First create the records in Odoo
+        records = super(PortainerNetwork, self).create(vals_list)
+        
+        # Then try to create the networks in Portainer
+        for record in records:
+            try:
+                # If a network_id is already provided, this is likely a sync operation
+                # so we should not try to create a new network in Portainer
+                if record.network_id:
+                    continue
+                    
+                # Create the network in Portainer
+                data = {
+                    'Name': record.name,
+                    'Driver': record.driver,
+                    'Internal': record.internal,
+                    'Attachable': record.attachable,
+                    'EnableIPv6': record.is_ipv6,
+                    'CheckDuplicate': True
+                }
+                
+                # Add IPAM configuration if subnet is provided
+                ipam_configs = []
+                
+                # Add IPv4 configuration if present
+                if record.ipv4_subnet:
+                    ipv4_config = {
+                        'Subnet': record.ipv4_subnet
+                    }
+                    
+                    if record.ipv4_gateway:
+                        ipv4_config['Gateway'] = record.ipv4_gateway
+                        
+                    if record.ipv4_range:
+                        ipv4_config['IPRange'] = record.ipv4_range
+                        
+                    # Add excluded IPs if present
+                    if record.ipv4_excluded_ids:
+                        ipv4_config['ExcludedIPs'] = [ip.ip_address for ip in record.ipv4_excluded_ids]
+                        
+                    ipam_configs.append(ipv4_config)
+                
+                # Add IPv6 configuration if present
+                if record.ipv6_subnet:
+                    ipv6_config = {
+                        'Subnet': record.ipv6_subnet
+                    }
+                    
+                    if record.ipv6_gateway:
+                        ipv6_config['Gateway'] = record.ipv6_gateway
+                        
+                    if record.ipv6_range:
+                        ipv6_config['IPRange'] = record.ipv6_range
+                        
+                    # Add excluded IPs if present
+                    if record.ipv6_excluded_ids:
+                        ipv6_config['ExcludedIPs'] = [ip.ip_address for ip in record.ipv6_excluded_ids]
+                        
+                    ipam_configs.append(ipv6_config)
+                
+                # Add IPAM configuration if we have any configs
+                if ipam_configs:
+                    data['IPAM'] = {
+                        'Driver': 'default',
+                        'Config': ipam_configs
+                    }
+                
+                # Add labels if present
+                if record.network_label_ids:
+                    data['Labels'] = {label.name: label.value for label in record.network_label_ids}
+                
+                # Make API request to create network
+                server = record.server_id
+                environment_id = record.environment_id
+                endpoint = f'/api/endpoints/{environment_id}/docker/networks/create'
+                response = server._make_api_request(endpoint, 'POST', data=data)
+                
+                if response.status_code in [200, 201, 204]:
+                    # Get the network ID from the response
+                    response_data = response.json()
+                    network_id = response_data.get('Id')
+                    
+                    if network_id:
+                        # Update the record with the network ID
+                        record.write({
+                            'network_id': network_id,
+                            'last_sync': fields.Datetime.now()
+                        })
+                    else:
+                        # Handle case where network ID is not returned
+                        raise UserError(_("Network created in Portainer but no ID was returned"))
+                else:
+                    # If creation failed, delete the Odoo record and raise an error
+                    error_msg = response.text
+                    record.unlink()
+                    raise UserError(_("Failed to create network in Portainer: %s") % error_msg)
+                    
+            except Exception as e:
+                # If an error occurred, delete the Odoo record and raise the error
+                record.unlink()
+                raise UserError(_("Error creating network in Portainer: %s") % str(e))
+        
+        return records
+    
     name = fields.Char('Name', required=True)
     network_id = fields.Char('Network ID', readonly=True)
     driver = fields.Selection([
