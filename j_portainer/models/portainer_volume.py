@@ -21,6 +21,7 @@ class PortainerVolume(models.Model):
     created = fields.Datetime('Created')
     scope = fields.Char('Scope', default='local')
     labels = fields.Text('Labels')
+    labels_html = fields.Html('Labels HTML', compute='_compute_labels_html')
     details = fields.Text('Details')
     in_use = fields.Boolean('In Use', default=False, help="Whether the volume is currently used by any containers")
     
@@ -38,6 +39,32 @@ class PortainerVolume(models.Model):
         """Compute the number of containers using this volume"""
         for record in self:
             record.container_count = len(record.container_volume_ids)
+            
+    @api.depends('labels')
+    def _compute_labels_html(self):
+        """Format volume labels as HTML table"""
+        for record in self:
+            if not record.labels:
+                record.labels_html = '<p>No labels found</p>'
+                continue
+                
+            try:
+                labels_data = json.loads(record.labels)
+                if not labels_data:
+                    record.labels_html = '<p>No labels found</p>'
+                    continue
+                    
+                html = '<table class="table table-bordered table-sm">'
+                html += '<thead><tr><th>Label Name</th><th>Value</th></tr></thead><tbody>'
+                
+                for key, value in labels_data.items():
+                    html += f'<tr><td>{key}</td><td>{value}</td></tr>'
+                    
+                html += '</tbody></table>'
+                record.labels_html = html
+            except Exception as e:
+                _logger.error(f"Error formatting labels HTML: {str(e)}")
+                record.labels_html = f'<p>Error formatting labels: {str(e)}</p>'
     
     def _get_api(self):
         """Get API client"""

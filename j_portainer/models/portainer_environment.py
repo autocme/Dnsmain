@@ -29,6 +29,7 @@ class PortainerEnvironment(models.Model):
     active = fields.Boolean('Active', default=True, 
                           help="If unchecked, it means this environment no longer exists in Portainer, "
                                "but it's kept in Odoo for reference and to maintain relationships with templates")
+    last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     
