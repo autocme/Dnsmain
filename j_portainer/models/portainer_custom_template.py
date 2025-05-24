@@ -30,7 +30,7 @@ class PortainerCustomTemplate(models.Model):
     template_type = fields.Selection([
         ('1', 'Swarm'),
         ('2', 'Standalone / Podman')
-    ], string='Type', default='1', required=True)
+    ], string='Type', default='2', required=True)
     platform = fields.Selection([
         ('linux', 'Linux'),
         ('windows', 'Windows')

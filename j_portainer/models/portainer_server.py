@@ -614,8 +614,14 @@ class PortainerServer(models.Model):
                 obsolete_envs.write({'active': False})
                 _logger.info(f"Marked {len(obsolete_envs)} obsolete environments as inactive")
 
+            # Update environment-specific last_sync timestamps
+            now = fields.Datetime.now()
+            synced_environments = self.env['j_portainer.environment'].browse(synced_env_ids)
+            if synced_environments:
+                synced_environments.write({'last_sync': now})
+            
             self.write({
-                'last_sync': fields.Datetime.now(),
+                'last_sync': now,
                 'environment_count': len(environments)
             })
 
