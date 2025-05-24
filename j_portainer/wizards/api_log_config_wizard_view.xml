@@ -15,7 +15,7 @@
                 </group>
                 <footer>
                     <button name="save_config" string="Save Configuration" type="object" class="btn-primary"/>
-                    <button name="run_purge_now" string="Save &amp; Purge Now" type="object" class="btn-secondary"/>
+                    <button name="run_purge_now" string="Save &amp; Delete Now" type="object" class="btn-secondary"/>
                     <button string="Cancel" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>

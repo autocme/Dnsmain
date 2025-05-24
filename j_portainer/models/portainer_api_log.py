@@ -70,7 +70,7 @@ class PortainerApiLog(models.Model):
         """Delete API logs older than the specified number of days
         
         This method is meant to be called by a scheduled action to regularly
-        clean up old API logs and prevent database bloat.
+        delete old API logs and prevent database bloat.
         
         Args:
             days (int, optional): Number of days to keep logs for. If not provided,
@@ -82,7 +82,7 @@ class PortainerApiLog(models.Model):
         """
         # If days parameter is not provided, read from system parameter
         if days is None:
-            param_days = self.env['ir.config_parameter'].sudo().get_param('j_portainer.api_log_purge_days', '1')
+            param_days = self.env['ir.config_parameter'].sudo().get_param('j_portainer.api_log_delete_days', '1')
             try:
                 days = int(param_days)
             except (ValueError, TypeError):
