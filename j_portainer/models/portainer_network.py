@@ -138,14 +138,12 @@ class PortainerNetwork(models.Model):
                         # Handle case where network ID is not returned
                         raise UserError(_("Network created in Portainer but no ID was returned"))
                 else:
-                    # If creation failed, delete the Odoo record and raise an error
+                    # If creation failed, raise an error
                     error_msg = response.text
-                    record.unlink()
                     raise UserError(_("Failed to create network in Portainer: %s") % error_msg)
                     
             except Exception as e:
-                # If an error occurred, delete the Odoo record and raise the error
-                record.unlink()
+                # If an error occurred, raise the error
                 raise UserError(_("Error creating network in Portainer: %s") % str(e))
         
         return records
