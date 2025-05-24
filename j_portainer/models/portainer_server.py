@@ -1725,6 +1725,35 @@ class PortainerServer(models.Model):
                                 'name': label_name,
                                 'value': str(label_value)  # Convert any non-string values to string
                             })
+                    
+                    # Process connected containers - only use containers from the Portainer response
+                    containers_data = network.get('Containers', {}) or {}
+                    
+                    # First, remove all existing container-network connections for this network
+                    existing_connections = self.env['j_portainer.container.network'].search([
+                        ('network_id', '=', network_record.id)
+                    ])
+                    if existing_connections:
+                        existing_connections.unlink()
+                    
+                    # Now add connections only for containers in the response data
+                    for container_id, container_data in containers_data.items():
+                        # Find the container in Odoo
+                        container = self.env['j_portainer.container'].search([
+                            ('server_id', '=', self.id),
+                            ('environment_id', '=', endpoint_id),
+                            ('container_id', '=', container_id)
+                        ], limit=1)
+                        
+                        # Only create connection if container exists in Odoo
+                        if container:
+                            self.env['j_portainer.container.network'].create({
+                                'container_id': container.id,
+                                'network_id': network_record.id,
+                                'ip_address': container_data.get('IPv4Address', '').split('/')[0] if '/' in container_data.get('IPv4Address', '') else container_data.get('IPv4Address', ''),
+                                'gateway': container_data.get('Gateway', ''),
+                                'mac_address': container_data.get('MacAddress', '')
+                            })
 
                     synced_network_ids.append((endpoint_id, network_id))
                     network_count += 1
