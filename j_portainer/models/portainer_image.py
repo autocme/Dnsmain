@@ -31,6 +31,7 @@ class PortainerImage(models.Model):
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
     environment_name = fields.Char('Environment', required=True)
+    last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
     def _get_api(self):
         """Get API client"""

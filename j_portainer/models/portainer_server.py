@@ -1092,8 +1092,14 @@ class PortainerServer(models.Model):
             # Log the statistics
             _logger.info(
                 f"Container sync complete: {container_count} total containers, {created_count} created, {updated_count} updated, {removed_count} removed")
-
-            self.write({'last_sync': fields.Datetime.now()})
+                
+            # Update container-specific last_sync
+            now = fields.Datetime.now()
+            containers = self.env['j_portainer.container'].search([
+                ('server_id', '=', self.id)
+            ])
+            if containers:
+                containers.write({'last_sync': now})
 
             return {
                 'type': 'ir.actions.client',
@@ -1349,7 +1355,13 @@ class PortainerServer(models.Model):
             _logger.info(
                 f"Image sync complete: {image_count} total images, {created_count} created, {updated_count} updated, {removed_count} removed")
 
-            self.write({'last_sync': fields.Datetime.now()})
+            # Update image-specific last_sync
+            now = fields.Datetime.now()
+            images = self.env['j_portainer.image'].search([
+                ('server_id', '=', self.id)
+            ])
+            if images:
+                images.write({'last_sync': now})
 
             return {
                 'type': 'ir.actions.client',
@@ -1491,7 +1503,13 @@ class PortainerServer(models.Model):
             _logger.info(
                 f"Volume sync complete: {volume_count} total volumes, {created_count} created, {updated_count} updated, {removed_count} removed")
 
-            self.write({'last_sync': fields.Datetime.now()})
+            # Update volume-specific last_sync
+            now = fields.Datetime.now()
+            volumes = self.env['j_portainer.volume'].search([
+                ('server_id', '=', self.id)
+            ])
+            if volumes:
+                volumes.write({'last_sync': now})
 
             return {
                 'type': 'ir.actions.client',
@@ -1623,7 +1641,13 @@ class PortainerServer(models.Model):
             _logger.info(
                 f"Network sync complete: {network_count} total networks, {created_count} created, {updated_count} updated, {removed_count} removed")
 
-            self.write({'last_sync': fields.Datetime.now()})
+            # Update network-specific last_sync
+            now = fields.Datetime.now()
+            networks = self.env['j_portainer.network'].search([
+                ('server_id', '=', self.id)
+            ])
+            if networks:
+                networks.write({'last_sync': now})
 
             return {
                 'type': 'ir.actions.client',
@@ -1761,7 +1785,13 @@ class PortainerServer(models.Model):
             _logger.info(
                 f"Standard template sync complete: {template_count} total templates, {created_count} created, {updated_count} updated, {removed_count} removed")
 
-            self.write({'last_sync': fields.Datetime.now()})
+            # Update template-specific last_sync
+            now = fields.Datetime.now()
+            templates = self.env['j_portainer.template'].search([
+                ('server_id', '=', self.id)
+            ])
+            if templates:
+                templates.write({'last_sync': now})
 
             return {
                 'type': 'ir.actions.client',
@@ -2048,7 +2078,13 @@ class PortainerServer(models.Model):
             _logger.info(
                 f"Custom template sync complete: {template_count} total custom templates, {created_count} created, {updated_count} updated, {removed_count} removed")
 
-            self.write({'last_sync': fields.Datetime.now()})
+            # Update custom template-specific last_sync
+            now = fields.Datetime.now()
+            custom_templates = self.env['j_portainer.customtemplate'].search([
+                ('server_id', '=', self.id)
+            ])
+            if custom_templates:
+                custom_templates.write({'last_sync': now})
 
             return {
                 'type': 'ir.actions.client',
@@ -2121,7 +2157,13 @@ class PortainerServer(models.Model):
                     error_count += 1
                     _logger.error(f"Error pushing template '{template.title}': {str(e)}")
 
-            self.write({'last_sync': fields.Datetime.now()})
+            # Update custom template-specific last_sync
+            now = fields.Datetime.now()
+            custom_templates = self.env['j_portainer.customtemplate'].search([
+                ('server_id', '=', self.id)
+            ])
+            if custom_templates:
+                custom_templates.write({'last_sync': now})
 
             return {
                 'type': 'ir.actions.client',
@@ -2153,7 +2195,14 @@ class PortainerServer(models.Model):
             ])
 
             if not custom_templates:
-                self.write({'last_sync': fields.Datetime.now()})
+                # Update custom template-specific last_sync even if no templates to push
+                now = fields.Datetime.now()
+                all_custom_templates = self.env['j_portainer.customtemplate'].search([
+                    ('server_id', '=', self.id)
+                ])
+                if all_custom_templates:
+                    all_custom_templates.write({'last_sync': now})
+                
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
@@ -2468,7 +2517,13 @@ class PortainerServer(models.Model):
             _logger.info(
                 f"Stack sync complete: {stack_count} total stacks, {created_count} created, {updated_count} updated, {removed_count} removed")
 
-            self.write({'last_sync': fields.Datetime.now()})
+            # Update stack-specific last_sync
+            now = fields.Datetime.now()
+            stacks = self.env['j_portainer.stack'].search([
+                ('server_id', '=', self.id)
+            ])
+            if stacks:
+                stacks.write({'last_sync': now})
 
             return {
                 'type': 'ir.actions.client',

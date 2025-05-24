@@ -60,6 +60,7 @@
                             <field name="template_type"/>
                             <field name="platform"/>
                             <field name="build_method"/>
+                            <field name="last_sync" readonly="1"/>
                         </group>
                         <group>
                             <field name="logo"/>

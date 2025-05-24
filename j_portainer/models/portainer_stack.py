@@ -33,6 +33,7 @@ class PortainerStack(models.Model):
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
     environment_name = fields.Char('Environment', required=True)
+    last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
     # Related containers in this stack
     container_ids = fields.One2many('j_portainer.container', 'stack_id', string='Containers')

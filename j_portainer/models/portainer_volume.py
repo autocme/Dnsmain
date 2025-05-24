@@ -27,6 +27,7 @@ class PortainerVolume(models.Model):
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
     environment_id = fields.Integer('Environment ID', required=True)
     environment_name = fields.Char('Environment', required=True)
+    last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
     # Relation with containers using this volume
     container_volume_ids = fields.One2many('j_portainer.container.volume', 'volume_id', string='Container Mappings')
