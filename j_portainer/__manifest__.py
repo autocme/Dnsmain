@@ -29,6 +29,7 @@
     'data': [
         'security/portainer_security.xml',
         'security/ir.model.access.csv',
+        'data/cron_data.xml',
         'views/portainer_server_views.xml',
         'views/portainer_environment_views.xml',
         'views/portainer_container_views.xml',
@@ -51,6 +52,7 @@
         'wizards/image_remove_wizard_view.xml',
         'wizards/template_deploy_wizard_view.xml',
         'wizards/container_join_network_wizard_views.xml',
+        'wizards/api_log_config_wizard_view.xml',
         'views/menu_views.xml',
     ],
     'demo': [],

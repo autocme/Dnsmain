@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- API Log Configuration Wizard Form -->
+    <record id="view_portainer_api_log_config_wizard_form" model="ir.ui.view">
+        <field name="name">j_portainer.api_log.config.wizard.form</field>
+        <field name="model">j_portainer.api_log.config.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Configure API Log Retention">
+                <p class="text-muted">
+                    Configure how long API logs are kept in the system before they are automatically deleted.
+                    The scheduled action runs daily to remove logs older than the specified number of days.
+                </p>
+                <group>
+                    <field name="days"/>
+                </group>
+                <footer>
+                    <button name="save_config" string="Save Configuration" type="object" class="btn-primary"/>
+                    <button name="run_purge_now" string="Save &amp; Purge Now" type="object" class="btn-secondary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    
+    <!-- API Log Configuration Action -->
+    <record id="action_portainer_api_log_config" model="ir.actions.act_window">
+        <field name="name">Configure Log Retention</field>
+        <field name="res_model">j_portainer.api_log.config.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

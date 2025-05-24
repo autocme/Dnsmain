@@ -3,6 +3,7 @@
 
 from odoo import models, fields, api, _
 import json
+import logging
 from datetime import datetime
 
 
@@ -63,3 +64,53 @@ class PortainerApiLog(models.Model):
                 name = f"{name} ({log.status})"
             result.append((log.id, name))
         return result
+        
+    @api.model
+    def purge_old_logs(self, days=None):
+        """Delete API logs older than the specified number of days
+        
+        This method is meant to be called by a scheduled action to regularly
+        clean up old API logs and prevent database bloat.
+        
+        Args:
+            days (int, optional): Number of days to keep logs for. If not provided,
+                                 the value will be read from system parameters.
+                                 Logs older than this will be deleted.
+        
+        Returns:
+            int: Number of logs deleted
+        """
+        # If days parameter is not provided, read from system parameter
+        if days is None:
+            param_days = self.env['ir.config_parameter'].sudo().get_param('j_portainer.api_log_purge_days', '1')
+            try:
+                days = int(param_days)
+            except (ValueError, TypeError):
+                days = 1
+        
+        # Ensure days is a valid positive integer
+        if not isinstance(days, int) or days < 1:
+            days = 1
+            
+        # Calculate cutoff date (current date minus specified days)
+        import datetime
+        from datetime import timedelta
+        cutoff_date = fields.Datetime.now() - timedelta(days=days)
+        
+        # Find logs older than the cutoff date
+        old_logs = self.search([
+            ('request_date', '<', cutoff_date)
+        ])
+        
+        # Count records for return value
+        count = len(old_logs)
+        
+        # Delete the old logs
+        if old_logs:
+            old_logs.unlink()
+            
+        # Log the purge operation
+        _logger = logging.getLogger(__name__)
+        _logger.info(f"Purged {count} API logs older than {days} days")
+            
+        return count
