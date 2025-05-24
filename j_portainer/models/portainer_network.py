@@ -47,12 +47,13 @@ class PortainerNetwork(models.Model):
     network_id = fields.Char('Network ID', required=True)
     driver = fields.Selection([
         ('bridge', 'Bridge'),
+        ('host', 'Host'),
         ('macvlan', 'MAC VLAN'),
         ('ipvlan', 'IP VLAN'),
         ('overlay', 'Overlay'),
         ('null', 'Null'),
     ], string='Driver', required=True, default='bridge',
-       help="Supported network types: bridge (default), macvlan, ipvlan, overlay, null")
+       help="Supported network types: bridge (default), host, macvlan, ipvlan, overlay, null")
     scope = fields.Char('Scope', default='local')
     ipam = fields.Text('IPAM')
     ipam_config = fields.Text('IPAM Configuration') # Field to hold formatted IPAM configuration for display
