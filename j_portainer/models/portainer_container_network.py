@@ -23,7 +23,7 @@ class PortainerContainerNetwork(models.Model):
     mac_address = fields.Char('MAC Address')
     
     # Other network details
-    driver = fields.Char(related='network_id.driver', string='Driver', readonly=True)
+    driver = fields.Selection(related='network_id.driver', string='Driver', readonly=True)
     scope = fields.Char(related='network_id.scope', string='Scope', readonly=True)
     
     # Display name computed field
