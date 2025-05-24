@@ -28,5 +28,7 @@
         <field name="res_model">j_portainer.api_log.config.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
+        <field name="binding_model_id" ref="model_j_portainer_api_log"/>
+        <field name="binding_view_types">list,form</field>
     </record>
 </odoo>

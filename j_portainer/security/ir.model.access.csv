@@ -48,3 +48,4 @@ access_j_portainer_container_port_user,j_portainer.container.port.user,model_j_p
 access_j_portainer_container_port_admin,j_portainer.container.port.admin,model_j_portainer_container_port,j_portainer.group_j_portainer_manager,1,1,1,1
 access_j_portainer_image_tag_user,j_portainer.image.tag.user,model_j_portainer_image_tag,j_portainer.group_j_portainer_user,1,0,0,0
 access_j_portainer_image_tag_admin,j_portainer.image.tag.admin,model_j_portainer_image_tag,j_portainer.group_j_portainer_manager,1,1,1,1
+access_j_portainer_api_log_config_wizard_admin,j_portainer.api_log.config.wizard.admin,model_j_portainer_api_log_config_wizard,j_portainer.group_j_portainer_manager,1,1,1,1
