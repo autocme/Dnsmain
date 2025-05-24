@@ -1585,6 +1585,14 @@ class PortainerServer(models.Model):
 
                     details = details_response.json() if details_response.status_code == 200 else {}
                     
+                    # Handle potential None values in nested dictionaries
+                    ipam_data = network.get('IPAM') or {}
+                    labels_data = network.get('Labels') or {}
+                    containers_data = network.get('Containers') or {}
+                    portainer_data = details.get('Portainer') or {}
+                    resource_control = portainer_data.get('ResourceControl') or {}
+                    options_data = details.get('Options') or {}
+                    
                     # Prepare network data
                     network_data = {
                         'server_id': self.id,
@@ -1594,17 +1602,17 @@ class PortainerServer(models.Model):
                         'name': network.get('Name', ''),
                         'driver': network.get('Driver', 'bridge'),  # Use selection field with default value
                         'scope': network.get('Scope', 'local'),
-                        'ipam': json.dumps(network.get('IPAM', {})),
-                        'labels': json.dumps(network.get('Labels', {})),
-                        'containers': json.dumps(network.get('Containers', {})),
+                        'ipam': json.dumps(ipam_data),
+                        'labels': json.dumps(labels_data),
+                        'containers': json.dumps(containers_data),
                         'details': json.dumps(details, indent=2) if details else '',
                         
                         # Get config options from details
-                        'options': json.dumps(details.get('Options', {})),
+                        'options': json.dumps(options_data),
                         # Additional boolean attributes from Portainer metadata
-                        'public': details.get('Portainer', {}).get('ResourceControl', {}).get('Public', True),
-                        'administrators_only': details.get('Portainer', {}).get('ResourceControl', {}).get('AdministratorsOnly', False),
-                        'system': details.get('Portainer', {}).get('ResourceControl', {}).get('System', False),
+                        'public': resource_control.get('Public', True),
+                        'administrators_only': resource_control.get('AdministratorsOnly', False),
+                        'system': resource_control.get('System', False),
                         
                         # Boolean attributes updated from details
                         'is_ipv6': details.get('EnableIPv6', False),
@@ -1625,8 +1633,8 @@ class PortainerServer(models.Model):
                         created_count += 1
                     
                     # Process IPv4 and IPv6 configuration from IPAM
-                    ipam_data = network.get('IPAM', {})
-                    ipam_config = ipam_data.get('Config', [])
+                    ipam_data = network.get('IPAM', {}) or {}
+                    ipam_config = ipam_data.get('Config', []) or []
                     
                     # Process IPv4 and IPv6 configuration fields
                     for config in ipam_config:
@@ -1643,7 +1651,7 @@ class PortainerServer(models.Model):
                             })
                             
                             # Process excluded IPs if present
-                            excluded_ips = config.get('ExcludedIPs', [])
+                            excluded_ips = config.get('ExcludedIPs', []) or []
                             if excluded_ips:
                                 # Remove existing excluded IPs
                                 existing_excluded = self.env['j_portainer.network.ipv6.excluded'].search([
@@ -1666,7 +1674,7 @@ class PortainerServer(models.Model):
                             })
                             
                             # Process excluded IPs if present
-                            excluded_ips = config.get('ExcludedIPs', [])
+                            excluded_ips = config.get('ExcludedIPs', []) or []
                             if excluded_ips:
                                 # Remove existing excluded IPs
                                 existing_excluded = self.env['j_portainer.network.ipv4.excluded'].search([
@@ -1683,7 +1691,7 @@ class PortainerServer(models.Model):
                                     })
                     
                     # Process driver options
-                    options_data = details.get('Options', {})
+                    options_data = details.get('Options', {}) or {}
                     if options_data:
                         # Remove existing driver options
                         existing_options = self.env['j_portainer.network.driver.option'].search([
@@ -1701,7 +1709,7 @@ class PortainerServer(models.Model):
                             })
                     
                     # Process network labels
-                    labels_data = network.get('Labels', {})
+                    labels_data = network.get('Labels', {}) or {}
                     if labels_data:
                         # Remove existing network labels
                         existing_labels = self.env['j_portainer.network.label'].search([
