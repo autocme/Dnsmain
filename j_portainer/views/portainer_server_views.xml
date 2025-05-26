@@ -129,7 +129,7 @@
                                     <field name="name"/>
                                     <field name="driver"/>
                                     <field name="scope"/>
-                                    <field name="environment_name"/>
+                                    <field name="environment_id"/>
                                 </tree>
                             </field>
                         </page>
