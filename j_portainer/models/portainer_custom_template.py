@@ -598,7 +598,7 @@ class PortainerCustomTemplate(models.Model):
             "Platform": str(platform_int),  # Must be a string for multipart form
             "Type": type_str,              # "1" for Standalone/Podman, "2" for Swarm
             "Logo": self.logo or "",
-            "Variables": self.environment_variables or "[]"
+            "Variables": "[]"  # Always send empty array to prevent null errors
         }
         
         # Add categories if available
@@ -819,19 +819,8 @@ class PortainerCustomTemplate(models.Model):
                         if portainer_env_id:
                             url = f"{url}?environment={portainer_env_id}"
                         
-                        # Add variables if available
-                        if self.environment_variables:
-                            try:
-                                # Convert to proper JSON string if it's a raw string
-                                if isinstance(self.environment_variables, str):
-                                    # Try to parse as JSON to validate
-                                    env_vars_json = json.loads(self.environment_variables)
-                                    data['Variables'] = json.dumps(env_vars_json)
-                                else:
-                                    data['Variables'] = json.dumps(self.environment_variables)
-                            except Exception as e:
-                                _logger.warning(f"Error formatting environment variables: {str(e)}")
-                                data['Variables'] = self.environment_variables
+                        # Always set Variables to empty array to prevent null errors in Portainer frontend
+                        data['Variables'] = "[]"
                                 
                         # Add categories if available
                         if self.categories:
@@ -878,16 +867,8 @@ class PortainerCustomTemplate(models.Model):
                             'Logo': self.logo or '',
                         }
                         
-                        # Add variables if available
-                        if self.environment_variables:
-                            json_data['Variables'] = []
-                            try:
-                                import json
-                                if isinstance(self.environment_variables, str):
-                                    env_vars = json.loads(self.environment_variables)
-                                    json_data['Variables'] = env_vars
-                            except Exception as e:
-                                _logger.warning(f"Failed to parse variables: {e}")
+                        # Always set Variables to empty array to prevent null errors in Portainer frontend
+                        json_data['Variables'] = []
                         
                         # Add file content directly in the JSON payload
                         if file_content:
