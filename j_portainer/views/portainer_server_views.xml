@@ -195,7 +195,7 @@
                                     <field name="name" required="1"/>
                                     <field name="sync_days" required="1"/>
                                     <field name="sync_all_resources"/>
-                                    <field name="resource_types" readonly="sync_all_resources" 
+                                    <field name="resource_type_ids" readonly="sync_all_resources" widget="many2many_tags" options="{'no_create': True}" 
                                            required="not sync_all_resources"/>
                                     <field name="active"/>
                                     <field name="sync_status" readonly="1"/>
