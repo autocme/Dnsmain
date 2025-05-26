@@ -144,11 +144,106 @@ class PortainerNetwork(models.Model):
                 network_id = response_data.get('Id')
 
                 if network_id:
-                    # Update the record with the network ID
-                    self.write({
-                        'network_id': network_id,
-                        'last_sync': fields.Datetime.now()
-                    })
+                    # Get detailed network information from Portainer to sync all fields
+                    details_response = server._make_api_request(
+                        f'/api/endpoints/{environment_id}/docker/networks/{network_id}', 'GET')
+                    
+                    if details_response.status_code == 200:
+                        details = details_response.json()
+                        
+                        # Extract IPAM configuration
+                        ipam_data = details.get('IPAM', {})
+                        ipam_config = ipam_data.get('Config', [])
+                        
+                        # Initialize IPv4 and IPv6 values
+                        ipv4_subnet = ipv4_gateway = ipv4_range = None
+                        ipv6_subnet = ipv6_gateway = ipv6_range = None
+                        
+                        # Parse IPAM configuration for IPv4 and IPv6
+                        for config in ipam_config:
+                            subnet = config.get('Subnet', '')
+                            if ':' in subnet:  # IPv6
+                                ipv6_subnet = subnet
+                                ipv6_gateway = config.get('Gateway')
+                                ipv6_range = config.get('IPRange')
+                            else:  # IPv4
+                                ipv4_subnet = subnet
+                                ipv4_gateway = config.get('Gateway')
+                                ipv4_range = config.get('IPRange')
+                        
+                        # Update the record with all network details
+                        update_data = {
+                            'network_id': network_id,
+                            'driver': details.get('Driver', self.driver),
+                            'scope': details.get('Scope', 'local'),
+                            'is_ipv6': details.get('EnableIPv6', False),
+                            'internal': details.get('Internal', False),
+                            'attachable': details.get('Attachable', False),
+                            'ipam': json.dumps(ipam_data),
+                            'labels': json.dumps(details.get('Labels') or {}),
+                            'containers': json.dumps(details.get('Containers') or {}),
+                            'details': json.dumps(details, indent=2),
+                            'options': json.dumps(details.get('Options') or {}),
+                            'last_sync': fields.Datetime.now()
+                        }
+                        
+                        # Add IPv4 configuration if available
+                        if ipv4_subnet:
+                            update_data['ipv4_subnet'] = ipv4_subnet
+                        if ipv4_gateway:
+                            update_data['ipv4_gateway'] = ipv4_gateway
+                        if ipv4_range:
+                            update_data['ipv4_range'] = ipv4_range
+                            
+                        # Add IPv6 configuration if available
+                        if ipv6_subnet:
+                            update_data['ipv6_subnet'] = ipv6_subnet
+                        if ipv6_gateway:
+                            update_data['ipv6_gateway'] = ipv6_gateway
+                        if ipv6_range:
+                            update_data['ipv6_range'] = ipv6_range
+                        
+                        self.write(update_data)
+                        
+                        # Check if all requested configurations were applied and notify user
+                        warnings = []
+                        if self.ipv4_subnet and not ipv4_subnet:
+                            warnings.append("IPv4 subnet configuration may not have been applied")
+                        if self.ipv6_subnet and not ipv6_subnet:
+                            warnings.append("IPv6 subnet configuration may not have been applied")
+                        
+                        # Show success message with any warnings
+                        message_text = _('Network %s created successfully in Portainer') % self.name
+                        if warnings:
+                            message_text += ". " + _("Note: %s") % "; ".join(warnings)
+                            
+                        return {
+                            'type': 'ir.actions.client',
+                            'tag': 'display_notification',
+                            'params': {
+                                'title': _('Network Created'),
+                                'message': message_text,
+                                'sticky': False,
+                                'type': 'warning' if warnings else 'success',
+                            }
+                        }
+                    else:
+                        # Network created but couldn't get details
+                        self.write({
+                            'network_id': network_id,
+                            'last_sync': fields.Datetime.now()
+                        })
+                        
+                        return {
+                            'type': 'ir.actions.client',
+                            'tag': 'display_notification',
+                            'params': {
+                                'title': _('Network Created'),
+                                'message': _('Network %s created in Portainer but could not retrieve all details') % self.name,
+                                'sticky': False,
+                                'type': 'warning',
+                            }
+                        }
                 else:
                     # Handle case where network ID is not returned
                     raise UserError(_("Network created in Portainer but no ID was returned"))
