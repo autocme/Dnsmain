@@ -28,7 +28,7 @@ class PortainerNetworkIPv6Excluded(models.Model):
     _description = 'Portainer Network IPv6 Excluded IP'
     
     ip_address = fields.Char('IP Address', required=True, help="IPv6 address to exclude")
-    network_id = fields.Many2one('j_portainer.network', string='Network', required=True, ondelete='cascade'
+    network_id = fields.Many2one('j_portainer.network', string='Network', required=True, ondelete='cascade')
 
 class PortainerNetworkLabel(models.Model):
     _name = 'j_portainer.network.label'
@@ -36,7 +36,7 @@ class PortainerNetworkLabel(models.Model):
     
     name = fields.Char('Name', required=True, help="Label name")
     value = fields.Char('Value', required=True, help="Label value")
-    network_id = fields.Many2one('j_portainer.network', string='Network', required=True)
+    network_id = fields.Many2one('j_portainer.network', string='Network', required=True, ondelete='cascade')
 
 class PortainerNetwork(models.Model):
     _name = 'j_portainer.network'
@@ -55,14 +55,18 @@ class PortainerNetwork(models.Model):
 
         return records
 
-    def create_network_in_portainer(self):
+    def create_network_in_portainer(self, from_sync=False):
         self.ensure_one()
         try:
             # If a network_id is already provided, this is likely a sync operation
             # so we should not try to create a new network in Portainer
             if self.network_id:
-                raise UserError(
-                    _('The Network Already Has an ID, which means its already created, cant create a network if the ID is existed'))
+                if from_sync:
+                    # During sync, just return without error
+                    return False
+                else:
+                    raise UserError(
+                        _('The Network Already Has an ID, which means its already created, cant create a network if the ID is existed'))
 
             # Create the network in Portainer
             data = {
@@ -246,15 +250,27 @@ class PortainerNetwork(models.Model):
                         }
                 else:
                     # Handle case where network ID is not returned
-                    raise UserError(_("Network created in Portainer but no ID was returned"))
+                    if from_sync:
+                        _logger.warning("Network created in Portainer but no ID was returned")
+                        return False
+                    else:
+                        raise UserError(_("Network created in Portainer but no ID was returned"))
             else:
                 # If creation failed, raise an error and prevent saving
                 error_msg = response.text
-                raise UserError(_("Failed to create network in Portainer: %s") % error_msg)
+                if from_sync:
+                    _logger.warning(f"Failed to create network in Portainer during sync: {error_msg}")
+                    return False
+                else:
+                    raise UserError(_("Failed to create network in Portainer: %s") % error_msg)
 
         except Exception as e:
-            # If an error occurred, raise the error
-            raise UserError(_("Error creating network in Portainer: %s") % str(e))
+            # If an error occurred, handle based on context
+            if from_sync:
+                _logger.warning(f"Error creating network in Portainer during sync: {str(e)}")
+                return False
+            else:
+                raise UserError(_("Error creating network in Portainer: %s") % str(e))
     
     name = fields.Char('Name', required=True)
     network_id = fields.Char('Network ID', readonly=True)
