@@ -1575,7 +1575,7 @@ class PortainerServer(models.Model):
                     # Check if this network already exists in Odoo
                     existing_network = self.env['j_portainer.network'].search([
                         ('server_id', '=', self.id),
-                        ('environment_id', '=', endpoint_id),
+                        ('environment_id', '=', env.id),
                         ('network_id', '=', network_id)
                     ], limit=1)
 
@@ -1596,8 +1596,7 @@ class PortainerServer(models.Model):
                     # Prepare network data
                     network_data = {
                         'server_id': self.id,
-                        'environment_id': endpoint_id,
-                        'environment_name': env.name,
+                        'environment_id': env.id,
                         'network_id': network_id,
                         'name': network.get('Name', ''),
                         'driver': network.get('Driver', 'bridge'),  # Use selection field with default value
@@ -1726,7 +1725,7 @@ class PortainerServer(models.Model):
                                 'value': str(label_value)  # Convert any non-string values to string
                             })
 
-                    synced_network_ids.append((endpoint_id, network_id))
+                    synced_network_ids.append((env.id, network_id))
                     network_count += 1
 
             # Clean up networks that no longer exist in Portainer
