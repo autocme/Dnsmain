@@ -95,8 +95,13 @@ class PortainerNetwork(models.Model):
                     ipv4_config['IPRange'] = self.ipv4_range
 
                 # Add excluded IPs if present
+                excluded_ips = []
                 if self.ipv4_excluded_ids:
-                    ipv4_config['ExcludedIPs'] = [ip.ip_address for ip in self.ipv4_excluded_ids]
+                    excluded_ips.extend([ip.ip_address for ip in self.ipv4_excluded_ids])
+                if excluded_ips:
+                    ipv4_config['AuxAddress'] = {}
+                    for i, ip in enumerate(excluded_ips):
+                        ipv4_config['AuxAddress'][f'excluded_{i}'] = ip
 
                 ipam_configs.append(ipv4_config)
 
@@ -113,8 +118,13 @@ class PortainerNetwork(models.Model):
                     ipv6_config['IPRange'] = self.ipv6_range
 
                 # Add excluded IPs if present
+                excluded_ips = []
                 if self.ipv6_excluded_ids:
-                    ipv6_config['ExcludedIPs'] = [ip.ip_address for ip in self.ipv6_excluded_ids]
+                    excluded_ips.extend([ip.ip_address for ip in self.ipv6_excluded_ids])
+                if excluded_ips:
+                    ipv6_config['AuxAddress'] = {}
+                    for i, ip in enumerate(excluded_ips):
+                        ipv6_config['AuxAddress'][f'excluded_{i}'] = ip
 
                 ipam_configs.append(ipv6_config)
 
@@ -127,11 +137,17 @@ class PortainerNetwork(models.Model):
 
             # Add labels if present
             if self.network_label_ids:
-                data['Labels'] = {label.name: label.value for label in self.network_label_ids}
+                labels = {}
+                for label in self.network_label_ids:
+                    labels[str(label.name)] = str(label.value)
+                data['Labels'] = labels
 
             # Add driver options if present
             if self.driver_option_ids:
-                data['Options'] = {option.name: option.value for option in self.driver_option_ids}
+                options = {}
+                for option in self.driver_option_ids:
+                    options[str(option.name)] = str(option.value)
+                data['Options'] = options
 
             # Make API request to create network
             server = self.server_id
