@@ -93,7 +93,7 @@
                                            decoration-warning="state == 'paused'"
                                            decoration-danger="state in ['stopped', 'exited', 'dead']"/>
                                     <field name="image"/>
-                                    <field name="environment_id"/>
+                                    <field name="environment_name"/>
                                     <field name="created"/>
                                 </tree>
                             </field>
@@ -105,7 +105,7 @@
                                     <field name="repository"/>
                                     <field name="tag"/>
                                     <field name="image_id"/>
-                                    <field name="environment_id"/>
+                                    <field name="environment_name"/>
                                     <field name="created"/>
                                 </tree>
                             </field>
@@ -117,7 +117,7 @@
                                     <field name="name"/>
                                     <field name="driver"/>
                                     <field name="mountpoint"/>
-                                    <field name="environment_id"/>
+                                    <field name="environment_name"/>
                                     <field name="created"/>
                                 </tree>
                             </field>
@@ -129,7 +129,7 @@
                                     <field name="name"/>
                                     <field name="driver"/>
                                     <field name="scope"/>
-                                    <field name="environment_id"/>
+                                    <field name="environment_name"/>
                                 </tree>
                             </field>
                         </page>
@@ -168,7 +168,7 @@
                                     <field name="status" widget="badge"
                                            decoration-success="status == 1"
                                            decoration-danger="status == 2"/>
-                                    <field name="environment_id"/>
+                                    <field name="environment_name"/>
                                     <field name="creation_date"/>
                                     <field name="update_date"/>
                                 </tree>
