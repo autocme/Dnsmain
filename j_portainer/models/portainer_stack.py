@@ -30,7 +30,7 @@ class PortainerStack(models.Model):
     update_date = fields.Datetime('Updated')
     details = fields.Text('Details')
     
-    server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
+    server_id = fields.Many2one('j_portainer.server', string='Server', required=True)
     environment_id = fields.Integer('Environment ID', required=True)
     environment_name = fields.Char('Environment', required=True)
     last_sync = fields.Datetime('Last Synchronized', readonly=True)

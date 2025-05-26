@@ -14,7 +14,7 @@ class PortainerApiLog(models.Model):
     _rec_name = 'endpoint'
 
     server_id = fields.Many2one('j_portainer.server', string='Portainer Server', required=True, 
-                               ondelete='cascade', index=True)
+                               index=True)
     environment_id = fields.Integer('Environment ID', help="Portainer environment ID if applicable")
     environment_name = fields.Char('Environment Name', help="Portainer environment name if applicable")
     

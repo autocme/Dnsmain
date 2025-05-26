@@ -28,7 +28,7 @@ class PortainerImage(models.Model):
     layers = fields.Html('Layers', compute='_compute_layers', store=True, help='Image layers with size information')
     labels_html = fields.Html('Labels Table', compute='_compute_labels_html', store=True, help='Image labels in table format')
     
-    server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
+    server_id = fields.Many2one('j_portainer.server', string='Server', required=True)
     environment_id = fields.Integer('Environment ID', required=True)
     environment_name = fields.Char('Environment', required=True)
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
