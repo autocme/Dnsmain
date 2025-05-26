@@ -296,25 +296,25 @@ class PortainerNetwork(models.Model):
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
     # Related containers connected to this network
-    connected_container_ids = fields.One2many('j_portainer.container.network', 'network_id', string='Connected Containers')
+    connected_container_ids = fields.One2many('j_portainer.container.network', 'network_id', string='Connected Containers', ondelete='cascade')
     
     # Driver options
-    driver_option_ids = fields.One2many('j_portainer.network.driver.option', 'network_id', string='Driver Options')
+    driver_option_ids = fields.One2many('j_portainer.network.driver.option', 'network_id', string='Driver Options', ondelete='cascade')
     
     # IPv4 Configuration
     ipv4_subnet = fields.Char('IPv4 Subnet', help="CIDR notation for IPv4 subnet (e.g. 172.17.0.0/16)")
     ipv4_gateway = fields.Char('IPv4 Gateway', help="IPv4 gateway address")
     ipv4_range = fields.Char('IPv4 Range', help="IPv4 address range in CIDR notation")
-    ipv4_excluded_ids = fields.One2many('j_portainer.network.ipv4.excluded', 'network_id', string='IPv4 Excluded IPs')
+    ipv4_excluded_ids = fields.One2many('j_portainer.network.ipv4.excluded', 'network_id', string='IPv4 Excluded IPs', ondelete='cascade')
     
     # IPv6 Configuration
     ipv6_subnet = fields.Char('IPv6 Subnet', help="CIDR notation for IPv6 subnet")
     ipv6_gateway = fields.Char('IPv6 Gateway', help="IPv6 gateway address")
     ipv6_range = fields.Char('IPv6 Range', help="IPv6 address range in CIDR notation")
-    ipv6_excluded_ids = fields.One2many('j_portainer.network.ipv6.excluded', 'network_id', string='IPv6 Excluded IPs')
+    ipv6_excluded_ids = fields.One2many('j_portainer.network.ipv6.excluded', 'network_id', string='IPv6 Excluded IPs', ondelete='cascade')
     
     # Network Labels
-    network_label_ids = fields.One2many('j_portainer.network.label', 'network_id', string='Network Labels')
+    network_label_ids = fields.One2many('j_portainer.network.label', 'network_id', string='Network Labels', ondelete='cascade')
     
     def _get_api(self):
         """Get API client"""
