@@ -61,7 +61,7 @@ class PortainerCustomTemplate(models.Model):
         ('editor', 'Web Editor'),
         ('file', 'File Upload'),
         ('repository', 'Git Repository')
-    ], string='Build Method', default='editor')
+    ], string='Build Method', default='editor', required=True)
     
     # Repository details
     git_repository_url = fields.Char('Repository URL')
