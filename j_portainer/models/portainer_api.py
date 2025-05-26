@@ -1314,8 +1314,7 @@ class PortainerAPI(models.AbstractModel):
                 template_data['type'] = 1  # Default to container type
         
         # Log the template data for debugging
-        _logger.info(f"Updating template {template_id} with data: {json.dumps(template_data, indent=2)}")
-            
+                    
         # Use the API endpoint for custom templates
         endpoint = f'/api/custom_templates/{template_id}'
         
