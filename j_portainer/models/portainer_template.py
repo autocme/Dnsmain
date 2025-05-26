@@ -28,7 +28,7 @@ class PortainerTemplate(models.Model):
         ('windows', 'Windows')
     ], string='Platform', default='linux', required=True)
     template_id = fields.Integer('Template ID')
-    server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
+    server_id = fields.Many2one('j_portainer.server', string='Server', required=True)
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     logo = fields.Char('Logo URL')
     registry = fields.Char('Registry')

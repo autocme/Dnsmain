@@ -16,7 +16,7 @@ class PortainerContainerEnv(models.Model):
     name = fields.Char('Name', required=True, help="Environment variable name")
     value = fields.Char('Value', help="Environment variable value")
     container_id = fields.Many2one('j_portainer.container', string='Container', 
-                                  required=True, ondelete='cascade',
+                                  required=True,
                                   help="Container this environment variable belongs to")
     
     _sql_constraints = [

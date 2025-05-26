@@ -31,7 +31,7 @@ class PortainerEnvironment(models.Model):
                                "but it's kept in Odoo for reference and to maintain relationships with templates")
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
-    server_id = fields.Many2one('j_portainer.server', string='Server', required=True, ondelete='cascade')
+    server_id = fields.Many2one('j_portainer.server', string='Server', required=True)
     
     # Count fields
     container_count = fields.Integer('Containers', compute='_compute_resource_counts')
