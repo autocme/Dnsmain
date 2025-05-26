@@ -108,8 +108,8 @@
                             <group>
                                 <group>
                                     <field name="git_repository_url" placeholder="https://github.com/username/repo" required="build_method == 'repository'"/>
-                                    <field name="git_repository_reference" placeholder="main, master, v1.0, etc"/>
-                                    <field name="git_compose_path" placeholder="docker-compose.yml"/>
+                                    <field name="git_repository_reference" required="build_method == 'repository'" placeholder="main, master, v1.0, etc"/>
+                                    <field name="git_compose_path" placeholder="docker-compose.yml" required="build_method == 'repository'"/>
                                     <field name="git_skip_tls"/>
                                     <field name="git_authentication"/>
                                 </group>
