@@ -598,7 +598,8 @@ class PortainerCustomTemplate(models.Model):
             "Platform": str(platform_int),  # Must be a string for multipart form
             "Type": type_str,              # "1" for Standalone/Podman, "2" for Swarm
             "Logo": self.logo or "",
-            "Variables": self.environment_variables or "[]"
+            "Variables": "[]",  # Always send empty array to prevent null errors
+            "AdministratorsOnly": "true"  # Match Portainer's default behavior
         }
         
         # Add categories if available
@@ -812,6 +813,7 @@ class PortainerCustomTemplate(models.Model):
                             'Platform': str(platform_value),  # 1 for Linux, 2 for Windows
                             'Type': str(type_value),  # 1 for Standalone/Podman, 2 for Swarm
                             'Logo': self.logo or '',
+                            'AdministratorsOnly': 'true'  # Match Portainer's default behavior
                         }
                         
                         # Add environment ID in the URL query params instead of form data
@@ -1338,7 +1340,7 @@ class PortainerCustomTemplate(models.Model):
                             
                             if template_id:
                                 # Update template ID in Odoo
-                                record.write({'template_id': template_id})
+                                record.write({'template_id': template_id, 'details': result, 'last_sync': fields.Datetime.now()})
                                 _logger.info(f"Template created successfully in Portainer with ID: {template_id}")
                         except Exception as e:
                             _logger.warning(f"Couldn't parse JSON response: {str(e)}")
