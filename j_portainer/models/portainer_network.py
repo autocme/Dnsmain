@@ -57,16 +57,17 @@ class PortainerNetwork(models.Model):
 
     def create_network_in_portainer(self, from_sync=False):
         self.ensure_one()
+        
+        # If called from sync, don't perform any operation
+        if from_sync:
+            return False
+            
         try:
             # If a network_id is already provided, this is likely a sync operation
             # so we should not try to create a new network in Portainer
             if self.network_id:
-                if from_sync:
-                    # During sync, just return without error
-                    return False
-                else:
-                    raise UserError(
-                        _('The Network Already Has an ID, which means its already created, cant create a network if the ID is existed'))
+                raise UserError(
+                    _('The Network Already Has an ID, which means its already created, cant create a network if the ID is existed'))
 
             # Create the network in Portainer
             data = {
@@ -250,27 +251,15 @@ class PortainerNetwork(models.Model):
                         }
                 else:
                     # Handle case where network ID is not returned
-                    if from_sync:
-                        _logger.warning("Network created in Portainer but no ID was returned")
-                        return False
-                    else:
-                        raise UserError(_("Network created in Portainer but no ID was returned"))
+                    raise UserError(_("Network created in Portainer but no ID was returned"))
             else:
                 # If creation failed, raise an error and prevent saving
                 error_msg = response.text
-                if from_sync:
-                    _logger.warning(f"Failed to create network in Portainer during sync: {error_msg}")
-                    return False
-                else:
-                    raise UserError(_("Failed to create network in Portainer: %s") % error_msg)
+                raise UserError(_("Failed to create network in Portainer: %s") % error_msg)
 
         except Exception as e:
-            # If an error occurred, handle based on context
-            if from_sync:
-                _logger.warning(f"Error creating network in Portainer during sync: {str(e)}")
-                return False
-            else:
-                raise UserError(_("Error creating network in Portainer: %s") % str(e))
+            # If an error occurred, raise the error
+            raise UserError(_("Error creating network in Portainer: %s") % str(e))
     
     name = fields.Char('Name', required=True)
     network_id = fields.Char('Network ID', readonly=True)
