@@ -51,7 +51,9 @@ class PortainerNetwork(models.Model):
 
         # Then try to create the networks in Portainer
         for record in records:
-            record.create_network_in_portainer()
+            # If network_id is already provided, this is from sync, don't create in Portainer
+            if not record.network_id:
+                record.create_network_in_portainer()
 
         return records
 
@@ -137,17 +139,11 @@ class PortainerNetwork(models.Model):
 
             # Add labels if present
             if self.network_label_ids:
-                labels = {}
-                for label in self.network_label_ids:
-                    labels[str(label.name)] = str(label.value)
-                data['Labels'] = labels
+                data['Labels'] = {label.name: label.value for label in self.network_label_ids}
 
             # Add driver options if present
             if self.driver_option_ids:
-                options = {}
-                for option in self.driver_option_ids:
-                    options[str(option.name)] = str(option.value)
-                data['Options'] = options
+                data['Options'] = {option.name: option.value for option in self.driver_option_ids}
 
             # Make API request to create network
             server = self.server_id
