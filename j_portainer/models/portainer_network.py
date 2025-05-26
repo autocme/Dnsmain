@@ -130,7 +130,7 @@ class PortainerNetwork(models.Model):
 
             # Make API request to create network
             server = self.server_id
-            environment_id = self.environment_id
+            environment_id = self.environment_id.environment_id
             endpoint = f'/api/endpoints/{environment_id}/docker/networks/create'
 
             # Log the data being sent for debugging
@@ -197,8 +197,7 @@ class PortainerNetwork(models.Model):
     options = fields.Text('Options')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True)
-    environment_id = fields.Integer('Environment ID', required=True)
-    environment_name = fields.Char('Environment', required=True)
+    environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True)
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
     # Related containers connected to this network
@@ -260,7 +259,7 @@ class PortainerNetwork(models.Model):
         try:
             api = self._get_api()
             result = api.network_action(
-                self.server_id.id, self.environment_id, self.network_id, 'delete')
+                self.server_id.id, self.environment_id.environment_id, self.network_id, 'delete')
             
             # Check for errors in the result - be very explicit about this check
             if isinstance(result, dict) and result.get('error'):
@@ -306,7 +305,7 @@ class PortainerNetwork(models.Model):
         self.ensure_one()
         
         try:
-            self.server_id.sync_networks(self.environment_id)
+            self.server_id.sync_networks(self.environment_id.environment_id)
             
             return {
                 'type': 'ir.actions.client',
