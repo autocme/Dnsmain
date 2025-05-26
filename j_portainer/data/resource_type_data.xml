@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Predefined Resource Types -->
+        <record id="resource_type_networks" model="j_portainer.resource.type">
+            <field name="name">Networks</field>
+            <field name="sync_method">sync_networks</field>
+        </record>
+
+        <record id="resource_type_templates" model="j_portainer.resource.type">
+            <field name="name">Templates</field>
+            <field name="sync_method">sync_templates</field>
+        </record>
+
+        <record id="resource_type_custom_templates" model="j_portainer.resource.type">
+            <field name="name">Custom Templates</field>
+            <field name="sync_method">sync_custom_templates</field>
+        </record>
+
+        <record id="resource_type_containers" model="j_portainer.resource.type">
+            <field name="name">Containers</field>
+            <field name="sync_method">sync_containers</field>
+        </record>
+
+        <record id="resource_type_images" model="j_portainer.resource.type">
+            <field name="name">Images</field>
+            <field name="sync_method">sync_images</field>
+        </record>
+
+        <record id="resource_type_volumes" model="j_portainer.resource.type">
+            <field name="name">Volumes</field>
+            <field name="sync_method">sync_volumes</field>
+        </record>
+
+        <record id="resource_type_stacks" model="j_portainer.resource.type">
+            <field name="name">Stacks</field>
+            <field name="sync_method">sync_stacks</field>
+        </record>
+
+        <record id="resource_type_environments" model="j_portainer.resource.type">
+            <field name="name">Environments</field>
+            <field name="sync_method">sync_environments</field>
+        </record>
+    </data>
+</odoo>

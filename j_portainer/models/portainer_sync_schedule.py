@@ -25,16 +25,8 @@ class PortainerSyncSchedule(models.Model):
                               help="Number of days between synchronizations (minimum 1)")
     sync_all_resources = fields.Boolean('Sync All Resources', default=False,
                                        help="If enabled, will sync all resource types ignoring individual selections")
-    resource_types = fields.Selection([
-        ('networks', 'Networks'),
-        ('templates', 'Templates'),
-        ('custom_templates', 'Custom Templates'),
-        ('containers', 'Containers'),
-        ('images', 'Images'),
-        ('volumes', 'Volumes'),
-        ('stacks', 'Stacks'),
-        ('environments', 'Environments'),
-    ], string='Resource Types', help="Select which resource types to synchronize")
+    resource_type_ids = fields.Many2many('j_portainer.resource.type', string='Resource Types',
+                                        help="Select which resource types to synchronize")
     
     # Tracking Fields
     last_sync = fields.Datetime('Last Synchronized', readonly=True,
@@ -73,28 +65,26 @@ class PortainerSyncSchedule(models.Model):
             if record.sync_days < 1:
                 raise ValidationError(_("Sync interval must be at least 1 day."))
     
-    @api.constrains('sync_all_resources', 'resource_types')
+    @api.constrains('sync_all_resources', 'resource_type_ids')
     def _check_resource_selection(self):
-        """Validate that either sync_all_resources is True or resource_types is selected"""
+        """Validate that either sync_all_resources is True or resource_type_ids is selected"""
         for record in self:
-            if not record.sync_all_resources and not record.resource_types:
+            if not record.sync_all_resources and not record.resource_type_ids:
                 raise ValidationError(_("Please either enable 'Sync All Resources' or select specific resource types."))
     
     @api.onchange('sync_all_resources')
     def _onchange_sync_all_resources(self):
-        """Clear resource_types when sync_all_resources is enabled"""
+        """Clear resource_type_ids when sync_all_resources is enabled"""
         if self.sync_all_resources:
-            self.resource_types = False
+            self.resource_type_ids = [(5, 0, 0)]  # Clear all many2many relations
     
     def get_resource_types_display(self):
         """Get formatted display of selected resource types"""
         self.ensure_one()
         if self.sync_all_resources:
             return "All Resources"
-        elif self.resource_types:
-            # Get the display value for the selection
-            selection_dict = dict(self._fields['resource_types'].selection)
-            return selection_dict.get(self.resource_types, self.resource_types)
+        elif self.resource_type_ids:
+            return ", ".join(self.resource_type_ids.mapped('name'))
         return "None"
     
     def is_sync_due(self):
@@ -138,28 +128,18 @@ class PortainerSyncSchedule(models.Model):
                 result = self.server_id.sync_all_resources()
                 sync_results.append("All Resources: " + str(result))
             else:
-                # Sync specific resource type
-                resource_type = self.resource_types
-                _logger.info(f"Syncing {resource_type} for server '{self.server_id.name}'")
-                
-                # Map resource types to server methods
-                sync_methods = {
-                    'networks': self.server_id.sync_networks,
-                    'templates': self.server_id.sync_templates,
-                    'custom_templates': self.server_id.sync_custom_templates,
-                    'containers': self.server_id.sync_containers,
-                    'images': self.server_id.sync_images,
-                    'volumes': self.server_id.sync_volumes,
-                    'stacks': self.server_id.sync_stacks,
-                    'environments': self.server_id.sync_environments,
-                }
-                
-                if resource_type in sync_methods:
-                    result = sync_methods[resource_type]()
-                    sync_results.append(f"{resource_type}: {result}")
-                else:
-                    _logger.warning(f"Unknown resource type '{resource_type}' in sync schedule")
-                    sync_results.append(f"Unknown resource type: {resource_type}")
+                # Sync specific resource types
+                for resource_type in self.resource_type_ids:
+                    _logger.info(f"Syncing {resource_type.name} for server '{self.server_id.name}'")
+                    
+                    # Get the sync method from the resource type
+                    if hasattr(self.server_id, resource_type.sync_method):
+                        sync_method = getattr(self.server_id, resource_type.sync_method)
+                        result = sync_method()
+                        sync_results.append(f"{resource_type.name}: {result}")
+                    else:
+                        _logger.warning(f"Server does not have sync method '{resource_type.sync_method}' for resource type '{resource_type.name}'")
+                        sync_results.append(f"{resource_type.name}: Method not found")
             
             # Update successful completion
             self.write({
