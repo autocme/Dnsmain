@@ -57,12 +57,8 @@ class PortainerNetwork(models.Model):
 
         return records
 
-    def create_network_in_portainer(self, from_sync=False):
+    def create_network_in_portainer(self):
         self.ensure_one()
-        
-        # If called from sync, don't perform any operation
-        if from_sync:
-            return False
             
         try:
             # If a network_id is already provided, this is likely a sync operation
