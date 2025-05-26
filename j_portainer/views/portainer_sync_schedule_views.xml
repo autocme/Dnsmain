@@ -13,7 +13,7 @@
                 <field name="server_id"/>
                 <field name="sync_days"/>
                 <field name="sync_all_resources"/>
-                <field name="resource_types" invisible="sync_all_resources"/>
+                <field name="resource_type_ids" widget="many2many_tags" invisible="sync_all_resources"/>
                 <field name="active"/>
                 <field name="sync_status"/>
                 <field name="last_sync"/>
@@ -56,7 +56,7 @@
                         </group>
                         <group>
                             <field name="sync_all_resources"/>
-                            <field name="resource_types" readonly="sync_all_resources" 
+                            <field name="resource_type_ids" widget="many2many_tags" readonly="sync_all_resources" 
                                    required="not sync_all_resources"/>
                         </group>
                     </group>
@@ -89,7 +89,7 @@
             <search string="Search Sync Schedules">
                 <field name="name"/>
                 <field name="server_id"/>
-                <field name="resource_types"/>
+                <field name="resource_type_ids"/>
                 <filter string="Active" name="active_schedules" domain="[('active', '=', True)]"/>
                 <filter string="Inactive" name="inactive_schedules" domain="[('active', '=', False)]"/>
                 <separator/>
@@ -103,7 +103,6 @@
                 <group expand="0" string="Group By">
                     <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
                     <filter string="Status" name="group_by_status" domain="[]" context="{'group_by': 'sync_status'}"/>
-                    <filter string="Resource Type" name="group_by_resource" domain="[]" context="{'group_by': 'resource_types'}"/>
                 </group>
             </search>
         </field>

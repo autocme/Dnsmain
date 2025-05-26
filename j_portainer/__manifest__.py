@@ -30,6 +30,7 @@
         'security/portainer_security.xml',
         'security/ir.model.access.csv',
         'data/cron_data.xml',
+        'data/resource_type_data.xml',
         'views/portainer_server_views.xml',
         'views/portainer_environment_views.xml',
         'views/portainer_container_views.xml',
