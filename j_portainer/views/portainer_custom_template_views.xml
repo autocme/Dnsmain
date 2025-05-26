@@ -53,8 +53,8 @@
                         <group>
                             <field name="server_id" required="1"/>
                             <field name="environment_id" required="1"/>
-                            <field name="template_id"/>
-                            <field name="manual_template_id" help="If automatic template creation fails, you can create the template manually in Portainer and enter its ID here"/>
+                            <field name="template_id" readonly="1"/>
+                            <field name="manual_template_id" readonly="1" help="If automatic template creation fails, you can create the template manually in Portainer and enter its ID here"/>
                             <field name="skip_portainer_create" invisible="1"/>
                             <field name="category_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
                             <field name="template_type"/>
@@ -71,7 +71,7 @@
                     </group>
                     <notebook>
                         <page string="Description" name="description">
-                            <field name="description" placeholder="Template description..."/>
+                            <field name="description" placeholder="Template description..." required="1"/>
                             <field name="note" placeholder="Additional notes..."/>
                         </page>
                         <page string="Advanced Details" name="advanced_details">
@@ -107,7 +107,7 @@
                         <page string="Repository" name="repository" invisible="build_method != 'repository'">
                             <group>
                                 <group>
-                                    <field name="git_repository_url" placeholder="https://github.com/username/repo"/>
+                                    <field name="git_repository_url" placeholder="https://github.com/username/repo" required="build_method == 'repository'"/>
                                     <field name="git_repository_reference" placeholder="main, master, v1.0, etc"/>
                                     <field name="git_compose_path" placeholder="docker-compose.yml"/>
                                     <field name="git_skip_tls"/>
@@ -129,9 +129,15 @@
                         <page string="File Content" name="file_content" invisible="build_method != 'editor'">
                             <button name="action_refresh_file_content" string="Refresh File Content" type="object" 
                                     class="btn-secondary mb-2" invisible="not template_id"/>
-                            <field name="fileContent" placeholder="Docker Compose or Stack file content..."/>
+                            <field name="fileContent" placeholder="Docker Compose or Stack file content..." required="build_method == 'editor'"/>
                             <div class="text-muted">
                                 This field replaces the older "compose_file" field and is synchronized directly with Portainer.
+                            </div>
+                        </page>
+                        <page string="File Upload" name="file_upload" invisible="build_method != 'file'">
+                            <field name="upload_file" filename="upload_filename" required="build_method == 'file'"/>
+                            <div class="text-muted">
+                                Upload a Docker Compose or Stack file for template creation. Supported formats: .yml, .yaml, .json
                             </div>
                         </page>
                         <page string="Raw Data" name="raw_data" groups="base.group_system">

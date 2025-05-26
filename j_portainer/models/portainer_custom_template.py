@@ -77,6 +77,10 @@ class PortainerCustomTemplate(models.Model):
     
     # Editor method fields
     fileContent = fields.Text('File Content', help="Content of the template file (Docker Compose or Stack file)")
+    
+    # File upload method fields
+    upload_file = fields.Binary('Upload File', help="File to upload for template creation")
+    upload_filename = fields.Char('Upload Filename', help="Name of the uploaded file")
     compose_file = fields.Text('Compose File', 
                               help="Docker Compose file content when using the editor build method (deprecated, use fileContent)",
                               compute='_compute_compose_file',
@@ -129,6 +133,64 @@ class PortainerCustomTemplate(models.Model):
         if len(environments) == 1:
             return environments.id
         return False
+
+    @api.constrains('description', 'fileContent', 'upload_file', 'git_repository_url', 'build_method')
+    def _check_required_fields(self):
+        """Validate required fields based on build method"""
+        for template in self:
+            # Description is always required
+            if not template.description:
+                raise ValidationError(_("Description is required for all custom templates."))
+            
+            # Web Editor: File Content is required
+            if template.build_method == 'editor' and not template.fileContent:
+                raise ValidationError(_("File Content is required when Build Method is Web Editor."))
+            
+            # File Upload: Upload File is required
+            if template.build_method == 'file' and not template.upload_file:
+                raise ValidationError(_("Upload File is required when Build Method is File Upload."))
+            
+            # Git Repository: Repository URL is required
+            if template.build_method == 'repository' and not template.git_repository_url:
+                raise ValidationError(_("Repository URL is required when Build Method is Git Repository."))
+
+    @api.onchange('build_method')
+    def _onchange_build_method(self):
+        """Clear fields when build method changes"""
+        if self.build_method == 'editor':
+            # Clear repository and file upload fields
+            self.git_repository_url = False
+            self.git_repository_reference = False
+            self.git_compose_path = 'docker-compose.yml'  # Reset to default
+            self.git_skip_tls = False
+            self.git_authentication = False
+            self.git_credentials_id = False
+            self.git_username = False
+            self.git_token = False
+            self.git_save_credential = False
+            self.git_credential_name = False
+            self.upload_file = False
+            self.upload_filename = False
+            
+        elif self.build_method == 'file':
+            # Clear repository and editor fields
+            self.git_repository_url = False
+            self.git_repository_reference = False
+            self.git_compose_path = 'docker-compose.yml'  # Reset to default
+            self.git_skip_tls = False
+            self.git_authentication = False
+            self.git_credentials_id = False
+            self.git_username = False
+            self.git_token = False
+            self.git_save_credential = False
+            self.git_credential_name = False
+            self.fileContent = False
+            
+        elif self.build_method == 'repository':
+            # Clear editor and file upload fields
+            self.fileContent = False
+            self.upload_file = False
+            self.upload_filename = False
     
     # The formatting functions for environment variables, volumes, and
     # categories are now inherited from j_portainer.template.mixin
