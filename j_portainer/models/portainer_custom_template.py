@@ -1102,7 +1102,6 @@ class PortainerCustomTemplate(models.Model):
                 
                 # Make sure to use json module imported at method level
                 import json
-                _logger.info(f"Updating template with data: {json.dumps(update_data, indent=2)}")
                 
                 response = api.direct_api_call(
                     server_id, 
