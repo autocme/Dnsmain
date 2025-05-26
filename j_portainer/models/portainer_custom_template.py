@@ -36,10 +36,10 @@ class PortainerCustomTemplate(models.Model):
         ('windows', 'Windows')
     ], string='Platform', default='linux', required=True)
     template_id = fields.Char('Template ID', copy=False)
-    server_id = fields.Many2one('j_portainer.server', string='Server', required=True)
+    server_id = fields.Many2one('j_portainer.server', string='Server', required=True, default=lambda self: self._default_server_id())
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True,
-                                domain="[('server_id', '=', server_id)]")
+                                domain="[('server_id', '=', server_id)]", default=lambda self: self._default_environment_id())
     logo = fields.Char('Logo URL')
     registry = fields.Char('Registry')
     image = fields.Char('Image')
@@ -115,6 +115,20 @@ class PortainerCustomTemplate(models.Model):
                 ]
                 if self.search_count(domain) > 0:
                     raise ValidationError(_("Template ID %s already exists for this Portainer server!") % template.template_id)
+    
+    def _default_server_id(self):
+        """Return default server if only one exists"""
+        servers = self.env['j_portainer.server'].search([])
+        if len(servers) == 1:
+            return servers.id
+        return False
+
+    def _default_environment_id(self):
+        """Return default environment if only one exists"""
+        environments = self.env['j_portainer.environment'].search([])
+        if len(environments) == 1:
+            return environments.id
+        return False
     
     # The formatting functions for environment variables, volumes, and
     # categories are now inherited from j_portainer.template.mixin

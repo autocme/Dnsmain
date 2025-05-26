@@ -308,8 +308,8 @@ class PortainerNetwork(models.Model):
                           help="Whether this is a system-managed network")
     options = fields.Text('Options')
     
-    server_id = fields.Many2one('j_portainer.server', string='Server', required=True)
-    environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True)
+    server_id = fields.Many2one('j_portainer.server', string='Server', required=True, default=lambda self: self._default_server_id())
+    environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True, default=lambda self: self._default_environment_id())
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
     # Related containers connected to this network
@@ -333,6 +333,20 @@ class PortainerNetwork(models.Model):
     # Network Labels
     network_label_ids = fields.One2many('j_portainer.network.label', 'network_id', string='Network Labels', ondelete='cascade')
     
+    def _default_server_id(self):
+        """Return default server if only one exists"""
+        servers = self.env['j_portainer.server'].search([])
+        if len(servers) == 1:
+            return servers.id
+        return False
+
+    def _default_environment_id(self):
+        """Return default environment if only one exists"""
+        environments = self.env['j_portainer.environment'].search([])
+        if len(environments) == 1:
+            return environments.id
+        return False
+
     def _get_api(self):
         """Get API client"""
         return self.env['j_portainer.api']
