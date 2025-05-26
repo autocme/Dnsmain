@@ -110,12 +110,5 @@
               action="action_portainer_api_log_config"
               sequence="45"
               groups="j_portainer.group_j_portainer_manager"/>
-              
-    <!-- Sync Schedules Menu -->
-    <menuitem id="menu_j_portainer_sync_schedules" 
-              name="Sync Schedules" 
-              parent="menu_j_portainer_configuration" 
-              action="action_portainer_sync_schedule"
-              sequence="50"
-              groups="j_portainer.group_j_portainer_manager"/>
+
 </odoo>
