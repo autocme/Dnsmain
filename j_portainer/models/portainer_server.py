@@ -1743,6 +1743,38 @@ class PortainerServer(models.Model):
             if networks_to_remove:
                 removed_count = len(networks_to_remove)
                 _logger.info(f"Removing {removed_count} obsolete networks from Odoo (already removed from Portainer)")
+                
+                # First, remove all related records to avoid foreign key constraint errors
+                for network in networks_to_remove:
+                    # Remove network labels
+                    network_labels = self.env['j_portainer.network.label'].search([
+                        ('network_id', '=', network.id)
+                    ])
+                    if network_labels:
+                        network_labels.unlink()
+                    
+                    # Remove driver options
+                    driver_options = self.env['j_portainer.network.driver.option'].search([
+                        ('network_id', '=', network.id)
+                    ])
+                    if driver_options:
+                        driver_options.unlink()
+                    
+                    # Remove IPv4 excluded IPs
+                    ipv4_excluded = self.env['j_portainer.network.ipv4.excluded'].search([
+                        ('network_id', '=', network.id)
+                    ])
+                    if ipv4_excluded:
+                        ipv4_excluded.unlink()
+                    
+                    # Remove IPv6 excluded IPs
+                    ipv6_excluded = self.env['j_portainer.network.ipv6.excluded'].search([
+                        ('network_id', '=', network.id)
+                    ])
+                    if ipv6_excluded:
+                        ipv6_excluded.unlink()
+                
+                # Now remove the network records themselves
                 networks_to_remove.unlink()
             else:
                 removed_count = 0
