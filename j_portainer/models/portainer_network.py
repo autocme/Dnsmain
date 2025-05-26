@@ -14,21 +14,21 @@ class PortainerNetworkDriverOption(models.Model):
     
     name = fields.Char('Name', required=True, help="Option name, e.g. com.docker.network.bridge.enable_icc")
     value = fields.Char('Value', required=True, help="Option value, e.g. true")
-    network_id = fields.Many2one('j_portainer.network', string='Network', required=True)
+    network_id = fields.Many2one('j_portainer.network', string='Network', required=True, ondelete='cascade')
 
 class PortainerNetworkIPv4Excluded(models.Model):
     _name = 'j_portainer.network.ipv4.excluded'
     _description = 'Portainer Network IPv4 Excluded IP'
     
     ip_address = fields.Char('IP Address', required=True, help="IPv4 address to exclude")
-    network_id = fields.Many2one('j_portainer.network', string='Network', required=True)
+    network_id = fields.Many2one('j_portainer.network', string='Network', required=True, ondelete='cascade')
 
 class PortainerNetworkIPv6Excluded(models.Model):
     _name = 'j_portainer.network.ipv6.excluded'
     _description = 'Portainer Network IPv6 Excluded IP'
     
     ip_address = fields.Char('IP Address', required=True, help="IPv6 address to exclude")
-    network_id = fields.Many2one('j_portainer.network', string='Network', required=True)
+    network_id = fields.Many2one('j_portainer.network', string='Network', required=True, ondelete='cascade'
 
 class PortainerNetworkLabel(models.Model):
     _name = 'j_portainer.network.label'

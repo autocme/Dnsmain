@@ -1736,7 +1736,7 @@ class PortainerServer(models.Model):
 
                     # Filter networks that should be removed (not found in Portainer)
                     networks_to_remove = all_networks.filtered(
-                        lambda n: (n.environment_id, n.network_id) not in synced_network_ids
+                        lambda n: (n.environment_id.id, n.network_id) not in synced_network_ids
                     )
 
                     # Remove obsolete networks
