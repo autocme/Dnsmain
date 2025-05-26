@@ -175,6 +175,39 @@
                             </field>
                         </page>
 
+                        <page string="Sync Schedule" name="sync_schedule">
+                            <div class="oe_button_box" name="sync_button_box">
+                                <button class="oe_stat_button" type="action" name="%(action_portainer_sync_schedule)d" 
+                                        context="{'search_default_server_id': active_id}" icon="fa-clock-o">
+                                    <field string="Sync Schedules" name="sync_schedules_count" widget="statinfo"/>
+                                </button>
+                            </div>
+                            <p class="oe_grey">
+                                Configure automated synchronization schedules for different resource types.
+                                Each schedule can sync specific resources at custom intervals.
+                            </p>
+                            <field name="sync_schedule_ids">
+                                <tree string="Sync Schedules" editable="bottom" 
+                                      decoration-success="sync_status == 'completed'" 
+                                      decoration-danger="sync_status == 'failed'" 
+                                      decoration-warning="sync_status == 'running'">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name" required="1"/>
+                                    <field name="sync_days" required="1"/>
+                                    <field name="sync_all_resources"/>
+                                    <field name="resource_types" readonly="sync_all_resources" 
+                                           required="not sync_all_resources"/>
+                                    <field name="active"/>
+                                    <field name="sync_status" readonly="1"/>
+                                    <field name="last_sync" readonly="1"/>
+                                    <field name="next_sync" readonly="1"/>
+                                    <button name="execute_sync" string="Run Now" type="object" 
+                                            icon="fa-play" title="Execute sync now" 
+                                            invisible="not active"/>
+                                </tree>
+                            </field>
+                        </page>
+
                         <page string="Server Info" name="server_info">
                             <field name="portainer_info" widget="html" readonly="1"/>
                         </page>
