@@ -47,7 +47,6 @@
         'views/portainer_stack_views.xml',
         'views/portainer_api_log_views.xml',
         'views/portainer_sync_schedule_views.xml',
-        'data/sync_schedule_cron.xml',
         'wizards/portainer_sync_wizard_views.xml',
         'wizards/container_logs_wizard_view.xml',
         'wizards/container_remove_wizard_view.xml',
