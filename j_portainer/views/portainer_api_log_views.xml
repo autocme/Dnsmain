@@ -7,7 +7,7 @@
         <field name="arch" type="xml">
             <tree string="Portainer API Logs" decoration-success="status == 'success'" decoration-danger="status == 'error'" decoration-info="status == 'warning'">
                 <field name="server_id"/>
-                <field name="environment_name"/>
+                <field name="environment_id"/>
                 <field name="method"/>
                 <field name="endpoint"/>
                 <field name="request_date"/>
