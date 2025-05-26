@@ -24,3 +24,4 @@ from . import portainer_container_volume
 from . import portainer_container_network
 from . import portainer_container_env
 from . import portainer_container_port
+from . import portainer_sync_schedule

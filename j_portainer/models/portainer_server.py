@@ -155,6 +155,13 @@ class PortainerServer(models.Model):
             server.api_log_count = self.env['j_portainer.api_log'].search_count([
                 ('server_id', '=', server.id)
             ])
+    
+    def _compute_sync_schedules_count(self):
+        """Compute the number of sync schedules configured for this server"""
+        for server in self:
+            server.sync_schedules_count = self.env['j_portainer.sync.schedule'].search_count([
+                ('server_id', '=', server.id)
+            ])
 
     # Related Resources
     container_ids = fields.One2many('j_portainer.container', 'server_id', string='Containers')
@@ -165,6 +172,10 @@ class PortainerServer(models.Model):
     custom_template_ids = fields.One2many('j_portainer.customtemplate', 'server_id', string='Custom Templates')
     stack_ids = fields.One2many('j_portainer.stack', 'server_id', string='Stacks')
     environment_ids = fields.One2many('j_portainer.environment', 'server_id', string='Environments')
+    
+    # Sync Schedule relationship
+    sync_schedule_ids = fields.One2many('j_portainer.sync.schedule', 'server_id', string='Sync Schedules')
+    sync_schedules_count = fields.Integer('Sync Schedules Count', compute='_compute_sync_schedules_count')
 
     _sql_constraints = [
         ('name_unique', 'UNIQUE(name)', 'Server name must be unique!')

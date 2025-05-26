@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Sync Schedule Tree View -->
+    <record id="view_portainer_sync_schedule_tree" model="ir.ui.view">
+        <field name="name">j_portainer.sync.schedule.tree</field>
+        <field name="model">j_portainer.sync.schedule</field>
+        <field name="arch" type="xml">
+            <tree string="Sync Schedules" decoration-success="sync_status == 'completed'" 
+                  decoration-danger="sync_status == 'failed'" decoration-warning="sync_status == 'running'">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="server_id"/>
+                <field name="sync_days"/>
+                <field name="sync_all_resources"/>
+                <field name="resource_types" invisible="sync_all_resources"/>
+                <field name="active"/>
+                <field name="sync_status"/>
+                <field name="last_sync"/>
+                <field name="next_sync"/>
+                <button name="execute_sync" string="Run Now" type="object" icon="fa-play" 
+                        title="Execute sync now" invisible="not active"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Sync Schedule Form View -->
+    <record id="view_portainer_sync_schedule_form" model="ir.ui.view">
+        <field name="name">j_portainer.sync.schedule.form</field>
+        <field name="model">j_portainer.sync.schedule</field>
+        <field name="arch" type="xml">
+            <form string="Sync Schedule">
+                <header>
+                    <button name="execute_sync" string="Run Sync Now" type="object" 
+                            class="oe_highlight" invisible="not active"
+                            confirm="Are you sure you want to run this sync schedule now?"/>
+                    <field name="sync_status" widget="statusbar" statusbar_visible="pending,running,completed,failed"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="toggle_active" type="object" class="oe_stat_button" icon="fa-archive">
+                            <field name="active" widget="boolean_button" options='{"terminology": "archive"}'/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only"/>
+                        <h1>
+                            <field name="name" placeholder="Schedule Name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="server_id" required="1"/>
+                            <field name="sequence"/>
+                            <field name="sync_days" required="1"/>
+                        </group>
+                        <group>
+                            <field name="sync_all_resources"/>
+                            <field name="resource_types" readonly="sync_all_resources" 
+                                   required="not sync_all_resources"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Sync Information" name="sync_info">
+                            <group>
+                                <group>
+                                    <field name="last_sync" readonly="1"/>
+                                    <field name="next_sync" readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="sync_status" readonly="1"/>
+                                </group>
+                            </group>
+                            <group string="Last Sync Result">
+                                <field name="last_sync_result" readonly="1" nolabel="1"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Sync Schedule Search View -->
+    <record id="view_portainer_sync_schedule_search" model="ir.ui.view">
+        <field name="name">j_portainer.sync.schedule.search</field>
+        <field name="model">j_portainer.sync.schedule</field>
+        <field name="arch" type="xml">
+            <search string="Search Sync Schedules">
+                <field name="name"/>
+                <field name="server_id"/>
+                <field name="resource_types"/>
+                <filter string="Active" name="active_schedules" domain="[('active', '=', True)]"/>
+                <filter string="Inactive" name="inactive_schedules" domain="[('active', '=', False)]"/>
+                <separator/>
+                <filter string="Sync All Resources" name="sync_all" domain="[('sync_all_resources', '=', True)]"/>
+                <filter string="Specific Resources" name="sync_specific" domain="[('sync_all_resources', '=', False)]"/>
+                <separator/>
+                <filter string="Pending" name="status_pending" domain="[('sync_status', '=', 'pending')]"/>
+                <filter string="Running" name="status_running" domain="[('sync_status', '=', 'running')]"/>
+                <filter string="Completed" name="status_completed" domain="[('sync_status', '=', 'completed')]"/>
+                <filter string="Failed" name="status_failed" domain="[('sync_status', '=', 'failed')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
+                    <filter string="Status" name="group_by_status" domain="[]" context="{'group_by': 'sync_status'}"/>
+                    <filter string="Resource Type" name="group_by_resource" domain="[]" context="{'group_by': 'resource_types'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Sync Schedule Action -->
+    <record id="action_portainer_sync_schedule" model="ir.actions.act_window">
+        <field name="name">Sync Schedules</field>
+        <field name="res_model">j_portainer.sync.schedule</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_portainer_sync_schedule_search"/>
+        <field name="context">{'search_default_active_schedules': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No sync schedules configured
+            </p>
+            <p>
+                Create sync schedules to automatically synchronize Portainer resources at regular intervals.
+                You can configure different schedules for different resource types or sync all resources together.
+            </p>
+        </field>
+    </record>
+
+</odoo>
