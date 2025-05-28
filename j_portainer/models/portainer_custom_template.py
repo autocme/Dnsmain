@@ -1321,6 +1321,13 @@ class PortainerCustomTemplate(models.Model):
                             "CredentialName": self.git_credential_name,
                         })
         
+        # Debug: Log the data being sent to help diagnose issues
+        _logger.info(f"Creating template with data: {data}")
+        _logger.info(f"Build method: {self.build_method}")
+        _logger.info(f"Has files: {bool(files)}")
+        if files:
+            _logger.info(f"Files keys: {list(files.keys())}")
+        
         # Make API request using server's method for proper logging
         if files:
             # For multipart requests with files, we need to use the multipart mode
@@ -1333,6 +1340,7 @@ class PortainerCustomTemplate(models.Model):
                 "X-API-Key": server._get_api_key_header()
             }
             
+            _logger.info(f"Making file upload request to: {url}")
             response = requests.post(
                 url,
                 headers=headers,
@@ -1343,6 +1351,7 @@ class PortainerCustomTemplate(models.Model):
             )
         else:
             # For non-file requests, use the server's API request method
+            _logger.info(f"Making non-file request")
             response = server._make_api_request(
                 f'/api/custom_templates/create/file?environment={portainer_env_id}',
                 'POST',
