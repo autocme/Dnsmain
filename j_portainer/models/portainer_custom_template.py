@@ -1498,24 +1498,26 @@ class PortainerCustomTemplate(models.Model):
         
     def write(self, vals):
         """Override write to sync with Portainer"""
+        # Skip Portainer update if we're just updating from a sync operation
+        if self.env.context.get('skip_portainer_update'):
+            return super(PortainerCustomTemplate, self).write(vals)
+        
+        # Update in Odoo first
         result = super(PortainerCustomTemplate, self).write(vals)
         
-        # Skip Portainer update if we're just updating from a sync operation
-        # if not self.env.context.get('skip_portainer_update'):
-        #     for template in self:
-        #         if template.template_id and template.server_id.status == 'connected':
-        #             try:
-        #                 # Skip if we're just setting skip_portainer_create flag
-        #                 if len(vals) == 1 and 'skip_portainer_create' in vals:
-        #                     continue
-                        
-        #                 # Sync the template to Portainer
-        #                 response = template._sync_to_portainer(method='put')
-                        
-        #                 if not response:
-        #                     _logger.warning(f"Could not update template {template.id} in Portainer")
-        #             except Exception as e:
-        #                 _logger.error(f"Error updating template {template.id} in Portainer: {str(e)}")
+        # Then sync to Portainer
+        for template in self:
+            if template.template_id and template.server_id.status == 'connected':
+                # Skip if we're just setting internal flags
+                if len(vals) == 1 and ('skip_portainer_create' in vals or 'last_sync' in vals):
+                    continue
+                
+                try:
+                    response = template._sync_to_portainer(vals, method='put')
+                    if not response:
+                        raise UserError(_("Failed to update template in Portainer. Changes not saved."))
+                except Exception as e:
+                    raise UserError(_("Error updating template in Portainer: %s") % str(e))
         
         return result
     
