@@ -239,7 +239,7 @@ class PortainerCustomTemplate(models.Model):
                 'title': template_data.get('Title', self.title),
                 'description': template_data.get('Description', ''),
                 'note': template_data.get('Note', ''),
-                'platform': str(template_data.get('Platform', 'linux')).lower(),
+                'platform': 'linux' if str(template_data.get('Platform', 1)) == '1' else 'windows',
                 'logo': template_data.get('Logo', ''),
                 'categories': ','.join(template_data.get('Categories', [])),
             }
