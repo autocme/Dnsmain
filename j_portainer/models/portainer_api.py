@@ -1317,6 +1317,8 @@ class PortainerAPI(models.AbstractModel):
                     
         # Use the API endpoint for custom templates
         endpoint = f'/api/custom_templates/{template_id}'
+        if environment_id:
+            endpoint = f'{endpoint}?environment={environment_id}'
         
         try:
             # Properly set Content-Type header
