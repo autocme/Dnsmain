@@ -697,8 +697,8 @@ class PortainerCustomTemplate(models.Model):
                     template_id = result.get('Id', result.get('id'))
                     
                     if template_id:
-                        # Update template ID in Odoo
-                        self.write({'template_id': template_id})
+                        # Update template ID in Odoo - skip write method to avoid triggering sync
+                        self.with_context(skip_portainer_update=True).write({'template_id': template_id})
                         
                         return {
                             'type': 'ir.actions.client',
