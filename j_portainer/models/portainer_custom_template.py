@@ -1241,153 +1241,153 @@ class PortainerCustomTemplate(models.Model):
         # Use standard method to copy the record with our defaults
         return super(PortainerCustomTemplate, self).copy(default)
     
-    def _create_template_in_portainer(self):
-        """Create this template in Portainer using the server's API request method"""
-        self.ensure_one()
+    # def _create_template_in_portainer(self):
+    #     """Create this template in Portainer using the server's API request method"""
+    #     self.ensure_one()
         
-        if not self.server_id:
-            raise UserError(_("Server is required for template creation"))
+    #     if not self.server_id:
+    #         raise UserError(_("Server is required for template creation"))
             
-        if not self.environment_id:
-            raise UserError(_("Environment is required for template creation"))
+    #     if not self.environment_id:
+    #         raise UserError(_("Environment is required for template creation"))
         
-        # Get server details
-        server = self.server_id
-        portainer_env_id = self.environment_id.environment_id
+    #     # Get server details
+    #     server = self.server_id
+    #     portainer_env_id = self.environment_id.environment_id
         
-        # Convert platform and type to integer format as expected by Portainer
-        platform_int = 1  # Default to Linux (1)
-        if self.platform:
-            platform_map = {
-                'linux': 1,
-                'windows': 2
-            }
-            platform_int = platform_map.get(self.platform.lower(), 1)
+    #     # Convert platform and type to integer format as expected by Portainer
+    #     platform_int = 1  # Default to Linux (1)
+    #     if self.platform:
+    #         platform_map = {
+    #             'linux': 1,
+    #             'windows': 2
+    #         }
+    #         platform_int = platform_map.get(self.platform.lower(), 1)
             
-        # Prepare form data
-        data = {
-            "Title": self.title,
-            "Description": self.description or f"Auto-created from Odoo",
-            "Note": self.note or "Created from Odoo j_portainer module",
-            "Platform": str(platform_int),  # Must be a string for multipart form
-            "Type": self.template_type,   # Already a string in our model
-            "Logo": self.logo or "",
-            "Variables": self.environment_variables or "[]"
-        }
+    #     # Prepare form data
+    #     data = {
+    #         "Title": self.title,
+    #         "Description": self.description or f"Auto-created from Odoo",
+    #         "Note": self.note or "Created from Odoo j_portainer module",
+    #         "Platform": str(platform_int),  # Must be a string for multipart form
+    #         "Type": self.template_type,   # Already a string in our model
+    #         "Logo": self.logo or "",
+    #         "Variables": self.environment_variables or "[]"
+    #     }
         
-        # Add categories if provided
-        if self.categories:
-            data["Categories"] = self.categories
+    #     # Add categories if provided
+    #     if self.categories:
+    #         data["Categories"] = self.categories
         
-        # Add method-specific data and files
-        files = None
+    #     # Add method-specific data and files
+    #     files = None
         
-        if self.build_method == 'editor':
-            # Web editor method - check for file content in fileContent or compose_file
-            file_content = self.fileContent or self.compose_file
-            if not file_content:
-                raise UserError(_("File content is required when using Web Editor build method. Please provide content in the File Content field."))
+    #     if self.build_method == 'editor':
+    #         # Web editor method - check for file content in fileContent or compose_file
+    #         file_content = self.fileContent or self.compose_file
+    #         if not file_content:
+    #             raise UserError(_("File content is required when using Web Editor build method. Please provide content in the File Content field."))
             
-            files = {
-                'file': ('docker-compose.yml', file_content.encode('utf-8'), 'text/plain')
-            }
-        elif self.build_method == 'file' and self.upload_file:
-            # File upload method
-            import base64
-            file_data = base64.b64decode(self.upload_file)
-            filename = self.upload_filename or 'docker-compose.yml'
-            files = {
-                'file': (filename, file_data, 'application/octet-stream')
-            }
-        elif self.build_method == 'repository':
-            # Git repository method
-            data.update({
-                "RepositoryURL": self.git_repository_url,
-                "RepositoryReference": self.git_repository_reference or "refs/heads/master",
-                "ComposeFilePathInRepository": self.git_compose_path or "docker-compose.yml",
-                "RepositorySkipTLSVerify": str(self.git_skip_tls).lower(),
-            })
+    #         files = {
+    #             'file': ('docker-compose.yml', file_content.encode('utf-8'), 'text/plain')
+    #         }
+    #     elif self.build_method == 'file' and self.upload_file:
+    #         # File upload method
+    #         import base64
+    #         file_data = base64.b64decode(self.upload_file)
+    #         filename = self.upload_filename or 'docker-compose.yml'
+    #         files = {
+    #             'file': (filename, file_data, 'application/octet-stream')
+    #         }
+    #     elif self.build_method == 'repository':
+    #         # Git repository method
+    #         data.update({
+    #             "RepositoryURL": self.git_repository_url,
+    #             "RepositoryReference": self.git_repository_reference or "refs/heads/master",
+    #             "ComposeFilePathInRepository": self.git_compose_path or "docker-compose.yml",
+    #             "RepositorySkipTLSVerify": str(self.git_skip_tls).lower(),
+    #         })
             
-            # Add authentication if enabled
-            if self.git_authentication:
-                if self.git_credentials_id:
-                    data["RepositoryGitCredentialID"] = str(self.git_credentials_id.credential_id)
-                elif self.git_username and self.git_token:
-                    data.update({
-                        "RepositoryUsername": self.git_username,
-                        "RepositoryPassword": self.git_token,
-                    })
+    #         # Add authentication if enabled
+    #         if self.git_authentication:
+    #             if self.git_credentials_id:
+    #                 data["RepositoryGitCredentialID"] = str(self.git_credentials_id.credential_id)
+    #             elif self.git_username and self.git_token:
+    #                 data.update({
+    #                     "RepositoryUsername": self.git_username,
+    #                     "RepositoryPassword": self.git_token,
+    #                 })
                     
-                    # Save credentials if requested
-                    if self.git_save_credential and self.git_credential_name:
-                        data.update({
-                            "SaveCredential": "true",
-                            "CredentialName": self.git_credential_name,
-                        })
+    #                 # Save credentials if requested
+    #                 if self.git_save_credential and self.git_credential_name:
+    #                     data.update({
+    #                         "SaveCredential": "true",
+    #                         "CredentialName": self.git_credential_name,
+    #                     })
         
-        # Debug: Log the data being sent to help diagnose issues
-        _logger.info(f"Creating template with data: {data}")
-        _logger.info(f"Build method: {self.build_method}")
-        _logger.info(f"Has files: {bool(files)}")
-        if files:
-            _logger.info(f"Files keys: {list(files.keys())}")
+    #     # Debug: Log the data being sent to help diagnose issues
+    #     _logger.info(f"Creating template with data: {data}")
+    #     _logger.info(f"Build method: {self.build_method}")
+    #     _logger.info(f"Has files: {bool(files)}")
+    #     if files:
+    #         _logger.info(f"Files keys: {list(files.keys())}")
         
-        # Make API request using server's method for proper logging
-        if files:
-            # For multipart requests with files, we need to use the multipart mode
-            # and include file data in the data parameter
-            import requests
+    #     # Make API request using server's method for proper logging
+    #     if files:
+    #         # For multipart requests with files, we need to use the multipart mode
+    #         # and include file data in the data parameter
+    #         import requests
             
-            # Make direct request for file uploads since _make_api_request doesn't support files parameter
-            url = f"{server.url.rstrip('/')}/api/custom_templates/create/file?environment={portainer_env_id}"
-            headers = {
-                "X-API-Key": server._get_api_key_header()
-            }
+    #         # Make direct request for file uploads since _make_api_request doesn't support files parameter
+    #         url = f"{server.url.rstrip('/')}/api/custom_templates/create/file?environment={portainer_env_id}"
+    #         headers = {
+    #             "X-API-Key": server._get_api_key_header()
+    #         }
             
-            _logger.info(f"Making file upload request to: {url}")
-            response = requests.post(
-                url,
-                headers=headers,
-                data=data,
-                files=files,
-                verify=server.verify_ssl,
-                timeout=30
-            )
-        else:
-            # For non-file requests, use the server's API request method
-            _logger.info(f"Making non-file request")
-            response = server._make_api_request(
-                f'/api/custom_templates/create/file?environment={portainer_env_id}',
-                'POST',
-                data=data,
-                use_multipart=True
-            )
+    #         _logger.info(f"Making file upload request to: {url}")
+    #         response = requests.post(
+    #             url,
+    #             headers=headers,
+    #             data=data,
+    #             files=files,
+    #             verify=server.verify_ssl,
+    #             timeout=30
+    #         )
+    #     else:
+    #         # For non-file requests, use the server's API request method
+    #         _logger.info(f"Making non-file request")
+    #         response = server._make_api_request(
+    #             f'/api/custom_templates/create/file?environment={portainer_env_id}',
+    #             'POST',
+    #             data=data,
+    #             use_multipart=True
+    #         )
         
-        if response.status_code in [200, 201]:
-            try:
-                result = response.json()
-                template_id = result.get('Id', result.get('id'))
+    #     if response.status_code in [200, 201]:
+    #         try:
+    #             result = response.json()
+    #             template_id = result.get('Id', result.get('id'))
                 
-                if template_id:
-                    # Update template ID in Odoo
-                    self.write({'template_id': template_id, 'details': result, 'last_sync': fields.Datetime.now()})
-                    _logger.info(f"Template created successfully in Portainer with ID: {template_id}")
-                    return True
-            except Exception as e:
-                _logger.warning(f"Couldn't parse JSON response: {str(e)}")
-                return True  # Still consider success if we got 200/201
-        else:
-            # Get detailed error message
-            error_message = response.text
-            try:
-                error_data = response.json()
-                if isinstance(error_data, dict) and 'message' in error_data:
-                    error_message = error_data['message']
-            except Exception:
-                pass
+    #             if template_id:
+    #                 # Update template ID in Odoo
+    #                 self.write({'template_id': template_id, 'details': result, 'last_sync': fields.Datetime.now()})
+    #                 _logger.info(f"Template created successfully in Portainer with ID: {template_id}")
+    #                 return True
+    #         except Exception as e:
+    #             _logger.warning(f"Couldn't parse JSON response: {str(e)}")
+    #             return True  # Still consider success if we got 200/201
+    #     else:
+    #         # Get detailed error message
+    #         error_message = response.text
+    #         try:
+    #             error_data = response.json()
+    #             if isinstance(error_data, dict) and 'message' in error_data:
+    #                 error_message = error_data['message']
+    #         except Exception:
+    #             pass
             
-            _logger.error(f"Error creating template in Portainer: {error_message} (status: {response.status_code})")
-            raise UserError(_("Failed to create template in Portainer: %s (Status: %s)") % (error_message, response.status_code))
+    #         _logger.error(f"Error creating template in Portainer: {error_message} (status: {response.status_code})")
+    #         raise UserError(_("Failed to create template in Portainer: %s (Status: %s)") % (error_message, response.status_code))
 
     @api.model
     def create(self, vals):
@@ -1415,7 +1415,7 @@ class PortainerCustomTemplate(models.Model):
             
         # Auto-create in Portainer using the separated method
         # If this fails, it will raise UserError and prevent record creation
-        record._create_template_in_portainer()
+        record.action_create_in_portainer()
 
         return record
         
