@@ -621,6 +621,26 @@ class PortainerCustomTemplate(models.Model):
             "File": ("template.yml", file_content.encode('utf-8'), "text/x-yaml")
         }
         
+        # Prepare API log data
+        from datetime import datetime
+        start_time = datetime.now()
+        
+        # Create log data for request
+        log_vals = {
+            'server_id': server.id,
+            'endpoint': f'/api/custom_templates/create/file?environment={portainer_env_id}',
+            'method': 'POST',
+            'environment_id': portainer_env_id,
+            'environment_name': self.environment_id.name if self.environment_id else '',
+            'request_date': start_time,
+            'request_data': json.dumps({
+                'url': url,
+                'method': 'POST',
+                'body': data,
+                'has_files': bool(files)
+            }, indent=2)
+        }
+        
         try:
             _logger.info(f"Creating template in Portainer at URL: {url}")
             _logger.info(f"Template data: {data}")
@@ -633,6 +653,42 @@ class PortainerCustomTemplate(models.Model):
                 files=files,
                 verify=server.verify_ssl
             )
+            
+            # Calculate response time
+            end_time = datetime.now()
+            response_time_ms = int((end_time - start_time).total_seconds() * 1000)
+            
+            # Prepare response log data
+            response_log_data = {
+                'status_code': response.status_code,
+                'headers': dict(response.headers),
+                'url': response.url
+            }
+            
+            # Add response body
+            try:
+                if response.status_code in [204, 304]:
+                    response_log_data['body'] = f"Empty response body (status {response.status_code})"
+                else:
+                    try:
+                        response_json = response.json()
+                        response_log_data['body'] = response_json
+                    except Exception:
+                        response_text = response.text[:5000] if response.text else ""
+                        response_log_data['body'] = response_text
+            except Exception as e:
+                response_log_data['body'] = f"Error formatting response: {str(e)}"
+            
+            # Update log with response data
+            log_vals.update({
+                'status_code': response.status_code,
+                'response_time_ms': response_time_ms,
+                'response_data': json.dumps(response_log_data, indent=2),
+                'error_message': json.dumps(response_log_data, indent=2) if response.status_code >= 300 else None,
+            })
+            
+            # Create API log record
+            self.env['j_portainer.api_log'].sudo().create(log_vals)
             
             # Check response
             if response.status_code in [200, 201, 202, 204]:
@@ -693,6 +749,27 @@ class PortainerCustomTemplate(models.Model):
                     error_message, response.status_code))
                 
         except requests.exceptions.RequestException as e:
+            # Log the connection error
+            end_time = datetime.now()
+            response_time_ms = int((end_time - start_time).total_seconds() * 1000)
+            
+            error_data = {
+                'error_type': 'RequestException',
+                'url': url,
+                'method': 'POST',
+                'message': str(e)
+            }
+            
+            log_vals.update({
+                'status_code': 0,
+                'response_time_ms': response_time_ms,
+                'error_message': json.dumps(error_data, indent=2),
+                'response_data': json.dumps(error_data, indent=2)
+            })
+            
+            # Create API log record for the error
+            self.env['j_portainer.api_log'].sudo().create(log_vals)
+            
             raise UserError(_("Error connecting to Portainer: %s") % str(e))
         
     def _sync_to_portainer(self, vals=None, method='post'):
