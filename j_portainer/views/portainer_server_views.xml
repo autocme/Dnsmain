@@ -21,7 +21,7 @@
                             class="btn-secondary"/>
                     <button name="sync_networks" string="Sync Networks" type="object"
                             class="btn-secondary"/>
-                    <button name="sync_all_templates_bidirectional" string="Sync All Templates" type="object"
+                    <button name="sync_templates" string="Sync All Templates" type="object"
                             class="btn-secondary"/>
                     <button name="sync_stacks" string="Sync Stacks" type="object"
                             class="btn-secondary"/>
