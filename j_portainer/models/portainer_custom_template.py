@@ -1241,6 +1241,120 @@ class PortainerCustomTemplate(models.Model):
         # Use standard method to copy the record with our defaults
         return super(PortainerCustomTemplate, self).copy(default)
     
+    def _create_template_in_portainer(self):
+        """Create this template in Portainer using the server's API request method"""
+        self.ensure_one()
+        
+        if not self.server_id:
+            raise UserError(_("Server is required for template creation"))
+            
+        if not self.environment_id:
+            raise UserError(_("Environment is required for template creation"))
+        
+        # Get server details
+        server = self.server_id
+        portainer_env_id = self.environment_id.environment_id
+        
+        # Convert platform and type to integer format as expected by Portainer
+        platform_int = 1  # Default to Linux (1)
+        if self.platform:
+            platform_map = {
+                'linux': 1,
+                'windows': 2
+            }
+            platform_int = platform_map.get(self.platform.lower(), 1)
+            
+        # Prepare form data
+        data = {
+            "Title": self.title,
+            "Description": self.description or f"Auto-created from Odoo",
+            "Note": self.note or "Created from Odoo j_portainer module",
+            "Platform": str(platform_int),  # Must be a string for multipart form
+            "Type": self.template_type,   # Already a string in our model
+            "Logo": self.logo or "",
+            "Variables": self.environment_variables or "[]"
+        }
+        
+        # Add categories if provided
+        if self.categories:
+            data["Categories"] = self.categories
+        
+        # Add method-specific data and files
+        files = None
+        
+        if self.build_method == 'editor' and self.fileContent:
+            # Web editor method - send file content directly
+            files = {
+                'file': ('docker-compose.yml', self.fileContent.encode('utf-8'), 'text/plain')
+            }
+        elif self.build_method == 'file' and self.upload_file:
+            # File upload method
+            import base64
+            file_data = base64.b64decode(self.upload_file)
+            filename = self.upload_filename or 'docker-compose.yml'
+            files = {
+                'file': (filename, file_data, 'application/octet-stream')
+            }
+        elif self.build_method == 'repository':
+            # Git repository method
+            data.update({
+                "RepositoryURL": self.git_repository_url,
+                "RepositoryReference": self.git_repository_reference or "refs/heads/master",
+                "ComposeFilePathInRepository": self.git_compose_path or "docker-compose.yml",
+                "RepositorySkipTLSVerify": str(self.git_skip_tls).lower(),
+            })
+            
+            # Add authentication if enabled
+            if self.git_authentication:
+                if self.git_credentials_id:
+                    data["RepositoryGitCredentialID"] = str(self.git_credentials_id.credential_id)
+                elif self.git_username and self.git_token:
+                    data.update({
+                        "RepositoryUsername": self.git_username,
+                        "RepositoryPassword": self.git_token,
+                    })
+                    
+                    # Save credentials if requested
+                    if self.git_save_credential and self.git_credential_name:
+                        data.update({
+                            "SaveCredential": "true",
+                            "CredentialName": self.git_credential_name,
+                        })
+        
+        # Make API request using server's method for proper logging
+        response = server._make_api_request(
+            f'/api/custom_templates/create/file?environment={portainer_env_id}',
+            'POST',
+            data=data,
+            files=files
+        )
+        
+        if response.status_code in [200, 201]:
+            try:
+                result = response.json()
+                template_id = result.get('Id', result.get('id'))
+                
+                if template_id:
+                    # Update template ID in Odoo
+                    self.write({'template_id': template_id, 'details': result, 'last_sync': fields.Datetime.now()})
+                    _logger.info(f"Template created successfully in Portainer with ID: {template_id}")
+                    return True
+            except Exception as e:
+                _logger.warning(f"Couldn't parse JSON response: {str(e)}")
+                return True  # Still consider success if we got 200/201
+        else:
+            # Log error but don't raise exception - we still want to create the record in Odoo
+            error_message = response.text
+            try:
+                error_data = response.json()
+                if isinstance(error_data, dict) and 'message' in error_data:
+                    error_message = error_data['message']
+            except Exception:
+                pass
+            
+            _logger.warning(f"Error creating template in Portainer: {error_message} (status: {response.status_code})")
+            return False
+
     @api.model
     def create(self, vals):
         """Create custom template in Odoo and automatically post to Portainer"""
@@ -1258,108 +1372,16 @@ class PortainerCustomTemplate(models.Model):
         # Create the record in Odoo
         record = super(PortainerCustomTemplate, self).create(vals)
         
-        # Skip Portainer creation if skip_portainer_create flag is set or if manual template ID was provided
-        if vals.get('skip_portainer_create') or vals.get('manual_template_id'):
+        # Skip Portainer creation if:
+        # 1. skip_portainer_create flag is set (used during sync operations)
+        # 2. template_id already exists (indicates this is a sync from server)
+        # 3. manual_template_id was provided (user manually specified existing template)
+        if vals.get('skip_portainer_create') or vals.get('template_id') or vals.get('manual_template_id'):
             return record
             
-        # Auto-create in Portainer using the direct file upload API
+        # Auto-create in Portainer using the separated method
         try:
-            # Call the action_create_in_portainer method without raising exceptions
-            # This ensures the record is still created in Odoo even if Portainer creation fails
-            import requests
-            import json
-            
-            # Get server details
-            server = record.server_id
-            portainer_env_id = record.environment_id.environment_id
-            
-            # Prepare the endpoint URL
-            url = f"{server.url.rstrip('/')}/api/custom_templates/create/file?environment={portainer_env_id}"
-            
-            # Prepare headers with API key
-            headers = {
-                "X-API-Key": server._get_api_key_header()
-            }
-            
-            # Convert platform and type to integer format as expected by Portainer
-            platform_int = 1  # Default to Linux (1)
-            if record.platform:
-                platform_map = {
-                    'linux': 1,
-                    'windows': 2
-                }
-                platform_int = platform_map.get(record.platform.lower(), 1)
-                
-            # Prepare form data
-            data = {
-                "Title": record.title,
-                "Description": record.description or f"Auto-created from Odoo",
-                "Note": record.note or "Created from Odoo j_portainer module",
-                "Platform": str(platform_int),  # Must be a string for multipart form
-                "Type": record.template_type,   # Already a string in our model
-                "Logo": record.logo or "",
-                "Variables": record.environment_variables or "[]"
-            }
-            
-            # Add categories if available
-            if record.categories:
-                try:
-                    # Try to format categories as JSON string
-                    categories = record.categories.split(",") if isinstance(record.categories, str) else []
-                    data["Categories"] = json.dumps(categories)
-                except Exception as e:
-                    _logger.warning(f"Error formatting categories: {str(e)}")
-            
-            # Prepare the file content
-            file_content = record.fileContent or record.compose_file or ""
-            if file_content:
-                # Prepare the file for upload
-                files = {
-                    "File": ("template.yml", file_content.encode('utf-8'), "text/x-yaml")
-                }
-                
-                try:
-                    _logger.info(f"Auto-creating template in Portainer at URL: {url}")
-                    _logger.info(f"Template data: {data}")
-                    
-                    # Make the request with SSL verification as configured in server
-                    response = requests.post(
-                        url, 
-                        headers=headers,
-                        data=data,
-                        files=files,
-                        verify=server.verify_ssl
-                    )
-                    
-                    # Check response
-                    if response.status_code in [200, 201, 202, 204]:
-                        try:
-                            result = response.json()
-                            template_id = result.get('Id', result.get('id'))
-                            
-                            if template_id:
-                                # Update template ID in Odoo
-                                record.write({'template_id': template_id, 'details': result, 'last_sync': fields.Datetime.now()})
-                                _logger.info(f"Template created successfully in Portainer with ID: {template_id}")
-                        except Exception as e:
-                            _logger.warning(f"Couldn't parse JSON response: {str(e)}")
-                    else:
-                        # Log error but don't raise exception - we still want to create the record in Odoo
-                        error_message = response.text
-                        try:
-                            error_data = response.json()
-                            if isinstance(error_data, dict) and 'message' in error_data:
-                                error_message = error_data['message']
-                        except Exception:
-                            pass
-                        
-                        _logger.warning(f"Error creating template in Portainer: {error_message} (status: {response.status_code})")
-                        
-                except requests.exceptions.RequestException as e:
-                    _logger.warning(f"Error connecting to Portainer: {str(e)}")
-            else:
-                _logger.warning("Skipping auto-create in Portainer: No file content available")
-                
+            record._create_template_in_portainer()
         except Exception as e:
             _logger.warning(f"Error during auto-create in Portainer (record still created in Odoo): {str(e)}")
             
@@ -1370,21 +1392,21 @@ class PortainerCustomTemplate(models.Model):
         result = super(PortainerCustomTemplate, self).write(vals)
         
         # Skip Portainer update if we're just updating from a sync operation
-        if not self.env.context.get('skip_portainer_update'):
-            for template in self:
-                if template.template_id and template.server_id.status == 'connected':
-                    try:
-                        # Skip if we're just setting skip_portainer_create flag
-                        if len(vals) == 1 and 'skip_portainer_create' in vals:
-                            continue
+        # if not self.env.context.get('skip_portainer_update'):
+        #     for template in self:
+        #         if template.template_id and template.server_id.status == 'connected':
+        #             try:
+        #                 # Skip if we're just setting skip_portainer_create flag
+        #                 if len(vals) == 1 and 'skip_portainer_create' in vals:
+        #                     continue
                         
-                        # Sync the template to Portainer
-                        response = template._sync_to_portainer(method='put')
+        #                 # Sync the template to Portainer
+        #                 response = template._sync_to_portainer(method='put')
                         
-                        if not response:
-                            _logger.warning(f"Could not update template {template.id} in Portainer")
-                    except Exception as e:
-                        _logger.error(f"Error updating template {template.id} in Portainer: {str(e)}")
+        #                 if not response:
+        #                     _logger.warning(f"Could not update template {template.id} in Portainer")
+        #             except Exception as e:
+        #                 _logger.error(f"Error updating template {template.id} in Portainer: {str(e)}")
         
         return result
     
