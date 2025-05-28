@@ -1291,7 +1291,7 @@ class PortainerAPI(models.AbstractModel):
             _logger.error(f"Exception during template creation: {str(e)}")
             return None
             
-    def update_template(self, server_id, template_id, template_data):
+    def update_template(self, server_id, template_id, template_data, environment_id=None):
         """Update a custom template in Portainer
         
         Args:
@@ -1406,7 +1406,7 @@ class PortainerAPI(models.AbstractModel):
                     api_data['ports'] = []
             
             # Make the update request
-            response = server._make_api_request(endpoint, 'PUT', data=api_data, headers=headers)
+            response = server._make_api_request(endpoint, 'PUT', data=api_data, headers=headers, environment_id=environment_id)
             
             if response.status_code in [200, 201, 204]:
                 try:
