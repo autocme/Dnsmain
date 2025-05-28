@@ -31,14 +31,14 @@
             <form string="Custom Template">
                 <header>
                     <button name="action_deploy" string="Deploy" type="object" class="oe_highlight" help="Deploy this template"/>
-                    <button name="action_create_in_portainer" string="Create in Portainer" type="object" 
-                            class="btn-primary" help="Create this template in Portainer using direct file upload API"/>
+                    <!-- <button name="action_create_in_portainer" string="Create in Portainer" type="object" 
+                            class="btn-primary" help="Create this template in Portainer using direct file upload API"/> -->
                     <button name="remove_custom_template" string="Remove Template" type="object" class="oe_link"
                             help="Remove this custom template from both Portainer and Odoo"
                             confirm="Are you sure you want to remove this custom template from both Portainer and Odoo?"/>
-                    <button name="force_remove_from_odoo" string="Force Remove from Odoo Only" type="object" class="oe_link"
+                    <!-- <button name="force_remove_from_odoo" string="Force Remove from Odoo Only" type="object" class="oe_link"
                             help="Remove this custom template from Odoo only (will remain in Portainer if it exists there)"
-                            confirm="WARNING: This will remove the template from Odoo only. It will remain in Portainer if it exists there. Are you sure?"/>
+                            confirm="WARNING: This will remove the template from Odoo only. It will remain in Portainer if it exists there. Are you sure?"/> -->
                     <button name="action_refresh" string="Refresh Custom Templates" type="object" class="oe_link"
                             help="Refresh custom templates from Portainer"/>
                 </header>
