@@ -1282,10 +1282,14 @@ class PortainerCustomTemplate(models.Model):
         # Add method-specific data and files
         files = None
         
-        if self.build_method == 'editor' and self.fileContent:
-            # Web editor method - send file content directly
+        if self.build_method == 'editor':
+            # Web editor method - check for file content in fileContent or compose_file
+            file_content = self.fileContent or self.compose_file
+            if not file_content:
+                raise UserError(_("File content is required when using Web Editor build method. Please provide content in the File Content field."))
+            
             files = {
-                'file': ('docker-compose.yml', self.fileContent.encode('utf-8'), 'text/plain')
+                'file': ('docker-compose.yml', file_content.encode('utf-8'), 'text/plain')
             }
         elif self.build_method == 'file' and self.upload_file:
             # File upload method
