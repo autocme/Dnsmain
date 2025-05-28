@@ -983,6 +983,21 @@ class PortainerCustomTemplate(models.Model):
                         
                         # Send the PUT request with SSL verification as configured in server
                         res = requests.put(url, headers=json_headers, json=json_data, verify=server_info.verify_ssl)
+                        
+                        # Create API log record for PUT request
+                        env_record = self.env['j_portainer.environment'].browse(environment_id)
+                        self.env['j_portainer.api_log'].sudo().create({
+                            'server_id': server_id,
+                            'endpoint': f'/api/custom_templates/{template_id}',
+                            'method': 'PUT',
+                            'environment_id': env_record.environment_id if env_record else portainer_env_id,
+                            'environment_name': env_record.name if env_record else '',
+                            'request_date': fields.Datetime.now(),
+                            'status_code': res.status_code,
+                            'request_data': json.dumps({'json': json_data}, indent=2),
+                            'response_data': json.dumps({'status': res.status_code, 'response': res.text[:5000]}, indent=2),
+                            'response_time_ms': 0  # Could add timing if needed
+                        })
                     
                     if res.status_code in [200, 201, 202]:
                         try:
