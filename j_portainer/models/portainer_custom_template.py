@@ -1364,7 +1364,7 @@ class PortainerCustomTemplate(models.Model):
                 _logger.warning(f"Couldn't parse JSON response: {str(e)}")
                 return True  # Still consider success if we got 200/201
         else:
-            # Log error but don't raise exception - we still want to create the record in Odoo
+            # Get detailed error message
             error_message = response.text
             try:
                 error_data = response.json()
@@ -1373,8 +1373,8 @@ class PortainerCustomTemplate(models.Model):
             except Exception:
                 pass
             
-            _logger.warning(f"Error creating template in Portainer: {error_message} (status: {response.status_code})")
-            return False
+            _logger.error(f"Error creating template in Portainer: {error_message} (status: {response.status_code})")
+            raise UserError(_("Failed to create template in Portainer: %s (Status: %s)") % (error_message, response.status_code))
 
     @api.model
     def create(self, vals):
@@ -1401,11 +1401,8 @@ class PortainerCustomTemplate(models.Model):
             return record
             
         # Auto-create in Portainer using the separated method
-        if not record.template_id:
-            try:
-                record._create_template_in_portainer()
-            except Exception as e:
-                raise UserError(_(f"Error during auto-create in Portainer (record still created in Odoo): {str(e)}"))
+        # If this fails, it will raise UserError and prevent record creation
+        record._create_template_in_portainer()
 
         return record
         
