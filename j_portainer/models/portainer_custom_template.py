@@ -1322,12 +1322,33 @@ class PortainerCustomTemplate(models.Model):
                         })
         
         # Make API request using server's method for proper logging
-        response = server._make_api_request(
-            f'/api/custom_templates/create/file?environment={portainer_env_id}',
-            'POST',
-            data=data,
-            files=files
-        )
+        if files:
+            # For multipart requests with files, we need to use the multipart mode
+            # and include file data in the data parameter
+            import requests
+            
+            # Make direct request for file uploads since _make_api_request doesn't support files parameter
+            url = f"{server.url.rstrip('/')}/api/custom_templates/create/file?environment={portainer_env_id}"
+            headers = {
+                "X-API-Key": server._get_api_key_header()
+            }
+            
+            response = requests.post(
+                url,
+                headers=headers,
+                data=data,
+                files=files,
+                verify=server.verify_ssl,
+                timeout=30
+            )
+        else:
+            # For non-file requests, use the server's API request method
+            response = server._make_api_request(
+                f'/api/custom_templates/create/file?environment={portainer_env_id}',
+                'POST',
+                data=data,
+                use_multipart=True
+            )
         
         if response.status_code in [200, 201]:
             try:
@@ -1380,11 +1401,12 @@ class PortainerCustomTemplate(models.Model):
             return record
             
         # Auto-create in Portainer using the separated method
-        try:
-            record._create_template_in_portainer()
-        except Exception as e:
-            _logger.warning(f"Error during auto-create in Portainer (record still created in Odoo): {str(e)}")
-            
+        if not record.template_id:
+            try:
+                record._create_template_in_portainer()
+            except Exception as e:
+                raise UserError(_(f"Error during auto-create in Portainer (record still created in Odoo): {str(e)}"))
+
         return record
         
     def write(self, vals):
