@@ -1863,12 +1863,12 @@ class PortainerServer(models.Model):
 
                 if existing_template:
                     # Update existing template
-                    existing_template.write(template_data)
+                    existing_template.with_context(from_sync=True, skip_portainer_update=True).write(template_data)
                     updated_count += 1
                 else:
                     # Create new template - skip Portainer creation since we're just syncing
                     template_data['skip_portainer_create'] = True
-                    self.env['j_portainer.template'].create(template_data)
+                    self.env['j_portainer.template'].with_context(from_sync=True, skip_portainer_create=True).create(template_data)
                     created_count += 1
 
                 if isinstance(template_id, (int, str)) and str(template_id).isdigit():
@@ -2159,7 +2159,7 @@ class PortainerServer(models.Model):
                             continue
 
                     try:
-                        self.env['j_portainer.customtemplate'].create(template_data)
+                        self.env['j_portainer.customtemplate'].with_context(from_sync=True, skip_portainer_create=True).create(template_data)
                         created_count += 1
                     except Exception as e:
                         _logger.error(f"Error creating custom template: {str(e)}")
