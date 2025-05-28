@@ -863,8 +863,10 @@ class PortainerCustomTemplate(models.Model):
                         # For new template creation with file, use the create/file endpoint
                         url = f"{server_url}/api/custom_templates/create/file"
                     else:
-                        # For updates, include template ID in the URL
+                        # For updates, include template ID in the URL with environment parameter
                         url = f"{server_url}/api/custom_templates/{template_id}"
+                        if portainer_env_id:
+                            url = f"{url}?environment={portainer_env_id}"
                     
                     # Prepare headers with authorization
                     headers = {'Authorization': f'Bearer {api_key}'}
@@ -1501,8 +1503,10 @@ class PortainerCustomTemplate(models.Model):
         
     def write(self, vals):
         """Override write to sync with Portainer"""
-        # Skip Portainer update if we're just updating from a sync operation
-        if self.env.context.get('skip_portainer_update'):
+        # Skip Portainer update if we're just updating from a sync operation or creation
+        if (self.env.context.get('skip_portainer_update') or 
+            self.env.context.get('skip_portainer_create') or
+            self.env.context.get('from_sync')):
             return super(PortainerCustomTemplate, self).write(vals)
         
         # Update in Odoo first
