@@ -541,6 +541,7 @@ class PortainerCustomTemplate(models.Model):
         # Custom template: '1'=Swarm, '2'=Standalone/Podman
         # Deploy wizard: '1'=Standalone/Podman, '2'=Swarm
         wizard_template_type = '2' if self.template_type == '1' else '1'
+        _logger.info(f"Template type mapping: custom_template.template_type='{self.template_type}' -> wizard_template_type='{wizard_template_type}'")
         
         # Open the deployment wizard
         return {
