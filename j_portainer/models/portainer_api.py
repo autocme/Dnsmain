@@ -947,23 +947,67 @@ class PortainerAPI(models.AbstractModel):
             
         # Prepare the request
         if is_custom:
-            # Custom template deployment (using v2 endpoint)
-            endpoint = f'/api/custom_templates/{template_id}'
-            method = 'POST'
+            # For custom templates, we need to get the template first and then deploy based on its type
+            # Get the custom template details
+            template_endpoint = f'/api/custom_templates/{template_id}'
+            template_response = server._make_api_request(template_endpoint, 'GET')
+            
+            if template_response.status_code != 200:
+                _logger.error(f"Failed to get custom template details: {template_response.status_code}")
+                return False
+                
+            template_data = template_response.json()
+            template_type = template_data.get('Type', 2)  # Default to container
+            
+            # Use appropriate endpoint based on template type
+            if template_type == 1:  # Swarm stack
+                endpoint = f'/api/stacks'
+                method = 'POST'
+            else:  # Standalone container (type 2)
+                endpoint = f'/api/endpoints/{environment_id}/docker/containers/create'
+                method = 'POST'
         else:
-            # Standard template deployment (using v2 endpoint)
+            # Standard template deployment
             endpoint = f'/api/templates/{template_id}'
             method = 'POST'
             
         # Prepare the request data
-        data = {
-            'endpointId': environment_id
-        }
-        
-        # Add additional parameters
-        if params:
-            for key, value in params.items():
-                data[key] = value
+        if is_custom:
+            if template_type == 1:  # Swarm stack
+                data = {
+                    'endpointId': environment_id,
+                    'type': 1,  # Swarm stack
+                    'method': 'string',  # Deploy from string content
+                    'body': template_data.get('FileContent', ''),
+                }
+                # Add stack name from params
+                if params and 'name' in params:
+                    data['name'] = params['name']
+            else:  # Standalone container (type 2)
+                # Parse the template's file content (should be docker-compose or container spec)
+                file_content = template_data.get('FileContent', '')
+                
+                # For container deployment, we need to format according to Docker API
+                data = {
+                    'name': params.get('name', f"container-{template_id}") if params else f"container-{template_id}",
+                    'Image': template_data.get('Image', 'nginx:latest'),  # Default fallback
+                }
+                
+                # Add restart policy if provided
+                if params and 'RestartPolicy' in params:
+                    data['HostConfig'] = {
+                        'RestartPolicy': params['RestartPolicy']
+                    }
+        else:
+            # Standard template deployment
+            data = {
+                'endpointId': environment_id
+            }
+            
+            # Add additional parameters
+            if params:
+                for key, value in params.items():
+                    data[key] = value
                 
         _logger.info(f"Deploying {'custom' if is_custom else 'standard'} template with data: {json.dumps(data, indent=2)}")
         
