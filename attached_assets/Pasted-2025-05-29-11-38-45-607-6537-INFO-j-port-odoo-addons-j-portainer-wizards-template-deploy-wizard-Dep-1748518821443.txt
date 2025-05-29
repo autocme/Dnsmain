@@ -1,0 +1,37 @@
+2025-05-29 11:38:45,607 6537 INFO j-port odoo.addons.j_portainer.wizards.template_deploy_wizard: Deploying custom template 89 with params: {'name': 'S22-009999', 'RestartPolicy': {'Name': 'always'}} 
+2025-05-29 11:38:46,648 6537 INFO j-port odoo.addons.j_portainer.models.portainer_api: Retrieved template data: {
+  "Id": 89,
+  "Title": "S22-00",
+  "Description": "22",
+  "ProjectPath": "/data/custom_templates/89",
+  "EntryPoint": "docker-compose.yml",
+  "CreatedByUserId": 1,
+  "Note": "",
+  "Platform": 1,
+  "Logo": "",
+  "Type": 2,
+  "ResourceControl": {
+    "Id": 243,
+    "ResourceId": "89",
+    "SubResourceIds": [],
+    "Type": 8,
+    "UserAccesses": [
+      {
+        "UserId": 1,
+        "AccessLevel": 1
+      }
+    ],
+    "TeamAccesses": [],
+    "Public": false,
+    "AdministratorsOnly": false,
+    "System": false
+  },
+  "Variables": null,
+  "GitConfig": null,
+  "IsComposeFormat": false,
+  "EdgeTemplate": false
+} 
+2025-05-29 11:38:47,649 6537 INFO j-port odoo.addons.j_portainer.models.portainer_api: Retrieved file content from file endpoint: 682 characters 
+2025-05-29 11:38:47,650 6537 INFO j-port odoo.addons.j_portainer.models.portainer_api: Template file content preview: {"FileContent":"version: '3.8'\n\nservices:\n\n  odoo:\n\n    image: odoo:17\n\n    ports:\n\n      - \"8069:8069\"\n\n    depends_on:\n\n      - db\n\n    volumes:\n\n      - odoo_data:/var/lib/odoo\n\n      - odoo_custom_addons:/mnt/extra-addons\n\n    environment:\n\n      - POSTGRES_USER=odoo\n\n      - POSTGRES_PASSWORD=odoo\n\n      - POSTGRES_DB=postgres\n\n      - PGHOST=db\n\n\n\n  db:\n\n    image: postgres:12\n\n    environment:\n\n      - POSTGRES_USER=odoo\n\n      - POSTGRES_PASSWO... 
+2025-05-29 11:38:47,651 6537 INFO j-port odoo.addons.j_portainer.models.portainer_api: Parsed YAML data: {'FileContent': 'version: \'3.8\'\n\nservices:\n\n  odoo:\n\n    image: odoo:17\n\n    ports:\n\n      - "8069:8069"\n\n    depends_on:\n\n      - db\n\n    volumes:\n\n      - odoo_data:/var/lib/odoo\n\n      - odoo_custom_addons:/mnt/extra-addons\n\n    environment:\n\n      - POSTGRES_USER=odoo\n\n      - POSTGRES_PASSWORD=odoo\n\n      - POSTGRES_DB=postgres\n\n      - PGHOST=db\n\n\n\n  db:\n\n    image: postgres:12\n\n    environment:\n\n      - POSTGRES_USER=odoo\n\n      - POSTGRES_PASSWORD=odoo\n\n      - POSTGRES_DB=postgres\n\n    volumes:\n\n      - odoo_db_data:/var/lib/postgresql/data\n\n\n\nvolumes:\n\n  odoo_data:\n\n  odoo_custom_addons:\n\n  odoo_db_data:'} 
+2025-05-29 11:38:47,651 6537 ERROR j-port odoo.addons.j_portainer.wizards.template_deploy_wizard: Error deploying template: No image found in template. Content structure: ['FileContent'] 
