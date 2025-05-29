@@ -967,7 +967,9 @@ class PortainerAPI(models.AbstractModel):
                 endpoint = f'/api/stacks'
                 method = 'POST'
             else:  # Standalone container (type 2)
-                endpoint = f'/api/endpoints/{environment_id}/docker/containers/create'
+                # For container creation, the name goes in the URL parameter
+                container_name = params.get('name', f"container-{template_id}") if params else f"container-{template_id}"
+                endpoint = f'/api/endpoints/{environment_id}/docker/containers/create?name={container_name}'
                 method = 'POST'
         else:
             # Standard template deployment
@@ -1061,8 +1063,8 @@ class PortainerAPI(models.AbstractModel):
                         raise Exception(f"Failed to parse template file content and no image found in text: {str(e)}")
                 
                 # For container deployment, we need to format according to Docker API
+                # Note: name is now in URL parameter, not in body
                 data = {
-                    'name': params.get('name', f"container-{template_id}") if params else f"container-{template_id}",
                     'Image': image,
                 }
                 
