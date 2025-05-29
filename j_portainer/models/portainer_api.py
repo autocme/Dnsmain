@@ -1011,21 +1011,44 @@ class PortainerAPI(models.AbstractModel):
                 if not file_content:
                     raise Exception(f"Custom template {template_id} has no accessible file content to deploy")
                 
-                # Try to extract image from file content (docker-compose format)
+                # Debug: Show the actual file content
+                _logger.info(f"Template file content preview: {file_content[:500]}...")
+                
+                # Try to extract image from file content
+                image = None
                 try:
                     compose_data = yaml.safe_load(file_content)
+                    _logger.info(f"Parsed YAML data: {compose_data}")
                     
-                    # Extract image from first service in docker-compose
-                    if 'services' in compose_data:
-                        first_service = next(iter(compose_data['services'].values()))
-                        image = first_service.get('image')
-                        if not image:
-                            raise Exception("No image specified in the template's docker-compose file")
-                    else:
-                        raise Exception("Invalid docker-compose format: no services section found")
+                    # Handle different formats
+                    if isinstance(compose_data, dict):
+                        # Standard docker-compose format with services
+                        if 'services' in compose_data:
+                            first_service = next(iter(compose_data['services'].values()))
+                            image = first_service.get('image')
+                        # Single service format (just the service definition)
+                        elif 'image' in compose_data:
+                            image = compose_data['image']
+                        # Check if it's a direct image specification
+                        else:
+                            # Look for any image field in the structure
+                            for key, value in compose_data.items():
+                                if key.lower() == 'image' or (isinstance(value, dict) and 'image' in value):
+                                    image = value if isinstance(value, str) else value.get('image')
+                                    break
+                    
+                    if not image:
+                        raise Exception(f"No image found in template. Content structure: {list(compose_data.keys()) if isinstance(compose_data, dict) else type(compose_data)}")
                         
                 except yaml.YAMLError as e:
-                    raise Exception(f"Failed to parse template file content: {str(e)}")
+                    # If YAML parsing fails, try to extract image from text
+                    _logger.warning(f"YAML parsing failed: {e}, trying text extraction")
+                    import re
+                    image_match = re.search(r'image:\s*([^\s\n]+)', file_content, re.IGNORECASE)
+                    if image_match:
+                        image = image_match.group(1)
+                    else:
+                        raise Exception(f"Failed to parse template file content and no image found in text: {str(e)}")
                 
                 # For container deployment, we need to format according to Docker API
                 data = {
