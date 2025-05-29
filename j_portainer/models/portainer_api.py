@@ -959,6 +959,8 @@ class PortainerAPI(models.AbstractModel):
             template_data = template_response.json()
             template_type = template_data.get('Type', 2)  # Default to container
             
+            _logger.info(f"Retrieved template data: {json.dumps(template_data, indent=2)}")
+            
             # Use appropriate endpoint based on template type
             if template_type == 1:  # Swarm stack
                 endpoint = f'/api/stacks'
@@ -985,10 +987,17 @@ class PortainerAPI(models.AbstractModel):
                     data['name'] = params['name']
             else:  # Standalone container (type 2)
                 # Parse the template's file content (should be docker-compose or container spec)
-                file_content = template_data.get('FileContent', '')
+                # Try different possible field names for file content
+                file_content = (template_data.get('FileContent') or 
+                               template_data.get('fileContent') or 
+                               template_data.get('file_content') or 
+                               template_data.get('body') or '')
+                
+                _logger.info(f"File content found: {len(file_content)} characters")
+                _logger.info(f"Available template fields: {list(template_data.keys())}")
                 
                 if not file_content:
-                    raise Exception(f"Custom template {template_id} has no file content to deploy")
+                    raise Exception(f"Custom template {template_id} has no file content to deploy. Available fields: {list(template_data.keys())}")
                 
                 # Try to extract image from file content (docker-compose format)
                 import yaml
