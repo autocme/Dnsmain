@@ -8,6 +8,7 @@ import io
 import uuid
 import urllib.request
 import urllib.parse
+import yaml
 import urllib.error
 
 # Try to import optional dependencies
@@ -1011,7 +1012,6 @@ class PortainerAPI(models.AbstractModel):
                     raise Exception(f"Custom template {template_id} has no accessible file content to deploy")
                 
                 # Try to extract image from file content (docker-compose format)
-                import yaml
                 try:
                     compose_data = yaml.safe_load(file_content)
                     
