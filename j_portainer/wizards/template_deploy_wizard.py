@@ -84,7 +84,7 @@ class PortainerTemplateDeployWizard(models.TransientModel):
         }
         
         # Add Swarm-specific options
-        if self.template_type == '2':  # Swarm
+        if self.template_type == '1':  # Swarm
             params['stackfile'] = self.stack_file_path or ''
             
             # Add access control options
@@ -101,7 +101,7 @@ class PortainerTemplateDeployWizard(models.TransientModel):
                 params['tls'] = True
                 
         # Add Standalone/Podman-specific options
-        if self.template_type == '1':  # Standalone/Podman
+        if self.template_type == '2':  # Standalone/Podman
             # Add restart policy
             params['RestartPolicy'] = {'Name': self.restart_policy}
             
@@ -172,7 +172,7 @@ class PortainerTemplateDeployWizard(models.TransientModel):
                         result_data['deployed_resource_id'] = result['container_id']
                         
                     # For swarm stack deployments, store file content if available
-                    if self.template_type == '2' and self.is_custom and self.custom_template_id.fileContent:
+                    if self.template_type == '1' and self.is_custom and self.custom_template_id.fileContent:
                         result_data['compose_file_content'] = self.custom_template_id.fileContent
                         
                 # Update wizard record
@@ -180,12 +180,12 @@ class PortainerTemplateDeployWizard(models.TransientModel):
                 
                 # Refresh resources after deployment
                 self.server_id.sync_containers(self.environment_id.environment_id)
-                if self.template_type == '2':  # Swarm
+                if self.template_type == '1':  # Swarm
                     self.server_id.sync_stacks(self.environment_id.environment_id)
                 
                 # Determine the appropriate resource type name for the message
                 resource_type = 'standalone container'
-                if self.template_type == '2':
+                if self.template_type == '1':
                     resource_type = 'swarm stack'
                 
                 # Return success message
