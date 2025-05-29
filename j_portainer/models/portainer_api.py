@@ -987,10 +987,30 @@ class PortainerAPI(models.AbstractModel):
                 # Parse the template's file content (should be docker-compose or container spec)
                 file_content = template_data.get('FileContent', '')
                 
+                if not file_content:
+                    raise Exception(f"Custom template {template_id} has no file content to deploy")
+                
+                # Try to extract image from file content (docker-compose format)
+                import yaml
+                try:
+                    compose_data = yaml.safe_load(file_content)
+                    
+                    # Extract image from first service in docker-compose
+                    if 'services' in compose_data:
+                        first_service = next(iter(compose_data['services'].values()))
+                        image = first_service.get('image')
+                        if not image:
+                            raise Exception("No image specified in the template's docker-compose file")
+                    else:
+                        raise Exception("Invalid docker-compose format: no services section found")
+                        
+                except yaml.YAMLError as e:
+                    raise Exception(f"Failed to parse template file content: {str(e)}")
+                
                 # For container deployment, we need to format according to Docker API
                 data = {
                     'name': params.get('name', f"container-{template_id}") if params else f"container-{template_id}",
-                    'Image': template_data.get('Image', 'nginx:latest'),  # Default fallback
+                    'Image': image,
                 }
                 
                 # Add restart policy if provided
@@ -1021,11 +1041,22 @@ class PortainerAPI(models.AbstractModel):
                 except:
                     return {'success': True, 'message': 'Deployment successful (no response data)'}
             else:
+                error_message = f"Deployment failed (HTTP {response.status_code})"
+                try:
+                    error_data = response.json()
+                    if 'message' in error_data:
+                        error_message = error_data['message']
+                except:
+                    if response.text:
+                        error_message = response.text
+                
                 _logger.error(f"Deployment failed: {response.status_code} - {response.text}")
-                return False
+                # Raise exception so it reaches the user interface
+                raise Exception(error_message)
         except Exception as e:
             _logger.error(f"Error deploying template: {str(e)}")
-            return False
+            # Re-raise the exception so it reaches the user interface
+            raise
     
     def create_template(self, server_id, template_data):
         """Create a custom template in Portainer
