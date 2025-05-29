@@ -133,6 +133,7 @@ class PortainerTemplateDeployWizard(models.TransientModel):
                 
                 # Deploy custom template
                 template_id = self.custom_template_id.template_id
+                _logger.info(f"Deploying custom template {template_id} with params: {params}")
                 result = api.deploy_template(
                     self.server_id.id,
                     template_id,
@@ -140,12 +141,14 @@ class PortainerTemplateDeployWizard(models.TransientModel):
                     params,
                     is_custom=True
                 )
+                _logger.info(f"Custom template deployment result: {result}")
             else:
                 if not self.template_id:
                     raise UserError(_("No template selected"))
                 
                 # Deploy standard template
                 template_id = self.template_id.template_id
+                _logger.info(f"Deploying standard template {template_id} with params: {params}")
                 result = api.deploy_template(
                     self.server_id.id,
                     template_id,
@@ -153,6 +156,7 @@ class PortainerTemplateDeployWizard(models.TransientModel):
                     params,
                     is_custom=False
                 )
+                _logger.info(f"Standard template deployment result: {result}")
                 
             # Handle result
             if result:
@@ -200,16 +204,18 @@ class PortainerTemplateDeployWizard(models.TransientModel):
                     }
                 }
             else:
+                error_msg = _("API returned no result - deployment may have failed")
+                _logger.warning(f"Template deployment returned no result: template_id={template_id}, params={params}")
                 self.write({
                     'state': 'error',
-                    'result_message': _("Failed to deploy template")
+                    'result_message': error_msg
                 })
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
                         'title': _('Deployment Failed'),
-                        'message': _("Failed to deploy template"),
+                        'message': error_msg,
                         'sticky': True,
                         'type': 'danger',
                     }
