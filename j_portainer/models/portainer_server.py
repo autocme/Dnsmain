@@ -2141,7 +2141,7 @@ class PortainerServer(models.Model):
 
                 if existing_template:
                     # Update existing custom template
-                    existing_template.write(template_data)
+                    existing_template.with_context(from_sync=True, skip_portainer_update=True).write(template_data)
                     updated_count += 1
                 else:
                     # Create new custom template - skip Portainer creation since we're just syncing
