@@ -18,9 +18,9 @@ class PortainerTemplateDeployWizard(models.TransientModel):
     
     # Template Info
     template_type = fields.Selection([
-        ('1', 'Standalone / Podman'),
-        ('2', 'Swarm')
-    ], string='Type', default='1', required=True)
+        ('1', 'Swarm'),
+        ('2', 'Standalone / Podman')
+    ], string='Type', default='2', required=True)
     template_title = fields.Char('Template Title', readonly=True)
     
     # Deployment options

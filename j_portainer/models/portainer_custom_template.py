@@ -537,11 +537,7 @@ class PortainerCustomTemplate(models.Model):
         if self.server_id.status != 'connected':
             raise UserError(_("Cannot deploy template: Server is not connected"))
             
-        # Map template type correctly for deploy wizard
-        # Custom template: '1'=Swarm, '2'=Standalone/Podman
-        # Deploy wizard: '1'=Standalone/Podman, '2'=Swarm
-        wizard_template_type = '2' if self.template_type == '1' else '1'
-        _logger.info(f"Template type mapping: custom_template.template_type='{self.template_type}' -> wizard_template_type='{wizard_template_type}'")
+
         
         # Open the deployment wizard
         return {
@@ -555,7 +551,7 @@ class PortainerCustomTemplate(models.Model):
                 'default_custom_template_id': self.id,
                 'default_is_custom': True,
                 'default_template_title': self.title,
-                'default_template_type': wizard_template_type,
+                'default_template_type': self.template_type,
                 'default_name': self.title,
             }
         }
