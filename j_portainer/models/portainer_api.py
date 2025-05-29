@@ -986,18 +986,29 @@ class PortainerAPI(models.AbstractModel):
                 if params and 'name' in params:
                     data['name'] = params['name']
             else:  # Standalone container (type 2)
-                # Parse the template's file content (should be docker-compose or container spec)
-                # Try different possible field names for file content
-                file_content = (template_data.get('FileContent') or 
-                               template_data.get('fileContent') or 
-                               template_data.get('file_content') or 
-                               template_data.get('body') or '')
+                # For custom templates with ProjectPath, we need to get the file content separately
+                file_content = ''
                 
-                _logger.info(f"File content found: {len(file_content)} characters")
-                _logger.info(f"Available template fields: {list(template_data.keys())}")
+                if 'ProjectPath' in template_data and template_data.get('EntryPoint'):
+                    # Get file content from the file endpoint
+                    file_endpoint = f'/api/custom_templates/{template_id}/file'
+                    file_response = server._make_api_request(file_endpoint, 'GET')
+                    
+                    if file_response.status_code == 200:
+                        file_content = file_response.text
+                        _logger.info(f"Retrieved file content from file endpoint: {len(file_content)} characters")
+                    else:
+                        _logger.warning(f"Failed to get file content: {file_response.status_code}")
+                else:
+                    # Try direct content fields for inline templates
+                    file_content = (template_data.get('FileContent') or 
+                                   template_data.get('fileContent') or 
+                                   template_data.get('file_content') or 
+                                   template_data.get('body') or '')
+                    _logger.info(f"Using inline content: {len(file_content)} characters")
                 
                 if not file_content:
-                    raise Exception(f"Custom template {template_id} has no file content to deploy. Available fields: {list(template_data.keys())}")
+                    raise Exception(f"Custom template {template_id} has no accessible file content to deploy")
                 
                 # Try to extract image from file content (docker-compose format)
                 import yaml
