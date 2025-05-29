@@ -998,6 +998,16 @@ class PortainerAPI(models.AbstractModel):
                     if file_response.status_code == 200:
                         file_content = file_response.text
                         _logger.info(f"Retrieved file content from file endpoint: {len(file_content)} characters")
+                        
+                        # Check if the response is JSON wrapped
+                        try:
+                            file_json = json.loads(file_content)
+                            if 'FileContent' in file_json:
+                                file_content = file_json['FileContent']
+                                _logger.info(f"Extracted FileContent from JSON wrapper: {len(file_content)} characters")
+                        except json.JSONDecodeError:
+                            # Not JSON, use as-is
+                            pass
                     else:
                         _logger.warning(f"Failed to get file content: {file_response.status_code}")
                 else:
