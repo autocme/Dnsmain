@@ -1291,19 +1291,9 @@ class PortainerAPI(models.AbstractModel):
                             'empty_layer': int(layer.get('Size', 0)) == 0
                         }
                         
-                        # Clean up the command for better readability
+                        # Clean up the command for better readability using advanced parsing
                         command = layer_info['command']
-                        if command.startswith('/bin/sh -c '):
-                            layer_info['command'] = command.replace('/bin/sh -c ', 'RUN ')
-                        elif command.startswith('RUN #(nop) '):
-                            # Remove Docker's internal #(nop) prefix to match Portainer display
-                            layer_info['command'] = command.replace('RUN #(nop) ', '')
-                        elif command.startswith('COPY '):
-                            pass  # Keep COPY commands as-is
-                        elif command.startswith('ADD '):
-                            pass  # Keep ADD commands as-is
-                        elif not command:
-                            layer_info['command'] = 'Base layer'
+                        layer_info['command'] = self._clean_docker_command(command)
                         
                         processed_layers.append(layer_info)
                         
@@ -1321,6 +1311,85 @@ class PortainerAPI(models.AbstractModel):
         except Exception as e:
             _logger.error(f"Error getting image history for {image_id}: {str(e)}")
             return None
+    
+    def _clean_docker_command(self, command):
+        """
+        Advanced Docker command cleaning to match Portainer's display exactly.
+        Handles complex Docker command formats including embedded HTML-like tags,
+        buildkit metadata, and various shell command structures.
+        
+        Args:
+            command (str): Raw Docker command from API
+            
+        Returns:
+            str: Cleaned command matching Portainer format
+        """
+        if not command:
+            return 'Base layer'
+        
+        original_command = command
+        
+        try:
+            # Step 1: Handle embedded HTML-like structures with buildkit metadata
+            # Pattern: "long_command # buildkit">RUN /bin/sh -c actual_command"
+            if '# buildkit">' in command:
+                # Extract the command after the buildkit tag
+                buildkit_parts = command.split('# buildkit">')
+                if len(buildkit_parts) > 1:
+                    # Take the part after the buildkit tag
+                    command = buildkit_parts[-1].strip()
+                    _logger.debug(f"Extracted from buildkit tag: {command[:100]}...")
+            
+            # Step 2: Handle other embedded tag patterns
+            # Look for patterns like "> COMMAND" or similar embedded structures
+            if '">' in command and not command.startswith(('RUN', 'COPY', 'ADD', 'ENV', 'WORKDIR', 'CMD', 'ENTRYPOINT')):
+                tag_parts = command.split('">')
+                if len(tag_parts) > 1:
+                    command = tag_parts[-1].strip()
+                    _logger.debug(f"Extracted from embedded tag: {command[:100]}...")
+            
+            # Step 3: Clean up shell command prefixes
+            if command.startswith('/bin/sh -c '):
+                # Remove /bin/sh -c and add RUN prefix if not already present
+                command = command.replace('/bin/sh -c ', '', 1)
+                if not command.startswith(('RUN', 'COPY', 'ADD', 'ENV', 'WORKDIR', 'CMD', 'ENTRYPOINT')):
+                    command = f'RUN {command}'
+            elif command.startswith('RUN /bin/sh -c '):
+                # Replace "RUN /bin/sh -c" with just "RUN"
+                command = command.replace('RUN /bin/sh -c ', 'RUN ', 1)
+            
+            # Step 4: Handle #(nop) directives (conditional removal)
+            if command.startswith('RUN #(nop) '):
+                command = command.replace('RUN #(nop) ', '', 1)
+            elif '#(nop) ' in command:
+                command = command.replace('#(nop) ', '', 1)
+            
+            # Step 5: Handle duplicate RUN prefixes (but preserve intentional doubles like Portainer)
+            # Only remove if we have "RUN RUN" and it's not intentional
+            if command.startswith('RUN RUN RUN'):
+                # Too many RUNs, reduce to two
+                command = command.replace('RUN RUN RUN', 'RUN RUN', 1)
+            
+            # Step 6: Clean up extra whitespace and formatting
+            command = ' '.join(command.split())
+            
+            # Step 7: Handle special cases for known Docker directives
+            if not command or command.isspace():
+                command = 'Base layer'
+            elif command == '/bin/sh':
+                command = 'RUN /bin/sh'
+            
+            # Log the transformation for debugging
+            if command != original_command:
+                _logger.debug(f"Command transformation: '{original_command[:100]}...' -> '{command[:100]}...'")
+            
+            return command
+            
+        except Exception as e:
+            _logger.error(f"Error cleaning Docker command: {str(e)}")
+            _logger.debug(f"Problematic command: {original_command}")
+            # Return the original command if cleaning fails
+            return original_command
     
     def create_template(self, server_id, template_data):
         """Create a custom template in Portainer

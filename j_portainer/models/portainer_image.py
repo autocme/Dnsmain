@@ -337,9 +337,8 @@ class PortainerImage(models.Model):
             # Get command and apply additional cleaning to match Portainer
             command = layer.get('command', 'Unknown command')
             
-            # Remove "RUN #(nop)" prefix if it exists (conditional cleaning)
-            if command.startswith('RUN #(nop) '):
-                command = command.replace('RUN #(nop) ', '')
+            # Apply the same advanced command cleaning used in API processing
+            command = self.env['j_portainer.api']._clean_docker_command(command)
             
             # Don't truncate long commands - show full text with proper wrapping
             # Add title attribute for tooltip on hover
