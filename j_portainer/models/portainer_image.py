@@ -20,6 +20,9 @@ class PortainerImage(models.Model):
     size = fields.Float('Size (bytes)')
     shared_size = fields.Float('Shared Size (bytes)')
     virtual_size = fields.Float('Virtual Size (bytes)')
+    size_formatted = fields.Char('Size', compute='_compute_formatted_sizes', store=True)
+    shared_size_formatted = fields.Char('Shared Size', compute='_compute_formatted_sizes', store=True)
+    virtual_size_formatted = fields.Char('Virtual Size', compute='_compute_formatted_sizes', store=True)
     labels = fields.Text('Labels')
     details = fields.Text('Details')
     in_use = fields.Boolean('In Use', default=False, help='Whether this image is being used by any containers')
@@ -37,6 +40,41 @@ class PortainerImage(models.Model):
     def _get_api(self):
         """Get API client"""
         return self.env['j_portainer.api']
+    
+    @api.depends('size', 'shared_size', 'virtual_size')
+    def _compute_formatted_sizes(self):
+        """
+        Format image sizes using decimal conversion (1000-based) to match Portainer display
+        Converts raw byte values to human-readable format (B, KB, MB, GB)
+        """
+        for image in self:
+            image.size_formatted = self._format_size_decimal(image.size)
+            image.shared_size_formatted = self._format_size_decimal(image.shared_size)
+            image.virtual_size_formatted = self._format_size_decimal(image.virtual_size)
+    
+    def _format_size_decimal(self, size_bytes):
+        """
+        Format size in bytes to human-readable format using decimal conversion (1000-based)
+        This matches Portainer's size display exactly
+        
+        Args:
+            size_bytes (float): Size in bytes
+            
+        Returns:
+            str: Formatted size string (e.g., "129.9 MB", "116.5 MB")
+        """
+        if not size_bytes or size_bytes == 0:
+            return "0 B"
+        
+        # Use decimal conversion (1000-based) to match Portainer
+        if size_bytes < 1000:
+            return f"{int(size_bytes)} B"
+        elif size_bytes < 1000 * 1000:
+            return f"{size_bytes / 1000:.1f} KB"
+        elif size_bytes < 1000 * 1000 * 1000:
+            return f"{size_bytes / (1000 * 1000):.1f} MB"
+        else:
+            return f"{size_bytes / (1000 * 1000 * 1000):.1f} GB"
     
     @api.depends('repository', 'tag')
     def _compute_display_name(self):
