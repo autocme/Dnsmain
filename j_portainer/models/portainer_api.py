@@ -1229,6 +1229,72 @@ class PortainerAPI(models.AbstractModel):
         output_lower = output.lower()
         return any(pattern in output_lower for pattern in error_patterns)
     
+    def get_image_history(self, server_id, environment_id, image_id):
+        """
+        Get Docker image history (layers) with commands and sizes using Docker API
+        
+        Args:
+            server_id (int): ID of the Portainer server
+            environment_id (int): Environment ID
+            image_id (str): Docker image ID
+            
+        Returns:
+            list: List of layer objects with commands, sizes, and metadata or None if failed
+        """
+        server = self.env['j_portainer.server'].browse(server_id)
+        if not server:
+            _logger.error("Server not found for image history request")
+            return None
+            
+        if not environment_id or not image_id:
+            _logger.error("Environment ID and Image ID are required for image history")
+            return None
+
+        try:
+            # Use Docker Image History API endpoint
+            endpoint = f'/api/endpoints/{environment_id}/docker/images/{image_id}/history'
+            
+            _logger.info(f"Fetching image history for image {image_id} in environment {environment_id}")
+            response = server._make_api_request(endpoint, 'GET')
+            
+            if response.status_code == 200:
+                history_data = response.json()
+                
+                # Process and clean the history data
+                processed_layers = []
+                for layer in history_data:
+                    # Extract layer information
+                    layer_info = {
+                        'command': layer.get('CreatedBy', '').strip(),
+                        'size': layer.get('Size', 0),
+                        'created': layer.get('Created', ''),
+                        'hash': layer.get('Id', ''),
+                        'empty_layer': layer.get('Size', 0) == 0
+                    }
+                    
+                    # Clean up the command for better readability
+                    if layer_info['command'].startswith('/bin/sh -c '):
+                        layer_info['command'] = layer_info['command'].replace('/bin/sh -c ', 'RUN ')
+                    elif layer_info['command'].startswith('COPY '):
+                        pass  # Keep COPY commands as-is
+                    elif layer_info['command'].startswith('ADD '):
+                        pass  # Keep ADD commands as-is
+                    elif not layer_info['command']:
+                        layer_info['command'] = 'Base layer'
+                    
+                    processed_layers.append(layer_info)
+                
+                _logger.info(f"Successfully retrieved {len(processed_layers)} layers for image {image_id}")
+                return processed_layers
+                
+            else:
+                _logger.error(f"Failed to get image history: {response.status_code} - {response.text}")
+                return None
+                
+        except Exception as e:
+            _logger.error(f"Error getting image history for {image_id}: {str(e)}")
+            return None
+    
     def create_template(self, server_id, template_data):
         """Create a custom template in Portainer
         

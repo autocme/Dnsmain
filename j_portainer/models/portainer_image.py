@@ -90,21 +90,34 @@ class PortainerImage(models.Model):
             except Exception as e:
                 _logger.error(f"Error syncing image tags for image {image.id}: {str(e)}")
                 
-    @api.depends('details')
+    @api.depends('details', 'layers')
     def _compute_layers(self):
         """Compute HTML formatted layers for this image
         Format: Order | Size | Layer Command
         Starting with Order 0 to match Portainer's display
+        Uses enhanced layer data from Docker Image History API when available
         """
         for image in self:
-            if not image.details:
-                image.layers = "<div class='text-muted'>No layer information available</div>"
-                continue
-                
             try:
+                # First, try to use enhanced layer data from Image History API
+                if image.layers:
+                    try:
+                        enhanced_layers = json.loads(image.layers)
+                        if isinstance(enhanced_layers, list) and enhanced_layers:
+                            _logger.info(f"Using enhanced layer data for image {image.repository}:{image.tag}")
+                            image._format_enhanced_layers(enhanced_layers)
+                            continue
+                    except (json.JSONDecodeError, TypeError) as e:
+                        _logger.warning(f"Failed to parse enhanced layers for {image.repository}:{image.tag}: {str(e)}")
+                
+                # Fallback to legacy layer processing from details field
+                if not image.details:
+                    image.layers = "<div class='text-muted'>No layer information available</div>"
+                    continue
+                    
                 details = json.loads(image.details)
                 
-                # Extract layers information
+                # Extract layers information using legacy method
                 layers = []
                 
                 # Different Docker API versions have different fields
@@ -208,6 +221,72 @@ class PortainerImage(models.Model):
             except Exception as e:
                 _logger.error(f"Error computing layers for image {image.repository}:{image.tag}: {str(e)}")
                 image.layers = f"<div class='text-danger'>Error computing layers: {str(e)}</div>"
+    
+    def _format_enhanced_layers(self, enhanced_layers):
+        """
+        Format enhanced layer data from Docker Image History API into HTML table
+        
+        Args:
+            enhanced_layers (list): List of layer objects with command, size, created, hash
+        """
+        # Build HTML table for enhanced layers
+        html = [
+            '<table class="table table-sm table-striped">',
+            '<thead>',
+            '<tr>',
+            '<th style="width: 60px;">#</th>',
+            '<th style="width: 100px;">Size</th>',
+            '<th style="width: 120px;">Created</th>',
+            '<th>Layer Command</th>',
+            '</tr>',
+            '</thead>',
+            '<tbody>'
+        ]
+        
+        for i, layer in enumerate(enhanced_layers):
+            # Format size for display
+            size = layer.get('size', 0)
+            if size == 0:
+                size_str = '<span class="text-muted">0 B</span>'
+            elif size < 1024:
+                size_str = f"{size} B"
+            elif size < 1024 * 1024:
+                size_str = f"{size / 1024:.1f} KB"
+            elif size < 1024 * 1024 * 1024:
+                size_str = f"{size / (1024 * 1024):.1f} MB"
+            else:
+                size_str = f"{size / (1024 * 1024 * 1024):.1f} GB"
+            
+            # Format timestamp
+            created = layer.get('created', '')
+            if created:
+                try:
+                    # Parse timestamp and format for display
+                    from datetime import datetime
+                    created_dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
+                    created_str = created_dt.strftime('%Y-%m-%d %H:%M')
+                except:
+                    created_str = created[:16] if created else ''
+            else:
+                created_str = ''
+            
+            # Clean and format command
+            command = layer.get('command', 'Unknown command')
+            if len(command) > 80:
+                command = command[:77] + '...'
+            
+            # Mark empty layers with different styling
+            row_class = 'text-muted' if layer.get('empty_layer', False) else ''
+            
+            html.append(f'<tr class="{row_class}">')
+            html.append(f'<td>{i}</td>')
+            html.append(f'<td>{size_str}</td>')
+            html.append(f'<td class="small">{created_str}</td>')
+            html.append(f'<td class="text-monospace small" title="{command}">{command}</td>')
+            html.append('</tr>')
+        
+        html.extend(['</tbody>', '</table>'])
+        self.layers = ''.join(html)
     
     def name_get(self):
         """Override name_get to display repository:tag"""
