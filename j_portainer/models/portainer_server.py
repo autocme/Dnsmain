@@ -1268,7 +1268,7 @@ class PortainerServer(models.Model):
                             'repository': primary_repository,
                             'tag': primary_tag,
                             'all_tags': json.dumps(tag_list),
-                            'layers': json.dumps(enhanced_layers) if enhanced_layers else image_data.get('layers', '')
+                            'enhanced_layers_data': json.dumps(enhanced_layers) if enhanced_layers else ''
                         })
                         
                         if existing_image:
@@ -1313,7 +1313,7 @@ class PortainerServer(models.Model):
                                     'repository': repository,
                                     'tag': tag,
                                     'all_tags': json.dumps(tag_list),
-                                    'layers': json.dumps(enhanced_layers) if enhanced_layers else image_data.get('layers', '')
+                                    'enhanced_layers_data': json.dumps(enhanced_layers) if enhanced_layers else ''
                                 })
                                 
                                 if existing_image:
