@@ -32,6 +32,12 @@
                             <field name="last_size_check"/>
                         </group>
                     </group>
+                    <notebook>
+                        <page string="Size Check Details">
+                            <field name="size_description" widget="text" 
+                                   placeholder="Complete output from size check command will appear here"/>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>
