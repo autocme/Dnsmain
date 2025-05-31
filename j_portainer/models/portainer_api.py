@@ -1348,21 +1348,15 @@ class PortainerAPI(models.AbstractModel):
                     command = tag_parts[-1].strip()
                     _logger.debug(f"Extracted from embedded tag: {command[:100]}...")
             
-            # Step 3: Clean up shell command prefixes and ensure proper RUN prefixes
-            if command.startswith('/bin/sh -c '):
-                # Remove /bin/sh -c and add RUN prefix
-                command = command.replace('/bin/sh -c ', '', 1)
-                if not command.startswith(('RUN', 'COPY', 'ADD', 'ENV', 'WORKDIR', 'CMD', 'ENTRYPOINT')):
-                    command = f'RUN {command}'
-            elif command.startswith('RUN /bin/sh -c '):
-                # Replace "RUN /bin/sh -c" with "RUN RUN" to match Portainer
+            # Step 3: Clean up shell command prefixes with precise pattern matching
+            if command.startswith('RUN /bin/sh -c '):
+                # Pattern: "RUN /bin/sh -c set -eux" → "RUN RUN set -eux"
                 command = command.replace('RUN /bin/sh -c ', 'RUN RUN ', 1)
-            elif command.startswith('RUN ') and not command.startswith('RUN RUN'):
-                # For commands that start with single RUN, check if they should have double RUN like Portainer
-                # Commands that typically get double RUN in Portainer: set, apt-get, etc.
-                cmd_after_run = command[4:]  # Remove "RUN "
-                if any(cmd_after_run.startswith(prefix) for prefix in ['set -', 'apt-get', 'apt-', 'echo', 'mkdir', 'cd ']):
-                    command = f'RUN RUN {cmd_after_run}'
+            elif command.startswith('/bin/sh -c '):
+                # Pattern: "/bin/sh -c set -eux" → "RUN set -eux"
+                command = command.replace('/bin/sh -c ', 'RUN ', 1)
+            # For commands that already start with "RUN " (but not "RUN RUN"), leave them as single RUN
+            # Pattern: "RUN set -eux" → "RUN set -eux" (no change)
             
             # Step 4: Handle #(nop) directives (conditional removal)
             if command.startswith('RUN #(nop) '):
