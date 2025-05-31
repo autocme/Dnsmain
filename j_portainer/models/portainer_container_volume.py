@@ -109,9 +109,13 @@ class PortainerContainerVolume(models.Model):
             )
             
             if result:
+                # Clean the output by removing NUL characters and other non-printable characters
+                # Docker exec API sometimes returns binary data mixed with text
+                cleaned_result = result.replace('\x00', '').strip()
+                
                 # Parse the du command output (format: "40M\t/mnt/oca")
                 # Split by tab or space and take the first part (the size)
-                size_output = result.strip().split()[0] if result.strip() else 'Unknown'
+                size_output = cleaned_result.split()[0] if cleaned_result else 'Unknown'
                 
                 # Update the volume size fields
                 self.write({
