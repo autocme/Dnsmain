@@ -6,6 +6,12 @@
         <field name="model">j_portainer.container.volume</field>
         <field name="arch" type="xml">
             <form string="Container Volume Mapping">
+                <header>
+                    <!-- Button to check volume size -->
+                    <button name="action_check_volume_size" type="object" 
+                            string="Check Size" class="btn-primary"
+                            help="Execute 'du -sh' command inside the container to check volume usage"/>
+                </header>
                 <sheet>
                     <group>
                         <group>
@@ -22,6 +28,8 @@
                             <field name="mode"/>
                             <field name="driver" invisible="1"/>
                             <field name="container_id" options="{'no_create': True}"/>
+                            <field name="usage_size"/>
+                            <field name="last_size_check"/>
                         </group>
                     </group>
                 </sheet>
@@ -39,7 +47,13 @@
                 <field name="type"/>
                 <field name="name"/>
                 <field name="mode"/>
+                <field name="usage_size"/>
+                <field name="last_size_check"/>
                 <field name="container_id"/>
+                <!-- Button to check volume size in tree view -->
+                <button name="action_check_volume_size" type="object" 
+                        string="Check Size" icon="fa-search"
+                        help="Execute 'du -sh' command inside the container to check volume usage"/>
             </tree>
         </field>
     </record>

@@ -56,6 +56,12 @@ class PortainerContainerVolume(models.Model):
     
     driver = fields.Char('Driver', help="Driver used for this volume")
     
+    # Volume size tracking fields
+    usage_size = fields.Char('Volume Usage Size', readonly=True, 
+                            help="Volume usage size as returned by du command (e.g., '40M', '1.2G')")
+    last_size_check = fields.Datetime('Last Size Check', readonly=True,
+                                     help="Timestamp when volume size was last calculated")
+    
     display_name = fields.Char('Display Name', compute='_compute_display_name')
     
     @api.depends('type', 'name', 'container_path')
@@ -69,6 +75,85 @@ class PortainerContainerVolume(models.Model):
             else:
                 volume.display_name = f"{volume.container_path} → {volume.type}: {volume.name}"
                 
+    def action_check_volume_size(self):
+        """
+        Check volume usage size by executing 'du -sh' command inside the container
+        This method requires the container to be running and have 'du' command available
+        """
+        self.ensure_one()
+        
+        # Check if container is running
+        if self.container_id.state != 'running':
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Container Not Running'),
+                    'message': _('Volume size can only be checked for running containers'),
+                    'sticky': False,
+                    'type': 'warning',
+                }
+            }
+        
+        # Prepare the du command to check volume size
+        du_command = f"du -sh {self.container_path}"
+        
+        try:
+            # Get API client and execute command inside container
+            api = self.env['j_portainer.api']
+            result = api.execute_container_command(
+                self.container_id.server_id.id,
+                self.container_id.container_id,
+                self.container_id.environment_id,
+                du_command
+            )
+            
+            if result:
+                # Parse the du command output (format: "40M\t/mnt/oca")
+                # Split by tab or space and take the first part (the size)
+                size_output = result.strip().split()[0] if result.strip() else 'Unknown'
+                
+                # Update the volume size fields
+                self.write({
+                    'usage_size': size_output,
+                    'last_size_check': fields.Datetime.now()
+                })
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Volume Size Updated'),
+                        'message': _('Volume usage: %s') % size_output,
+                        'sticky': False,
+                        'type': 'success',
+                    }
+                }
+            else:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Size Check Failed'),
+                        'message': _('Unable to execute du command inside container'),
+                        'sticky': False,
+                        'type': 'danger',
+                    }
+                }
+                
+        except Exception as e:
+            _logger.error(f"Error checking volume size for {self.container_path}: {str(e)}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Error Checking Size'),
+                    'message': _('Error: %s') % str(e),
+                    'sticky': True,
+                    'type': 'danger',
+                }
+            }
+
     def view_related_container(self):
         """Open the related container form view"""
         self.ensure_one()
