@@ -1113,6 +1113,78 @@ class PortainerAPI(models.AbstractModel):
             # Re-raise the exception so it reaches the user interface
             raise
     
+    def execute_container_command(self, server_id, container_id, environment_id, command):
+        """
+        Execute a command inside a running container using Docker exec API
+        
+        Args:
+            server_id (int): ID of the Portainer server
+            container_id (str): Container ID in Portainer
+            environment_id (int): Environment ID
+            command (str): Command to execute (e.g., "du -sh /mnt/data")
+            
+        Returns:
+            str: Command output or None if failed
+        """
+        server = self.env['j_portainer.server'].browse(server_id)
+        if not server:
+            _logger.error("Server not found")
+            return None
+            
+        if not environment_id or not container_id:
+            _logger.error("Environment ID and Container ID are required")
+            return None
+            
+        try:
+            # Step 1: Create exec instance in the container
+            # This prepares the command for execution
+            exec_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/exec'
+            exec_data = {
+                'AttachStdout': True,
+                'AttachStderr': True,
+                'Cmd': command.split(),  # Split command into array (e.g., ["du", "-sh", "/mnt/data"])
+                'Tty': False
+            }
+            
+            _logger.info(f"Creating exec instance for command: {command}")
+            exec_response = server._make_api_request(exec_endpoint, 'POST', data=exec_data)
+            
+            if exec_response.status_code != 201:
+                _logger.error(f"Failed to create exec instance: {exec_response.status_code} - {exec_response.text}")
+                return None
+                
+            # Extract exec ID from response
+            exec_result = exec_response.json()
+            exec_id = exec_result.get('Id')
+            
+            if not exec_id:
+                _logger.error("No exec ID returned from exec creation")
+                return None
+                
+            # Step 2: Start the exec instance and capture output
+            # This actually runs the command and returns the result
+            start_endpoint = f'/api/endpoints/{environment_id}/docker/exec/{exec_id}/start'
+            start_data = {
+                'Detach': False,  # Wait for command to complete
+                'Tty': False
+            }
+            
+            _logger.info(f"Starting exec instance {exec_id}")
+            start_response = server._make_api_request(start_endpoint, 'POST', data=start_data)
+            
+            if start_response.status_code == 200:
+                # Return the command output as text
+                output = start_response.text.strip()
+                _logger.info(f"Command executed successfully, output: {output}")
+                return output
+            else:
+                _logger.error(f"Failed to start exec: {start_response.status_code} - {start_response.text}")
+                return None
+                
+        except Exception as e:
+            _logger.error(f"Error executing container command: {str(e)}")
+            return None
+    
     def create_template(self, server_id, template_data):
         """Create a custom template in Portainer
         
