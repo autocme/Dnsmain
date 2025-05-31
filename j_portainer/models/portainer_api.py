@@ -1116,6 +1116,7 @@ class PortainerAPI(models.AbstractModel):
     def execute_container_command(self, server_id, container_id, environment_id, command):
         """
         Execute a command inside a running container using Docker exec API
+        For size checking commands, automatically tries fallback commands if the primary fails
         
         Args:
             server_id (int): ID of the Portainer server
@@ -1134,56 +1135,99 @@ class PortainerAPI(models.AbstractModel):
         if not environment_id or not container_id:
             _logger.error("Environment ID and Container ID are required")
             return None
+
+        # Check if this is a size checking command and prepare fallback commands
+        is_size_command = command.startswith('du -sh')
+        commands_to_try = [command]
+        
+        if is_size_command:
+            # Extract the path from the du command
+            path = command.replace('du -sh ', '').strip()
+            commands_to_try = [
+                f'du -sh {path}',
+                f'find {path} -type f -exec ls -l {{}} \\; | awk "{{sum+=$5}} END {{print sum \\"bytes\\"}}"',
+                f'ls -la {path}'
+            ]
             
+        # Try each command until one succeeds
+        for cmd in commands_to_try:
+            try:
+                result = self._execute_single_command(server, environment_id, container_id, cmd)
+                if result and not self._is_command_not_found_error(result):
+                    # Command succeeded, return the result
+                    if cmd != command:
+                        _logger.info(f"Fallback command succeeded: {cmd}")
+                    return result
+                elif result:
+                    # Command failed with "not found" error, try next fallback
+                    _logger.warning(f"Command '{cmd}' not available, trying fallback")
+                    continue
+                else:
+                    # Command execution failed completely, try next fallback
+                    continue
+                    
+            except Exception as e:
+                _logger.warning(f"Command '{cmd}' failed with exception: {str(e)}")
+                continue
+        
+        # All commands failed
+        _logger.error(f"All commands failed for size check on path: {command}")
+        return None
+        
+    def _execute_single_command(self, server, environment_id, container_id, command):
+        """Execute a single command in container"""
         try:
             # Step 1: Create exec instance in the container
-            # This prepares the command for execution
             exec_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/exec'
             exec_data = {
                 'AttachStdout': True,
                 'AttachStderr': True,
-                'Cmd': command.split(),  # Split command into array (e.g., ["du", "-sh", "/mnt/data"])
+                'Cmd': command.split(),
                 'Tty': False
             }
             
-            _logger.info(f"Creating exec instance for command: {command}")
             exec_response = server._make_api_request(exec_endpoint, 'POST', data=exec_data)
             
             if exec_response.status_code != 201:
-                _logger.error(f"Failed to create exec instance: {exec_response.status_code} - {exec_response.text}")
                 return None
                 
-            # Extract exec ID from response
             exec_result = exec_response.json()
             exec_id = exec_result.get('Id')
             
             if not exec_id:
-                _logger.error("No exec ID returned from exec creation")
                 return None
                 
             # Step 2: Start the exec instance and capture output
-            # This actually runs the command and returns the result
             start_endpoint = f'/api/endpoints/{environment_id}/docker/exec/{exec_id}/start'
             start_data = {
-                'Detach': False,  # Wait for command to complete
+                'Detach': False,
                 'Tty': False
             }
             
-            _logger.info(f"Starting exec instance {exec_id}")
             start_response = server._make_api_request(start_endpoint, 'POST', data=start_data)
             
             if start_response.status_code == 200:
-                # Return the command output as text
-                output = start_response.text.strip()
-                _logger.info(f"Command executed successfully, output: {output}")
-                return output
+                return start_response.text.strip()
             else:
-                _logger.error(f"Failed to start exec: {start_response.status_code} - {start_response.text}")
                 return None
                 
         except Exception as e:
-            _logger.error(f"Error executing container command: {str(e)}")
             return None
+            
+    def _is_command_not_found_error(self, output):
+        """Check if output indicates command not found"""
+        if not output:
+            return False
+            
+        error_patterns = [
+            'executable file not found',
+            'command not found',
+            'not found',
+            'no such file or directory'
+        ]
+        
+        output_lower = output.lower()
+        return any(pattern in output_lower for pattern in error_patterns)
     
     def create_template(self, server_id, template_data):
         """Create a custom template in Portainer
