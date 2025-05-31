@@ -1348,15 +1348,21 @@ class PortainerAPI(models.AbstractModel):
                     command = tag_parts[-1].strip()
                     _logger.debug(f"Extracted from embedded tag: {command[:100]}...")
             
-            # Step 3: Clean up shell command prefixes
+            # Step 3: Clean up shell command prefixes and ensure proper RUN prefixes
             if command.startswith('/bin/sh -c '):
-                # Remove /bin/sh -c and add RUN prefix if not already present
+                # Remove /bin/sh -c and add RUN prefix
                 command = command.replace('/bin/sh -c ', '', 1)
                 if not command.startswith(('RUN', 'COPY', 'ADD', 'ENV', 'WORKDIR', 'CMD', 'ENTRYPOINT')):
                     command = f'RUN {command}'
             elif command.startswith('RUN /bin/sh -c '):
-                # Replace "RUN /bin/sh -c" with just "RUN"
-                command = command.replace('RUN /bin/sh -c ', 'RUN ', 1)
+                # Replace "RUN /bin/sh -c" with "RUN RUN" to match Portainer
+                command = command.replace('RUN /bin/sh -c ', 'RUN RUN ', 1)
+            elif command.startswith('RUN ') and not command.startswith('RUN RUN'):
+                # For commands that start with single RUN, check if they should have double RUN like Portainer
+                # Commands that typically get double RUN in Portainer: set, apt-get, etc.
+                cmd_after_run = command[4:]  # Remove "RUN "
+                if any(cmd_after_run.startswith(prefix) for prefix in ['set -', 'apt-get', 'apt-', 'echo', 'mkdir', 'cd ']):
+                    command = f'RUN RUN {cmd_after_run}'
             
             # Step 4: Handle #(nop) directives (conditional removal)
             if command.startswith('RUN #(nop) '):
@@ -1364,10 +1370,9 @@ class PortainerAPI(models.AbstractModel):
             elif '#(nop) ' in command:
                 command = command.replace('#(nop) ', '', 1)
             
-            # Step 5: Handle duplicate RUN prefixes (but preserve intentional doubles like Portainer)
-            # Only remove if we have "RUN RUN" and it's not intentional
+            # Step 5: Handle excessive RUN prefixes (but preserve Portainer's double RUN pattern)
             if command.startswith('RUN RUN RUN'):
-                # Too many RUNs, reduce to two
+                # Too many RUNs, reduce to two to match Portainer
                 command = command.replace('RUN RUN RUN', 'RUN RUN', 1)
             
             # Step 6: Clean up extra whitespace and formatting
