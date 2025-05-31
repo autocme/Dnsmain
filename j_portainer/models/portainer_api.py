@@ -1295,6 +1295,9 @@ class PortainerAPI(models.AbstractModel):
                         command = layer_info['command']
                         if command.startswith('/bin/sh -c '):
                             layer_info['command'] = command.replace('/bin/sh -c ', 'RUN ')
+                        elif command.startswith('RUN #(nop) '):
+                            # Remove Docker's internal #(nop) prefix to match Portainer display
+                            layer_info['command'] = command.replace('RUN #(nop) ', '')
                         elif command.startswith('COPY '):
                             pass  # Keep COPY commands as-is
                         elif command.startswith('ADD '):
