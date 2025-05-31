@@ -110,16 +110,17 @@ class PortainerContainerVolume(models.Model):
                 du_command
             )
             
-            # Always store the complete raw result for debugging
-            self.write({
-                'size_description': raw_result or 'No output received from command',
-                'last_size_check': fields.Datetime.now()
-            })
-            
             if raw_result:
                 # Clean the output by removing all non-printable characters
+                # Docker exec API often returns control characters, escape sequences, and binary data
                 import re
                 cleaned_result = re.sub(r'[^\x20-\x7E\t]', '', raw_result).strip()
+                
+                # Store the cleaned result for debugging (no NUL characters)
+                self.write({
+                    'size_description': cleaned_result or 'Empty output after cleaning',
+                    'last_size_check': fields.Datetime.now()
+                })
                 
                 # Check if this looks like an error message
                 if self._is_error_message(cleaned_result):
@@ -166,7 +167,12 @@ class PortainerContainerVolume(models.Model):
                             }
                         }
             else:
-                self.write({'usage_size': 'N/A'})
+                # No output received
+                self.write({
+                    'usage_size': 'N/A',
+                    'size_description': 'No output received from command',
+                    'last_size_check': fields.Datetime.now()
+                })
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
