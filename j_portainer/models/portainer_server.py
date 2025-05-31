@@ -982,7 +982,18 @@ class PortainerServer(models.Model):
                         volume_records.append(volume_data)
 
                     if volume_records:
-                        self.env['j_portainer.container.volume'].create(volume_records)
+                        # Create volume mapping records
+                        created_volume_mappings = self.env['j_portainer.container.volume'].create(volume_records)
+                        
+                        # Automatically calculate volume sizes for running containers
+                        if container_record.state == 'running':
+                            for volume_mapping in created_volume_mappings:
+                                try:
+                                    # Calculate volume size in background without blocking sync
+                                    volume_mapping.action_check_volume_size()
+                                except Exception as e:
+                                    # Don't let volume size calculation errors interrupt sync
+                                    _logger.warning(f"Failed to calculate volume size for {volume_mapping.container_path} in container {container_record.name}: {str(e)}")
                         
                     # Process container network connections as separate records
                     # First, remove existing network connections for this container to avoid duplicates
