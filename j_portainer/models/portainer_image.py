@@ -261,55 +261,50 @@ class PortainerImage(models.Model):
     def _format_enhanced_layers(self, enhanced_layers):
         """
         Format enhanced layer data from Docker Image History API into HTML table
+        Matches Portainer's exact display format and ordering
         
         Args:
             enhanced_layers (list): List of layer objects with command, size, created, hash
         """
-        # Build HTML table for enhanced layers
+        # Reverse the layer order to match Portainer (newest first, oldest last)
+        reversed_layers = list(reversed(enhanced_layers))
+        
+        # Build HTML table for enhanced layers (matching Portainer layout)
         html = [
             '<table class="table table-sm table-striped">',
             '<thead>',
             '<tr>',
             '<th style="width: 60px;">#</th>',
             '<th style="width: 100px;">Size</th>',
-            '<th style="width: 120px;">Created</th>',
-            '<th>Layer Command</th>',
+            '<th>Layer</th>',
             '</tr>',
             '</thead>',
             '<tbody>'
         ]
         
-        for i, layer in enumerate(enhanced_layers):
-            # Format size for display
+        for i, layer in enumerate(reversed_layers):
+            # Format size for display using decimal conversion (1000-based) to match Portainer
             size = layer.get('size', 0)
             if size == 0:
                 size_str = '<span class="text-muted">0 B</span>'
-            elif size < 1024:
+            elif size < 1000:
                 size_str = f"{size} B"
-            elif size < 1024 * 1024:
-                size_str = f"{size / 1024:.1f} KB"
-            elif size < 1024 * 1024 * 1024:
-                size_str = f"{size / (1024 * 1024):.1f} MB"
+            elif size < 1000 * 1000:
+                size_str = f"{size / 1000:.1f} KB"
+            elif size < 1000 * 1000 * 1000:
+                size_str = f"{size / (1000 * 1000):.1f} MB"
             else:
-                size_str = f"{size / (1024 * 1024 * 1024):.1f} GB"
+                size_str = f"{size / (1000 * 1000 * 1000):.1f} GB"
             
-            # Format timestamp
-            created = layer.get('created', '')
-            if created:
-                try:
-                    # Parse timestamp and format for display
-                    from datetime import datetime
-                    created_dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
-                    created_str = created_dt.strftime('%Y-%m-%d %H:%M')
-                except:
-                    created_str = created[:16] if created else ''
-            else:
-                created_str = ''
-            
-            # Clean and format command
+            # Get command and apply additional cleaning to match Portainer
             command = layer.get('command', 'Unknown command')
-            if len(command) > 80:
-                command = command[:77] + '...'
+            
+            # Remove "RUN #(nop)" prefix if it exists (conditional cleaning)
+            if command.startswith('RUN #(nop) '):
+                command = command.replace('RUN #(nop) ', '')
+            
+            # Don't truncate long commands - show full text with proper wrapping
+            # Add title attribute for tooltip on hover
             
             # Mark empty layers with different styling
             row_class = 'text-muted' if layer.get('empty_layer', False) else ''
@@ -317,8 +312,7 @@ class PortainerImage(models.Model):
             html.append(f'<tr class="{row_class}">')
             html.append(f'<td>{i}</td>')
             html.append(f'<td>{size_str}</td>')
-            html.append(f'<td class="small">{created_str}</td>')
-            html.append(f'<td class="text-monospace small" title="{command}">{command}</td>')
+            html.append(f'<td class="text-monospace small" style="word-break: break-all; white-space: normal;" title="{command}">{command}</td>')
             html.append('</tr>')
         
         html.extend(['</tbody>', '</table>'])
