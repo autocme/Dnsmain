@@ -1259,12 +1259,16 @@ class PortainerServer(models.Model):
                                 'tag': tag_name
                             })
                         
+                        # Get enhanced layer information using Docker Image History API
+                        enhanced_layers = self._get_enhanced_image_layers(endpoint_id, image_id)
+                        
                         # Prepare image data with primary repository and tag plus all tags
                         image_data = dict(base_image_data)
                         image_data.update({
                             'repository': primary_repository,
                             'tag': primary_tag,
-                            'all_tags': json.dumps(tag_list)
+                            'all_tags': json.dumps(tag_list),
+                            'layers': json.dumps(enhanced_layers) if enhanced_layers else image_data.get('layers', '')
                         })
                         
                         if existing_image:
@@ -1300,12 +1304,16 @@ class PortainerServer(models.Model):
                                     'tag': tag
                                 }]
                                 
+                                # Get enhanced layer information using Docker Image History API
+                                enhanced_layers = self._get_enhanced_image_layers(endpoint_id, image_id)
+                                
                                 # Prepare specific image data with repository from digest
                                 image_data = dict(base_image_data)
                                 image_data.update({
                                     'repository': repository,
                                     'tag': tag,
-                                    'all_tags': json.dumps(tag_list)
+                                    'all_tags': json.dumps(tag_list),
+                                    'layers': json.dumps(enhanced_layers) if enhanced_layers else image_data.get('layers', '')
                                 })
                                 
                                 if existing_image:
@@ -1406,6 +1414,33 @@ class PortainerServer(models.Model):
         except Exception as e:
             _logger.error(f"Error syncing images: {str(e)}")
             raise UserError(_("Error syncing images: %s") % str(e))
+            
+    def _get_enhanced_image_layers(self, environment_id, image_id):
+        """
+        Get enhanced layer information using Docker Image History API
+        
+        Args:
+            environment_id (int): Environment ID
+            image_id (str): Docker image ID
+            
+        Returns:
+            list: Enhanced layer information with commands, sizes, and metadata
+        """
+        try:
+            # Use the API client to get image history
+            api = self.env['j_portainer.api']
+            history_layers = api.get_image_history(self.id, environment_id, image_id)
+            
+            if history_layers:
+                _logger.info(f"Retrieved {len(history_layers)} enhanced layers for image {image_id}")
+                return history_layers
+            else:
+                _logger.warning(f"No enhanced layers retrieved for image {image_id}, keeping existing layer data")
+                return None
+                
+        except Exception as e:
+            _logger.error(f"Error getting enhanced layers for image {image_id}: {str(e)}")
+            return None
 
     def sync_volumes(self, environment_id=None):
         """Sync volumes from Portainer
