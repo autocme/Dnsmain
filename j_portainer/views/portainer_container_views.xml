@@ -120,8 +120,12 @@
                                     <field name="volume_id" invisible="type != 'volume'"/>
                                     <field name="name" invisible="type == 'volume'"/>
                                     <field name="mode"/>
+                                    <field name="usage_size"/>Add commentMore actions
+                                    <field name="last_size_check"/>
                                     <button name="unlink" string="Remove" type="object" 
                                             icon="fa-trash-o" confirm="Are you sure you want to remove this volume mapping?"/>
+                                    <button name="action_check_volume_size" type="object" string="Check Size" icon="fa-search"
+                                        help="Execute 'du -sh' command inside the container to check volume usage"/>
                                 </tree>
                             </field>
                             <div class="alert alert-info" role="alert">
