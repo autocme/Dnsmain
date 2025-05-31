@@ -25,6 +25,7 @@ class PortainerImage(models.Model):
     in_use = fields.Boolean('In Use', default=False, help='Whether this image is being used by any containers')
     all_tags = fields.Text('All Tags JSON', help='All tags for this image, stored as JSON array', groups='base.group_system')
     image_tag_ids = fields.One2many('j_portainer.image.tag', 'image_id', string='Image Tags')
+    enhanced_layers_data = fields.Text('Enhanced Layers Data', help='Enhanced layer data from Docker Image History API stored as JSON')
     layers = fields.Html('Layers', compute='_compute_layers', store=True, help='Image layers with size information')
     labels_html = fields.Html('Labels Table', compute='_compute_labels_html', store=True, help='Image labels in table format')
     
@@ -90,7 +91,7 @@ class PortainerImage(models.Model):
             except Exception as e:
                 _logger.error(f"Error syncing image tags for image {image.id}: {str(e)}")
                 
-    @api.depends('details', 'layers')
+    @api.depends('details', 'enhanced_layers_data')
     def _compute_layers(self):
         """Compute HTML formatted layers for this image
         Format: Order | Size | Layer Command
@@ -100,15 +101,20 @@ class PortainerImage(models.Model):
         for image in self:
             try:
                 # First, try to use enhanced layer data from Image History API
-                if image.layers:
+                if image.enhanced_layers_data:
                     try:
-                        enhanced_layers = json.loads(image.layers)
+                        _logger.info(f"Parsing enhanced layer data for image {image.repository}:{image.tag}")
+                        _logger.debug(f"Enhanced layer data content: {image.enhanced_layers_data[:200]}...")
+                        enhanced_layers = json.loads(image.enhanced_layers_data)
                         if isinstance(enhanced_layers, list) and enhanced_layers:
-                            _logger.info(f"Using enhanced layer data for image {image.repository}:{image.tag}")
+                            _logger.info(f"Using enhanced layer data for image {image.repository}:{image.tag} - {len(enhanced_layers)} layers")
                             image._format_enhanced_layers(enhanced_layers)
                             continue
+                        else:
+                            _logger.warning(f"Enhanced layers data is not a valid list for {image.repository}:{image.tag}")
                     except (json.JSONDecodeError, TypeError) as e:
-                        _logger.warning(f"Failed to parse enhanced layers for {image.repository}:{image.tag}: {str(e)}")
+                        _logger.error(f"Failed to parse enhanced layers for {image.repository}:{image.tag}: {str(e)}")
+                        _logger.debug(f"Problematic data: {image.enhanced_layers_data}")
                 
                 # Fallback to legacy layer processing from details field
                 if not image.details:
