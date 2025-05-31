@@ -1260,31 +1260,55 @@ class PortainerAPI(models.AbstractModel):
             if response.status_code == 200:
                 history_data = response.json()
                 
+                # Log the raw response structure for debugging
+                _logger.info(f"Raw Docker API response type: {type(history_data)}")
+                _logger.debug(f"Raw Docker API response: {history_data}")
+                
+                # Validate that we received a list of layer objects
+                if not isinstance(history_data, list):
+                    _logger.error(f"Expected list of layers, got {type(history_data)}: {history_data}")
+                    return None
+                
+                if not history_data:
+                    _logger.warning(f"Empty layer history received for image {image_id}")
+                    return []
+                
                 # Process and clean the history data
                 processed_layers = []
-                for layer in history_data:
-                    # Extract layer information
-                    layer_info = {
-                        'command': layer.get('CreatedBy', '').strip(),
-                        'size': layer.get('Size', 0),
-                        'created': layer.get('Created', ''),
-                        'hash': layer.get('Id', ''),
-                        'empty_layer': layer.get('Size', 0) == 0
-                    }
-                    
-                    # Clean up the command for better readability
-                    if layer_info['command'].startswith('/bin/sh -c '):
-                        layer_info['command'] = layer_info['command'].replace('/bin/sh -c ', 'RUN ')
-                    elif layer_info['command'].startswith('COPY '):
-                        pass  # Keep COPY commands as-is
-                    elif layer_info['command'].startswith('ADD '):
-                        pass  # Keep ADD commands as-is
-                    elif not layer_info['command']:
-                        layer_info['command'] = 'Base layer'
-                    
-                    processed_layers.append(layer_info)
+                for i, layer in enumerate(history_data):
+                    try:
+                        # Validate that each layer is a dictionary
+                        if not isinstance(layer, dict):
+                            _logger.error(f"Layer {i} is not a dict, got {type(layer)}: {layer}")
+                            continue
+                        
+                        # Extract layer information with safe access
+                        layer_info = {
+                            'command': str(layer.get('CreatedBy', '')).strip(),
+                            'size': int(layer.get('Size', 0)) if layer.get('Size') is not None else 0,
+                            'created': str(layer.get('Created', '')),
+                            'hash': str(layer.get('Id', '')),
+                            'empty_layer': int(layer.get('Size', 0)) == 0
+                        }
+                        
+                        # Clean up the command for better readability
+                        command = layer_info['command']
+                        if command.startswith('/bin/sh -c '):
+                            layer_info['command'] = command.replace('/bin/sh -c ', 'RUN ')
+                        elif command.startswith('COPY '):
+                            pass  # Keep COPY commands as-is
+                        elif command.startswith('ADD '):
+                            pass  # Keep ADD commands as-is
+                        elif not command:
+                            layer_info['command'] = 'Base layer'
+                        
+                        processed_layers.append(layer_info)
+                        
+                    except Exception as e:
+                        _logger.error(f"Error processing layer {i}: {str(e)} - Layer data: {layer}")
+                        continue
                 
-                _logger.info(f"Successfully retrieved {len(processed_layers)} layers for image {image_id}")
+                _logger.info(f"Successfully processed {len(processed_layers)} out of {len(history_data)} layers for image {image_id}")
                 return processed_layers
                 
             else:

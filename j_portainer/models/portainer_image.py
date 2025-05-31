@@ -105,16 +105,46 @@ class PortainerImage(models.Model):
                     try:
                         _logger.info(f"Parsing enhanced layer data for image {image.repository}:{image.tag}")
                         _logger.debug(f"Enhanced layer data content: {image.enhanced_layers_data[:200]}...")
+                        
                         enhanced_layers = json.loads(image.enhanced_layers_data)
-                        if isinstance(enhanced_layers, list) and enhanced_layers:
-                            _logger.info(f"Using enhanced layer data for image {image.repository}:{image.tag} - {len(enhanced_layers)} layers")
-                            image._format_enhanced_layers(enhanced_layers)
-                            continue
+                        
+                        # Validate the parsed data structure
+                        if not isinstance(enhanced_layers, list):
+                            _logger.error(f"Enhanced layers data is not a list for {image.repository}:{image.tag}, got {type(enhanced_layers)}")
+                            _logger.debug(f"Data: {enhanced_layers}")
+                        elif not enhanced_layers:
+                            _logger.warning(f"Enhanced layers data is empty for {image.repository}:{image.tag}")
                         else:
-                            _logger.warning(f"Enhanced layers data is not a valid list for {image.repository}:{image.tag}")
-                    except (json.JSONDecodeError, TypeError) as e:
+                            # Validate each layer object
+                            valid_layers = []
+                            for i, layer in enumerate(enhanced_layers):
+                                if not isinstance(layer, dict):
+                                    _logger.error(f"Layer {i} is not a dict for {image.repository}:{image.tag}, got {type(layer)}: {layer}")
+                                    continue
+                                
+                                # Ensure required fields exist with safe defaults
+                                safe_layer = {
+                                    'command': str(layer.get('command', 'Unknown command')),
+                                    'size': int(layer.get('size', 0)) if layer.get('size') is not None else 0,
+                                    'created': str(layer.get('created', '')),
+                                    'hash': str(layer.get('hash', '')),
+                                    'empty_layer': bool(layer.get('empty_layer', False))
+                                }
+                                valid_layers.append(safe_layer)
+                            
+                            if valid_layers:
+                                _logger.info(f"Using {len(valid_layers)} valid enhanced layers for image {image.repository}:{image.tag}")
+                                image._format_enhanced_layers(valid_layers)
+                                continue
+                            else:
+                                _logger.warning(f"No valid layers found in enhanced data for {image.repository}:{image.tag}")
+                                
+                    except (json.JSONDecodeError, TypeError, ValueError) as e:
                         _logger.error(f"Failed to parse enhanced layers for {image.repository}:{image.tag}: {str(e)}")
                         _logger.debug(f"Problematic data: {image.enhanced_layers_data}")
+                    except Exception as e:
+                        _logger.error(f"Unexpected error processing enhanced layers for {image.repository}:{image.tag}: {str(e)}")
+                        _logger.debug(f"Data: {image.enhanced_layers_data}")
                 
                 # Fallback to legacy layer processing from details field
                 if not image.details:
