@@ -109,6 +109,67 @@ class PortainerImage(models.Model):
             self.dockerfile_content = False
             self.dockerfile_upload = False
     
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Override create to build image in Portainer before saving"""
+        for vals in vals_list:
+            # Only build in Portainer if this is a new image (no image_id yet)
+            if not vals.get('image_id'):
+                server_id = vals.get('server_id')
+                environment_id = vals.get('environment_id')
+                
+                if not server_id or not environment_id:
+                    raise UserError(_("Server and Environment are required to create an image"))
+                
+                # Get environment record to extract environment_id for API call
+                env_record = self.env['j_portainer.environment'].browse(environment_id)
+                if not env_record.exists():
+                    raise UserError(_("Environment not found"))
+                
+                # Prepare build data
+                build_data = {
+                    'build_method': vals.get('build_method'),
+                    'repository': vals.get('repository'),
+                    'tag': vals.get('tag', 'latest'),
+                    'dockerfile_content': vals.get('dockerfile_content'),
+                    'dockerfile_upload': vals.get('dockerfile_upload'),
+                    'build_url': vals.get('build_url'),
+                    'dockerfile_path': vals.get('dockerfile_path')
+                }
+                
+                # Build image in Portainer
+                api = self.env['j_portainer.api']
+                try:
+                    build_result = api.build_image(server_id, env_record.environment_id, build_data)
+                    
+                    # Update vals with Portainer response data
+                    vals.update({
+                        'image_id': build_result.get('image_id'),
+                        'created': build_result.get('created'),
+                        'size': build_result.get('size', 0),
+                        'shared_size': build_result.get('shared_size', 0),
+                        'virtual_size': build_result.get('virtual_size', 0),
+                        'labels': json.dumps(build_result.get('labels', {})) if build_result.get('labels') else None,
+                        'last_sync': fields.Datetime.now()
+                    })
+                    
+                except Exception as e:
+                    # Prevent record creation if Portainer build fails
+                    raise UserError(_("Failed to create image in Portainer: %s") % str(e))
+        
+        # Create records in Odoo after successful Portainer build
+        records = super().create(vals_list)
+        
+        # Display success message for each created image
+        for record in records:
+            if record.image_id:  # Only show message for newly built images
+                self.env.user.notify_success(
+                    title=_('Image Created Successfully'),
+                    message=_('Image %s:%s has been built and created in Portainer') % (record.repository, record.tag)
+                )
+        
+        return records
+    
     @api.depends('repository', 'tag')
     def _compute_display_name(self):
         """Compute display name based on repository and tag"""
