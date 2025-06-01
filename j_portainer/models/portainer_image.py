@@ -18,9 +18,11 @@ class PortainerImage(models.Model):
          'An image with this ID already exists in this environment')
     ]
     
-    repository = fields.Char('Repository', required=True)
-    tag = fields.Char('Tag', required=True)
-    image_id = fields.Char('Image ID', required=False)
+    repository = fields.Char('Repository', required=True, 
+                             readonly=lambda self: bool(self.image_id))
+    tag = fields.Char('Tag', required=True, 
+                      readonly=lambda self: bool(self.image_id))
+    image_id = fields.Char('Image ID', required=False, readonly=True)
     created = fields.Datetime('Created')
     size = fields.Float('Size (bytes)')
     shared_size = fields.Float('Shared Size (bytes)')
@@ -37,8 +39,12 @@ class PortainerImage(models.Model):
     layers = fields.Html('Layers', compute='_compute_layers', store=True, help='Image layers with size information')
     labels_html = fields.Html('Labels Table', compute='_compute_labels_html', store=True, help='Image labels in table format')
     
-    server_id = fields.Many2one('j_portainer.server', string='Server', required=True)
-    environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True)
+    server_id = fields.Many2one('j_portainer.server', string='Server', required=True,
+                                default=lambda self: self.env['j_portainer.server'].search([], limit=1),
+                                readonly=lambda self: bool(self.image_id))
+    environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True,
+                                    default=lambda self: self.env['j_portainer.environment'].search([], limit=1),
+                                    readonly=lambda self: bool(self.image_id))
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
     # Build functionality fields
@@ -46,16 +52,21 @@ class PortainerImage(models.Model):
         ('web_editor', 'Web Editor'),
         ('upload', 'Upload'),
         ('url', 'URL')
-    ], string='Build Method', required=True, default='web_editor')
+    ], string='Build Method', required=True, default='web_editor',
+       readonly=lambda self: bool(self.image_id))
     
     dockerfile_content = fields.Text('Dockerfile Content', 
-                                   help='Define the content of the Dockerfile')
+                                   help='Define the content of the Dockerfile',
+                                   readonly=lambda self: bool(self.image_id))
     dockerfile_upload = fields.Binary('Dockerfile Upload',
-                                    help='You can upload a Dockerfile or a tar archive containing a Dockerfile from your computer. When using a tarball, the root folder will be used as the build context.')
+                                    help='You can upload a Dockerfile or a tar archive containing a Dockerfile from your computer. When using a tarball, the root folder will be used as the build context.',
+                                    readonly=lambda self: bool(self.image_id))
     build_url = fields.Char('URL',
-                           help='Specify the URL to a Dockerfile, a tarball or a public Git repository (suffixed by .git). When using a Git repository URL, build contexts can be specified as in the Docker documentation.')
+                           help='Specify the URL to a Dockerfile, a tarball or a public Git repository (suffixed by .git). When using a Git repository URL, build contexts can be specified as in the Docker documentation.',
+                           readonly=lambda self: bool(self.image_id))
     dockerfile_path = fields.Char('Dockerfile Path',
-                                 help='Indicate the path to the Dockerfile within the tarball/repository (ignored when using a Dockerfile).')
+                                 help='Indicate the path to the Dockerfile within the tarball/repository (ignored when using a Dockerfile).',
+                                 readonly=lambda self: bool(self.image_id))
     
     def _get_api(self):
         """Get API client"""
