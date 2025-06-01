@@ -15,7 +15,7 @@ class PortainerImage(models.Model):
     
     repository = fields.Char('Repository', required=True)
     tag = fields.Char('Tag', required=True)
-    image_id = fields.Char('Image ID', required=True)
+    image_id = fields.Char('Image ID', required=False)
     created = fields.Datetime('Created')
     size = fields.Float('Size (bytes)')
     shared_size = fields.Float('Shared Size (bytes)')
@@ -33,9 +33,24 @@ class PortainerImage(models.Model):
     labels_html = fields.Html('Labels Table', compute='_compute_labels_html', store=True, help='Image labels in table format')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True)
-    environment_id = fields.Integer('Environment ID', required=True)
-    environment_name = fields.Char('Environment', required=True)
+    environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True)
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
+    
+    # Build functionality fields
+    build_method = fields.Selection([
+        ('web_editor', 'Web Editor'),
+        ('upload', 'Upload'),
+        ('url', 'URL')
+    ], string='Build Method', required=True, default='web_editor')
+    
+    dockerfile_content = fields.Text('Dockerfile Content', 
+                                   help='Define the content of the Dockerfile')
+    dockerfile_upload = fields.Binary('Dockerfile Upload',
+                                    help='You can upload a Dockerfile or a tar archive containing a Dockerfile from your computer. When using a tarball, the root folder will be used as the build context.')
+    build_url = fields.Char('URL',
+                           help='Specify the URL to a Dockerfile, a tarball or a public Git repository (suffixed by .git). When using a Git repository URL, build contexts can be specified as in the Docker documentation.')
+    dockerfile_path = fields.Char('Dockerfile Path',
+                                 help='Indicate the path to the Dockerfile within the tarball/repository (ignored when using a Dockerfile).')
     
     def _get_api(self):
         """Get API client"""
