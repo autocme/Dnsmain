@@ -12,7 +12,7 @@ class PortainerImageTag(models.Model):
     repository = fields.Char('Repository', required=True, index=True)
     tag = fields.Char('Tag', required=True, index=True)
     display_name = fields.Char('Display Name', compute='_compute_display_name', store=True, index=True)
-    image_id = fields.Many2one('j_portainer.image', string='Image', required=True)
+    image_id = fields.Many2one('j_portainer.image', string='Image', required=True, ondelete='cascade')
     color = fields.Integer('Color Index', default=lambda self: random.randint(1, 11))
     
     _sql_constraints = [

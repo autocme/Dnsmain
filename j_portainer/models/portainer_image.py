@@ -91,6 +91,24 @@ class PortainerImage(models.Model):
         else:
             return f"{size_bytes / (1000 * 1000 * 1000):.1f} GB"
     
+    @api.onchange('build_method')
+    def _onchange_build_method(self):
+        """Clear irrelevant build fields when build method changes"""
+        if self.build_method == 'web_editor':
+            # Clear upload and URL fields
+            self.dockerfile_upload = False
+            self.build_url = False
+            self.dockerfile_path = False
+        elif self.build_method == 'upload':
+            # Clear web editor and URL fields
+            self.dockerfile_content = False
+            self.build_url = False
+            self.dockerfile_path = False
+        elif self.build_method == 'url':
+            # Clear web editor and upload fields
+            self.dockerfile_content = False
+            self.dockerfile_upload = False
+    
     @api.depends('repository', 'tag')
     def _compute_display_name(self):
         """Compute display name based on repository and tag"""
