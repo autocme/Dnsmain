@@ -1470,9 +1470,14 @@ class PortainerAPI(models.AbstractModel):
             else:
                 raise UserError(_("Invalid build method: %s") % build_method)
             
-            # Make build request
-            endpoint = f"/api/endpoints/{environment_id}/docker/build"
-            response = server._make_api_request(endpoint, 'POST', data=data, params=params, headers=headers)
+            # Make build request using requests directly (not _make_api_request for binary data)
+            import requests
+            url = server.url.rstrip('/') + f"/api/endpoints/{environment_id}/docker/build"
+            
+            if data:
+                response = requests.post(url, headers=headers, data=data, params=params, verify=server.verify_ssl, timeout=60)
+            else:
+                response = requests.post(url, headers=headers, params=params, verify=server.verify_ssl, timeout=60)
             
             if response.status_code in [200, 201]:
                 # Parse build response and get image details
