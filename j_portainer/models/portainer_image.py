@@ -178,18 +178,32 @@ class PortainerImage(models.Model):
                         ], limit=1)
                         
                         if not existing_tag:
-                            new_tag_record = self.env['j_portainer.image.tag'].create({
-                                'image_id': existing_image.id,
+                            _logger.info(f"Adding new tag {vals['repository']}:{vals['tag']} to existing image {existing_image.image_id}")
+                            
+                            # Update all_tags JSON field to include the new tag
+                            current_tags = []
+                            if existing_image.all_tags:
+                                try:
+                                    current_tags = json.loads(existing_image.all_tags)
+                                except:
+                                    current_tags = []
+                            
+                            # Add the new tag to the list
+                            new_tag_info = {
                                 'repository': vals['repository'],
                                 'tag': vals['tag']
-                            })
-                            _logger.info(f"Created new tag record: {vals['repository']}:{vals['tag']} for image {existing_image.image_id}")
+                            }
                             
-                            # Force immediate update of computed fields
-                            if hasattr(existing_image, '_compute_layers'):
-                                existing_image._compute_layers()
-                            if hasattr(existing_image, '_compute_labels_html'):
-                                existing_image._compute_labels_html()
+                            # Check if this tag combination already exists in all_tags
+                            tag_exists = any(
+                                tag.get('repository') == vals['repository'] and tag.get('tag') == vals['tag']
+                                for tag in current_tags
+                            )
+                            
+                            if not tag_exists:
+                                current_tags.append(new_tag_info)
+                                existing_image.all_tags = json.dumps(current_tags)
+                                _logger.info(f"Updated all_tags JSON with new tag: {vals['repository']}:{vals['tag']}")
                         
                         # Update existing image with latest data
                         existing_image.write({
