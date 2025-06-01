@@ -58,8 +58,7 @@
                     
                     <notebook>
                         <page string="Tags" name="tags">
-                            <field name="image_tag_ids" 
-                                   context="{'default_image_id': active_id}"
+                            <field name="image_tag_ids" widget="many2many_tags" context="{'default_image_id': active_id}"
                                    options="{'color_field': 'color'}"/>
                         </page>
 
