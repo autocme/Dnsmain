@@ -13,6 +13,11 @@ class PortainerImage(models.Model):
     _description = 'Portainer Image'
     _order = 'repository, tag'
     
+    _sql_constraints = [
+        ('unique_image_per_environment', 'unique(image_id, environment_id)', 
+         'An image with this ID already exists in this environment')
+    ]
+    
     repository = fields.Char('Repository', required=True)
     tag = fields.Char('Tag', required=True)
     image_id = fields.Char('Image ID', required=False)
@@ -155,18 +160,63 @@ class PortainerImage(models.Model):
                         'last_sync': fields.Datetime.now()
                     })
                     
+                    # Check if image with same image_id already exists in this environment
+                    existing_image = self.search([
+                        ('image_id', '=', vals['image_id']),
+                        ('environment_id', '=', vals['environment_id'])
+                    ], limit=1)
+                    
+                    if existing_image:
+                        # Image already exists, add new tag to existing image
+                        _logger.info(f"Image {vals['image_id']} already exists, adding tag {vals['repository']}:{vals['tag']}")
+                        
+                        # Update existing image with latest data
+                        existing_image.write({
+                            'created': vals.get('created'),
+                            'size': vals.get('size', 0),
+                            'shared_size': vals.get('shared_size', 0),
+                            'virtual_size': vals.get('virtual_size', 0),
+                            'labels': vals.get('labels'),
+                            'details': vals.get('details'),
+                            'enhanced_layers_data': vals.get('enhanced_layers_data'),
+                            'last_sync': fields.Datetime.now()
+                        })
+                        
+                        # Sync tags for existing image to include the new tag
+                        existing_image._sync_image_tags()
+                        
+                        # Mark this vals as handled by setting a flag
+                        vals['_duplicate_handled'] = True
+                        vals['_existing_record'] = existing_image
+                    
                 except Exception as e:
                     # Prevent record creation if Portainer build fails
                     raise UserError(_("Failed to create image in Portainer: %s") % str(e))
         
-        # Create records in Odoo after successful Portainer build
-        records = super().create(vals_list)
+        # Filter out duplicate-handled vals and collect existing records
+        result_records = self.env['j_portainer.image']
+        vals_to_create = []
         
-        # Sync image tags for each created image
-        for record in records:
-            record._sync_image_tags()
+        for vals in vals_list:
+            if vals.get('_duplicate_handled'):
+                # Add existing record to result
+                result_records += vals['_existing_record']
+                # Clean up temporary flags
+                del vals['_duplicate_handled']
+                del vals['_existing_record']
+            else:
+                vals_to_create.append(vals)
         
-        return records
+        # Create new records only for non-duplicate images
+        if vals_to_create:
+            new_records = super().create(vals_to_create)
+            result_records += new_records
+            
+            # Sync image tags for newly created images
+            for record in new_records:
+                record._sync_image_tags()
+        
+        return result_records
     
     @api.depends('repository', 'tag')
     def _compute_display_name(self):
