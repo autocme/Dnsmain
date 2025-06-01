@@ -81,11 +81,23 @@ class PortainerImageTag(models.Model):
                     }
                 )
                 
-                if not (response and hasattr(response, 'status_code') and response.status_code == 201):
-                    error_msg = _("Failed to tag image in Portainer")
-                    if hasattr(response, 'text'):
-                        error_msg += f": {response.text}"
-                    raise UserError(error_msg)
+                # Check for successful response (201 Created for tag operation)
+                if not response:
+                    raise UserError(_("No response from Portainer API"))
+                
+                # Handle both dict response (from direct_api_call) and response object
+                if isinstance(response, dict):
+                    if not response.get('success', True):
+                        error_msg = response.get('message', 'Unknown error from Portainer')
+                        raise UserError(_("Failed to tag image in Portainer: %s") % error_msg)
+                elif hasattr(response, 'status_code'):
+                    if response.status_code != 201:
+                        error_msg = _("Failed to tag image in Portainer")
+                        if hasattr(response, 'text'):
+                            error_msg += f": {response.text}"
+                        raise UserError(error_msg)
+                else:
+                    raise UserError(_("Invalid response from Portainer API"))
                     
                 _logger.info(f"Successfully tagged image {image.image_id} with {new_tag_name} in Portainer")
                 
@@ -114,11 +126,23 @@ class PortainerImageTag(models.Model):
                     params={'force': 'false'}
                 )
                 
-                if not (response and hasattr(response, 'status_code') and response.status_code in [200, 204]):
-                    error_msg = _("Failed to remove tag from Portainer")
-                    if hasattr(response, 'text'):
-                        error_msg += f": {response.text}"
-                    raise UserError(error_msg)
+                # Check for successful response (200 OK or 204 No Content for delete operation)
+                if not response:
+                    raise UserError(_("No response from Portainer API"))
+                
+                # Handle both dict response (from direct_api_call) and response object
+                if isinstance(response, dict):
+                    if not response.get('success', True):
+                        error_msg = response.get('message', 'Unknown error from Portainer')
+                        raise UserError(_("Failed to remove tag from Portainer: %s") % error_msg)
+                elif hasattr(response, 'status_code'):
+                    if response.status_code not in [200, 204]:
+                        error_msg = _("Failed to remove tag from Portainer")
+                        if hasattr(response, 'text'):
+                            error_msg += f": {response.text}"
+                        raise UserError(error_msg)
+                else:
+                    raise UserError(_("Invalid response from Portainer API"))
                     
                 _logger.info(f"Successfully removed tag {tag_name} from Portainer")
                 
