@@ -1217,8 +1217,7 @@ class PortainerServer(models.Model):
                     # Use size values directly from the API response without any conversion
                     base_image_data = {
                         'server_id': self.id,
-                        'environment_id': endpoint_id,
-                        'environment_name': env.name,
+                        'environment_id': env.id,
                         'image_id': image_id,
                         'created': self._safe_parse_timestamp(image.get('Created', 0)),
                         'size': image.get('Size', 0),
@@ -1242,7 +1241,7 @@ class PortainerServer(models.Model):
                         # Check if this image already exists in Odoo
                         existing_image = self.env['j_portainer.image'].search([
                             ('server_id', '=', self.id),
-                            ('environment_id', '=', endpoint_id),
+                            ('environment_id', '=', env.id),
                             ('image_id', '=', image_id)
                         ], limit=1)
                         

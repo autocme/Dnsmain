@@ -56,7 +56,7 @@ class PortainerEnvironment(models.Model):
             # Images
             env.image_count = self.env['j_portainer.image'].search_count([
                 ('server_id', '=', env.server_id.id),
-                ('environment_id', '=', env.environment_id)
+                ('environment_id', '=', env.id)
             ])
             
             # Volumes

@@ -24,7 +24,6 @@
                             <field name="image_id" readonly="1"/>
                             <field name="server_id" readonly="1"/>
                             <field name="environment_id" readonly="1"/>
-                            <field name="environment_name" readonly="1"/>
                             <field name="last_sync" readonly="1"/>
                         </group>
                         <group>
@@ -32,6 +31,23 @@
                             <field name="created" readonly="1"/>
                             <field name="in_use" readonly="1"/>
                         </group>
+                    </group>
+                    
+                    <group string="Build Configuration">
+                        <field name="build_method"/>
+                        <field name="dockerfile_content" 
+                               invisible="build_method != 'web_editor'" 
+                               required="build_method == 'web_editor'"
+                               widget="ace" options="{'mode': 'dockerfile'}"/>
+                        <field name="dockerfile_upload" 
+                               invisible="build_method != 'upload'" 
+                               required="build_method == 'upload'"/>
+                        <field name="build_url" 
+                               invisible="build_method != 'url'" 
+                               required="build_method == 'url'"/>
+                        <field name="dockerfile_path" 
+                               invisible="build_method != 'url'" 
+                               required="build_method == 'url'"/>
                     </group>
                     
                     <notebook>
@@ -65,7 +81,7 @@
                 <field name="image_id"/>
                 <field name="image_tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
                 <field name="server_id"/>
-                <field name="environment_name"/>
+                <field name="environment_id"/>
                 <field name="created"/>
                 <field name="size_formatted"/>
                 <field name="in_use"/>
@@ -85,14 +101,14 @@
                 <field name="repository"/>
                 <field name="image_id"/>
                 <field name="server_id"/>
-                <field name="environment_name"/>
+                <field name="environment_id"/>
                 <field name="image_tag_ids" string="Image Tags" filter_domain="[('image_tag_ids.display_name', 'ilike', self)]"/>
                 <separator/>
                 <filter string="In Use" name="in_use" domain="[('in_use', '=', True)]"/>
                 <filter string="Not In Use" name="not_in_use" domain="[('in_use', '=', False)]"/>
                 <group expand="0" string="Group By">
                     <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
-                    <filter string="Environment" name="group_by_environment" domain="[]" context="{'group_by': 'environment_name'}"/>
+                    <filter string="Environment" name="group_by_environment" domain="[]" context="{'group_by': 'environment_id'}"/>
                     <filter string="Repository" name="group_by_repository" domain="[]" context="{'group_by': 'repository'}"/>
                 </group>
             </search>
