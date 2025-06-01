@@ -1480,8 +1480,15 @@ class PortainerAPI(models.AbstractModel):
                 response = requests.post(url, headers=headers, params=params, verify=server.verify_ssl, timeout=60)
             
             if response.status_code in [200, 201]:
-                # Parse build response and get image details
-                build_response = response.json() if response.content else {}
+                # Docker build API returns streaming JSON, not a single JSON object
+                build_response = {}
+                if response.content:
+                    try:
+                        # Try to parse as single JSON first
+                        build_response = response.json()
+                    except:
+                        # If that fails, it's likely streaming JSON - just use the text
+                        build_response = {'build_output': response.text}
                 
                 # Get the created image details
                 image_list_response = server._make_api_request(
