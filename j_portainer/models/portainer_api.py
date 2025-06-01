@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from odoo import models
+from odoo import models, _
+from odoo.exceptions import UserError
 import logging
 import json
 import io
@@ -1389,6 +1390,122 @@ class PortainerAPI(models.AbstractModel):
             _logger.debug(f"Problematic command: {original_command}")
             # Return the original command if cleaning fails
             return original_command
+    
+    def build_image(self, server_id, environment_id, build_data):
+        """
+        Build an image in Portainer using Docker Build API
+        
+        Args:
+            server_id (int): Portainer server ID
+            environment_id (int): Environment ID  
+            build_data (dict): Build configuration data
+            
+        Returns:
+            dict: Image build response data or raises UserError on failure
+        """
+        server = self.env['j_portainer.server'].browse(server_id)
+        if not server.exists():
+            raise UserError(_("Server not found"))
+        
+        try:
+            build_method = build_data.get('build_method')
+            repository = build_data.get('repository')
+            tag = build_data.get('tag', 'latest')
+            
+            # Prepare build parameters
+            params = {
+                't': f"{repository}:{tag}",  # Image tag
+                'rm': 'true',  # Remove intermediate containers
+                'forcerm': 'true'  # Always remove intermediate containers
+            }
+            
+            headers = server._get_auth_headers()
+            
+            if build_method == 'web_editor':
+                # Build from Dockerfile content
+                dockerfile_content = build_data.get('dockerfile_content')
+                if not dockerfile_content:
+                    raise UserError(_("Dockerfile content is required for web editor build method"))
+                
+                headers['Content-Type'] = 'application/x-tar'
+                
+                # Create tar archive with Dockerfile
+                import tarfile
+                import io
+                tar_buffer = io.BytesIO()
+                with tarfile.open(fileobj=tar_buffer, mode='w') as tar:
+                    dockerfile_info = tarfile.TarInfo(name='Dockerfile')
+                    dockerfile_info.size = len(dockerfile_content.encode())
+                    tar.addfile(dockerfile_info, io.BytesIO(dockerfile_content.encode()))
+                
+                data = tar_buffer.getvalue()
+                
+            elif build_method == 'upload':
+                # Build from uploaded file
+                dockerfile_upload = build_data.get('dockerfile_upload')
+                if not dockerfile_upload:
+                    raise UserError(_("Dockerfile upload is required for upload build method"))
+                
+                import base64
+                data = base64.b64decode(dockerfile_upload)
+                headers['Content-Type'] = 'application/x-tar'
+                
+            elif build_method == 'url':
+                # Build from URL
+                build_url = build_data.get('build_url')
+                dockerfile_path = build_data.get('dockerfile_path', 'Dockerfile')
+                if not build_url:
+                    raise UserError(_("Build URL is required for URL build method"))
+                
+                params['remote'] = build_url
+                if dockerfile_path and dockerfile_path != 'Dockerfile':
+                    params['dockerfile'] = dockerfile_path
+                
+                data = None
+                headers.pop('Content-Type', None)
+            
+            else:
+                raise UserError(_("Invalid build method: %s") % build_method)
+            
+            # Make build request
+            endpoint = f"/api/endpoints/{environment_id}/docker/build"
+            response = server._make_api_request(endpoint, 'POST', data=data, params=params, headers=headers)
+            
+            if response.status_code in [200, 201]:
+                # Parse build response and get image details
+                build_response = response.json() if response.content else {}
+                
+                # Get the created image details
+                image_list_response = server._make_api_request(
+                    f"/api/endpoints/{environment_id}/docker/images/json",
+                    'GET',
+                    params={'filters': f'{{"reference":["{repository}:{tag}"]}}'}
+                )
+                
+                if image_list_response.status_code == 200:
+                    images = image_list_response.json()
+                    if images:
+                        image_data = images[0]
+                        return {
+                            'image_id': image_data.get('Id'),
+                            'created': self._safe_parse_timestamp(image_data.get('Created', 0)),
+                            'size': image_data.get('Size', 0),
+                            'shared_size': image_data.get('SharedSize', 0),
+                            'virtual_size': image_data.get('VirtualSize', 0),
+                            'labels': image_data.get('Labels') or {},
+                            'build_response': build_response
+                        }
+                
+                raise UserError(_("Image built successfully but could not retrieve image details"))
+            else:
+                error_msg = response.text or f"HTTP {response.status_code}"
+                raise UserError(_("Failed to build image in Portainer: %s") % error_msg)
+                
+        except UserError:
+            raise
+        except Exception as e:
+            _logger.error(f"Error building image: {str(e)}")
+            raise UserError(_("Error building image: %s") % str(e))
     
     def create_template(self, server_id, template_data):
         """Create a custom template in Portainer

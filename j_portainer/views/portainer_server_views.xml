@@ -105,7 +105,6 @@
                                     <field name="repository"/>
                                     <field name="tag"/>
                                     <field name="image_id"/>
-                                    <field name="environment_name"/>
                                     <field name="created"/>
                                 </tree>
                             </field>
