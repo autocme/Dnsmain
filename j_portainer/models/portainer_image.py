@@ -178,12 +178,19 @@ class PortainerImage(models.Model):
                         ], limit=1)
                         
                         if not existing_tag:
-                            self.env['j_portainer.image.tag'].create({
+                            new_tag_record = self.env['j_portainer.image.tag'].create({
                                 'image_id': existing_image.id,
                                 'repository': vals['repository'],
                                 'tag': vals['tag']
                             })
                             _logger.info(f"Created new tag record: {vals['repository']}:{vals['tag']} for image {existing_image.image_id}")
+                            
+                            # Force immediate update of computed fields
+                            existing_image._compute_all_tags()
+                            if hasattr(existing_image, '_compute_layers'):
+                                existing_image._compute_layers()
+                            if hasattr(existing_image, '_compute_labels_html'):
+                                existing_image._compute_labels_html()
                         
                         # Update existing image with latest data
                         existing_image.write({
@@ -196,6 +203,10 @@ class PortainerImage(models.Model):
                             'enhanced_layers_data': vals.get('enhanced_layers_data'),
                             'last_sync': fields.Datetime.now()
                         })
+                        
+                        # Force refresh of tag-related computed fields after update
+                        existing_image.invalidate_cache()
+                        existing_image._compute_all_tags()
                         
                         # Sync tags for existing image to include all current tags
                         existing_image._sync_image_tags()
