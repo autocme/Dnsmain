@@ -160,14 +160,9 @@ class PortainerImage(models.Model):
         # Create records in Odoo after successful Portainer build
         records = super().create(vals_list)
         
-        # Sync image tags and display success message for each created image
+        # Sync image tags for each created image
         for record in records:
             record._sync_image_tags()
-            if record.image_id:  # Only show message for newly built images
-                self.env.user.notify_success(
-                    title=_('Image Created Successfully'),
-                    message=_('Image %s:%s has been built and created in Portainer') % (record.repository, record.tag)
-                )
         
         return records
     
