@@ -1501,6 +1501,8 @@ class PortainerAPI(models.AbstractModel):
                     images = image_list_response.json()
                     if images:
                         image_data = images[0]
+                        image_id = image_data.get('Id')
+                        
                         # Parse timestamp safely
                         created_timestamp = image_data.get('Created', 0)
                         created_datetime = None
@@ -1514,13 +1516,27 @@ class PortainerAPI(models.AbstractModel):
                             except:
                                 created_datetime = None
                         
+                        # Get detailed image information including layers
+                        details_response = server._make_api_request(
+                            f"/api/endpoints/{environment_id}/docker/images/{image_id}/json", 'GET'
+                        )
+                        
+                        details = {}
+                        if details_response.status_code == 200:
+                            details = details_response.json()
+                        
+                        # Get enhanced layer data using Image History API
+                        enhanced_layers = self.get_image_history(server_id, environment_id, image_id)
+                        
                         return {
-                            'image_id': image_data.get('Id'),
+                            'image_id': image_id,
                             'created': created_datetime,
                             'size': image_data.get('Size', 0),
                             'shared_size': image_data.get('SharedSize', 0),
                             'virtual_size': image_data.get('VirtualSize', 0),
                             'labels': image_data.get('Labels') or {},
+                            'details': json.dumps(details) if details else None,
+                            'enhanced_layers_data': json.dumps(enhanced_layers) if enhanced_layers else None,
                             'build_response': build_response
                         }
                 

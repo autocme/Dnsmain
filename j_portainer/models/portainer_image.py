@@ -142,7 +142,7 @@ class PortainerImage(models.Model):
                 try:
                     build_result = api.build_image(server_id, env_record.environment_id, build_data)
                     
-                    # Update vals with Portainer response data
+                    # Update vals with complete Portainer response data
                     vals.update({
                         'image_id': build_result.get('image_id'),
                         'created': build_result.get('created'),
@@ -150,6 +150,8 @@ class PortainerImage(models.Model):
                         'shared_size': build_result.get('shared_size', 0),
                         'virtual_size': build_result.get('virtual_size', 0),
                         'labels': json.dumps(build_result.get('labels', {})) if build_result.get('labels') else None,
+                        'details': build_result.get('details'),
+                        'enhanced_layers_data': build_result.get('enhanced_layers_data'),
                         'last_sync': fields.Datetime.now()
                     })
                     
