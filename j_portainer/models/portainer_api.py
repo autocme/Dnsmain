@@ -1419,7 +1419,10 @@ class PortainerAPI(models.AbstractModel):
                 'forcerm': 'true'  # Always remove intermediate containers
             }
             
-            headers = server._get_auth_headers()
+            headers = {
+                'X-API-Key': server._get_api_key_header(),
+                'Content-Type': 'application/json'
+            }
             
             if build_method == 'web_editor':
                 # Build from Dockerfile content
