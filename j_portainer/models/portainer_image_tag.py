@@ -14,9 +14,11 @@ class PortainerImageTag(models.Model):
     _rec_name = 'display_name'
     
     repository = fields.Char('Repository', required=True, index=True)
-    tag = fields.Char('Tag', required=True, index=True)
+    tag = fields.Char('Tag', required=False, index=True, default='latest', 
+                      help='Tag name. If not specified, "latest" will be used by default.')
     display_name = fields.Char('Display Name', compute='_compute_display_name', store=True, index=True)
-    image_id = fields.Many2one('j_portainer.image', string='Image', required=True, ondelete='cascade')
+    image_id = fields.Many2one('j_portainer.image', string='Image', required=True, ondelete='cascade',
+                               default=lambda self: self.env.context.get('default_image_id'))
     color = fields.Integer('Color Index', default=lambda self: random.randint(1, 11))
     
     _sql_constraints = [
