@@ -171,20 +171,19 @@ class PortainerImage(models.Model):
                         _logger.info(f"Image {vals['image_id']} already exists, adding tag {vals['repository']}:{vals['tag']}")
                         
                         # Create the new tag record for this repository:tag combination
-                        new_tag = f"{vals['repository']}:{vals['tag']}"
                         existing_tag = self.env['j_portainer.image.tag'].search([
                             ('image_id', '=', existing_image.id),
-                            ('tag', '=', new_tag)
+                            ('repository', '=', vals['repository']),
+                            ('tag', '=', vals['tag'])
                         ], limit=1)
                         
                         if not existing_tag:
                             self.env['j_portainer.image.tag'].create({
                                 'image_id': existing_image.id,
-                                'tag': new_tag,
                                 'repository': vals['repository'],
-                                'tag_name': vals['tag']
+                                'tag': vals['tag']
                             })
-                            _logger.info(f"Created new tag record: {new_tag} for image {existing_image.image_id}")
+                            _logger.info(f"Created new tag record: {vals['repository']}:{vals['tag']} for image {existing_image.image_id}")
                         
                         # Update existing image with latest data
                         existing_image.write({
