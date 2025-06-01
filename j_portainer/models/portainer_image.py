@@ -160,8 +160,9 @@ class PortainerImage(models.Model):
         # Create records in Odoo after successful Portainer build
         records = super().create(vals_list)
         
-        # Display success message for each created image
+        # Sync image tags and display success message for each created image
         for record in records:
+            record._sync_image_tags()
             if record.image_id:  # Only show message for newly built images
                 self.env.user.notify_success(
                     title=_('Image Created Successfully'),
@@ -179,13 +180,7 @@ class PortainerImage(models.Model):
             else:
                 image.display_name = image.repository
                 
-    @api.model_create_multi
-    def create(self, vals_list):
-        """Override create to sync image tags"""
-        records = super(PortainerImage, self).create(vals_list)
-        for record in records:
-            record._sync_image_tags()
-        return records
+
     
     def write(self, vals):
         """Override write to sync image tags"""
