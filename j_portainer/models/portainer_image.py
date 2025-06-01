@@ -186,7 +186,6 @@ class PortainerImage(models.Model):
                             _logger.info(f"Created new tag record: {vals['repository']}:{vals['tag']} for image {existing_image.image_id}")
                             
                             # Force immediate update of computed fields
-                            existing_image._compute_all_tags()
                             if hasattr(existing_image, '_compute_layers'):
                                 existing_image._compute_layers()
                             if hasattr(existing_image, '_compute_labels_html'):
@@ -205,8 +204,6 @@ class PortainerImage(models.Model):
                         })
                         
                         # Force refresh of tag-related computed fields after update
-                        existing_image.invalidate_cache()
-                        existing_image._compute_all_tags()
                         
                         # Sync tags for existing image to include all current tags
                         existing_image._sync_image_tags()
