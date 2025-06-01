@@ -283,22 +283,43 @@ class PortainerImage(models.Model):
                 # Parse the all_tags JSON data
                 all_tags_data = json.loads(image.all_tags)
                 
-                # Delete existing tags
-                image.image_tag_ids.unlink()
+                # Get current existing tags for this image
+                existing_tags = image.image_tag_ids
+                existing_tag_combinations = set()
+                for tag in existing_tags:
+                    existing_tag_combinations.add((tag.repository, tag.tag))
                 
-                # Create new tag records
+                # Find tags that should exist according to all_tags JSON
+                expected_tag_combinations = set()
                 tag_vals_list = []
+                
                 for tag_info in all_tags_data:
                     if isinstance(tag_info, dict) and 'repository' in tag_info and 'tag' in tag_info:
-                        # New format with repository and tag separately
-                        tag_vals_list.append({
-                            'repository': tag_info['repository'],
-                            'tag': tag_info['tag'],
-                            'image_id': image.id
-                        })
+                        repo = tag_info['repository']
+                        tag_name = tag_info['tag']
+                        expected_tag_combinations.add((repo, tag_name))
+                        
+                        # Only add to creation list if it doesn't exist
+                        if (repo, tag_name) not in existing_tag_combinations:
+                            tag_vals_list.append({
+                                'repository': repo,
+                                'tag': tag_name,
+                                'image_id': image.id
+                            })
                 
+                # Create only missing tags
                 if tag_vals_list:
                     self.env['j_portainer.image.tag'].create(tag_vals_list)
+                    _logger.info(f"Created {len(tag_vals_list)} new tag records for image {image.image_id}")
+                
+                # Remove tags that shouldn't exist anymore
+                tags_to_remove = existing_tags.filtered(
+                    lambda t: (t.repository, t.tag) not in expected_tag_combinations
+                )
+                if tags_to_remove:
+                    tags_to_remove.unlink()
+                    _logger.info(f"Removed {len(tags_to_remove)} obsolete tag records for image {image.image_id}")
+                    
             except Exception as e:
                 _logger.error(f"Error syncing image tags for image {image.id}: {str(e)}")
                 
