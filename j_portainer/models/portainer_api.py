@@ -1501,9 +1501,22 @@ class PortainerAPI(models.AbstractModel):
                     images = image_list_response.json()
                     if images:
                         image_data = images[0]
+                        # Parse timestamp safely
+                        created_timestamp = image_data.get('Created', 0)
+                        created_datetime = None
+                        if created_timestamp:
+                            try:
+                                from datetime import datetime
+                                if isinstance(created_timestamp, str):
+                                    created_datetime = datetime.fromisoformat(created_timestamp.replace('Z', '+00:00'))
+                                else:
+                                    created_datetime = datetime.fromtimestamp(created_timestamp)
+                            except:
+                                created_datetime = None
+                        
                         return {
                             'image_id': image_data.get('Id'),
-                            'created': self._safe_parse_timestamp(image_data.get('Created', 0)),
+                            'created': created_datetime,
                             'size': image_data.get('Size', 0),
                             'shared_size': image_data.get('SharedSize', 0),
                             'virtual_size': image_data.get('VirtualSize', 0),
