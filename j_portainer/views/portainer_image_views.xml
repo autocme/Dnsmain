@@ -39,20 +39,20 @@
                         <field name="build_method" readonly="image_id"/>
                         <field name="dockerfile_content" 
                                invisible="build_method != 'web_editor'" 
-                               required="build_method == 'web_editor'"
+                               required="build_method == 'web_editor' and not image_id"
                                readonly="image_id"
                                widget="ace"/>
                         <field name="dockerfile_upload" 
                                invisible="build_method != 'upload'" 
-                               required="build_method == 'upload'"
+                               required="build_method == 'upload' and not image_id"
                                readonly="image_id"/>
                         <field name="build_url" 
                                invisible="build_method != 'url'" 
-                               required="build_method == 'url'"
+                               required="build_method == 'url' and not image_id"
                                readonly="image_id"/>
                         <field name="dockerfile_path" 
                                invisible="build_method != 'url'" 
-                               required="build_method == 'url'"
+                               required="build_method == 'url' and not image_id"
                                readonly="image_id"/>
                     </group>
                     
