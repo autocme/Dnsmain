@@ -460,11 +460,24 @@ class PortainerStack(models.Model):
                 'Type': 2  # Compose (API expects integer here)
             }
                 
-            # Make API request to create stack
+            # Make API request to create stack with proper query parameters
             endpoint = '/api/stacks'
-            _logger.info(f"Creating stack '{name}' on environment {environment_id} with data: {data}")
+            params = {
+                'type': 2,  # Compose stack
+                'method': 'string',  # Deploy from string content
+                'endpointId': environment_id
+            }
             
-            response = server._make_api_request(endpoint, 'POST', data=data)
+            # For string method, the stack content should be in 'stackFileContent' field
+            stack_data = {
+                'Name': name,
+                'stackFileContent': stack_file_content,
+                'Env': []  # Environment variables array
+            }
+            
+            _logger.info(f"Creating stack '{name}' on environment {environment_id} with params: {params} and data: {stack_data}")
+            
+            response = server._make_api_request(endpoint, 'POST', data=stack_data, params=params)
             
             _logger.info(f"Stack creation response: Status {response.status_code}, Content: {response.text}")
             
