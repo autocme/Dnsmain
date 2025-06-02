@@ -36,6 +36,7 @@ class PortainerImage(models.Model):
     enhanced_layers_data = fields.Text('Enhanced Layers Data', help='Enhanced layer data from Docker Image History API stored as JSON')
     layers = fields.Html('Layers', compute='_compute_layers', store=True, help='Image layers with size information')
     labels_html = fields.Html('Labels Table', compute='_compute_labels_html', store=True, help='Image labels in table format')
+    env_html = fields.Html('Environment Variables', compute='_compute_env_html', store=True, help='Image environment variables in table format')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True,
                                 default=lambda self: self.env['j_portainer.server'].search([], limit=1))
@@ -625,6 +626,62 @@ class PortainerImage(models.Model):
             except Exception as e:
                 _logger.error(f"Error computing labels HTML for image {image.id}: {str(e)}")
                 image.labels_html = f"<div class='text-danger'>Error computing labels: {str(e)}</div>"
+    
+    @api.depends('details')
+    def _compute_env_html(self):
+        """Compute HTML formatted table of environment variables"""
+        for image in self:
+            if not image.details:
+                image.env_html = "<div class='text-muted'>No environment variables available</div>"
+                continue
+                
+            try:
+                details_data = json.loads(image.details)
+                
+                # Extract environment variables from Config.Env
+                env_vars = []
+                config = details_data.get('Config', {})
+                if config and 'Env' in config and isinstance(config['Env'], list):
+                    env_vars = config['Env']
+                
+                if not env_vars:
+                    image.env_html = "<div class='text-muted'>No environment variables available</div>"
+                    continue
+                    
+                # Generate HTML table for environment variables
+                html = ['<table class="table table-sm table-bordered table-striped">',
+                        '<thead>',
+                        '<tr>',
+                        '<th width="30%">Variable Name</th>',
+                        '<th width="70%">Variable Value</th>',
+                        '</tr>',
+                        '</thead>',
+                        '<tbody>']
+                
+                for env_var in sorted(env_vars):
+                    # Parse environment variable (format: KEY=VALUE)
+                    if '=' in env_var:
+                        key, value = env_var.split('=', 1)
+                    else:
+                        key = env_var
+                        value = ''
+                    
+                    # Escape HTML characters to prevent XSS
+                    safe_key = str(key).replace('<', '&lt;').replace('>', '&gt;')
+                    safe_value = str(value).replace('<', '&lt;').replace('>', '&gt;')
+                    
+                    html.append('<tr>')
+                    html.append(f'<td class="text-monospace font-weight-bold">{safe_key}</td>')
+                    html.append(f'<td class="text-monospace">{safe_value}</td>')
+                    html.append('</tr>')
+                    
+                html.append('</tbody>')
+                html.append('</table>')
+                
+                image.env_html = ''.join(html)
+            except Exception as e:
+                _logger.error(f"Error computing environment variables HTML for image {image.id}: {str(e)}")
+                image.env_html = f"<div class='text-danger'>Error computing environment variables: {str(e)}</div>"
     
     def pull(self):
         """Pull the latest version of the image"""
