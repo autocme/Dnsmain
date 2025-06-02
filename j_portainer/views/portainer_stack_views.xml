@@ -47,12 +47,6 @@
                         </group>
                     </group>
                     
-                    <!-- <group>
-                        <group>
-                            
-                        </group>
-                    </group> -->
-                    
                     <notebook>
                         <!-- Web Editor page -->
                         <page string="Web Editor" name="web_editor" invisible="build_method != 'web_editor'">
@@ -111,10 +105,10 @@
                             </field>
                         </page>
                         
-                        <page string="Content" name="content">
+                        <!-- <page string="Content" name="content">
                             <field name="content" widget="text" readonly="0" 
                                    placeholder="Stack content will be displayed here"/>
-                        </page>
+                        </page> -->
                         
                         <page string="Details" name="details">
                             <field name="details" widget="html" readonly="1"/>
