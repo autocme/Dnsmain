@@ -653,7 +653,7 @@ class PortainerImage(models.Model):
             api = self._get_api()
             result = api.image_action(
                 self.server_id.id, 'remove',
-                endpoint=f"/endpoints/{self.environment_id}/docker/images/{self.image_id}",
+                endpoint=f"/endpoints/{self.environment_id.environment_id}/docker/images/{self.image_id}",
                 params={'force': True}
             )
             
