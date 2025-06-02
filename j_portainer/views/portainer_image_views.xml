@@ -66,6 +66,10 @@
                             <field name="labels_html" widget="html" readonly="1" nolabel="1"/>
                         </page>
                         
+                        <page string="Env" name="env">
+                            <field name="env_html" widget="html" readonly="1" nolabel="1"/>
+                        </page>
+                        
                         <page string="Layers" name="layers">
                             <field name="layers" widget="html" readonly="1"/>
                         </page>
