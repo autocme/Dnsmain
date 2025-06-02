@@ -460,28 +460,65 @@ class PortainerStack(models.Model):
                 'Type': 2  # Compose (API expects integer here)
             }
                 
-            # Try alternative endpoint format based on template deployment patterns
-            # First attempt: Use query string format like template deployment
-            endpoint = f'/api/stacks?type={data["Type"]}&method=string&endpointId={environment_id}'
+            # Use template deployment approach since direct stack creation isn't working
+            # Create a temporary custom template and deploy it
+            api_client = self.env['j_portainer.api']
             
-            # For string method, use simpler data structure
-            stack_data = {
-                'Name': name,
-                'StackFileContent': stack_file_content
+            # Create temporary template data
+            template_data = {
+                'title': f"temp-{name}",
+                'description': f"Temporary template for stack {name}",
+                'type': data['Type'],  # Stack type
+                'platform': 'linux',
+                'fileContent': stack_file_content,
+                'note': 'Auto-generated template for direct stack creation'
             }
             
-            _logger.info(f"Creating stack '{name}' on environment {environment_id} with endpoint: {endpoint} and data: {stack_data}")
+            _logger.info(f"Creating temporary template for stack '{name}' with data: {template_data}")
             
-            response = server._make_api_request(endpoint, 'POST', data=stack_data)
+            # Create the template first
+            template_result = api_client.create_custom_template(server.id, template_data)
             
-            _logger.info(f"Stack creation response: Status {response.status_code}, Content: {response.text}")
+            if not template_result or 'error' in template_result:
+                error_msg = template_result.get('error', 'Unknown error') if template_result else 'Failed to create template'
+                _logger.error(f"Failed to create temporary template: {error_msg}")
+                return False
             
-            if response.status_code in [200, 201, 204]:
-                # Refresh stacks
-                server.sync_stacks(environment_id)
+            template_id = template_result.get('id')
+            if not template_id:
+                _logger.error("Template creation succeeded but no ID returned")
+                return False
+            
+            _logger.info(f"Created temporary template with ID: {template_id}, now deploying as stack")
+            
+            # Deploy the template as a stack
+            deploy_params = {
+                'name': name,
+                'environment_id': environment_id
+            }
+            
+            deploy_result = api_client.deploy_template(
+                server_id=server.id,
+                template_id=template_id,
+                environment_id=environment_id,
+                is_custom=True,
+                params=deploy_params
+            )
+            
+            # Clean up the temporary template
+            try:
+                api_client.delete_custom_template(server.id, template_id)
+                _logger.info(f"Cleaned up temporary template {template_id}")
+            except Exception as e:
+                _logger.warning(f"Failed to clean up temporary template {template_id}: {str(e)}")
+            
+            # Check deployment result
+            if deploy_result and not ('error' in deploy_result):
+                _logger.info(f"Successfully deployed stack '{name}' via temporary template")
                 return True
             else:
-                _logger.error(f"Failed to create stack '{name}': Status {response.status_code}, Response: {response.text}")
+                error_msg = deploy_result.get('error', 'Unknown deployment error') if deploy_result else 'Deployment failed'
+                _logger.error(f"Failed to deploy template as stack: {error_msg}")
                 return False
                 
         except Exception as e:
