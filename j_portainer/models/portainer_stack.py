@@ -43,19 +43,17 @@ class PortainerStack(models.Model):
         ('repository', 'Repository')
     ], string='Build Method', required=True, default='web_editor')
     
-    # Repository fields
-    repository_url = fields.Char('Repository URL',
-                                help='Specify the URL to a public Git repository (suffixed by .git).')
-    repository_reference = fields.Char('Repository Reference',
-                                     help='Indicate a git reference (branch/tag). Defaults to ref in git repository.')
-    repository_username = fields.Char('Repository Username',
-                                    help='Username for repository authentication.')
-    repository_password = fields.Char('Repository Password',
-                                    help='Password for repository authentication.')
-    compose_file_path = fields.Char('Compose File Path',
-                                  help='Indicate the path to the compose file within the repository.')
-    additional_files = fields.Text('Additional Files',
-                                 help='Relative path to additional files that need to be imported.')
+    # Repository details
+    git_repository_url = fields.Char('Repository URL')
+    git_repository_reference = fields.Char('Reference', help="Branch, tag, or commit hash")
+    git_compose_path = fields.Char('Compose File Path', default='docker-compose.yml')
+    git_skip_tls = fields.Boolean('Skip TLS Verification', default=False)
+    git_authentication = fields.Boolean('Use Authentication', default=False)
+    git_credentials_id = fields.Many2one('j_portainer.git.credentials', string='Git Credentials')
+    git_username = fields.Char('Username')
+    git_token = fields.Char('Token/Password')
+    git_save_credential = fields.Boolean('Save Credentials', default=False)
+    git_credential_name = fields.Char('Credential Name')
     
     # Upload field
     compose_file_upload = fields.Binary('Compose File Upload',
@@ -69,12 +67,16 @@ class PortainerStack(models.Model):
         """Clear fields when build method changes"""
         if self.build_method == 'web_editor':
             # Clear repository and upload fields
-            self.repository_url = False
-            self.repository_reference = False
-            self.repository_username = False
-            self.repository_password = False
-            self.compose_file_path = False
-            self.additional_files = False
+            self.git_repository_url = False
+            self.git_repository_reference = False
+            self.git_compose_path = False
+            self.git_skip_tls = False
+            self.git_authentication = False
+            self.git_credentials_id = False
+            self.git_username = False
+            self.git_token = False
+            self.git_save_credential = False
+            self.git_credential_name = False
             self.compose_file_upload = False
         elif self.build_method == 'repository':
             # Clear content and upload fields
@@ -83,12 +85,16 @@ class PortainerStack(models.Model):
         elif self.build_method == 'upload':
             # Clear content and repository fields
             self.file_content = False
-            self.repository_url = False
-            self.repository_reference = False
-            self.repository_username = False
-            self.repository_password = False
-            self.compose_file_path = False
-            self.additional_files = False
+            self.git_repository_url = False
+            self.git_repository_reference = False
+            self.git_compose_path = False
+            self.git_skip_tls = False
+            self.git_authentication = False
+            self.git_credentials_id = False
+            self.git_username = False
+            self.git_token = False
+            self.git_save_credential = False
+            self.git_credential_name = False
 
     @api.depends('file_content')
     def _compute_content(self):
