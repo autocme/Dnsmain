@@ -1831,6 +1831,34 @@ class PortainerServer(models.Model):
                     _logger.error(f"Error syncing networks: {str(e)}")
                     raise UserError(_("Error syncing networks: %s") % str(e))
 
+    def _detect_environment_type(self, environment_id):
+        """Detect if environment is Docker standalone or Docker Swarm"""
+        try:
+            # Get Docker info to check Swarm status
+            response = self._make_api_request(f'/api/endpoints/{environment_id}/docker/info', 'GET')
+            
+            if response.status_code == 200:
+                docker_info = response.json()
+                
+                # Check Swarm status
+                swarm_info = docker_info.get('Swarm', {})
+                node_id = swarm_info.get('NodeID', '')
+                
+                # If NodeID exists and is not empty, it's a Swarm environment
+                if node_id and node_id.strip():
+                    _logger.info(f"Environment {environment_id} detected as Docker Swarm")
+                    return 'swarm'
+                else:
+                    _logger.info(f"Environment {environment_id} detected as Docker standalone")
+                    return 'docker'
+            else:
+                _logger.warning(f"Failed to detect environment type for {environment_id}, defaulting to Docker")
+                return 'docker'
+                
+        except Exception as e:
+            _logger.error(f"Error detecting environment type for {environment_id}: {str(e)}")
+            return 'docker'  # Default to Docker on error
+
     def sync_standard_templates(self):
         """Sync standard application templates from Portainer"""
         self.ensure_one()
@@ -1838,6 +1866,12 @@ class PortainerServer(models.Model):
         try:
             # Keep track of synced templates
             synced_template_ids = []
+
+            # Detect environment types for filtering templates
+            environment_types = {}
+            for env in self.environment_ids:
+                env_type = self._detect_environment_type(env.environment_id)
+                environment_types[env.environment_id] = env_type
 
             # Get templates
             response = self._make_api_request('/api/templates', 'GET')
@@ -1873,10 +1907,23 @@ class PortainerServer(models.Model):
                     _logger.warning(f"Skipping non-dict template: {template}")
                     continue
 
-                # Skip Swarm stack templates (type 2) for Docker environments
+                # Filter templates based on environment compatibility
                 template_type = template.get('type', 1)
-                if template_type == 2:  # Swarm stack type
-                    _logger.info(f"Skipping Swarm stack template '{template.get('title', 'Unknown')}' - not compatible with Docker environment")
+                
+                # Check if any environment can use this template
+                template_compatible = False
+                for env_id, env_type in environment_types.items():
+                    if env_type == 'swarm':
+                        # Swarm environments support all template types (1, 2, 3)
+                        template_compatible = True
+                        break
+                    elif env_type == 'docker' and template_type != 2:
+                        # Docker environments support container (1) and compose stack (3) templates, but not Swarm stacks (2)
+                        template_compatible = True
+                        break
+                
+                if not template_compatible:
+                    _logger.info(f"Skipping template '{template.get('title', 'Unknown')}' (type {template_type}) - not compatible with current environments")
                     continue
 
                 template_id = template.get('id')
