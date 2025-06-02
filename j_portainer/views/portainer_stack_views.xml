@@ -33,6 +33,7 @@
                             <field name="stack_id" readonly="1"/>
                             <field name="server_id" readonly="stack_id"/>
                             <field name="environment_id" readonly="stack_id"/>
+                            <field name="build_method" readonly="stack_id"/>
                         </group>
                         <group>
                             <field name="type" readonly="1"/>
@@ -46,11 +47,11 @@
                         </group>
                     </group>
                     
-                    <group>
+                    <!-- <group>
                         <group>
-                            <field name="build_method" readonly="stack_id"/>
+                            
                         </group>
-                    </group>
+                    </group> -->
                     
                     <notebook>
                         <!-- Web Editor page -->
@@ -82,7 +83,7 @@
                                             <field name="git_username" required="git_authentication and not git_credentials_id" placeholder="Username or Email" readonly="stack_id"/>
                                             <field name="git_token" required="git_authentication and not git_credentials_id" placeholder="Token or Password" password="True" readonly="stack_id"/>
                                             <field name="git_save_credential" readonly="stack_id"/>
-                                            <field name="git_credential_name" required="git_save_credential and git_authentication and not git_credentials_id" placeholder="Credential Name" readonly="stack_id"/>
+                                            <field name="git_credential_name" invisible="not git_save_credential" required="git_save_credential and git_authentication and not git_credentials_id" placeholder="Credential Name" readonly="stack_id"/>
                                         </group>
                                     </div>
                                 </group>
