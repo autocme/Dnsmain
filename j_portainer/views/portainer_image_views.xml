@@ -27,12 +27,11 @@
                             <field name="last_sync" readonly="1"/>
                         </group>
                         <group>
-                            <field name="repository" readonly="image_id"/>
-                            <!-- <field name="tag" readonly="image_id"/> -->
+                            <!-- <field name="repository" readonly="image_id"/> -->
+                            <!-- <field name="tag" readonly="image_id"/> -->                            <field name="build_info" readonly="1"/>
                             <field name="size_formatted" readonly="1"/>
                             <field name="created" readonly="1"/>
                             <field name="in_use" readonly="1"/>
-                            <field name="build_info" readonly="1"/>
                         </group>
                     </group>
                     
