@@ -97,6 +97,18 @@ class PortainerStack(models.Model):
             self.git_save_credential = False
             self.git_credential_name = False
 
+    def write(self, vals):
+        """Override write to sync content and file_content fields"""
+        # If content is being updated, sync it to file_content
+        if 'content' in vals:
+            vals['file_content'] = vals['content']
+        # If file_content is being updated, trigger content recomputation
+        elif 'file_content' in vals:
+            # Content will be recomputed automatically due to the dependency
+            pass
+        
+        return super(PortainerStack, self).write(vals)
+
     @api.model
     def create(self, vals):
         """Override create to create stack in Portainer first"""
@@ -209,11 +221,12 @@ class PortainerStack(models.Model):
             return False
         return False
 
-    @api.depends('content')
+    @api.depends('file_content')
     def _compute_content(self):
         """Compute content field - now used directly for web editor"""
-        # Content field is now used directly for both sync and manual editing
-        pass
+        for record in self:
+            # Use file_content as the source for content field
+            record.content = record.file_content or ''
     
     def _get_api(self):
         """Get API client"""
