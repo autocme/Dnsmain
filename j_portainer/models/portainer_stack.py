@@ -103,7 +103,7 @@ class PortainerStack(models.Model):
         if vals.get('stack_id'):
             return super().create(vals)
         
-        # New stack creation - create in Portainer first
+        # New stack creation - create in Portainer first using existing method
         try:
             # Get required data
             server_id = vals.get('server_id')
@@ -114,30 +114,19 @@ class PortainerStack(models.Model):
             if not all([server_id, environment_id, name]):
                 raise UserError("Server, Environment, and Name are required to create a stack.")
             
-            # Get server and environment records
-            server = self.env['j_portainer.server'].browse(server_id)
+            # Get environment record to get the environment_id for Portainer API
             environment = self.env['j_portainer.environment'].browse(environment_id)
-            
-            if not server.exists():
-                raise UserError("Invalid server specified.")
             if not environment.exists():
                 raise UserError("Invalid environment specified.")
             
-            # Prepare stack data based on build method - using working format from existing method
-            stack_data = {
-                'Name': name,
-                'Environment': [],
-                'EndpointId': environment.environment_id,
-                'SwarmID': '',
-                'Type': int(vals.get('type', 2))  # Compose by default
-            }
+            # Prepare stack content based on build method
+            stack_file_content = ''
             
-            # Handle different build methods
             if build_method == 'web_editor':
                 content = vals.get('content')
                 if not content:
                     raise UserError("Stack content is required for Web Editor method.")
-                stack_data['StackFileContent'] = content
+                stack_file_content = content
                 
             elif build_method == 'upload':
                 # Handle file upload - would need to process the binary file
@@ -147,63 +136,54 @@ class PortainerStack(models.Model):
                 raise UserError("File upload method is not yet implemented.")
                 
             elif build_method == 'repository':
-                # Handle repository method
-                git_url = vals.get('git_repository_url')
-                git_ref = vals.get('git_repository_reference')
-                git_path = vals.get('git_compose_path', 'docker-compose.yml')
+                # For repository method, we'll need to enhance the create_stack method
+                # For now, raise an error as repository method needs different handling
+                raise UserError("Repository method is not yet supported for direct creation. Use Web Editor method.")
+            
+            # Use the existing create_stack method
+            success = self.create_stack(
+                server_id=server_id,
+                environment_id=environment.environment_id,  # Use the Portainer environment ID
+                name=name,
+                stack_file_content=stack_file_content,
+                deployment_method=1  # File method
+            )
+            
+            if not success:
+                raise UserError("Failed to create stack in Portainer. Check server logs for details.")
+            
+            # If successful, the create_stack method triggers sync_stacks which creates the Odoo record
+            # We need to find the newly created record and return it
+            # Wait a moment for the sync to complete
+            self.env.cr.commit()
+            
+            # Find the newly created stack
+            new_stack = self.env['j_portainer.stack'].search([
+                ('server_id', '=', server_id),
+                ('environment_id', '=', environment_id),
+                ('name', '=', name)
+            ], limit=1, order='id desc')
+            
+            if new_stack:
+                # Update any additional fields from vals that weren't set during sync
+                update_vals = {}
+                for field in ['build_method', 'git_repository_url', 'git_repository_reference', 
+                              'git_compose_path', 'git_authentication', 'git_username', 'git_token']:
+                    if field in vals:
+                        update_vals[field] = vals[field]
                 
-                if not all([git_url, git_ref]):
-                    raise UserError("Repository URL and Reference are required for Repository method.")
+                if update_vals:
+                    new_stack.write(update_vals)
                 
-                stack_data['repositoryURL'] = git_url
-                stack_data['repositoryReferenceName'] = git_ref
-                stack_data['composeFilePath'] = git_path
-                
-                # Handle authentication if enabled
-                if vals.get('git_authentication'):
-                    stack_data['repositoryAuthentication'] = True
-                    if vals.get('git_credentials_id'):
-                        creds = self.env['j_portainer.git.credentials'].browse(vals['git_credentials_id'])
-                        stack_data['repositoryUsername'] = creds.username
-                        stack_data['repositoryPassword'] = creds.password
-                    else:
-                        stack_data['repositoryUsername'] = vals.get('git_username', '')
-                        stack_data['repositoryPassword'] = vals.get('git_token', '')
-            
-            # Create stack in Portainer using the working endpoint format
-            endpoint = '/api/stacks'
-            response = server._make_api_request(endpoint, 'POST', data=stack_data)
-            
-            if response.status_code not in [200, 201]:
-                error_msg = f"Failed to create stack in Portainer: {response.status_code} - {response.text}"
-                raise UserError(error_msg)
-            
-            # Parse response and update vals with Portainer data
-            response_data = response.json()
-            
-            # Update vals with response data
-            vals.update({
-                'stack_id': response_data.get('Id'),
-                'name': response_data.get('Name', vals.get('name')),
-                'type': str(response_data.get('Type', vals.get('type', 2))),
-                'status': str(response_data.get('Status', 1)),  # Active by default
-                'creation_date': self._parse_portainer_date(response_data.get('CreationDate')),
-                'update_date': self._parse_portainer_date(response_data.get('UpdatedDate')),
-                'details': json.dumps(response_data, indent=2),
-                'last_sync': fields.Datetime.now(),
-            })
-            
-            # If response contains stack file content, update content field
-            if response_data.get('StackFileContent'):
-                vals['content'] = response_data['StackFileContent']
-            
-            return super().create(vals)
+                return new_stack
+            else:
+                raise UserError("Stack was created in Portainer but sync failed. Please refresh the page.")
             
         except UserError:
             raise
         except Exception as e:
-            _logger.error(f"Error creating stack in Portainer: {str(e)}")
-            raise UserError(f"Failed to create stack in Portainer: {str(e)}")
+            _logger.error(f"Error creating stack: {str(e)}")
+            raise UserError(f"Failed to create stack: {str(e)}")
     
     def _parse_portainer_date(self, date_value):
         """Parse Portainer date format to Odoo datetime"""
