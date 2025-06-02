@@ -37,7 +37,7 @@ class PortainerImage(models.Model):
     layers = fields.Html('Layers', compute='_compute_layers', store=True, help='Image layers with size information')
     labels_html = fields.Html('Labels Table', compute='_compute_labels_html', store=True, help='Image labels in table format')
     env_html = fields.Html('Environment Variables', compute='_compute_env_html', store=True, help='Image environment variables in table format')
-    build_info = fields.Text('Build Information', compute='_compute_build_info', store=True, help='Docker build information')
+    build_info = fields.Text('Build', compute='_compute_build_info', store=True, help='Docker build information')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True,
                                 default=lambda self: self.env['j_portainer.server'].search([], limit=1))

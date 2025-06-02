@@ -1873,6 +1873,12 @@ class PortainerServer(models.Model):
                     _logger.warning(f"Skipping non-dict template: {template}")
                     continue
 
+                # Skip Swarm stack templates (type 3) for Docker environments
+                template_type = template.get('type', 1)
+                if template_type == 3:  # Swarm stack type
+                    _logger.info(f"Skipping Swarm stack template '{template.get('title', 'Unknown')}' - not compatible with Docker environment")
+                    continue
+
                 template_id = template.get('id')
 
                 # Check if this template already exists in Odoo
