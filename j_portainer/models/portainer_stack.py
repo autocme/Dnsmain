@@ -463,7 +463,7 @@ class PortainerStack(models.Model):
             # Make API request to create stack with proper query parameters
             endpoint = '/api/stacks'
             params = {
-                'type': 2,  # Compose stack
+                'type': data['Type'],  # Use the actual stack type from data
                 'method': 'string',  # Deploy from string content
                 'endpointId': environment_id
             }
