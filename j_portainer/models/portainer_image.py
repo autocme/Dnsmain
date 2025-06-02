@@ -37,6 +37,7 @@ class PortainerImage(models.Model):
     layers = fields.Html('Layers', compute='_compute_layers', store=True, help='Image layers with size information')
     labels_html = fields.Html('Labels Table', compute='_compute_labels_html', store=True, help='Image labels in table format')
     env_html = fields.Html('Environment Variables', compute='_compute_env_html', store=True, help='Image environment variables in table format')
+    build_info = fields.Text('Build Information', compute='_compute_build_info', store=True, help='Docker build information')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True,
                                 default=lambda self: self.env['j_portainer.server'].search([], limit=1))
@@ -682,6 +683,44 @@ class PortainerImage(models.Model):
             except Exception as e:
                 _logger.error(f"Error computing environment variables HTML for image {image.id}: {str(e)}")
                 image.env_html = f"<div class='text-danger'>Error computing environment variables: {str(e)}</div>"
+    
+    @api.depends('details')
+    def _compute_build_info(self):
+        """Compute Docker build information like Portainer displays"""
+        for image in self:
+            if not image.details:
+                image.build_info = "No build information available"
+                continue
+                
+            try:
+                details_data = json.loads(image.details)
+                
+                # Extract build information from Docker Engine details
+                docker_version = details_data.get('DockerVersion', '')
+                os_info = details_data.get('Os', '')
+                architecture = details_data.get('Architecture', '')
+                
+                # Build the info string like Portainer: "Docker 28.1.1 on linux, amd64"
+                build_parts = []
+                
+                if docker_version:
+                    build_parts.append(f"Docker {docker_version}")
+                
+                if os_info and architecture:
+                    build_parts.append(f"on {os_info}, {architecture}")
+                elif os_info:
+                    build_parts.append(f"on {os_info}")
+                elif architecture:
+                    build_parts.append(f"on {architecture}")
+                
+                if build_parts:
+                    image.build_info = " ".join(build_parts)
+                else:
+                    image.build_info = "Build information not available"
+                    
+            except Exception as e:
+                _logger.error(f"Error computing build info for image {image.id}: {str(e)}")
+                image.build_info = f"Error computing build information: {str(e)}"
     
     def pull(self):
         """Pull the latest version of the image"""
