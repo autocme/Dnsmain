@@ -18,7 +18,7 @@ class PortainerStack(models.Model):
     type = fields.Selection([
         ('1', 'Swarm'),
         ('2', 'Compose')
-    ], string='Type', default='2')
+    ], string='Type', default='2', required=True)
     status = fields.Selection([
         ('0', 'Unknown'),
         ('1', 'Active'),
@@ -95,6 +95,132 @@ class PortainerStack(models.Model):
             self.git_token = False
             self.git_save_credential = False
             self.git_credential_name = False
+
+    @api.model
+    def create(self, vals):
+        """Override create to create stack in Portainer first"""
+        # If stack_id is provided, this is a sync operation - save directly
+        if vals.get('stack_id'):
+            return super().create(vals)
+        
+        # New stack creation - create in Portainer first
+        try:
+            # Get required data
+            server_id = vals.get('server_id')
+            environment_id = vals.get('environment_id')
+            name = vals.get('name')
+            build_method = vals.get('build_method', 'web_editor')
+            
+            if not all([server_id, environment_id, name]):
+                raise UserError("Server, Environment, and Name are required to create a stack.")
+            
+            # Get server and environment records
+            server = self.env['j_portainer.server'].browse(server_id)
+            environment = self.env['j_portainer.environment'].browse(environment_id)
+            
+            if not server.exists():
+                raise UserError("Invalid server specified.")
+            if not environment.exists():
+                raise UserError("Invalid environment specified.")
+            
+            # Prepare stack data based on build method
+            stack_data = {
+                'name': name,
+                'type': int(vals.get('type', 2)),  # Default to Compose
+            }
+            
+            # Handle different build methods
+            if build_method == 'web_editor':
+                content = vals.get('content')
+                if not content:
+                    raise UserError("Stack content is required for Web Editor method.")
+                stack_data['stackFileContent'] = content
+                
+            elif build_method == 'upload':
+                # Handle file upload - would need to process the binary file
+                if not vals.get('compose_file_upload'):
+                    raise UserError("Compose file upload is required for Upload method.")
+                # TODO: Process uploaded file content
+                raise UserError("File upload method is not yet implemented.")
+                
+            elif build_method == 'repository':
+                # Handle repository method
+                git_url = vals.get('git_repository_url')
+                git_ref = vals.get('git_repository_reference')
+                git_path = vals.get('git_compose_path', 'docker-compose.yml')
+                
+                if not all([git_url, git_ref]):
+                    raise UserError("Repository URL and Reference are required for Repository method.")
+                
+                stack_data['repositoryURL'] = git_url
+                stack_data['repositoryReferenceName'] = git_ref
+                stack_data['composeFilePath'] = git_path
+                
+                # Handle authentication if enabled
+                if vals.get('git_authentication'):
+                    stack_data['repositoryAuthentication'] = True
+                    if vals.get('git_credentials_id'):
+                        creds = self.env['j_portainer.git.credentials'].browse(vals['git_credentials_id'])
+                        stack_data['repositoryUsername'] = creds.username
+                        stack_data['repositoryPassword'] = creds.password
+                    else:
+                        stack_data['repositoryUsername'] = vals.get('git_username', '')
+                        stack_data['repositoryPassword'] = vals.get('git_token', '')
+            
+            # Create stack in Portainer
+            api_client = self.env['j_portainer.api']
+            endpoint = f'/api/stacks'
+            
+            # Add environment ID to params
+            params = {'endpointId': environment.endpoint_id}
+            
+            response = server._make_api_request(endpoint, 'POST', data=stack_data, params=params)
+            
+            if response.status_code not in [200, 201]:
+                error_msg = f"Failed to create stack in Portainer: {response.status_code} - {response.text}"
+                raise UserError(error_msg)
+            
+            # Parse response and update vals with Portainer data
+            response_data = response.json()
+            
+            # Update vals with response data
+            vals.update({
+                'stack_id': response_data.get('Id'),
+                'name': response_data.get('Name', vals.get('name')),
+                'type': str(response_data.get('Type', vals.get('type', 2))),
+                'status': str(response_data.get('Status', 1)),  # Active by default
+                'creation_date': self._parse_portainer_date(response_data.get('CreationDate')),
+                'update_date': self._parse_portainer_date(response_data.get('UpdatedDate')),
+                'details': json.dumps(response_data, indent=2),
+                'last_sync': fields.Datetime.now(),
+            })
+            
+            # If response contains stack file content, update content field
+            if response_data.get('StackFileContent'):
+                vals['content'] = response_data['StackFileContent']
+            
+            return super().create(vals)
+            
+        except UserError:
+            raise
+        except Exception as e:
+            _logger.error(f"Error creating stack in Portainer: {str(e)}")
+            raise UserError(f"Failed to create stack in Portainer: {str(e)}")
+    
+    def _parse_portainer_date(self, date_value):
+        """Parse Portainer date format to Odoo datetime"""
+        if not date_value:
+            return False
+        try:
+            # Handle Unix timestamp
+            if isinstance(date_value, (int, float)):
+                return fields.Datetime.from_timestamp(date_value)
+            # Handle ISO string
+            elif isinstance(date_value, str):
+                return fields.Datetime.from_string(date_value)
+        except:
+            return False
+        return False
 
     @api.depends('content')
     def _compute_content(self):

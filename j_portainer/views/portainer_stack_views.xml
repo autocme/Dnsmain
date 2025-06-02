@@ -36,7 +36,7 @@
                             <field name="build_method" readonly="stack_id"/>
                         </group>
                         <group>
-                            <field name="type" readonly="1"/>
+                            <field name="type" readonly="stack_id"/>
                             <field name="status" widget="badge" 
                                    decoration-success="status == 1"
                                    decoration-danger="status == 2"
