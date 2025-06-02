@@ -460,65 +460,59 @@ class PortainerStack(models.Model):
                 'Type': 2  # Compose (API expects integer here)
             }
                 
-            # Use template deployment approach since direct stack creation isn't working
-            # Create a temporary custom template and deploy it
-            api_client = self.env['j_portainer.api']
+            # Try direct Docker Compose stack deployment using form data
+            import requests
             
-            # Create temporary template data
-            template_data = {
-                'title': f"temp-{name}",
-                'description': f"Temporary template for stack {name}",
-                'type': data['Type'],  # Stack type
-                'platform': 'linux',
-                'fileContent': stack_file_content,
-                'note': 'Auto-generated template for direct stack creation'
+            # Get server URL and API key
+            server_url = server.url
+            if server_url.endswith('/'):
+                server_url = server_url[:-1]
+                
+            api_key = server._get_api_key()
+            
+            # Try multipart form data approach for stack creation
+            endpoint = f"{server_url}/api/stacks"
+            
+            # Prepare form data
+            form_data = {
+                'Name': name,
+                'type': str(data['Type']),
+                'method': 'string',
+                'endpointId': str(environment_id)
             }
             
-            _logger.info(f"Creating temporary template for stack '{name}' with data: {template_data}")
-            
-            # Create the template first
-            template_result = api_client.create_template(server.id, template_data)
-            
-            if not template_result or 'error' in template_result:
-                error_msg = template_result.get('error', 'Unknown error') if template_result else 'Failed to create template'
-                _logger.error(f"Failed to create temporary template: {error_msg}")
-                return False
-            
-            template_id = template_result.get('id')
-            if not template_id:
-                _logger.error("Template creation succeeded but no ID returned")
-                return False
-            
-            _logger.info(f"Created temporary template with ID: {template_id}, now deploying as stack")
-            
-            # Deploy the template as a stack
-            deploy_params = {
-                'name': name,
-                'environment_id': environment_id
+            files = {
+                'StackFileContent': (None, stack_file_content)
             }
             
-            deploy_result = api_client.deploy_template(
-                server_id=server.id,
-                template_id=template_id,
-                environment_id=environment_id,
-                is_custom=True,
-                params=deploy_params
-            )
+            headers = {
+                'Authorization': f'Bearer {api_key}'
+            }
             
-            # Clean up the temporary template
+            _logger.info(f"Trying multipart form data stack creation with endpoint: {endpoint}")
+            _logger.info(f"Form data: {form_data}")
+            
             try:
-                api_client.delete_custom_template(server.id, template_id)
-                _logger.info(f"Cleaned up temporary template {template_id}")
+                response = requests.post(
+                    url=endpoint,
+                    headers=headers,
+                    data=form_data,
+                    files=files,
+                    verify=server.verify_ssl
+                )
+                
+                _logger.info(f"Stack creation response: Status {response.status_code}, Content: {response.text}")
+                
+                if response.status_code in [200, 201, 204]:
+                    # Refresh stacks
+                    server.sync_stacks(environment_id)
+                    return True
+                else:
+                    _logger.error(f"Failed to create stack '{name}': Status {response.status_code}, Response: {response.text}")
+                    return False
+                    
             except Exception as e:
-                _logger.warning(f"Failed to clean up temporary template {template_id}: {str(e)}")
-            
-            # Check deployment result
-            if deploy_result and not ('error' in deploy_result):
-                _logger.info(f"Successfully deployed stack '{name}' via temporary template")
-                return True
-            else:
-                error_msg = deploy_result.get('error', 'Unknown deployment error') if deploy_result else 'Deployment failed'
-                _logger.error(f"Failed to deploy template as stack: {error_msg}")
+                _logger.error(f"Exception during stack creation: {str(e)}")
                 return False
                 
         except Exception as e:
