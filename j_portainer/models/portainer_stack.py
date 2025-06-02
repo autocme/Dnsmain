@@ -484,8 +484,9 @@ class PortainerStack(models.Model):
             _logger.info(f"Stack creation response: Status {response.status_code}, Content: {response.text}")
             
             if response.status_code in [200, 201, 204]:
-                # Refresh stacks
+                # Refresh stacks and containers
                 server.sync_stacks(environment_id)
+                server.sync_containers(environment_id)
                 return True
             else:
                 _logger.error(f"Failed to create stack '{name}': Status {response.status_code}, Response: {response.text}")
