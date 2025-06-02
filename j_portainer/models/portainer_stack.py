@@ -123,10 +123,13 @@ class PortainerStack(models.Model):
             if not environment.exists():
                 raise UserError("Invalid environment specified.")
             
-            # Prepare stack data based on build method
+            # Prepare stack data based on build method - using working format from existing method
             stack_data = {
-                'name': name,
-                'type': int(vals.get('type', 2)),  # Default to Compose
+                'Name': name,
+                'Environment': [],
+                'EndpointId': environment.environment_id,
+                'SwarmID': '',
+                'Type': int(vals.get('type', 2))  # Compose by default
             }
             
             # Handle different build methods
@@ -134,7 +137,7 @@ class PortainerStack(models.Model):
                 content = vals.get('content')
                 if not content:
                     raise UserError("Stack content is required for Web Editor method.")
-                stack_data['stackFileContent'] = content
+                stack_data['StackFileContent'] = content
                 
             elif build_method == 'upload':
                 # Handle file upload - would need to process the binary file
@@ -167,14 +170,9 @@ class PortainerStack(models.Model):
                         stack_data['repositoryUsername'] = vals.get('git_username', '')
                         stack_data['repositoryPassword'] = vals.get('git_token', '')
             
-            # Create stack in Portainer
-            api_client = self.env['j_portainer.api']
-            endpoint = f'/api/stacks'
-            
-            # Add environment ID to params
-            params = {'endpointId': environment.environment_id}
-            
-            response = server._make_api_request(endpoint, 'POST', data=stack_data, params=params)
+            # Create stack in Portainer using the working endpoint format
+            endpoint = '/api/stacks'
+            response = server._make_api_request(endpoint, 'POST', data=stack_data)
             
             if response.status_code not in [200, 201]:
                 error_msg = f"Failed to create stack in Portainer: {response.status_code} - {response.text}"
