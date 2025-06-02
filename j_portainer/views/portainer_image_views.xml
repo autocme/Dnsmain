@@ -10,8 +10,8 @@
                     <button name="action_remove" string="Remove" type="object" 
                             class="btn-danger" 
                             confirm="Are you sure you want to remove this image?"/>
-                    <button name="action_refresh" string="Refresh" type="object" 
-                            class="btn-secondary"/>
+                    <!-- <button name="action_refresh" string="Refresh" type="object" 
+                            class="btn-secondary"/> -->
                 </header>
                 <sheet>
                     <div class="">
@@ -28,7 +28,7 @@
                         </group>
                         <group>
                             <field name="repository" readonly="image_id"/>
-                            <field name="tag" readonly="image_id"/>
+                            <!-- <field name="tag" readonly="image_id"/> -->
                             <field name="size_formatted" readonly="1"/>
                             <field name="created" readonly="1"/>
                             <field name="in_use" readonly="1"/>

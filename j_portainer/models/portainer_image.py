@@ -251,8 +251,16 @@ class PortainerImage(models.Model):
             new_records = super().create(vals_to_create)
             result_records += new_records
             
-            # Sync image tags for newly created images
+            # Add tag to all_tags JSON and sync for newly created images
             for record in new_records:
+                # Create the all_tags JSON with the initial tag
+                new_tag_info = {
+                    'repository': record.repository,
+                    'tag': record.tag
+                }
+                record.all_tags = json.dumps([new_tag_info])
+                
+                # Sync image tags to create the tag record immediately
                 record._sync_image_tags()
         
         return result_records
