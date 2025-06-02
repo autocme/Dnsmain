@@ -141,6 +141,8 @@ class PortainerStack(models.Model):
                 raise UserError("Repository method is not yet supported for direct creation. Use Web Editor method.")
             
             # Use the existing create_stack method
+            _logger.info(f"Creating stack {name} in Portainer using environment ID {environment.environment_id}")
+            
             success = self.create_stack(
                 server_id=server_id,
                 environment_id=environment.environment_id,  # Use the Portainer environment ID
@@ -150,7 +152,13 @@ class PortainerStack(models.Model):
             )
             
             if not success:
-                raise UserError("Failed to create stack in Portainer. Check server logs for details.")
+                # Get the server to check its status and last error
+                server = self.env['j_portainer.server'].browse(server_id)
+                error_details = f"Server: {server.name}, Status: {server.status}"
+                if server.error_message:
+                    error_details += f", Last Error: {server.error_message}"
+                
+                raise UserError(f"Failed to create stack in Portainer. {error_details}")
             
             # If successful, the create_stack method triggers sync_stacks which creates the Odoo record
             # We need to find the newly created record and return it
@@ -454,14 +462,18 @@ class PortainerStack(models.Model):
                 
             # Make API request to create stack
             endpoint = '/api/stacks'
+            _logger.info(f"Creating stack '{name}' on environment {environment_id} with data: {data}")
+            
             response = server._make_api_request(endpoint, 'POST', data=data)
+            
+            _logger.info(f"Stack creation response: Status {response.status_code}, Content: {response.text}")
             
             if response.status_code in [200, 201, 204]:
                 # Refresh stacks
                 server.sync_stacks(environment_id)
                 return True
             else:
-                _logger.error(f"Failed to create stack: {response.text}")
+                _logger.error(f"Failed to create stack '{name}': Status {response.status_code}, Response: {response.text}")
                 return False
                 
         except Exception as e:
