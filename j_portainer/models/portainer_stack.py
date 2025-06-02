@@ -477,7 +477,7 @@ class PortainerStack(models.Model):
             _logger.info(f"Creating temporary template for stack '{name}' with data: {template_data}")
             
             # Create the template first
-            template_result = api_client.create_custom_template(server.id, template_data)
+            template_result = api_client.create_template(server.id, template_data)
             
             if not template_result or 'error' in template_result:
                 error_msg = template_result.get('error', 'Unknown error') if template_result else 'Failed to create template'
