@@ -25,7 +25,7 @@ class PortainerStack(models.Model):
         ('2', 'Inactive')
     ], string='Status', default='0')
     file_content = fields.Text('Stack File')
-    content = fields.Text('Content', compute='_compute_content', store=True)
+    content = fields.Text('Content')
     creation_date = fields.Datetime('Created')
     update_date = fields.Datetime('Updated')
     details = fields.Text('Details')
@@ -98,15 +98,7 @@ class PortainerStack(models.Model):
             self.git_credential_name = False
 
     def write(self, vals):
-        """Override write to sync content and file_content fields"""
-        # If content is being updated, sync it to file_content
-        if 'content' in vals:
-            vals['file_content'] = vals['content']
-        # If file_content is being updated, trigger content recomputation
-        elif 'file_content' in vals:
-            # Content will be recomputed automatically due to the dependency
-            pass
-        
+        """Override write to handle content updates"""
         return super(PortainerStack, self).write(vals)
 
     @api.model
@@ -221,12 +213,7 @@ class PortainerStack(models.Model):
             return False
         return False
 
-    @api.depends('file_content')
-    def _compute_content(self):
-        """Compute content field - now used directly for web editor"""
-        for record in self:
-            # Use file_content as the source for content field
-            record.content = record.file_content or ''
+
     
     def _get_api(self):
         """Get API client"""
