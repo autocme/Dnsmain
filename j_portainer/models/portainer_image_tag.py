@@ -54,8 +54,19 @@ class PortainerImageTag(models.Model):
                 raise UserError(_("Image not found"))
             
             # Validate repository and tag
-            repository = vals.get('repository', '').strip()
-            tag = vals.get('tag', '').strip()
+            repository = vals.get('repository', '')
+            if isinstance(repository, str):
+                repository = repository.strip()
+            else:
+                repository = str(repository) if repository else ''
+                
+            tag = vals.get('tag', '')
+            if isinstance(tag, str):
+                tag = tag.strip()
+            elif isinstance(tag, bool):
+                tag = ''
+            else:
+                tag = str(tag) if tag else ''
             
             if not repository:
                 raise UserError(_("Repository is required"))
