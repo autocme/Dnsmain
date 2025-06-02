@@ -460,59 +460,28 @@ class PortainerStack(models.Model):
                 'Type': 2  # Compose (API expects integer here)
             }
                 
-            # Try direct Docker Compose stack deployment using form data
-            import requests
+            # Use the correct Portainer API endpoint for stack creation
+            endpoint = f'/api/stacks/create/standalone/string?endpointId={environment_id}'
             
-            # Get server URL and API key
-            server_url = server.url
-            if server_url.endswith('/'):
-                server_url = server_url[:-1]
-                
-            api_key = server._get_api_key()
-            
-            # Try multipart form data approach for stack creation
-            endpoint = f"{server_url}/api/stacks"
-            
-            # Prepare form data
-            form_data = {
+            # Prepare the payload according to the API specification
+            stack_payload = {
                 'Name': name,
-                'type': str(data['Type']),
-                'method': 'string',
-                'endpointId': str(environment_id)
+                'StackFileContent': stack_file_content
             }
             
-            files = {
-                'StackFileContent': (None, stack_file_content)
-            }
+            _logger.info(f"Creating stack '{name}' using endpoint: {endpoint}")
+            _logger.info(f"Stack payload: {stack_payload}")
             
-            headers = {
-                'Authorization': f'Bearer {api_key}'
-            }
+            response = server._make_api_request(endpoint, 'POST', data=stack_payload)
             
-            _logger.info(f"Trying multipart form data stack creation with endpoint: {endpoint}")
-            _logger.info(f"Form data: {form_data}")
+            _logger.info(f"Stack creation response: Status {response.status_code}, Content: {response.text}")
             
-            try:
-                response = requests.post(
-                    url=endpoint,
-                    headers=headers,
-                    data=form_data,
-                    files=files,
-                    verify=server.verify_ssl
-                )
-                
-                _logger.info(f"Stack creation response: Status {response.status_code}, Content: {response.text}")
-                
-                if response.status_code in [200, 201, 204]:
-                    # Refresh stacks
-                    server.sync_stacks(environment_id)
-                    return True
-                else:
-                    _logger.error(f"Failed to create stack '{name}': Status {response.status_code}, Response: {response.text}")
-                    return False
-                    
-            except Exception as e:
-                _logger.error(f"Exception during stack creation: {str(e)}")
+            if response.status_code in [200, 201, 204]:
+                # Refresh stacks
+                server.sync_stacks(environment_id)
+                return True
+            else:
+                _logger.error(f"Failed to create stack '{name}': Status {response.status_code}, Response: {response.text}")
                 return False
                 
         except Exception as e:
