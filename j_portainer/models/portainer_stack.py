@@ -172,7 +172,7 @@ class PortainerStack(models.Model):
             endpoint = f'/api/stacks'
             
             # Add environment ID to params
-            params = {'endpointId': environment.endpoint_id}
+            params = {'endpointId': environment.environment_id}
             
             response = server._make_api_request(endpoint, 'POST', data=stack_data, params=params)
             
