@@ -50,7 +50,7 @@
                     <notebook>
                         <!-- Web Editor page -->
                         <page string="Web Editor" name="web_editor" invisible="build_method != 'web_editor'">
-                            <field name="content" widget="ace" placeholder="Enter your Docker Compose content here..." nolabel="1" readonly="stack_id"/>
+                            <field name="content" widget="ace" placeholder="Enter your Docker Compose content here..." nolabel="1"/>
                         </page>
                         
                         <!-- Upload page -->
