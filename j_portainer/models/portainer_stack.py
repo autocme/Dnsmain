@@ -80,11 +80,11 @@ class PortainerStack(models.Model):
             self.compose_file_upload = False
         elif self.build_method == 'repository':
             # Clear content and upload fields
-            self.file_content = False
+            self.content = False
             self.compose_file_upload = False
         elif self.build_method == 'upload':
             # Clear content and repository fields
-            self.file_content = False
+            self.content = False
             self.git_repository_url = False
             self.git_repository_reference = False
             self.git_compose_path = False
@@ -96,11 +96,11 @@ class PortainerStack(models.Model):
             self.git_save_credential = False
             self.git_credential_name = False
 
-    @api.depends('file_content')
+    @api.depends('content')
     def _compute_content(self):
-        """Compute content field from file_content"""
-        for record in self:
-            record.content = record.file_content
+        """Compute content field - now used directly for web editor"""
+        # Content field is now used directly for both sync and manual editing
+        pass
     
     def _get_api(self):
         """Get API client"""
