@@ -30,14 +30,66 @@ class PortainerStack(models.Model):
     update_date = fields.Datetime('Updated')
     details = fields.Text('Details')
     
-    server_id = fields.Many2one('j_portainer.server', string='Server', required=True)
-    environment_id = fields.Integer('Environment ID', required=True)
-    environment_name = fields.Char('Environment', required=True)
+    server_id = fields.Many2one('j_portainer.server', string='Server', required=True,
+                                default=lambda self: self.env['j_portainer.server'].search([], limit=1))
+    environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True,
+                                    default=lambda self: self.env['j_portainer.environment'].search([], limit=1))
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
+    
+    # Build functionality fields
+    build_method = fields.Selection([
+        ('web_editor', 'Web Editor'),
+        ('upload', 'Upload'),
+        ('repository', 'Repository')
+    ], string='Build Method', required=True, default='web_editor')
+    
+    # Repository fields
+    repository_url = fields.Char('Repository URL',
+                                help='Specify the URL to a public Git repository (suffixed by .git).')
+    repository_reference = fields.Char('Repository Reference',
+                                     help='Indicate a git reference (branch/tag). Defaults to ref in git repository.')
+    repository_username = fields.Char('Repository Username',
+                                    help='Username for repository authentication.')
+    repository_password = fields.Char('Repository Password',
+                                    help='Password for repository authentication.')
+    compose_file_path = fields.Char('Compose File Path',
+                                  help='Indicate the path to the compose file within the repository.')
+    additional_files = fields.Text('Additional Files',
+                                 help='Relative path to additional files that need to be imported.')
+    
+    # Upload field
+    compose_file_upload = fields.Binary('Compose File Upload',
+                                      help='You can upload a compose file from your computer.')
     
     # Related containers in this stack
     container_ids = fields.One2many('j_portainer.container', 'stack_id', string='Containers')
     
+    @api.onchange('build_method')
+    def _onchange_build_method(self):
+        """Clear fields when build method changes"""
+        if self.build_method == 'web_editor':
+            # Clear repository and upload fields
+            self.repository_url = False
+            self.repository_reference = False
+            self.repository_username = False
+            self.repository_password = False
+            self.compose_file_path = False
+            self.additional_files = False
+            self.compose_file_upload = False
+        elif self.build_method == 'repository':
+            # Clear content and upload fields
+            self.file_content = False
+            self.compose_file_upload = False
+        elif self.build_method == 'upload':
+            # Clear content and repository fields
+            self.file_content = False
+            self.repository_url = False
+            self.repository_reference = False
+            self.repository_username = False
+            self.repository_password = False
+            self.compose_file_path = False
+            self.additional_files = False
+
     @api.depends('file_content')
     def _compute_content(self):
         """Compute content field from file_content"""

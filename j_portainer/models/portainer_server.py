@@ -2554,7 +2554,7 @@ class PortainerServer(models.Model):
                     # Check if this stack already exists in Odoo
                     existing_stack = self.env['j_portainer.stack'].search([
                         ('server_id', '=', self.id),
-                        ('environment_id', '=', endpoint_id),
+                        ('environment_id', '=', env.id),
                         ('stack_id', '=', stack_id)
                     ], limit=1)
 
@@ -2568,8 +2568,7 @@ class PortainerServer(models.Model):
                     # Prepare stack data
                     stack_data = {
                         'server_id': self.id,
-                        'environment_id': endpoint_id,
-                        'environment_name': env.name,
+                        'environment_id': env.id,
                         'stack_id': stack_id,
                         'name': stack.get('Name', ''),
                         'type': str(stack.get('Type', 1)),
@@ -2590,7 +2589,7 @@ class PortainerServer(models.Model):
                         self.env['j_portainer.stack'].create(stack_data)
                         created_count += 1
 
-                    synced_stack_ids.append((endpoint_id, stack_id))
+                    synced_stack_ids.append((env.id, stack_id))
                     stack_count += 1
 
             # Clean up stacks that no longer exist in Portainer
