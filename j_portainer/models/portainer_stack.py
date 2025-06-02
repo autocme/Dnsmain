@@ -187,6 +187,9 @@ class PortainerStack(models.Model):
                     if field in vals:
                         update_vals[field] = vals[field]
                 
+                # Most importantly, ensure the content field is set with the original content
+                update_vals['content'] = stack_file_content
+                
                 if update_vals:
                     new_stack.write(update_vals)
                 
