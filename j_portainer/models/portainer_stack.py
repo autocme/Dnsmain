@@ -34,6 +34,7 @@ class PortainerStack(models.Model):
                                 default=lambda self: self.env['j_portainer.server'].search([], limit=1))
     environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True,
                                     default=lambda self: self.env['j_portainer.environment'].search([], limit=1))
+    environment_name = fields.Char('Environment Name', related='environment_id.name', readonly=True, store=True)
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
     # Build functionality fields
