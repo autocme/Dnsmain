@@ -475,6 +475,7 @@ class PortainerStack(models.Model):
             _logger.info(f"Creating stack '{name}' using endpoint: {endpoint}")
             _logger.info(f"Stack payload: {stack_payload}")
             
+            # Use longer timeout for stack creation as it can take time
             response = server._make_api_request(endpoint, 'POST', data=stack_payload)
             
             _logger.info(f"Stack creation response: Status {response.status_code}, Content: {response.text}")
