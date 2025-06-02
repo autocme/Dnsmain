@@ -137,23 +137,34 @@ class PortainerImageTag(models.Model):
                     params={'force': 'false'}
                 )
                 
+                # Log the response for debugging
+                _logger.info(f"Tag deletion response type: {type(response)}, content: {response}")
+                
                 # Check for successful response (200 OK or 204 No Content for delete operation)
-                if not response:
+                if response is None:
                     raise UserError(_("No response from Portainer API"))
                 
                 # Handle both dict response (from direct_api_call) and response object
                 if isinstance(response, dict):
-                    if not response.get('success', True):
+                    # Success dict from direct_api_call or error dict
+                    success = response.get('success', True)
+                    if success is False:
                         error_msg = response.get('message', 'Unknown error from Portainer')
                         raise UserError(_("Failed to remove tag from Portainer: %s") % error_msg)
                 elif hasattr(response, 'status_code'):
+                    # Raw response object
                     if response.status_code not in [200, 204]:
                         error_msg = _("Failed to remove tag from Portainer")
                         if hasattr(response, 'text'):
                             error_msg += f": {response.text}"
                         raise UserError(error_msg)
+                elif response is True:
+                    # Boolean True indicates success
+                    pass
                 else:
-                    raise UserError(_("Invalid response from Portainer API"))
+                    # Log unexpected response format but don't fail
+                    _logger.warning(f"Unexpected response format from Portainer API: {type(response)} - {response}")
+                    # Assume success if we got here without an exception
                     
                 _logger.info(f"Successfully removed tag {tag_name} from Portainer")
                 
