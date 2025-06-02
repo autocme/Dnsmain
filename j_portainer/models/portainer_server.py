@@ -738,17 +738,35 @@ class PortainerServer(models.Model):
                     stack_id = False
                     container_labels = container.get('Labels', {})
                     if container_labels:
-                        # Portainer stacks use 'com.docker.compose.project' or 'com.docker.stack.namespace' label
-                        stack_name = container_labels.get('com.docker.compose.project') or container_labels.get('com.docker.stack.namespace')
+                        # Try multiple label patterns that Portainer might use
+                        stack_name = (
+                            container_labels.get('com.docker.compose.project') or 
+                            container_labels.get('com.docker.stack.namespace') or
+                            container_labels.get('com.portainer.stack.name') or
+                            container_labels.get('io.portainer.stack.name')
+                        )
+                        
                         if stack_name:
-                            # Find matching stack in this environment
+                            # Try exact match first - use the Odoo environment record ID
                             stack = self.env['j_portainer.stack'].search([
                                 ('server_id', '=', self.id),
-                                ('environment_id', '=', endpoint_id),
+                                ('environment_id', '=', env.id),
                                 ('name', '=', stack_name)
                             ], limit=1)
+                            
+                            # If no exact match, try case-insensitive search
+                            if not stack:
+                                stack = self.env['j_portainer.stack'].search([
+                                    ('server_id', '=', self.id),
+                                    ('environment_id', '=', env.id),
+                                    ('name', 'ilike', stack_name)
+                                ], limit=1)
+                            
                             if stack:
                                 stack_id = stack.id
+                                _logger.debug(f"Container {container_name} linked to stack {stack.name} (ID: {stack.id})")
+                            else:
+                                _logger.debug(f"No matching stack found for container {container_name} with stack name '{stack_name}'")
 
                     # Extract volume information from container details
                     volumes_data = []
