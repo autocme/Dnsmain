@@ -2600,7 +2600,7 @@ class PortainerServer(models.Model):
             
             # Filter stacks that should be removed (not found in Portainer)
             stacks_to_remove = all_stacks.filtered(
-                lambda s: (s.environment_id, s.stack_id) not in synced_stack_ids
+                lambda s: (s.environment_id.id, s.stack_id) not in synced_stack_ids
             )
             
             # Remove obsolete stacks
