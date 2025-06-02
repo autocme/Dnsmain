@@ -159,11 +159,13 @@ class PortainerStack(models.Model):
             if not success:
                 # Get the server to check its status and last error
                 server = self.env['j_portainer.server'].browse(server_id)
-                error_details = f"Server: {server.name}, Status: {server.status}"
-                if server.error_message:
-                    error_details += f", Last Error: {server.error_message}"
                 
-                raise UserError(f"Failed to create stack in Portainer. {error_details}")
+                # Show the actual error message if available
+                if server.error_message:
+                    raise UserError(f"Failed to create stack in Portainer: {server.error_message}")
+                else:
+                    error_details = f"Server: {server.name}, Status: {server.status}"
+                    raise UserError(f"Failed to create stack in Portainer. {error_details}")
             
             # If successful, the create_stack method triggers sync_stacks which creates the Odoo record
             # We need to find the newly created record and return it
