@@ -268,7 +268,7 @@ class PortainerServer(models.Model):
         return f"{self.api_key}"
 
     def _make_api_request(self, endpoint, method='GET', data=None, params=None, headers=None, use_multipart=False,
-                          environment_id=None):
+                          environment_id=None, timeout=None):
         """Make a request to the Portainer API
         
         Args:
@@ -279,6 +279,7 @@ class PortainerServer(models.Model):
             headers (dict, optional): Additional headers to include with the request
             use_multipart (bool, optional): Whether to use multipart form data instead of JSON
             environment_id (int, optional): Environment ID related to this request (for logging)
+            timeout (int, optional): Custom timeout in seconds (default: 15 for GET/DELETE, 30 for POST/PUT multipart)
             
         Returns:
             requests.Response: API response
@@ -403,33 +404,44 @@ class PortainerServer(models.Model):
 
         try:
             _logger.debug(f"Making {method} request to {url}")
+            
+            # Set default timeouts based on method and use_multipart, or use custom timeout
+            if timeout is None:
+                if use_multipart:
+                    request_timeout = 60  # Longer timeout for multipart uploads
+                elif method in ['POST', 'PUT']:
+                    request_timeout = 45  # Longer timeout for POST/PUT operations
+                else:
+                    request_timeout = 30  # Standard timeout for GET/DELETE
+            else:
+                request_timeout = timeout
 
             if method == 'GET':
                 response = requests.get(url, headers=request_headers, params=params,
-                                        verify=self.verify_ssl, timeout=15)
+                                        verify=self.verify_ssl, timeout=request_timeout)
             elif method == 'POST':
                 if use_multipart:
                     _logger.debug(f"POST request with multipart data")
                     response = requests.post(url, headers=request_headers, data=data,
-                                             verify=self.verify_ssl, timeout=30)
+                                             verify=self.verify_ssl, timeout=request_timeout)
                 else:
                     # Include params in debug log to see what's being sent
                     _logger.debug(f"POST request data: {json.dumps(data, indent=2) if data else None}")
                     _logger.debug(f"POST request params: {params}")
                     # Include params in the POST request for operations like stack start/stop
                     response = requests.post(url, headers=request_headers, json=data, params=params,
-                                             verify=self.verify_ssl, timeout=15)
+                                             verify=self.verify_ssl, timeout=request_timeout)
             elif method == 'PUT':
                 if use_multipart:
                     _logger.debug(f"PUT request with multipart data")
                     response = requests.put(url, headers=request_headers, data=data,
-                                            verify=self.verify_ssl, timeout=30)
+                                            verify=self.verify_ssl, timeout=request_timeout)
                 else:
                     response = requests.put(url, headers=request_headers, json=data,
-                                            verify=self.verify_ssl, timeout=15)
+                                            verify=self.verify_ssl, timeout=request_timeout)
             elif method == 'DELETE':
                 response = requests.delete(url, headers=request_headers, params=params,
-                                           verify=self.verify_ssl, timeout=15)
+                                           verify=self.verify_ssl, timeout=request_timeout)
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
 
