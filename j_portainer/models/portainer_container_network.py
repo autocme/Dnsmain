@@ -51,7 +51,7 @@ class PortainerContainerNetwork(models.Model):
         container_name = self.container_id.name
         network_name = self.network_id.name
         server_id = self.container_id.server_id.id
-        environment_id = self.container_id.environment_id
+        environment_id = self.container_id.environment_id.environment_id
         network_id = self.network_id.network_id
         container_id = self.container_id.container_id
         
@@ -63,8 +63,9 @@ class PortainerContainerNetwork(models.Model):
                 network_id,
                 container_id
             )
+            print('result', result)
             
-            if result:
+            if result in (200, 204):
                 # Create success message BEFORE removing the record
                 message = {
                     'type': 'ir.actions.client',
@@ -89,8 +90,8 @@ class PortainerContainerNetwork(models.Model):
                     'tag': 'display_notification',
                     'params': {
                         'title': _('Network Disconnect Failed'),
-                        'message': _('Failed to disconnect container %s from network %s') % (container_name, network_name),
-                        'sticky': False,
+                        'message': _('Failed to disconnect container %s from network %s: %s') % (container_name, network_name, result),
+                        'sticky': True,
                         'type': 'danger',
                     }
                 }
