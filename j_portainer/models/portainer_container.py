@@ -342,7 +342,7 @@ class PortainerContainer(models.Model):
         try:
             # Use direct API call to start the container
             server = self.server_id
-            start_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{self.container_id}/start'
+            start_endpoint = f'/api/endpoints/{self.environment_id.environment_id}/docker/containers/{self.container_id}/start'
             
             # Start container using direct API call
             _logger.info(f"Starting container {self.name} ({self.container_id})")
@@ -519,7 +519,7 @@ class PortainerContainer(models.Model):
             
             # Create the container in Portainer
             _logger.info(f"Creating container {self.name} with image {self.image}")
-            create_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/create'
+            create_endpoint = f'/api/endpoints/{self.environment_id.environment_id}/docker/containers/create'
             response = server._make_api_request(create_endpoint, 'POST', data=config, params=params)
             
             if response.status_code not in [200, 201, 204]:
@@ -541,7 +541,7 @@ class PortainerContainer(models.Model):
             # Start the container if specified
             try:
                 # Start the container
-                start_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{container_id}/start'
+                start_endpoint = f'/api/endpoints/{self.environment_id.environment_id}/docker/containers/{container_id}/start'
                 start_response = server._make_api_request(start_endpoint, 'POST')
                 
                 if start_response.status_code in [200, 201, 204]:
@@ -612,7 +612,7 @@ class PortainerContainer(models.Model):
         try:
             # Get container details from Docker API
             server = self.server_id
-            endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{self.container_id}/json'
+            endpoint = f'/api/endpoints/{self.environment_id.environment_id}/docker/containers/{self.container_id}/json'
             response = server._make_api_request(endpoint, 'GET')
             
             if response.status_code != 200:
@@ -690,7 +690,7 @@ class PortainerContainer(models.Model):
                     
                     # Get logs if available for diagnostics
                     try:
-                        logs_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{self.container_id}/logs'
+                        logs_endpoint = f'/api/endpoints/{self.environment_id.environment_id}/docker/containers/{self.container_id}/logs'
                         logs_params = {'stderr': 1, 'stdout': 1, 'tail': 50}
                         logs_response = server._make_api_request(
                             logs_endpoint, 'GET', 
