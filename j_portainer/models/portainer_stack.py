@@ -494,6 +494,26 @@ class PortainerStack(models.Model):
                 server.sync_containers(environment_id)
                 return True
             else:
+                # Extract detailed error message from Portainer response
+                error_message = f"Status {response.status_code}"
+                try:
+                    if response.text:
+                        error_data = response.json()
+                        if 'message' in error_data:
+                            error_message = error_data['message']
+                        elif 'details' in error_data:
+                            error_message = error_data['details']
+                        else:
+                            error_message = response.text
+                    else:
+                        error_message = f"HTTP {response.status_code} error with no response body"
+                except:
+                    # If JSON parsing fails, use raw response text
+                    error_message = response.text if response.text else f"HTTP {response.status_code} error"
+                
+                # Store the detailed error message in server for user display
+                server.error_message = f"Failed to create stack '{name}': {error_message}"
+                
                 _logger.error(f"Failed to create stack '{name}': Status {response.status_code}, Response: {response.text}")
                 return False
                 
