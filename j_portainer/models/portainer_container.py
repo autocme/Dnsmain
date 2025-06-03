@@ -75,7 +75,7 @@ class PortainerContainer(models.Model):
         return result
     
     name = fields.Char('Name', required=True)
-    container_id = fields.Char('Container ID', required=True)
+    container_id = fields.Char('Container ID', required=True, copy=False)
     image = fields.Char('Image', required=True)
     image_id = fields.Char('Image ID')
     always_pull_image = fields.Boolean('Always Pull Image', default=False,

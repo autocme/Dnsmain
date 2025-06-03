@@ -270,7 +270,7 @@ class PortainerNetwork(models.Model):
             raise UserError(_("Error creating network in Portainer: %s") % str(e))
     
     name = fields.Char('Name', required=True)
-    network_id = fields.Char('Network ID', readonly=True)
+    network_id = fields.Char('Network ID', readonly=True, copy=False)
     driver = fields.Selection([
         ('bridge', 'Bridge'),
         ('host', 'Host'),

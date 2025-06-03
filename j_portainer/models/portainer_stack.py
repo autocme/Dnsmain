@@ -14,7 +14,7 @@ class PortainerStack(models.Model):
     _order = 'name'
     
     name = fields.Char('Name', required=True)
-    stack_id = fields.Integer('Stack ID', required=True)
+    stack_id = fields.Integer('Stack ID', required=True, copy=False)
     type = fields.Selection([
         ('1', 'Swarm'),
         ('2', 'Compose')
