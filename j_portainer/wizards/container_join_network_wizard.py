@@ -18,8 +18,26 @@ class ContainerJoinNetworkWizard(models.TransientModel):
     environment_name = fields.Char(related='environment_id.name', string='Environment', readonly=True)
     
     # Available networks to join - domain is set to only show networks from the same environment
-    network_id = fields.Many2one('j_portainer.network', string='Network', required=True,
-                               domain="[('server_id', '=', server_id), ('environment_id', '=', environment_id)]")
+    network_id = fields.Many2one('j_portainer.network', string='Network', required=True)
+    
+    @api.depends('container_id', 'server_id', 'environment_id')
+    def _compute_network_domain(self):
+        """Compute domain for network selection"""
+        for record in self:
+            if record.server_id and record.environment_id:
+                return [('server_id', '=', record.server_id.id), ('environment_id', '=', record.environment_id.id)]
+            return [('id', '=', False)]  # No networks available if no server/environment
+    
+    @api.onchange('container_id')
+    def _onchange_container_id(self):
+        """Update network domain when container changes"""
+        if self.container_id and self.container_id.server_id and self.container_id.environment_id:
+            domain = [
+                ('server_id', '=', self.container_id.server_id.id), 
+                ('environment_id', '=', self.container_id.environment_id.id)
+            ]
+            return {'domain': {'network_id': domain}}
+        return {'domain': {'network_id': [('id', '=', False)]}}
     
     # Fields for IP address and aliases have been removed as per requirements
     
