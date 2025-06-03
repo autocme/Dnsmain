@@ -573,7 +573,7 @@ class PortainerContainer(models.Model):
             server = self.server_id
             
             # Use Docker API rename endpoint
-            rename_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{self.container_id}/rename'
+            rename_endpoint = f'/api/endpoints/{self.environment_id.environment_id}/docker/containers/{self.container_id}/rename'
             
             # Container names in Docker must not include a leading slash
             new_name = self.name.lstrip('/')
@@ -724,7 +724,7 @@ class PortainerContainer(models.Model):
         try:
             api = self._get_api()
             result = api.container_action(
-                self.server_id.id, self.environment_id, self.container_id, 'stop')
+                self.server_id.id, self.environment_id.environment_id, self.container_id, 'stop')
                 
             if result:
                 # Update container state
@@ -753,7 +753,7 @@ class PortainerContainer(models.Model):
         try:
             api = self._get_api()
             result = api.container_action(
-                self.server_id.id, self.environment_id, self.container_id, 'restart')
+                self.server_id.id, self.environment_id.environment_id, self.container_id, 'restart')
                 
             if result:
                 # Update container state
@@ -782,7 +782,7 @@ class PortainerContainer(models.Model):
         try:
             api = self._get_api()
             result = api.container_action(
-                self.server_id.id, self.environment_id, self.container_id, 'pause')
+                self.server_id.id, self.environment_id.environment_id, self.container_id, 'pause')
                 
             if result:
                 # Update container state
@@ -811,7 +811,7 @@ class PortainerContainer(models.Model):
         try:
             api = self._get_api()
             result = api.container_action(
-                self.server_id.id, self.environment_id, self.container_id, 'unpause')
+                self.server_id.id, self.environment_id.environment_id, self.container_id, 'unpause')
                 
             if result:
                 # Update container state
@@ -840,7 +840,7 @@ class PortainerContainer(models.Model):
         try:
             api = self._get_api()
             result = api.container_action(
-                self.server_id.id, self.environment_id, self.container_id, 'kill')
+                self.server_id.id, self.environment_id.environment_id, self.container_id, 'kill')
                 
             if result:
                 # Update container state
@@ -886,7 +886,7 @@ class PortainerContainer(models.Model):
             
             # Call the API to update the container
             result = api.container_action(
-                self.server_id.id, self.environment_id, self.container_id, 'update', 
+                self.server_id.id, self.environment_id.environment_id, self.container_id, 'update', 
                 params=update_data)
                 
             if result and (not isinstance(result, dict) or (isinstance(result, dict) and not result.get('error'))):
@@ -916,7 +916,7 @@ class PortainerContainer(models.Model):
             
             # Inspect container to get current environment variables
             inspect_result = api.container_action(
-                self.server_id.id, self.environment_id, self.container_id, 'inspect')
+                self.server_id.id, self.environment_id.environment_id, self.container_id, 'inspect')
                 
             if not inspect_result or isinstance(inspect_result, dict) and inspect_result.get('error'):
                 error_msg = inspect_result.get('error', _("Failed to inspect container")) if isinstance(inspect_result, dict) else _("Failed to inspect container")
@@ -1023,7 +1023,7 @@ class PortainerContainer(models.Model):
         try:
             api = self._get_api()
             result = api.remove_container(
-                self.server_id.id, self.environment_id, self.container_id,
+                self.server_id.id, self.environment_id.environment_id, self.container_id,
                 force=force, volumes=volumes)
             
             # Check for errors in the response
@@ -1513,8 +1513,8 @@ class PortainerContainer(models.Model):
                         'privileged': self.privileged,
                         'publish_all_ports': self.publish_all_ports,
                         'server_id': self.server_id.id,
-                        'environment_id': self.environment_id,
-                        'environment_name': self.environment_name,
+                        'environment_id': self.environment_id.id,
+                        'environment_id': self.environment_id.id,
                         'stack_id': self.stack_id.id if self.stack_id else False,
                     })
                     
