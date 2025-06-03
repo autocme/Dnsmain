@@ -123,37 +123,30 @@ class PortainerVolume(models.Model):
             response = volume.server_id._make_api_request(endpoint, 'POST', data=data)
             
             if response.status_code in [200, 201, 204]:
-                # Volume created successfully, get the detailed volume info from Portainer
+                import json
+                # Volume created successfully, get the volume details to update our record
                 try:
                     volume_data = response.json()
-                    
-                    # Get detailed info for the newly created volume
-                    details_response = volume.server_id._make_api_request(
-                        f'/api/endpoints/{volume.environment_id.environment_id}/docker/volumes/{volume.name}', 'GET')
-                    
-                    details = details_response.json() if details_response.status_code == 200 else {}
-                    
-                    # Update the volume record with complete data from Portainer
+                    # Update the volume record with data from Portainer
                     update_vals = {
                         'volume_id': volume_data.get('Name', volume.name),
-                        'created': volume.server_id._safe_parse_timestamp(volume_data.get('CreatedAt', 0)) if volume_data.get('CreatedAt') else fields.Datetime.now(),
+                        'created': fields.Datetime.now(),
                         'mountpoint': volume_data.get('Mountpoint', ''),
                         'scope': volume_data.get('Scope', 'local'),
-                        'details': json.dumps(details, indent=2) if details else json.dumps(volume_data, indent=2),
+                        'details': json.dumps(volume_data, indent=2) if volume_data else '',
                     }
-                    
+
                     # Handle labels if present
                     if volume_data.get('Labels'):
+                        import json
                         update_vals['labels'] = json.dumps(volume_data['Labels'])
-                    else:
-                        update_vals['labels'] = json.dumps({})
-                    
+
                     # Write the updates without triggering create again
                     super(PortainerVolume, volume).write(update_vals)
-                    
+
                 except Exception as e:
                     _logger.warning(f"Could not parse volume creation response: {e}")
-                
+
                 _logger.info(f"Volume '{volume.name}' created successfully in Portainer")
                 return True
             else:
