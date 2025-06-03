@@ -20,7 +20,7 @@ class PortainerImage(models.Model):
     
     repository = fields.Char('Repository', required=True)
     tag = fields.Char('Tag', required=True)
-    image_id = fields.Char('Image ID', required=False, readonly=True)
+    image_id = fields.Char('Image ID', required=False, readonly=True, copy=False)
     created = fields.Datetime('Created')
     size = fields.Float('Size (bytes)')
     shared_size = fields.Float('Shared Size (bytes)')
