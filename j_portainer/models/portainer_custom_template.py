@@ -964,27 +964,45 @@ class PortainerCustomTemplate(models.Model):
                         
                         # Add variables if available
                         if self.environment_variables:
-                            json_data['Variables'] = []
                             try:
-                                import json
                                 if isinstance(self.environment_variables, str):
                                     env_vars = json.loads(self.environment_variables)
                                     json_data['Variables'] = env_vars
+                                else:
+                                    json_data['Variables'] = self.environment_variables
                             except Exception as e:
                                 _logger.warning(f"Failed to parse variables: {e}")
+                                json_data['Variables'] = []
+                        else:
+                            json_data['Variables'] = []
                         
-                        # Add file content directly in the JSON payload
+                        # Add categories if available
+                        if self.categories:
+                            try:
+                                categories = self.categories.split(",") if isinstance(self.categories, str) else []
+                                json_data['Categories'] = [cat.strip() for cat in categories if cat.strip()]
+                            except Exception as e:
+                                _logger.warning(f"Error formatting categories: {str(e)}")
+                                json_data['Categories'] = []
+                        else:
+                            json_data['Categories'] = []
+                        
+                        # Add file content directly in the JSON payload - this is crucial for updates
                         if file_content:
                             json_data['FileContent'] = file_content
+                        else:
+                            _logger.warning("No file content available for template update")
                         
-                        # Add specific headers for JSON
-                        json_headers = headers.copy()
-                        json_headers['Content-Type'] = 'application/json'
+                        # Use X-API-Key header instead of Authorization Bearer for consistency
+                        json_headers = {
+                            'X-API-Key': api_key,
+                            'Content-Type': 'application/json'
+                        }
                         
                         # Log the complete request for debugging
                         _logger.info(f"PUT Request URL: {url}")
                         _logger.info(f"PUT Request Headers: {json_headers}")
-                        _logger.info(f"PUT Request JSON: {json.dumps(json_data)}")
+                        _logger.info(f"PUT Request JSON: {json.dumps(json_data, indent=2)}")
                         
                         # Send the PUT request with SSL verification as configured in server
                         res = requests.put(url, headers=json_headers, json=json_data, verify=server_info.verify_ssl)
