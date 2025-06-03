@@ -13,7 +13,7 @@ class PortainerVolume(models.Model):
     _description = 'Portainer Volume'
     _order = 'name'
     
-    name = fields.Char('Name', required=True)
+    name = fields.Char('Name', required=True, copy=False)
     volume_id = fields.Char('Volume ID', help="The unique identifier for this volume")
     driver = fields.Char('Driver', required=True)
     driver_opts = fields.Text('Driver Options', help="Options passed to the volume driver")
