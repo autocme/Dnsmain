@@ -58,6 +58,120 @@ class PortainerVolume(models.Model):
         """Compute the number of containers using this volume"""
         for record in self:
             record.container_count = len(record.container_volume_ids)
+    
+    @api.model
+    def create(self, vals):
+        """Override create to automatically create volume in Portainer"""
+        # Create the Odoo record first to get the ID and validate fields
+        volume = super().create(vals)
+        
+        try:
+            # Create the volume in Portainer
+            success = self._create_volume_in_portainer(volume)
+            if not success:
+                # If Portainer creation failed, delete the Odoo record and raise error
+                volume.unlink()
+                raise UserError(_("Failed to create volume in Portainer. Volume not created."))
+                
+        except Exception as e:
+            # If any error occurs, clean up the Odoo record
+            volume.unlink()
+            error_msg = str(e)
+            if "Failed to create volume in Portainer" in error_msg:
+                raise  # Re-raise the UserError with the original message
+            else:
+                raise UserError(_("Error creating volume in Portainer: %s") % error_msg)
+        
+        return volume
+    
+    def _create_volume_in_portainer(self, volume):
+        """Create volume in Portainer via API
+        
+        Args:
+            volume: Volume record to create in Portainer
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # Prepare data for volume creation
+            data = {
+                'Name': volume.name,
+                'Driver': volume.driver
+            }
+            
+            # Add driver options if provided
+            if volume.driver_opts:
+                try:
+                    # Parse driver options as JSON if it's a string
+                    import json
+                    if isinstance(volume.driver_opts, str):
+                        driver_opts = json.loads(volume.driver_opts)
+                    else:
+                        driver_opts = volume.driver_opts
+                    data['DriverOpts'] = driver_opts
+                except:
+                    # If parsing fails, skip driver options
+                    pass
+            
+            # Make API request to create volume
+            endpoint = f'/api/endpoints/{volume.environment_id.environment_id}/docker/volumes/create'
+            response = volume.server_id._make_api_request(endpoint, 'POST', data=data)
+            
+            if response.status_code in [200, 201, 204]:
+                # Volume created successfully, get the volume details to update our record
+                try:
+                    volume_data = response.json()
+                    # Update the volume record with data from Portainer
+                    update_vals = {
+                        'volume_id': volume_data.get('Name', volume.name),
+                        'created': fields.Datetime.now(),
+                        'mountpoint': volume_data.get('Mountpoint', ''),
+                        'scope': volume_data.get('Scope', 'local'),
+                    }
+                    
+                    # Handle labels if present
+                    if volume_data.get('Labels'):
+                        import json
+                        update_vals['labels'] = json.dumps(volume_data['Labels'])
+                    
+                    # Write the updates without triggering create again
+                    super(PortainerVolume, volume).write(update_vals)
+                    
+                except Exception as e:
+                    _logger.warning(f"Could not parse volume creation response: {e}")
+                
+                _logger.info(f"Volume '{volume.name}' created successfully in Portainer")
+                return True
+            else:
+                # Extract detailed error message from Portainer response
+                error_message = f"Status {response.status_code}"
+                try:
+                    if response.text:
+                        error_data = response.json()
+                        if 'message' in error_data:
+                            error_message = error_data['message']
+                        elif 'details' in error_data:
+                            error_message = error_data['details']
+                        else:
+                            error_message = response.text
+                    else:
+                        error_message = f"HTTP {response.status_code} error with no response body"
+                except:
+                    # If JSON parsing fails, use raw response text
+                    error_message = response.text if response.text else f"HTTP {response.status_code} error"
+                
+                _logger.error(f"Failed to create volume '{volume.name}': {error_message}")
+                
+                # Store the error for user display and raise UserError
+                raise UserError(_("Failed to create volume in Portainer: %s") % error_message)
+                
+        except UserError:
+            # Re-raise UserError without modification
+            raise
+        except Exception as e:
+            _logger.error(f"Error creating volume '{volume.name}' in Portainer: {str(e)}")
+            raise UserError(_("Error creating volume in Portainer: %s") % str(e))
             
     @api.depends('labels')
     def _compute_labels_html(self):
