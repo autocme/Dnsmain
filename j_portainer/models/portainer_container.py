@@ -34,11 +34,15 @@ class PortainerContainer(models.Model):
         # Perform the standard write operation
         result = super(PortainerContainer, self).write(vals)
         
+        # Skip sync operations during sync from Portainer
+        if self.env.context.get('sync_from_portainer'):
+            return result
+        
         # If name has changed, update the container name in Portainer
         if 'name' in vals:
             for record in self:
                 old_name = old_names.get(record.id, record.name)
-                if old_name != record.name:
+                if old_name != record.name and record.container_id:  # Only for existing containers with actual name changes
                     try:
                         _logger.info(f"Updating container name from '{old_name}' to '{record.name}'")
                         record._update_container_name_in_portainer(old_name)
@@ -47,8 +51,8 @@ class PortainerContainer(models.Model):
                         # We don't want to block the write operation if the API call fails
                         pass
         
-        # If restart policy is changed, update it in Portainer
-        if 'restart_policy' in vals:
+        # If restart policy is changed, update it in Portainer (skip during sync)
+        if 'restart_policy' in vals and not self.env.context.get('sync_from_portainer'):
             for record in self:
                 try:
                     record.update_restart_policy()
@@ -201,22 +205,7 @@ class PortainerContainer(models.Model):
                     
         return records
     
-    def write(self, vals):
-        """Override write to handle changes that need to be synchronized to Portainer"""
-        result = super().write(vals)
-        
-        # Skip sync during initial sync operations
-        if self.env.context.get('sync_from_portainer'):
-            return result
-            
-        # Handle container name changes
-        if 'name' in vals:
-            for record in self:
-                if record.container_id:  # Only for existing containers
-                    old_name = record.name
-                    record._update_container_name_in_portainer(old_name)
-                    
-        return result
+
     
     def _default_server_id(self):
         """Default server selection"""
