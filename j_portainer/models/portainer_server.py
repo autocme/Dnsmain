@@ -710,7 +710,7 @@ class PortainerServer(models.Model):
                     # Check if container already exists in Odoo
                     existing_container = self.env['j_portainer.container'].search([
                         ('server_id', '=', self.id),
-                        ('environment_id', '=', endpoint_id),
+                        ('environment_id.environment_id', '=', endpoint_id),
                         ('container_id', '=', container_id)
                     ], limit=1)
 
@@ -852,15 +852,24 @@ class PortainerServer(models.Model):
                                 if field_name in capabilities:
                                     capabilities[field_name] = True
                     
+                    # Find or create image record for this container
+                    image_record = False
+                    image_id_value = container.get('ImageID', '')
+                    if image_id_value:
+                        image_record = self.env['j_portainer.image'].search([
+                            ('server_id', '=', self.id),
+                            ('environment_id.environment_id', '=', endpoint_id),
+                            ('image_id', '=', image_id_value)
+                        ], limit=1)
+                    
                     # Prepare data for create/update
                     container_data = {
                         'server_id': self.id,
-                        'environment_id': endpoint_id,
-                        'environment_name': env.name,
+                        'environment_id': env.id,  # Use the Many2one relation
                         'container_id': container_id,
                         'name': container_name,
                         'image': container.get('Image', ''),
-                        'image_id': container.get('ImageID', ''),
+                        'image_id': image_record.id if image_record else False,
                         'created': self._safe_parse_timestamp(container.get('Created', 0)),
                         'status': status,
                         'state': 'running' if state.get('Running', False) else 'stopped',
@@ -934,8 +943,8 @@ class PortainerServer(models.Model):
                         container_record = existing_container
                         updated_count += 1
                     else:
-                        # Create new container record
-                        container_record = self.env['j_portainer.container'].create(container_data)
+                        # Create new container record - mark as sync operation
+                        container_record = self.env['j_portainer.container'].with_context(sync_from_portainer=True).create(container_data)
                         created_count += 1
                         
                     # Process container labels as separate records
@@ -985,7 +994,7 @@ class PortainerServer(models.Model):
                             if source:
                                 volume = self.env['j_portainer.volume'].search([
                                     ('server_id', '=', self.id),
-                                    ('environment_id', '=', endpoint_id),
+                                    ('environment_id.environment_id', '=', endpoint_id),
                                     ('name', '=', source)
                                 ], limit=1)
                                 if volume:
@@ -1136,7 +1145,7 @@ class PortainerServer(models.Model):
             
             # Filter containers that should be removed (not found in Portainer)
             containers_to_remove = all_containers.filtered(
-                lambda c: (c.environment_id, c.container_id) not in synced_container_ids
+                lambda c: (c.environment_id.environment_id, c.container_id) not in synced_container_ids
             )
             
             # Remove obsolete containers
