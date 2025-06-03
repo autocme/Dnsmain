@@ -868,7 +868,6 @@ class PortainerServer(models.Model):
                         'environment_id': env.id,  # Use the Many2one relation
                         'container_id': container_id,
                         'name': container_name,
-                        'image': container.get('Image', ''),
                         'image_id': image_record.id if image_record else False,
                         'created': self._safe_parse_timestamp(container.get('Created', 0)),
                         'status': status,
