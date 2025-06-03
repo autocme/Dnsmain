@@ -450,7 +450,7 @@ class PortainerContainer(models.Model):
         """
         try:
             # Validate required fields
-            if not self.name or not self.image or not self.server_id or not self.environment_id:
+            if not self.name or not self.image_id or not self.server_id or not self.environment_id:
                 _logger.error("Cannot create container: missing required fields")
                 return False
                 
