@@ -40,6 +40,11 @@ class PortainerTemplate(models.Model):
     volumes = fields.Text('Volumes')
     ports = fields.Text('Ports')
     note = fields.Text('Note')
+    
+    _sql_constraints = [
+        ('unique_template_per_server', 'unique(server_id, template_id)', 
+         'Template ID must be unique per server'),
+    ]
     details = fields.Text('Details', help="Additional details about the template")
     skip_portainer_create = fields.Boolean('Skip Portainer Creation', default=False, 
                                           help='Used during sync to skip creating the template in Portainer')

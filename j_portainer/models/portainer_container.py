@@ -173,6 +173,11 @@ class PortainerContainer(models.Model):
     env_ids = fields.One2many('j_portainer.container.env', 'container_id', string='Environment Variables')
     port_ids = fields.One2many('j_portainer.container.port', 'container_id', string='Port Mappings')
     
+    _sql_constraints = [
+        ('unique_container_per_environment', 'unique(server_id, environment_id, container_id)', 
+         'Container ID must be unique per environment on each server'),
+    ]
+    
     def _get_api(self):
         """Get API client"""
         return self.env['j_portainer.api']

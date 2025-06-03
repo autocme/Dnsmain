@@ -34,6 +34,11 @@ class PortainerVolume(models.Model):
     container_volume_ids = fields.One2many('j_portainer.container.volume', 'volume_id', string='Container Mappings')
     container_count = fields.Integer('Container Count', compute='_compute_container_count', store=True)
     
+    _sql_constraints = [
+        ('unique_volume_per_environment', 'unique(server_id, environment_id, name)', 
+         'Volume name must be unique per environment on each server'),
+    ]
+    
     @api.depends('container_volume_ids')
     def _compute_container_count(self):
         """Compute the number of containers using this volume"""
