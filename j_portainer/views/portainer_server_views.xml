@@ -93,7 +93,6 @@
                                            decoration-warning="state == 'paused'"
                                            decoration-danger="state in ['stopped', 'exited', 'dead']"/>
                                     <field name="image"/>
-                                    <field name="environment_name"/>
                                     <field name="created"/>
                                 </tree>
                             </field>

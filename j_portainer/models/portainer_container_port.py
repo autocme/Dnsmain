@@ -30,7 +30,7 @@ class PortainerContainerPort(models.Model):
     
     # Related information
     server_id = fields.Many2one(related='container_id.server_id', string='Server', store=True)
-    environment_id = fields.Integer(related='container_id.environment_id', string='Environment ID', store=True)
+    environment_id = fields.Many2one(related='container_id.environment_id', string='Environment ID', store=True)
     
     # Computed fields for display
     display_name = fields.Char('Display Name', compute='_compute_display_name')
