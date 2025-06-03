@@ -1046,6 +1046,176 @@ class PortainerContainer(models.Model):
             _logger.error(f"Error synchronizing port mappings for container {self.name}: {str(e)}")
             raise UserError(_("Error synchronizing port mappings: %s") % str(e))
 
+    def _mark_ports_changed(self):
+        """Mark container as having port changes that need to be applied to Portainer"""
+        self.ensure_one()
+        
+        # Note: Docker containers require recreation to change port mappings
+        # This method will trigger a notification to the user about the required action
+        try:
+            return self.action_notify_port_changes()
+        except Exception as e:
+            _logger.warning(f"Failed to handle port changes for container {self.name}: {str(e)}")
+            return False
+
+    def action_notify_port_changes(self):
+        """Notify user about port changes that require container recreation"""
+        self.ensure_one()
+        
+        if not self.container_id:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Container Not Found'),
+                    'message': _('Container does not exist in Portainer'),
+                    'sticky': False,
+                    'type': 'warning',
+                }
+            }
+        
+        # Build current port mappings from Odoo records
+        port_mappings = []
+        for port in self.port_ids:
+            if port.host_port:
+                if port.host_ip:
+                    port_mappings.append(f"{port.host_ip}:{port.host_port}->{port.container_port}/{port.protocol}")
+                else:
+                    port_mappings.append(f"{port.host_port}->{port.container_port}/{port.protocol}")
+            else:
+                port_mappings.append(f"{port.container_port}/{port.protocol} (exposed only)")
+        
+        port_list = "\n".join(port_mappings) if port_mappings else "No port mappings"
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Port Changes Detected'),
+                'message': _('Port mappings have been updated in Odoo for container "%s".\n\nNew port configuration:\n%s\n\nNote: Docker containers require recreation to apply port changes. Stop the container and recreate it to apply these changes in Portainer.') % (self.name, port_list),
+                'sticky': True,
+                'type': 'warning',
+            }
+        }
+
+    def action_recreate_with_new_ports(self):
+        """Action to recreate container with updated port mappings"""
+        self.ensure_one()
+        
+        if not self.container_id:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Container Not Found'),
+                    'message': _('Container does not exist in Portainer'),
+                    'sticky': False,
+                    'type': 'warning',
+                }
+            }
+        
+        try:
+            # Get container details for recreation
+            api = self.env['j_portainer.api']
+            
+            # First, stop the container if it's running
+            if self.state == 'running':
+                stop_result = api.container_action(
+                    self.server_id.id,
+                    'stop',
+                    container_id=self.container_id,
+                    environment_id=self.environment_id.environment_id
+                )
+                
+                if not stop_result:
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Failed to Stop Container'),
+                            'message': _('Could not stop the container before recreation'),
+                            'sticky': False,
+                            'type': 'danger',
+                        }
+                    }
+            
+            # Get container inspection details to preserve configuration
+            inspect_response = api.container_action(
+                self.server_id.id,
+                'inspect',
+                container_id=self.container_id,
+                environment_id=self.environment_id.environment_id
+            )
+            
+            if not inspect_response or 'error' in inspect_response:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Container Inspection Failed'),
+                        'message': _('Could not retrieve container configuration: %s') % inspect_response.get('error', 'Unknown error'),
+                        'sticky': False,
+                        'type': 'danger',
+                    }
+                }
+            
+            # Build new port configuration from Odoo records
+            port_bindings = {}
+            exposed_ports = {}
+            
+            for port in self.port_ids:
+                port_key = f"{port.container_port}/{port.protocol}"
+                exposed_ports[port_key] = {}
+                
+                if port.host_port:
+                    # Published port
+                    binding = {
+                        'HostIp': port.host_ip or '',
+                        'HostPort': str(port.host_port)
+                    }
+                    port_bindings[port_key] = [binding]
+            
+            # Store the recreation configuration for manual use
+            recreation_config = {
+                'container_name': self.name,
+                'image': self.image,
+                'exposed_ports': exposed_ports,
+                'port_bindings': port_bindings,
+                'environment_id': self.environment_id.environment_id,
+                'original_config': inspect_response,
+                'ports_updated': True,
+                'timestamp': fields.Datetime.now().isoformat()
+            }
+            
+            # Update container details with recreation info
+            self.write({
+                'details': json.dumps(recreation_config, indent=2)
+            })
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Container Ready for Recreation'),
+                    'message': _('Container "%s" has been prepared for recreation with new port mappings.\n\nThe container configuration is saved in the details field. You can now manually recreate the container in Portainer with the updated port configuration.') % self.name,
+                    'sticky': True,
+                    'type': 'info',
+                }
+            }
+            
+        except Exception as e:
+            _logger.error(f"Error preparing container recreation for {self.name}: {str(e)}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Recreation Preparation Failed'),
+                    'message': _('Error preparing container recreation: %s') % str(e),
+                    'sticky': False,
+                    'type': 'danger',
+                }
+            }
+
     def remove(self, force=False, volumes=False):
         """Remove the container
         
