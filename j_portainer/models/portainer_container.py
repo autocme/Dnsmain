@@ -163,6 +163,61 @@ class PortainerContainer(models.Model):
          'Container ID must be unique per environment on each server'),
     ]
     
+    @api.model
+    def create(self, vals_list):
+        """Override create to handle manual creation vs sync operations"""
+        if not isinstance(vals_list, list):
+            vals_list = [vals_list]
+            
+        records = self.env['j_portainer.container']
+        
+        for vals in vals_list:
+            # Check if this is a sync operation from Portainer
+            if self.env.context.get('sync_from_portainer'):
+                # For sync operations, create record directly without triggering Portainer creation
+                record = super().create(vals)
+                records |= record
+            else:
+                # For manual creation, create container in Portainer first
+                if not vals.get('container_id'):
+                    # This is manual creation - create a temporary record to use the creation logic
+                    temp_record = super().create(vals)
+                    try:
+                        # Attempt to create the container in Portainer
+                        success = temp_record._create_container_in_portainer()
+                        if not success:
+                            # If creation failed, delete the temporary record and raise error
+                            temp_record.unlink()
+                            raise UserError(_("Failed to create container in Portainer"))
+                        records |= temp_record
+                    except Exception as e:
+                        # Clean up temporary record on any error
+                        temp_record.unlink()
+                        raise UserError(_("Error creating container: %s") % str(e))
+                else:
+                    # Already has container_id, create normally
+                    record = super().create(vals)
+                    records |= record
+                    
+        return records
+    
+    def write(self, vals):
+        """Override write to handle changes that need to be synchronized to Portainer"""
+        result = super().write(vals)
+        
+        # Skip sync during initial sync operations
+        if self.env.context.get('sync_from_portainer'):
+            return result
+            
+        # Handle container name changes
+        if 'name' in vals:
+            for record in self:
+                if record.container_id:  # Only for existing containers
+                    old_name = record.name
+                    record._update_container_name_in_portainer(old_name)
+                    
+        return result
+    
     def _default_server_id(self):
         """Default server selection"""
         return self.env['j_portainer.server'].search([('status', '=', 'connected')], limit=1)
@@ -1513,7 +1568,6 @@ class PortainerContainer(models.Model):
                         'privileged': self.privileged,
                         'publish_all_ports': self.publish_all_ports,
                         'server_id': self.server_id.id,
-                        'environment_id': self.environment_id.id,
                         'environment_id': self.environment_id.id,
                         'stack_id': self.stack_id.id if self.stack_id else False,
                     })

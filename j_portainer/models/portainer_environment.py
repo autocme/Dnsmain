@@ -53,7 +53,7 @@ class PortainerEnvironment(models.Model):
             # Containers
             containers = self.env['j_portainer.container'].search([
                 ('server_id', '=', env.server_id.id),
-                ('environment_id', '=', env.environment_id)
+                ('environment_id', '=', env.id)
             ])
             env.container_count = len(containers)
             env.running_container_count = len(containers.filtered(lambda c: c.state == 'running'))

@@ -710,7 +710,7 @@ class PortainerServer(models.Model):
                     # Check if container already exists in Odoo
                     existing_container = self.env['j_portainer.container'].search([
                         ('server_id', '=', self.id),
-                        ('environment_id.environment_id', '=', endpoint_id),
+                        ('environment_id', '=', env.id),
                         ('container_id', '=', container_id)
                     ], limit=1)
 
@@ -858,7 +858,7 @@ class PortainerServer(models.Model):
                     if image_id_value:
                         image_record = self.env['j_portainer.image'].search([
                             ('server_id', '=', self.id),
-                            ('environment_id.environment_id', '=', endpoint_id),
+                            ('environment_id', '=', env.id),
                             ('image_id', '=', image_id_value)
                         ], limit=1)
                     
