@@ -436,22 +436,23 @@ class PortainerCustomTemplate(models.Model):
                 # Log successful Portainer deletion
                 _logger.info(f"Custom template {template_title} (ID: {template_id}) removed from Portainer")
                 
-                # Now unlink the record from Odoo
-                self.unlink()
-                
-                # Commit the transaction - important!
-                self.env.cr.commit()
-                
-                return {
+                message = {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'title': _('Template Completely Removed'),
+                        'title': _('Template Removed'),
                         'message': _("Custom template '%s' has been removed from both Portainer and Odoo") % template_title,
                         'sticky': False,
-                        'next': {'type': 'ir.actions.act_window_close'}
+                        'type': 'success',
                     }
                 }
+                
+                # Now unlink the record from Odoo
+                self.unlink()
+                # Commit the transaction - important!
+                self.env.cr.commit()
+                
+                return message
             else:
                 # If result is not explicitly an error but also not a success
                 _logger.error(f"Unexpected result when removing template {template_title} from Portainer: {result}")
