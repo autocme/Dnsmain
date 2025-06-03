@@ -1564,8 +1564,8 @@ class PortainerServer(models.Model):
                         existing_volume.write(volume_data)
                         updated_count += 1
                     else:
-                        # Create new volume record
-                        self.env['j_portainer.volume'].create(volume_data)
+                        # Create new volume record - mark as sync operation
+                        self.env['j_portainer.volume'].with_context(sync_from_portainer=True).create(volume_data)
                         created_count += 1
 
                     synced_volume_names.append((endpoint_id, volume_name))
