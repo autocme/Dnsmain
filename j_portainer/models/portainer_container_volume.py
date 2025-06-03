@@ -12,7 +12,7 @@ class PortainerContainerVolume(models.Model):
     _order = 'container_path'
     
     container_id = fields.Many2one('j_portainer.container', string='Container',
-                                  required=True, readonly=True, index=True)
+                                  required=True, readonly=True, index=True, ondelete='cascade')
     
     # Volume mapping information
     type = fields.Selection([

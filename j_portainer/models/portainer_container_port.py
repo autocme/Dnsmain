@@ -12,7 +12,7 @@ class PortainerContainerPort(models.Model):
     _order = 'container_port'
     
     container_id = fields.Many2one('j_portainer.container', string='Container',
-                                 required=True, index=True)
+                                 required=True, index=True, ondelete='cascade')
     
     # Port mapping information
     container_port = fields.Integer('Container Port', required=True, 

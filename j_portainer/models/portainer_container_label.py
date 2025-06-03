@@ -16,7 +16,7 @@ class PortainerContainerLabel(models.Model):
     value = fields.Char('Label Value', required=True)
     
     container_id = fields.Many2one('j_portainer.container', string='Container',
-                                  required=True, index=True)
+                                  required=True, index=True, ondelete='cascade')
     
     display_name = fields.Char('Display Name', compute='_compute_display_name')
     
