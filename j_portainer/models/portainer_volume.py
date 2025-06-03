@@ -62,6 +62,10 @@ class PortainerVolume(models.Model):
     @api.model
     def create(self, vals):
         """Override create to automatically create volume in Portainer"""
+        # If volume_id is provided, this is a sync operation - save directly
+        if vals.get('volume_id'):
+            return super().create(vals)
+        
         # Create the Odoo record first to get the ID and validate fields
         volume = super().create(vals)
         
