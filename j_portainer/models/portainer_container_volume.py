@@ -27,7 +27,7 @@ class PortainerContainerVolume(models.Model):
     volume_id = fields.Many2one('j_portainer.volume', string='Volume',
                               domain="[('server_id', '=', server_id), ('environment_id', '=', environment_id)]")
     server_id = fields.Many2one(related='container_id.server_id', string='Server', store=True)
-    environment_id = fields.Integer(related='container_id.environment_id', string='Environment ID', store=True)
+    environment_id = fields.Many2one(related='container_id.environment_id', string='Environment ID', store=True)
     
     @api.onchange('volume_id')
     def _onchange_volume_id(self):

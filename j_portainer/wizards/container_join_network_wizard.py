@@ -14,8 +14,8 @@ class ContainerJoinNetworkWizard(models.TransientModel):
     container_id = fields.Many2one('j_portainer.container', string='Container', required=True,
                                    readonly=True, ondelete='cascade')
     server_id = fields.Many2one(related='container_id.server_id', string='Server', readonly=True)
-    environment_id = fields.Integer(related='container_id.environment_id', string='Environment ID', readonly=True)
-    environment_name = fields.Char(related='container_id.environment_name', string='Environment', readonly=True)
+    environment_id = fields.Many2one(related='container_id.environment_id', string='Environment ID', readonly=True)
+    environment_name = fields.Char(related='environment_id.name', string='Environment', readonly=True)
     
     # Available networks to join - domain is set to only show networks from the same environment
     network_id = fields.Many2one('j_portainer.network', string='Network', required=True,
