@@ -2282,11 +2282,10 @@ class PortainerAPI(models.AbstractModel):
         if config is None:
             config = {}
             
+        # Docker API expects this simpler format for network connection
         data = {
             "Container": container_id,
-            "EndpointID": str(environment_id),
-            "NetworkID": network_id,
-            "Config": config
+            "EndpointConfig": config
         }
         
         endpoint = f'/api/endpoints/{environment_id}/docker/networks/{network_id}/connect'
