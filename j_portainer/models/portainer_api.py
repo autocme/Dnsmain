@@ -2281,11 +2281,12 @@ class PortainerAPI(models.AbstractModel):
         
         if config is None:
             config = {}
-            
-        # Docker API expects this simpler format for network connection
+        print('environment_id', environment_id)
         data = {
             "Container": container_id,
-            "EndpointConfig": config
+            "EndpointID": str(environment_id),
+            "NetworkID": network_id,
+            "Config": config
         }
         
         endpoint = f'/api/endpoints/{environment_id}/docker/networks/{network_id}/connect'
@@ -2317,8 +2318,8 @@ class PortainerAPI(models.AbstractModel):
         
         endpoint = f'/api/endpoints/{environment_id}/docker/networks/{network_id}/disconnect'
         response = server._make_api_request(endpoint, method='POST', data=data, environment_id=environment_id)
-        
-        return response.status_code in (200, 204)
+
+        return response.status_code if response.status_code in (200, 204) else response.text
         
     def update_container_labels(self, server_id, environment_id, container_id, labels):
         """Update container labels in Portainer
