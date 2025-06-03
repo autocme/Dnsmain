@@ -61,7 +61,7 @@ class PortainerContainer(models.Model):
     
     name = fields.Char('Name', required=True)
     container_id = fields.Char('Container ID', copy=False)
-    image = fields.Char('Image', required=True)
+    image = fields.Char('Image', related='image_id.image_id', readonly=True, store=True)
     image_id = fields.Many2one('j_portainer.image', string='Image')
     always_pull_image = fields.Boolean('Always Pull Image', default=False,
                                     help="Always pull the latest version of the image")
@@ -459,7 +459,7 @@ class PortainerContainer(models.Model):
             
             # Build container configuration
             config = {
-                'Image': self.image,
+                'Image': self.image_id.repository + ':' + self.image_id.tag if self.image_id else '',
                 'Hostname': self.name,
                 'HostConfig': {
                     'RestartPolicy': {
@@ -573,7 +573,7 @@ class PortainerContainer(models.Model):
             params = {'name': self.name}
             
             # Create the container in Portainer
-            _logger.info(f"Creating container {self.name} with image {self.image}")
+            _logger.info(f"Creating container {self.name} with image {self.image_id.repository}:{self.image_id.tag}" if self.image_id else f"Creating container {self.name}")
             create_endpoint = f'/api/endpoints/{self.environment_id.environment_id}/docker/containers/create'
             response = server._make_api_request(create_endpoint, 'POST', data=config, params=params)
             
@@ -1227,12 +1227,12 @@ class PortainerContainer(models.Model):
         container_name = self.name
         
         # Log the deployment attempt
-        _logger.info(f"Deploying container based on: {self.name} (Image: {self.image})")
+        _logger.info(f"Deploying container based on: {self.name} (Image: {self.image_id.repository}:{self.image_id.tag})" if self.image_id else f"Deploying container based on: {self.name}")
         
         try:
             # Build config from container fields - following exact Portainer format
             config = {
-                'Image': self.image,
+                'Image': self.image_id.repository + ':' + self.image_id.tag if self.image_id else '',
                 'Hostname': container_name,
                 'HostConfig': {
                     'RestartPolicy': {
@@ -1416,7 +1416,7 @@ class PortainerContainer(models.Model):
             
             # Use Docker API endpoint to create container
             _logger.info(f"Creating container with config: {json.dumps(config)}")
-            create_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/create'
+            create_endpoint = f'/api/endpoints/{self.environment_id.environment_id}/docker/containers/create'
             response = server._make_api_request(create_endpoint, 'POST', data=config, params=params)
             
             if response.status_code not in [200, 201, 204]:
@@ -1482,7 +1482,7 @@ class PortainerContainer(models.Model):
                     _logger.info(f"Connecting container to network: {network.network_name} (ID: {docker_network_id})")
                     
                     # Connect the container to the network using the Docker network ID
-                    connect_endpoint = f'/api/endpoints/{self.environment_id}/docker/networks/{docker_network_id}/connect'
+                    connect_endpoint = f'/api/endpoints/{self.environment_id.environment_id}/docker/networks/{docker_network_id}/connect'
                     connect_payload = {
                         'Container': container_id
                     }
@@ -1499,7 +1499,7 @@ class PortainerContainer(models.Model):
             
             # Start the container
             _logger.info(f"Starting container with ID: {container_id}")
-            start_endpoint = f'/api/endpoints/{self.environment_id}/docker/containers/{container_id}/start'
+            start_endpoint = f'/api/endpoints/{self.environment_id.environment_id}/docker/containers/{container_id}/start'
             start_response = server._make_api_request(start_endpoint, 'POST')
             
             if start_response.status_code not in [200, 201, 204]:
@@ -1559,8 +1559,7 @@ class PortainerContainer(models.Model):
                     new_container = self.env['j_portainer.container'].create({
                         'name': container_name,
                         'container_id': container_id,
-                        'image': self.image,
-                        'image_id': details.get('Image', ''),
+                        'image_id': self.image_id.id,
                         'created': created_at,
                         'status': status,
                         'state': container_state,
