@@ -106,7 +106,7 @@ class PortainerContainerVolume(models.Model):
             raw_result = api.execute_container_command(
                 self.container_id.server_id.id,
                 self.container_id.container_id,
-                self.container_id.environment_id,
+                self.container_id.environment_id.environment_id,
                 du_command
             )
             
