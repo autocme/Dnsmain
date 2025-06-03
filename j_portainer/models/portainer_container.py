@@ -15,28 +15,13 @@ class PortainerContainer(models.Model):
     
     @api.model_create_multi
     def create(self, vals_list):
-        """Override create to create containers in Portainer when created in Odoo"""
-        # First create the records in Odoo
-        records = super(PortainerContainer, self).create(vals_list)
+        """Override create to handle sync operations"""
+        # If this is a sync operation from Portainer, save directly
+        if self.env.context.get('sync_from_portainer'):
+            return super(PortainerContainer, self).create(vals_list)
         
-        # Then try to create the containers in Portainer
-        for record in records:
-            try:
-                # If a container ID is already provided, this is likely a sync operation
-                # so we should not try to create a new container in Portainer
-                if record.container_id:
-                    continue
-                    
-                # Create the container in Portainer
-                result = record._create_container_in_portainer()
-                if not result:
-                    _logger.warning(f"Failed to create container {record.name} in Portainer")
-            except Exception as e:
-                _logger.warning(f"Error creating container {record.name} in Portainer: {str(e)}")
-                # We don't want to block the create operation if the API call fails
-                pass
-                
-        return records
+        # For manual creation - not implemented yet as per requirements
+        return super(PortainerContainer, self).create(vals_list)
     
     def write(self, vals):
         """Override write to handle changes that need to be synchronized to Portainer"""
@@ -75,9 +60,9 @@ class PortainerContainer(models.Model):
         return result
     
     name = fields.Char('Name', required=True)
-    container_id = fields.Char('Container ID', required=True, copy=False)
+    container_id = fields.Char('Container ID', copy=False)
     image = fields.Char('Image', required=True)
-    image_id = fields.Char('Image ID')
+    image_id = fields.Many2one('j_portainer.image', string='Image')
     always_pull_image = fields.Boolean('Always Pull Image', default=False,
                                     help="Always pull the latest version of the image")
     created = fields.Datetime('Created')
@@ -160,9 +145,9 @@ class PortainerContainer(models.Model):
     get_formatted_volumes = fields.Html('Formatted Volumes', compute='_compute_formatted_volumes')
     get_formatted_ports = fields.Html('Formatted Ports', compute='_compute_formatted_ports')
     
-    server_id = fields.Many2one('j_portainer.server', string='Server', required=True)
-    environment_id = fields.Integer('Environment ID', required=True)
-    environment_name = fields.Char('Environment', required=True)
+    server_id = fields.Many2one('j_portainer.server', string='Server', required=True, default=lambda self: self._default_server_id())
+    environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True, 
+                                    domain="[('server_id', '=', server_id)]", default=lambda self: self._default_environment_id())
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     stack_id = fields.Many2one('j_portainer.stack', string='Stack', ondelete='set null')
     
@@ -177,6 +162,18 @@ class PortainerContainer(models.Model):
         ('unique_container_per_environment', 'unique(server_id, environment_id, container_id)', 
          'Container ID must be unique per environment on each server'),
     ]
+    
+    def _default_server_id(self):
+        """Default server selection"""
+        return self.env['j_portainer.server'].search([('status', '=', 'connected')], limit=1)
+    
+    def _default_environment_id(self):
+        """Default environment selection"""
+        # Get the first server and then its first environment
+        server = self._default_server_id()
+        if server:
+            return server.environment_ids[:1]
+        return False
     
     def _get_api(self):
         """Get API client"""

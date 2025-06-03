@@ -185,12 +185,11 @@ class PortainerEnvironment(models.Model):
             'view_mode': 'tree,form',
             'domain': [
                 ('server_id', '=', self.server_id.id),
-                ('environment_id', '=', self.environment_id)
+                ('environment_id', '=', self.id)
             ],
             'context': {
                 'default_server_id': self.server_id.id,
-                'default_environment_id': self.environment_id,
-                'default_environment_name': self.name,
+                'default_environment_id': self.id,
             }
         }
     
