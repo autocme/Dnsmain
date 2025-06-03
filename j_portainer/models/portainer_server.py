@@ -1516,7 +1516,7 @@ class PortainerServer(models.Model):
                     # Check if this volume already exists in Odoo
                     existing_volume = self.env['j_portainer.volume'].search([
                         ('server_id', '=', self.id),
-                        ('environment_id', '=', endpoint_id),
+                        ('environment_id.environment_id', '=', endpoint_id),
                         ('name', '=', volume_name)
                     ], limit=1)
 
@@ -1548,10 +1548,9 @@ class PortainerServer(models.Model):
                     # Prepare volume data
                     volume_data = {
                         'server_id': self.id,
-                        'environment_id': endpoint_id,
-                        'environment_name': env.name,
+                        'environment_id': env.id,  # Use the Many2one relation
                         'name': volume_name,
-                        'driver': volume.get('Driver', ''),
+                        'driver': volume.get('Driver', 'local'),
                         'created': self._safe_parse_timestamp(volume.get('CreatedAt', 0)),
                         'mountpoint': volume.get('Mountpoint', ''),
                         'scope': volume.get('Scope', 'local'),
@@ -1580,7 +1579,7 @@ class PortainerServer(models.Model):
             
             # Filter volumes that should be removed (not found in Portainer)
             volumes_to_remove = all_volumes.filtered(
-                lambda v: (v.environment_id, v.name) not in synced_volume_names
+                lambda v: (v.environment_id.environment_id, v.name) not in synced_volume_names
             )
             
             # Remove obsolete volumes

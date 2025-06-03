@@ -15,7 +15,9 @@ class PortainerVolume(models.Model):
     
     name = fields.Char('Name', required=True, copy=False)
     volume_id = fields.Char('Volume ID', help="The unique identifier for this volume")
-    driver = fields.Char('Driver', required=True)
+    driver = fields.Selection([
+        ('local', 'Local'),
+    ], string='Driver', required=True, default='local')
     driver_opts = fields.Text('Driver Options', help="Options passed to the volume driver")
     mountpoint = fields.Char('Mountpoint')
     created = fields.Datetime('Created')
@@ -25,9 +27,9 @@ class PortainerVolume(models.Model):
     details = fields.Text('Details')
     in_use = fields.Boolean('In Use', default=False, help="Whether the volume is currently used by any containers")
     
-    server_id = fields.Many2one('j_portainer.server', string='Server', required=True)
-    environment_id = fields.Integer('Environment ID', required=True)
-    environment_name = fields.Char('Environment', required=True)
+    server_id = fields.Many2one('j_portainer.server', string='Server', required=True, default=lambda self: self._default_server_id())
+    environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True, 
+                                    domain="[('server_id', '=', server_id)]", default=lambda self: self._default_environment_id())
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
     # Relation with containers using this volume
@@ -38,6 +40,18 @@ class PortainerVolume(models.Model):
         ('unique_volume_per_environment', 'unique(server_id, environment_id, name)', 
          'Volume name must be unique per environment on each server'),
     ]
+    
+    def _default_server_id(self):
+        """Default server selection"""
+        return self.env['j_portainer.server'].search([('status', '=', 'connected')], limit=1)
+    
+    def _default_environment_id(self):
+        """Default environment selection"""
+        # Get the first server and then its first environment
+        server = self._default_server_id()
+        if server:
+            return server.environment_ids[:1]
+        return False
     
     @api.depends('container_volume_ids')
     def _compute_container_count(self):
@@ -142,7 +156,7 @@ class PortainerVolume(models.Model):
         try:
             api = self._get_api()
             result = api.volume_action(
-                self.server_id.id, self.environment_id, self.name, 'delete')
+                self.server_id.id, self.environment_id.environment_id, self.name, 'delete')
             
             # Check for errors in the result - be very explicit about this check
             if isinstance(result, dict) and result.get('error'):
@@ -188,7 +202,7 @@ class PortainerVolume(models.Model):
         self.ensure_one()
         
         try:
-            self.server_id.sync_volumes(self.environment_id)
+            self.server_id.sync_volumes(self.environment_id.environment_id)
             
             return {
                 'type': 'ir.actions.client',
