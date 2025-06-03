@@ -1110,24 +1110,63 @@ class PortainerServer(models.Model):
                     if existing_ports:
                         existing_ports.unlink()
                         
-                    # Extract port mappings from container details
-                    ports_data = container.get('Ports', [])
+                    # Extract port mappings from container details using PortBindings
                     port_records = []
                     
-                    for port in ports_data:
-                        # Only process if we have container port information
-                        container_port = port.get('PrivatePort')
-                        if container_port:
-                            host_port = port.get('PublicPort')
-                            protocol = port.get('Type', 'tcp').lower()
-                            host_ip = port.get('IP', '')
+                    # Get PortBindings from container inspection details (more reliable than basic Ports array)
+                    port_bindings = details.get('HostConfig', {}).get('PortBindings', {})
+                    exposed_ports = details.get('Config', {}).get('ExposedPorts', {})
+                    
+                    # Process PortBindings for published ports
+                    for container_port_proto, bindings in port_bindings.items():
+                        if bindings:  # Only process if there are actual bindings
+                            # Parse container port and protocol (e.g., "40/tcp" -> port=40, protocol=tcp)
+                            if '/' in container_port_proto:
+                                container_port_str, protocol = container_port_proto.split('/', 1)
+                                container_port = int(container_port_str)
+                                protocol = protocol.lower()
+                            else:
+                                container_port = int(container_port_proto)
+                                protocol = 'tcp'
                             
+                            # Process each binding (can have multiple host ports mapped to same container port)
+                            for binding in bindings:
+                                host_ip = binding.get('HostIp', '')
+                                host_port = binding.get('HostPort', '')
+                                
+                                # Convert host_port to int if it's a valid number
+                                host_port_int = False
+                                if host_port and host_port.isdigit():
+                                    host_port_int = int(host_port)
+                                
+                                port_records.append({
+                                    'container_id': container_record.id,
+                                    'container_port': container_port,
+                                    'host_port': host_port_int,
+                                    'protocol': protocol,
+                                    'host_ip': host_ip,
+                                })
+                    
+                    # Also process exposed ports that are not published (no host port mapping)
+                    for container_port_proto in exposed_ports.keys():
+                        # Check if this port is already processed in PortBindings
+                        if container_port_proto not in port_bindings:
+                            # Parse container port and protocol
+                            if '/' in container_port_proto:
+                                container_port_str, protocol = container_port_proto.split('/', 1)
+                                container_port = int(container_port_str)
+                                protocol = protocol.lower()
+                            else:
+                                container_port = int(container_port_proto)
+                                protocol = 'tcp'
+                            
+                            # Add as exposed but not published port
                             port_records.append({
                                 'container_id': container_record.id,
                                 'container_port': container_port,
-                                'host_port': host_port or False,  # Use False if no host port (not published)
+                                'host_port': False,  # Not published to host
                                 'protocol': protocol,
-                                'host_ip': host_ip,
+                                'host_ip': '',
                             })
                     
                     if port_records:

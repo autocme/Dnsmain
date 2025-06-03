@@ -66,7 +66,7 @@ class PortainerContainer(models.Model):
     name = fields.Char('Name', required=True)
     container_id = fields.Char('Container ID', copy=False)
     image = fields.Char('Image', related='image_id.image_id', readonly=True, store=True)
-    image_id = fields.Many2one('j_portainer.image', string='Image')
+    image_id = fields.Many2one('j_portainer.image', string='Image', required=True)
     always_pull_image = fields.Boolean('Always Pull Image', default=False,
                                     help="Always pull the latest version of the image")
     created = fields.Datetime('Created')
@@ -1131,7 +1131,7 @@ class PortainerContainer(models.Model):
             
             # Get container details from Portainer API
             _logger.info(f"Refreshing container {self.name} ({container_id})")
-            details_endpoint = f'/api/endpoints/{environment_id}/docker/containers/{container_id}/json'
+            details_endpoint = f'/api/endpoints/{environment_id.environment_id}/docker/containers/{container_id}/json'
             details_response = server._make_api_request(details_endpoint, 'GET')
             
             if details_response.status_code != 200:
