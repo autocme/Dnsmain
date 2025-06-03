@@ -51,8 +51,8 @@
                     </div>
                     <group>
                         <group>
-                            <field name="server_id" required="1"/>
-                            <field name="environment_id" required="1"/>
+                            <field name="server_id" required="1" readonly="create_date"/>
+                            <field name="environment_id" required="1" readonly="create_date"/>
                             <field name="template_id" readonly="1"/>
                             <!-- <field name="manual_template_id" readonly="1" help="If automatic template creation fails, you can create the template manually in Portainer and enter its ID here"/> -->
                             <field name="skip_portainer_create" invisible="1"/>
@@ -62,11 +62,12 @@
                         <group>
                             <field name="template_type"/>
                             <field name="platform"/>
-                            <field name="build_method"/>
+                            <field name="create_date" invisible="1"/>
+                            <field name="build_method" readonly="create_date"/>
                             <field name="logo"/>
-                            <field name="registry" invisible="template_type != '1'"/>
-                            <field name="registry_url"/>
-                            <field name="image" invisible="template_type != '1'"/>
+                            <!-- <field name="registry" invisible="template_type != '1'"/> -->
+                            <!-- <field name="registry_url"/> -->
+                            <!-- <field name="image" invisible="template_type != '1'"/> -->
                         </group>
                     </group>
                     <notebook>
