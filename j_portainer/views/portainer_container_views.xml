@@ -62,8 +62,8 @@
                             <field name="last_sync" readonly="1"/>
                         </group>
                         <group>
-                            <field name="image" readonly="1"/>
                             <field name="image_id"/>
+                            <field name="image" readonly="1"/>
                             <field name="always_pull_image" widget="boolean_toggle"/>
                             <field name="created" readonly="1"/>
                             <field name="state" widget="badge"

@@ -15,7 +15,7 @@ class PortainerContainerLogsWizard(models.TransientModel):
     container_id = fields.Many2one('j_portainer.container', string='Container', required=True, readonly=True)
     server_id = fields.Many2one('j_portainer.server', string='Server', related='container_id.server_id', readonly=True)
     name = fields.Char(related='container_id.name', readonly=True)
-    environment_id = fields.Integer(related='container_id.environment_id', readonly=True)
+    environment_id = fields.Many2one(related='container_id.environment_id', readonly=True)
     
     lines = fields.Integer('Number of Lines', default=100, required=True, 
                          help="Maximum number of log lines to retrieve. Use 0 for all logs (may be slow for large logs).")
