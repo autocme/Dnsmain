@@ -311,6 +311,11 @@ class PortainerNetwork(models.Model):
     # Related containers connected to this network
     connected_container_ids = fields.One2many('j_portainer.container.network', 'network_id', string='Connected Containers', ondelete='cascade')
     
+    _sql_constraints = [
+        ('unique_network_per_environment', 'unique(server_id, environment_id, network_id)', 
+         'Network ID must be unique per environment on each server'),
+    ]
+    
     # Driver options
     driver_option_ids = fields.One2many('j_portainer.network.driver.option', 'network_id', string='Driver Options', ondelete='cascade')
     

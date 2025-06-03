@@ -33,6 +33,11 @@ class PortainerEnvironment(models.Model):
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True)
     
+    _sql_constraints = [
+        ('unique_environment_per_server', 'unique(server_id, environment_id)', 
+         'Environment ID must be unique per server'),
+    ]
+    
     # Count fields
     container_count = fields.Integer('Containers', compute='_compute_resource_counts')
     running_container_count = fields.Integer('Running Containers', compute='_compute_resource_counts')

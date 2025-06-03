@@ -63,6 +63,11 @@ class PortainerStack(models.Model):
     # Related containers in this stack
     container_ids = fields.One2many('j_portainer.container', 'stack_id', string='Containers')
     
+    _sql_constraints = [
+        ('unique_stack_per_environment', 'unique(server_id, environment_id, stack_id)', 
+         'Stack ID must be unique per environment on each server'),
+    ]
+    
     @api.onchange('build_method')
     def _onchange_build_method(self):
         """Clear fields when build method changes"""
