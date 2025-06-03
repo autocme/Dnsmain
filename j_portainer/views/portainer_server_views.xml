@@ -116,7 +116,6 @@
                                     <field name="name"/>
                                     <field name="driver"/>
                                     <field name="mountpoint"/>
-                                    <field name="environment_name"/>
                                     <field name="created"/>
                                 </tree>
                             </field>
