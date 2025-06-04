@@ -42,7 +42,7 @@
                             help="Create this container in Portainer"/>
                     
                     <!-- Always visible buttons -->
-                    <button name="deploy" string="Deploy Container" type="object" invisible="not can_manage_container or state != 'running'" 
+                    <button name="deploy" string="Deploy Container" type="object" invisible="not can_manage_container" 
                             class="btn-success" 
                             help="Deploy a new container based on this configuration"/>
                 </header>
@@ -52,7 +52,7 @@
                          invisible="not has_pending_changes">
                         <strong>Configuration changes detected.</strong><br/>
                         Changes will not be applied to Portainer until you deploy the container.<br/>
-                        <span name="pending_changes_message"/>
+                        <field name="pending_changes_message" readonly="1" nolabel="1"/>
                     </div>
                     
                     <!-- Container Not Created Banner -->
@@ -90,6 +90,8 @@
                             <!-- Hidden fields for button visibility -->
                             <field name="is_created_in_portainer" invisible="1"/>
                             <field name="can_manage_container" invisible="1"/>
+                            <field name="has_pending_changes" invisible="1"/>
+                            <field name="pending_changes_message" invisible="1"/>
                         </group>
                         <group>
                             <field name="create_date" invisible="1"/>
