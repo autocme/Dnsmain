@@ -1810,3 +1810,36 @@ class PortainerCustomTemplate(models.Model):
                         template_data['repositoryPassword'] = self.git_token or ''
         
         return template_data
+    
+    def action_create_stack(self):
+        """Create a stack record using this template's name, environment, server, and file content"""
+        self.ensure_one()
+        
+        if not self.fileContent and not self.compose_file:
+            raise UserError(_("File content is required to create a stack"))
+        
+        # Prepare stack data
+        stack_vals = {
+            'name': self.title,
+            'server_id': self.server_id.id,
+            'environment_id': self.environment_id.id,
+            'stack_file_content': self.fileContent or self.compose_file,
+            'type': 'compose',  # Default to compose type
+        }
+        
+        try:
+            # Create the stack record
+            stack = self.env['j_portainer.stack'].create(stack_vals)
+            
+            return {
+                'type': 'ir.actions.act_window',
+                'name': _('Created Stack'),
+                'res_model': 'j_portainer.stack',
+                'res_id': stack.id,
+                'view_mode': 'form',
+                'target': 'current',
+            }
+            
+        except Exception as e:
+            _logger.error(f"Error creating stack from template {self.title}: {str(e)}")
+            raise UserError(_("Error creating stack: %s") % str(e))
