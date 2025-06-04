@@ -2178,6 +2178,12 @@ class PortainerContainer(models.Model):
                     
                     _logger.info(f"Container deployed successfully: {container_id}")
                     
+                    # Clear pending changes after successful deployment
+                    self.write({
+                        'has_pending_changes': False,
+                        'original_config': False,
+                    })
+                    
                     # Call the action_refresh method on the new container to update its data
                     try:
                         # Refresh the new container from Portainer
