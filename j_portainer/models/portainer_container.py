@@ -23,6 +23,46 @@ class PortainerContainer(models.Model):
         # For manual creation - not implemented yet as per requirements
         return super(PortainerContainer, self).create(vals_list)
     
+    def copy(self, default=None):
+        """Override copy to duplicate related records"""
+        default = dict(default or {})
+        
+        # Clear container-specific fields that should not be copied
+        default.update({
+            'container_id': False,  # New container doesn't have Portainer ID yet
+            'created': False,       # Will be set when created in Portainer
+            'status': '',           # Will be updated from Portainer
+            'state': 'created',     # Default state for new container
+            'last_sync': False,     # Will be set after sync
+            'name': self.name + ' (Copy)',  # Add suffix to avoid name conflicts
+        })
+        
+        # Create the new container record
+        new_container = super().copy(default)
+        
+        # Copy related records manually to ensure they're duplicated
+        # Copy labels
+        for label in self.label_ids:
+            label.copy({'container_id': new_container.id})
+        
+        # Copy volumes
+        for volume in self.volume_ids:
+            volume.copy({'container_id': new_container.id})
+        
+        # Copy networks
+        for network in self.network_ids:
+            network.copy({'container_id': new_container.id})
+        
+        # Copy environment variables
+        for env_var in self.env_ids:
+            env_var.copy({'container_id': new_container.id})
+        
+        # Copy port mappings
+        for port in self.port_ids:
+            port.copy({'container_id': new_container.id})
+        
+        return new_container
+    
     def write(self, vals):
         """Override write to handle changes that need to be synchronized to Portainer"""
         # Store the old name if name is being changed
@@ -149,6 +189,10 @@ class PortainerContainer(models.Model):
     get_formatted_volumes = fields.Html('Formatted Volumes', compute='_compute_formatted_volumes')
     get_formatted_ports = fields.Html('Formatted Ports', compute='_compute_formatted_ports')
     
+    # Button visibility control
+    is_created_in_portainer = fields.Boolean('Created in Portainer', compute='_compute_portainer_status')
+    can_manage_container = fields.Boolean('Can Manage Container', compute='_compute_portainer_status')
+    
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, default=lambda self: self._default_server_id())
     environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True, 
                                     domain="[('server_id', '=', server_id)]", default=lambda self: self._default_environment_id())
@@ -244,6 +288,13 @@ class PortainerContainer(models.Model):
         if server:
             return server.environment_ids[:1]
         return False
+    
+    @api.depends('container_id')
+    def _compute_portainer_status(self):
+        """Compute portainer status for button visibility"""
+        for record in self:
+            record.is_created_in_portainer = bool(record.container_id)
+            record.can_manage_container = bool(record.container_id)
     
     def _get_api(self):
         """Get API client"""
