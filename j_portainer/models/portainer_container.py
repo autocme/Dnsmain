@@ -594,6 +594,12 @@ class PortainerContainer(models.Model):
             except Exception as e:
                 _logger.warning(f"Error starting container: {str(e)}")
                 
+            # Call enhanced refresh to sync all container data from Portainer
+            try:
+                self.action_refresh()
+            except Exception as e:
+                _logger.warning(f"Container created but failed to sync data: {str(e)}")
+                
             return True
                 
         except Exception as e:
@@ -1169,8 +1175,39 @@ class PortainerContainer(models.Model):
                 
             update_vals['state'] = container_state
             
-            # Update the container record
-            self.write(update_vals)
+            # Update created timestamp
+            created = details.get('Created')
+            if created:
+                update_vals['created'] = created
+                
+            # Update ports data
+            ports = details.get('Ports', [])
+            if ports:
+                update_vals['ports'] = json.dumps(ports, indent=2)
+                
+            # Update volumes data
+            mounts = details.get('Mounts', [])
+            if mounts:
+                update_vals['volumes'] = json.dumps(mounts, indent=2)
+                
+            # Update labels data
+            labels = details.get('Config', {}).get('Labels', {})
+            if labels:
+                update_vals['labels'] = json.dumps(labels, indent=2)
+                
+            # Update details data
+            update_vals['details'] = json.dumps(details, indent=2)
+            update_vals['last_sync'] = fields.Datetime.now()
+            
+            # Update the container record with sync context
+            self.with_context(sync_from_portainer=True).write(update_vals)
+            
+            # Smart sync all related records
+            self._smart_sync_ports(details)
+            self._smart_sync_volumes(details)
+            self._smart_sync_networks(details)
+            self._smart_sync_env_vars(details)
+            self._smart_sync_labels(details)
             
             # Return success notification
             return {
@@ -1186,6 +1223,333 @@ class PortainerContainer(models.Model):
         except Exception as e:
             _logger.error(f"Error refreshing container {self.name}: {str(e)}")
             raise UserError(_("Error refreshing container: %s") % str(e))
+
+    def _smart_sync_ports(self, portainer_data):
+        """Smart sync port mappings - only modify changed records"""
+        try:
+            # Get current port records
+            current_ports = self.port_ids
+            
+            # Parse port data from Portainer
+            host_config = portainer_data.get('HostConfig', {})
+            port_bindings = host_config.get('PortBindings', {})
+            exposed_ports = portainer_data.get('Config', {}).get('ExposedPorts', {})
+            
+            # Build expected port data
+            expected_ports = []
+            
+            # Process published ports (with host port mapping)
+            for container_port_proto, bindings in port_bindings.items():
+                if bindings:
+                    if '/' in container_port_proto:
+                        container_port_str, protocol = container_port_proto.split('/', 1)
+                        container_port = int(container_port_str)
+                        protocol = protocol.lower()
+                    else:
+                        container_port = int(container_port_proto)
+                        protocol = 'tcp'
+                    
+                    for binding in bindings:
+                        host_ip = binding.get('HostIp', '')
+                        host_port = binding.get('HostPort', '')
+                        host_port_int = int(host_port) if host_port and host_port.isdigit() else False
+                        
+                        expected_ports.append({
+                            'container_port': container_port,
+                            'host_port': host_port_int,
+                            'protocol': protocol,
+                            'host_ip': host_ip,
+                        })
+            
+            # Process exposed ports that are not published
+            for container_port_proto in exposed_ports.keys():
+                if container_port_proto not in port_bindings:
+                    if '/' in container_port_proto:
+                        container_port_str, protocol = container_port_proto.split('/', 1)
+                        container_port = int(container_port_str)
+                        protocol = protocol.lower()
+                    else:
+                        container_port = int(container_port_proto)
+                        protocol = 'tcp'
+                    
+                    expected_ports.append({
+                        'container_port': container_port,
+                        'host_port': False,
+                        'protocol': protocol,
+                        'host_ip': '',
+                    })
+            
+            # Compare and sync
+            ports_to_keep = []
+            ports_to_update = []
+            ports_to_create = expected_ports.copy()
+            
+            for current_port in current_ports:
+                found_match = False
+                for i, expected_port in enumerate(expected_ports):
+                    if (current_port.container_port == expected_port['container_port'] and
+                        current_port.protocol == expected_port['protocol']):
+                        
+                        # Check if update needed
+                        if (current_port.host_port != expected_port['host_port'] or
+                            current_port.host_ip != expected_port['host_ip']):
+                            ports_to_update.append((current_port, expected_port))
+                        else:
+                            ports_to_keep.append(current_port)
+                        
+                        # Remove from create list
+                        ports_to_create.pop(i)
+                        found_match = True
+                        break
+                
+                if not found_match:
+                    # Port no longer exists in Portainer
+                    current_port.with_context(sync_from_portainer=True).unlink()
+            
+            # Update changed ports
+            for port_record, new_data in ports_to_update:
+                port_record.with_context(sync_from_portainer=True).write(new_data)
+            
+            # Create new ports
+            for port_data in ports_to_create:
+                port_data['container_id'] = self.id
+                self.env['j_portainer.container.port'].with_context(sync_from_portainer=True).create(port_data)
+                
+        except Exception as e:
+            _logger.warning(f"Error syncing ports for container {self.name}: {str(e)}")
+
+    def _smart_sync_volumes(self, portainer_data):
+        """Smart sync volume mappings - only modify changed records"""
+        try:
+            # Get current volume records
+            current_volumes = self.volume_ids
+            
+            # Parse volume data from Portainer
+            mounts = portainer_data.get('Mounts', [])
+            
+            # Build expected volume data
+            expected_volumes = []
+            for mount in mounts:
+                source = mount.get('Source', '')
+                destination = mount.get('Destination', '')
+                mode = 'ro' if mount.get('Mode', '') == 'ro' else 'rw'
+                mount_type = mount.get('Type', '')
+                
+                if source and destination:
+                    expected_volumes.append({
+                        'name': source,
+                        'container_path': destination,
+                        'mode': mode,
+                    })
+            
+            # Compare and sync
+            volumes_to_keep = []
+            volumes_to_update = []
+            volumes_to_create = expected_volumes.copy()
+            
+            for current_volume in current_volumes:
+                found_match = False
+                for i, expected_volume in enumerate(expected_volumes):
+                    if (current_volume.name == expected_volume['name'] and
+                        current_volume.container_path == expected_volume['container_path']):
+                        
+                        # Check if update needed
+                        if current_volume.mode != expected_volume['mode']:
+                            volumes_to_update.append((current_volume, expected_volume))
+                        else:
+                            volumes_to_keep.append(current_volume)
+                        
+                        # Remove from create list
+                        volumes_to_create.pop(i)
+                        found_match = True
+                        break
+                
+                if not found_match:
+                    # Volume no longer exists in Portainer
+                    current_volume.with_context(sync_from_portainer=True).unlink()
+            
+            # Update changed volumes
+            for volume_record, new_data in volumes_to_update:
+                volume_record.with_context(sync_from_portainer=True).write(new_data)
+            
+            # Create new volumes
+            for volume_data in volumes_to_create:
+                volume_data['container_id'] = self.id
+                self.env['j_portainer.container.volume'].with_context(sync_from_portainer=True).create(volume_data)
+                
+        except Exception as e:
+            _logger.warning(f"Error syncing volumes for container {self.name}: {str(e)}")
+
+    def _smart_sync_networks(self, portainer_data):
+        """Smart sync network connections - only modify changed records"""
+        try:
+            # Get current network records
+            current_networks = self.network_ids
+            
+            # Parse network data from Portainer
+            network_settings = portainer_data.get('NetworkSettings', {})
+            networks = network_settings.get('Networks', {})
+            
+            # Build expected network data
+            expected_networks = []
+            for network_name, network_info in networks.items():
+                network_id = network_info.get('NetworkID', '')
+                
+                # Find the network record by network_id
+                if network_id:
+                    network_record = self.env['j_portainer.network'].search([
+                        ('server_id', '=', self.server_id.id),
+                        ('environment_id', '=', self.environment_id.id),
+                        ('network_id', '=', network_id)
+                    ], limit=1)
+                    
+                    if network_record:
+                        expected_networks.append({
+                            'network_id': network_record.id,
+                        })
+            
+            # Compare and sync
+            networks_to_keep = []
+            networks_to_create = expected_networks.copy()
+            
+            for current_network in current_networks:
+                found_match = False
+                for i, expected_network in enumerate(expected_networks):
+                    if current_network.network_id.id == expected_network['network_id']:
+                        networks_to_keep.append(current_network)
+                        # Remove from create list
+                        networks_to_create.pop(i)
+                        found_match = True
+                        break
+                
+                if not found_match:
+                    # Network no longer exists in Portainer
+                    current_network.with_context(sync_from_portainer=True).unlink()
+            
+            # Create new network connections
+            for network_data in networks_to_create:
+                network_data['container_id'] = self.id
+                self.env['j_portainer.container.network'].with_context(sync_from_portainer=True).create(network_data)
+                
+        except Exception as e:
+            _logger.warning(f"Error syncing networks for container {self.name}: {str(e)}")
+
+    def _smart_sync_env_vars(self, portainer_data):
+        """Smart sync environment variables - only modify changed records"""
+        try:
+            # Get current env var records
+            current_env_vars = self.env_ids
+            
+            # Parse env var data from Portainer
+            config = portainer_data.get('Config', {})
+            env_list = config.get('Env', [])
+            
+            # Build expected env var data
+            expected_env_vars = []
+            for env_var in env_list:
+                if '=' in env_var:
+                    name, value = env_var.split('=', 1)
+                    expected_env_vars.append({
+                        'name': name,
+                        'value': value,
+                    })
+                else:
+                    expected_env_vars.append({
+                        'name': env_var,
+                        'value': '',
+                    })
+            
+            # Compare and sync
+            env_vars_to_keep = []
+            env_vars_to_update = []
+            env_vars_to_create = expected_env_vars.copy()
+            
+            for current_env_var in current_env_vars:
+                found_match = False
+                for i, expected_env_var in enumerate(expected_env_vars):
+                    if current_env_var.name == expected_env_var['name']:
+                        
+                        # Check if update needed
+                        if current_env_var.value != expected_env_var['value']:
+                            env_vars_to_update.append((current_env_var, expected_env_var))
+                        else:
+                            env_vars_to_keep.append(current_env_var)
+                        
+                        # Remove from create list
+                        env_vars_to_create.pop(i)
+                        found_match = True
+                        break
+                
+                if not found_match:
+                    # Env var no longer exists in Portainer
+                    current_env_var.with_context(sync_from_portainer=True).unlink()
+            
+            # Update changed env vars
+            for env_var_record, new_data in env_vars_to_update:
+                env_var_record.with_context(sync_from_portainer=True).write(new_data)
+            
+            # Create new env vars
+            for env_var_data in env_vars_to_create:
+                env_var_data['container_id'] = self.id
+                self.env['j_portainer.container.env'].with_context(sync_from_portainer=True).create(env_var_data)
+                
+        except Exception as e:
+            _logger.warning(f"Error syncing environment variables for container {self.name}: {str(e)}")
+
+    def _smart_sync_labels(self, portainer_data):
+        """Smart sync labels - only modify changed records"""
+        try:
+            # Get current label records
+            current_labels = self.label_ids
+            
+            # Parse label data from Portainer
+            config = portainer_data.get('Config', {})
+            labels = config.get('Labels', {}) or {}
+            
+            # Build expected label data
+            expected_labels = []
+            for label_name, label_value in labels.items():
+                expected_labels.append({
+                    'name': label_name,
+                    'value': label_value or '',
+                })
+            
+            # Compare and sync
+            labels_to_keep = []
+            labels_to_update = []
+            labels_to_create = expected_labels.copy()
+            
+            for current_label in current_labels:
+                found_match = False
+                for i, expected_label in enumerate(expected_labels):
+                    if current_label.name == expected_label['name']:
+                        
+                        # Check if update needed
+                        if current_label.value != expected_label['value']:
+                            labels_to_update.append((current_label, expected_label))
+                        else:
+                            labels_to_keep.append(current_label)
+                        
+                        # Remove from create list
+                        labels_to_create.pop(i)
+                        found_match = True
+                        break
+                
+                if not found_match:
+                    # Label no longer exists in Portainer
+                    current_label.with_context(sync_from_portainer=True).unlink()
+            
+            # Update changed labels
+            for label_record, new_data in labels_to_update:
+                label_record.with_context(sync_from_portainer=True).write(new_data)
+            
+            # Create new labels
+            for label_data in labels_to_create:
+                label_data['container_id'] = self.id
+                self.env['j_portainer.container.label'].with_context(sync_from_portainer=True).create(label_data)
+                
+        except Exception as e:
+            _logger.warning(f"Error syncing labels for container {self.name}: {str(e)}")
     
     def action_view_logs(self):
         """View container logs"""
