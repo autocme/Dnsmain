@@ -36,16 +36,24 @@
                             class="btn-secondary"/>
                     
                     <!-- Button visible only when container doesn't exist in Portainer -->
-                    <button name="_create_container_in_portainer" string="Create in Portainer" type="object"
+                    <button name="action_create_in_portainer" string="Create in Portainer" type="object"
                             invisible="is_created_in_portainer"
                             class="btn-success" 
                             help="Create this container in Portainer"/>
                     
                     <!-- Always visible buttons -->
-                    <button name="deploy" string="Deploy Container" type="object"
+                    <button name="deploy" string="Deploy Container" type="object" invisible="not can_manage_container or state != 'running'" 
                             class="btn-success" 
                             help="Deploy a new container based on this configuration"/>
                 </header>
+                
+                <!-- Message banner for containers not created in Portainer -->
+                <div class="alert alert-info" role="alert" invisible="is_created_in_portainer">
+                    <strong>Container Not Created in Portainer</strong><br/>
+                    This container exists only in Odoo and has not been created in Portainer yet. 
+                    Click the <strong>"Create in Portainer"</strong> button above to create it in Portainer and start managing it.
+                </div>
+                
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_logs" string="Logs" type="object" class="oe_stat_button"
