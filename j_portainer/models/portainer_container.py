@@ -1301,6 +1301,7 @@ class PortainerContainer(models.Model):
             
             for current_port in current_ports:
                 found_match = False
+                matched_index = None
                 for i, expected_port in enumerate(expected_ports):
                     if (current_port.container_port == expected_port['container_port'] and
                         current_port.protocol == expected_port['protocol']):
@@ -1312,10 +1313,14 @@ class PortainerContainer(models.Model):
                         else:
                             ports_to_keep.append(current_port)
                         
-                        # Remove from create list
-                        ports_to_create.pop(i)
+                        # Mark for removal from create list
+                        matched_index = i
                         found_match = True
                         break
+                
+                # Remove matched item from create list
+                if matched_index is not None:
+                    ports_to_create.pop(matched_index)
                 
                 if not found_match:
                     # Port no longer exists in Portainer
@@ -1364,6 +1369,7 @@ class PortainerContainer(models.Model):
             
             for current_volume in current_volumes:
                 found_match = False
+                matched_index = None
                 for i, expected_volume in enumerate(expected_volumes):
                     if (current_volume.name == expected_volume['name'] and
                         current_volume.container_path == expected_volume['container_path']):
@@ -1374,10 +1380,14 @@ class PortainerContainer(models.Model):
                         else:
                             volumes_to_keep.append(current_volume)
                         
-                        # Remove from create list
-                        volumes_to_create.pop(i)
+                        # Mark for removal from create list
+                        matched_index = i
                         found_match = True
                         break
+                
+                # Remove matched item from create list
+                if matched_index is not None:
+                    volumes_to_create.pop(matched_index)
                 
                 if not found_match:
                     # Volume no longer exists in Portainer
@@ -1429,13 +1439,18 @@ class PortainerContainer(models.Model):
             
             for current_network in current_networks:
                 found_match = False
+                matched_index = None
                 for i, expected_network in enumerate(expected_networks):
                     if current_network.network_id.id == expected_network['network_id']:
                         networks_to_keep.append(current_network)
-                        # Remove from create list
-                        networks_to_create.pop(i)
+                        # Mark for removal from create list
+                        matched_index = i
                         found_match = True
                         break
+                
+                # Remove matched item from create list
+                if matched_index is not None:
+                    networks_to_create.pop(matched_index)
                 
                 if not found_match:
                     # Network no longer exists in Portainer
@@ -1481,6 +1496,7 @@ class PortainerContainer(models.Model):
             
             for current_env_var in current_env_vars:
                 found_match = False
+                matched_index = None
                 for i, expected_env_var in enumerate(expected_env_vars):
                     if current_env_var.name == expected_env_var['name']:
                         
@@ -1490,10 +1506,14 @@ class PortainerContainer(models.Model):
                         else:
                             env_vars_to_keep.append(current_env_var)
                         
-                        # Remove from create list
-                        env_vars_to_create.pop(i)
+                        # Mark for removal from create list
+                        matched_index = i
                         found_match = True
                         break
+                
+                # Remove matched item from create list
+                if matched_index is not None:
+                    env_vars_to_create.pop(matched_index)
                 
                 if not found_match:
                     # Env var no longer exists in Portainer
@@ -1536,6 +1556,7 @@ class PortainerContainer(models.Model):
             
             for current_label in current_labels:
                 found_match = False
+                matched_index = None
                 for i, expected_label in enumerate(expected_labels):
                     if current_label.name == expected_label['name']:
                         
@@ -1545,10 +1566,14 @@ class PortainerContainer(models.Model):
                         else:
                             labels_to_keep.append(current_label)
                         
-                        # Remove from create list
-                        labels_to_create.pop(i)
+                        # Mark for removal from create list
+                        matched_index = i
                         found_match = True
                         break
+                
+                # Remove matched item from create list
+                if matched_index is not None:
+                    labels_to_create.pop(matched_index)
                 
                 if not found_match:
                     # Label no longer exists in Portainer
