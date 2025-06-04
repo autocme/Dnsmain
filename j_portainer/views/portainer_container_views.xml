@@ -7,38 +7,49 @@
         <field name="arch" type="xml">
             <form string="Container">
                 <header>
+                    <!-- Buttons visible only when container exists in Portainer -->
                     <button name="start" string="Start" type="object"
-                            invisible="state == 'running'"
+                            invisible="not can_manage_container or state == 'running'"
                             class="btn-primary"/>
                     <button name="stop" string="Stop" type="object"
-                            invisible="state != 'running'"
+                            invisible="not can_manage_container or state != 'running'"
                             class="btn-warning"/>
                     <button name="restart" string="Restart" type="object"
-                            invisible="state != 'running'"
+                            invisible="not can_manage_container or state != 'running'"
                             class="btn-info"/>
                     <button name="pause" string="Pause" type="object"
-                            invisible="state != 'running'"
+                            invisible="not can_manage_container or state != 'running'"
                             class="btn-secondary"/>
                     <button name="unpause" string="Unpause" type="object"
-                            invisible="state != 'paused'"
+                            invisible="not can_manage_container or state != 'paused'"
                             class="btn-info"/>
                     <button name="kill" string="Kill" type="object"
-                            invisible="state != 'running'"
+                            invisible="not can_manage_container or state != 'running'"
                             class="btn-danger"
                             confirm="Are you sure you want to kill this container?"/>
                     <button name="action_remove_with_options" string="Remove" type="object"
+                            invisible="not can_manage_container"
                             class="btn-danger"
                             confirm="Are you sure you want to remove this container?"/>
                     <button name="action_refresh" string="Refresh" type="object"
+                            invisible="not can_manage_container"
                             class="btn-secondary"/>
+                    
+                    <!-- Button visible only when container doesn't exist in Portainer -->
+                    <button name="_create_container_in_portainer" string="Create in Portainer" type="object"
+                            invisible="is_created_in_portainer"
+                            class="btn-success" 
+                            help="Create this container in Portainer"/>
+                    
+                    <!-- Always visible buttons -->
                     <button name="deploy" string="Deploy Container" type="object"
                             class="btn-success" 
                             help="Deploy a new container based on this configuration"/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-
                         <button name="action_view_logs" string="Logs" type="object" class="oe_stat_button"
+                                invisible="not can_manage_container"
                                 icon="fa-tasks">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_text">Log</span>
@@ -60,11 +71,13 @@
                             <field name="server_id"/>
                             <field name="environment_id"/>
                             <field name="last_sync" readonly="1"/>
-                            <button name="action_create_in_portainer" type="object" string="Create in Portainer" class="btn-success" icon="fa-plus" attrs="{'invisible': [('container_id', '!=', False)]}"/>
+                            <!-- Hidden fields for button visibility -->
+                            <field name="is_created_in_portainer" invisible="1"/>
+                            <field name="can_manage_container" invisible="1"/>
                         </group>
                         <group>
                             <field name="create_date" invisible="1"/>
-                            <field name="image_id" readonly="create_date"/>
+                            <field name="image_id" readonly="container_id" options="{'no_create': True}"/>
                             <field name="image" readonly="1"/>
                             <field name="always_pull_image" widget="boolean_toggle"/>
                             <field name="created" readonly="1"/>
