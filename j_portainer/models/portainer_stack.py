@@ -263,7 +263,7 @@ class PortainerStack(models.Model):
         try:
             api = self._get_api()
             result = api.stack_action(
-                self.server_id.id, self.stack_id, 'start', environment_id=self.environment_id)
+                self.server_id.id, self.stack_id, 'start', environment_id=self.environment_id.environment_id)
             
             # Check if the result is True (success) or a dict with error info
             if result is True:
@@ -314,7 +314,7 @@ class PortainerStack(models.Model):
         try:
             api = self._get_api()
             result = api.stack_action(
-                self.server_id.id, self.stack_id, 'stop', environment_id=self.environment_id)
+                self.server_id.id, self.stack_id, 'stop', environment_id=self.environment_id.environment_id)
             
             # Check if the result is True (success) or a dict with error info
             if result is True:
@@ -372,7 +372,7 @@ class PortainerStack(models.Model):
                 'default_server_id': self.server_id.id,
                 'default_stack_id': self.id,
                 'default_stack_name': self.name,
-                'default_environment_id': self.environment_id,
+                'default_environment_id': self.environment_id.id,
                 'default_current_file': self.file_content,
             }
         }
@@ -387,7 +387,7 @@ class PortainerStack(models.Model):
         try:
             api = self._get_api()
             result = api.stack_action(
-                self.server_id.id, self.stack_id, 'delete', environment_id=self.environment_id)
+                self.server_id.id, self.stack_id, 'delete', environment_id=self.environment_id.environment_id)
             
             # Check for errors in the result - be very explicit about this check
             if isinstance(result, dict) and result.get('error'):
