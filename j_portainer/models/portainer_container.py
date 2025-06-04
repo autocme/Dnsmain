@@ -1178,7 +1178,22 @@ class PortainerContainer(models.Model):
             # Update created timestamp
             created = details.get('Created')
             if created:
-                update_vals['created'] = created
+                try:
+                    # Parse ISO format datetime from Portainer
+                    from datetime import datetime
+                    # Remove timezone info and parse
+                    if created.endswith('Z'):
+                        created = created[:-1]
+                    if '.' in created:
+                        # Remove microseconds if present
+                        created = created.split('.')[0]
+                    
+                    parsed_date = datetime.strptime(created, '%Y-%m-%dT%H:%M:%S')
+                    update_vals['created'] = parsed_date
+                except Exception as e:
+                    _logger.warning(f"Failed to parse created timestamp '{created}': {str(e)}")
+                    # Keep original string if parsing fails
+                    update_vals['created'] = created
                 
             # Update ports data
             ports = details.get('Ports', [])
