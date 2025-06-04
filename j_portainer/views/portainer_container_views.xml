@@ -48,7 +48,7 @@
                 </header>
                 <sheet>
                     <!-- Pending Changes Warning Banner -->
-                    <div class="alert alert-warning" role="alert" 
+                    <div class="alert alert-warning text-center" role="alert" 
                          invisible="not has_pending_changes">
                         <strong>Configuration changes detected.</strong><br/>
                         Changes will not be applied to Portainer until you deploy the container.<br/>
@@ -56,7 +56,7 @@
                     </div>
                     
                     <!-- Container Not Created Banner -->
-                    <div class="alert alert-info" role="alert" 
+                    <div class="alert alert-info text-center" role="alert" 
                          invisible="is_created_in_portainer">
                         <strong>Container Not Created in Portainer</strong><br/>
                         This container record exists in Odoo but has not been created in Portainer yet. 
@@ -160,7 +160,7 @@
                                         help="Execute 'du -sh' command inside the container to check volume usage"/>
                                 </tree>
                             </field>
-                            <div class="alert alert-info text-center" role="alert">
+                            <div class="alert alert-info" role="alert">
                                 <span class="fa fa-info-circle"/> Volume mappings are typically set when a container is created. Changes here are for documentation purposes only and won't affect the running container.
                             </div>
                         </page>
