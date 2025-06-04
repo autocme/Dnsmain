@@ -67,19 +67,19 @@ class PortainerEnvironment(models.Model):
             # Volumes
             env.volume_count = self.env['j_portainer.volume'].search_count([
                 ('server_id', '=', env.server_id.id),
-                ('environment_id', '=', env.environment_id)
+                ('environment_id', '=', env.id)
             ])
             
             # Networks
             env.network_count = self.env['j_portainer.network'].search_count([
                 ('server_id', '=', env.server_id.id),
-                ('environment_id', '=', env.environment_id)
+                ('environment_id', '=', env.id)
             ])
             
             # Stacks
             env.stack_count = self.env['j_portainer.stack'].search_count([
                 ('server_id', '=', env.server_id.id),
-                ('environment_id', '=', env.environment_id)
+                ('environment_id', '=', env.id)
             ])
     
     def get_type_name(self):
