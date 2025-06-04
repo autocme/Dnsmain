@@ -1297,11 +1297,11 @@ class PortainerContainer(models.Model):
             # Compare and sync
             ports_to_keep = []
             ports_to_update = []
-            ports_to_create = expected_ports.copy()
+            ports_to_create = []
+            processed_expected_ports = set()
             
             for current_port in current_ports:
                 found_match = False
-                matched_index = None
                 for i, expected_port in enumerate(expected_ports):
                     if (current_port.container_port == expected_port['container_port'] and
                         current_port.protocol == expected_port['protocol']):
@@ -1313,18 +1313,19 @@ class PortainerContainer(models.Model):
                         else:
                             ports_to_keep.append(current_port)
                         
-                        # Mark for removal from create list
-                        matched_index = i
+                        # Mark this expected port as processed
+                        processed_expected_ports.add(i)
                         found_match = True
                         break
-                
-                # Remove matched item from create list
-                if matched_index is not None:
-                    ports_to_create.pop(matched_index)
                 
                 if not found_match:
                     # Port no longer exists in Portainer
                     current_port.with_context(sync_from_portainer=True).unlink()
+            
+            # Build create list from unprocessed expected ports
+            for i, expected_port in enumerate(expected_ports):
+                if i not in processed_expected_ports:
+                    ports_to_create.append(expected_port)
             
             # Update changed ports
             for port_record, new_data in ports_to_update:
@@ -1365,11 +1366,11 @@ class PortainerContainer(models.Model):
             # Compare and sync
             volumes_to_keep = []
             volumes_to_update = []
-            volumes_to_create = expected_volumes.copy()
+            volumes_to_create = []
+            processed_expected_volumes = set()
             
             for current_volume in current_volumes:
                 found_match = False
-                matched_index = None
                 for i, expected_volume in enumerate(expected_volumes):
                     if (current_volume.name == expected_volume['name'] and
                         current_volume.container_path == expected_volume['container_path']):
@@ -1380,18 +1381,19 @@ class PortainerContainer(models.Model):
                         else:
                             volumes_to_keep.append(current_volume)
                         
-                        # Mark for removal from create list
-                        matched_index = i
+                        # Mark this expected volume as processed
+                        processed_expected_volumes.add(i)
                         found_match = True
                         break
-                
-                # Remove matched item from create list
-                if matched_index is not None:
-                    volumes_to_create.pop(matched_index)
                 
                 if not found_match:
                     # Volume no longer exists in Portainer
                     current_volume.with_context(sync_from_portainer=True).unlink()
+            
+            # Build create list from unprocessed expected volumes
+            for i, expected_volume in enumerate(expected_volumes):
+                if i not in processed_expected_volumes:
+                    volumes_to_create.append(expected_volume)
             
             # Update changed volumes
             for volume_record, new_data in volumes_to_update:
@@ -1435,26 +1437,27 @@ class PortainerContainer(models.Model):
             
             # Compare and sync
             networks_to_keep = []
-            networks_to_create = expected_networks.copy()
+            networks_to_create = []
+            processed_expected_networks = set()
             
             for current_network in current_networks:
                 found_match = False
-                matched_index = None
                 for i, expected_network in enumerate(expected_networks):
                     if current_network.network_id.id == expected_network['network_id']:
                         networks_to_keep.append(current_network)
-                        # Mark for removal from create list
-                        matched_index = i
+                        # Mark this expected network as processed
+                        processed_expected_networks.add(i)
                         found_match = True
                         break
-                
-                # Remove matched item from create list
-                if matched_index is not None:
-                    networks_to_create.pop(matched_index)
                 
                 if not found_match:
                     # Network no longer exists in Portainer
                     current_network.with_context(sync_from_portainer=True).unlink()
+            
+            # Build create list from unprocessed expected networks
+            for i, expected_network in enumerate(expected_networks):
+                if i not in processed_expected_networks:
+                    networks_to_create.append(expected_network)
             
             # Create new network connections
             for network_data in networks_to_create:
@@ -1492,11 +1495,11 @@ class PortainerContainer(models.Model):
             # Compare and sync
             env_vars_to_keep = []
             env_vars_to_update = []
-            env_vars_to_create = expected_env_vars.copy()
+            env_vars_to_create = []
+            processed_expected_env_vars = set()
             
             for current_env_var in current_env_vars:
                 found_match = False
-                matched_index = None
                 for i, expected_env_var in enumerate(expected_env_vars):
                     if current_env_var.name == expected_env_var['name']:
                         
@@ -1506,18 +1509,19 @@ class PortainerContainer(models.Model):
                         else:
                             env_vars_to_keep.append(current_env_var)
                         
-                        # Mark for removal from create list
-                        matched_index = i
+                        # Mark this expected env var as processed
+                        processed_expected_env_vars.add(i)
                         found_match = True
                         break
-                
-                # Remove matched item from create list
-                if matched_index is not None:
-                    env_vars_to_create.pop(matched_index)
                 
                 if not found_match:
                     # Env var no longer exists in Portainer
                     current_env_var.with_context(sync_from_portainer=True).unlink()
+            
+            # Build create list from unprocessed expected env vars
+            for i, expected_env_var in enumerate(expected_env_vars):
+                if i not in processed_expected_env_vars:
+                    env_vars_to_create.append(expected_env_var)
             
             # Update changed env vars
             for env_var_record, new_data in env_vars_to_update:
@@ -1552,11 +1556,11 @@ class PortainerContainer(models.Model):
             # Compare and sync
             labels_to_keep = []
             labels_to_update = []
-            labels_to_create = expected_labels.copy()
+            labels_to_create = []
+            processed_expected_labels = set()
             
             for current_label in current_labels:
                 found_match = False
-                matched_index = None
                 for i, expected_label in enumerate(expected_labels):
                     if current_label.name == expected_label['name']:
                         
@@ -1566,18 +1570,19 @@ class PortainerContainer(models.Model):
                         else:
                             labels_to_keep.append(current_label)
                         
-                        # Mark for removal from create list
-                        matched_index = i
+                        # Mark this expected label as processed
+                        processed_expected_labels.add(i)
                         found_match = True
                         break
-                
-                # Remove matched item from create list
-                if matched_index is not None:
-                    labels_to_create.pop(matched_index)
                 
                 if not found_match:
                     # Label no longer exists in Portainer
                     current_label.with_context(sync_from_portainer=True).unlink()
+            
+            # Build create list from unprocessed expected labels
+            for i, expected_label in enumerate(expected_labels):
+                if i not in processed_expected_labels:
+                    labels_to_create.append(expected_label)
             
             # Update changed labels
             for label_record, new_data in labels_to_update:
