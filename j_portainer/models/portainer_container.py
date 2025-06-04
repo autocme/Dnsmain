@@ -77,7 +77,7 @@ class PortainerContainer(models.Model):
         # Fields that can be synced immediately
         immediate_sync_fields = ['name', 'restart_policy']
         
-        # Check if any field requiring container recreation is being changed
+        # Check if any field requiring container recreation is being changed (excluding restart_policy)
         config_fields = ['image', 'image_id', 'always_pull_image', 'ports', 'volumes', 'labels', 
                         'publish_all_ports', 'privileged', 'init_process', 'shm_size', 'memory_reservation', 
                         'memory_limit', 'cpu_limit']
@@ -89,7 +89,6 @@ class PortainerContainer(models.Model):
                     original_config = {
                         'image': record.image or '',
                         'always_pull_image': record.always_pull_image,
-                        'restart_policy': record.restart_policy,
                         'publish_all_ports': record.publish_all_ports,
                         'privileged': record.privileged,
                         'init_process': record.init_process,
@@ -342,7 +341,7 @@ class PortainerContainer(models.Model):
             record.is_created_in_portainer = bool(record.container_id)
             record.can_manage_container = bool(record.container_id)
     
-    @api.depends('image', 'image_id', 'always_pull_image', 'restart_policy', 'ports', 'volumes', 'labels', 
+    @api.depends('image', 'image_id', 'always_pull_image', 'ports', 'volumes', 'labels', 
                  'publish_all_ports', 'privileged', 'init_process', 'shm_size', 'memory_reservation', 
                  'memory_limit', 'cpu_limit', 'label_ids', 'volume_ids', 'network_ids', 'env_ids', 'port_ids')
     def _compute_pending_changes_message(self):
@@ -358,11 +357,10 @@ class PortainerContainer(models.Model):
                 original = json.loads(record.original_config)
                 changed_fields = []
                 
-                # Check main fields
+                # Check main fields (excluding restart_policy as it syncs immediately)
                 current_config = {
                     'image': record.image or '',
                     'always_pull_image': record.always_pull_image,
-                    'restart_policy': record.restart_policy,
                     'publish_all_ports': record.publish_all_ports,
                     'privileged': record.privileged,
                     'init_process': record.init_process,
