@@ -188,15 +188,12 @@ class PortainerContainer(models.Model):
                     temp_record = super().create(vals)
                     try:
                         # Attempt to create the container in Portainer
-                        success = temp_record._create_container_in_portainer()
-                        if not success:
-                            # If creation failed, delete the temporary record and raise error
-                            temp_record.unlink()
-                            raise UserError(_("Failed to create container in Portainer"))
+                        temp_record._create_container_in_portainer()
                         records |= temp_record
                     except Exception as e:
                         # Clean up temporary record on any error
                         temp_record.unlink()
+                        # Show the actual detailed error instead of generic message
                         raise UserError(_("Error creating container: %s") % str(e))
                 else:
                     # Already has container_id, create normally
@@ -533,10 +530,10 @@ class PortainerContainer(models.Model):
                 
                 for volume in volume_mappings:
                     # Format host:container:mode
-                    if volume.host_path:
+                    if volume.name:
                         # Docker API format for binds
-                        bind_str = f"{volume.host_path}:{volume.container_path}"
-                        if volume.read_only:
+                        bind_str = f"{volume.name}:{volume.container_path}"
+                        if volume.mode == 'ro':
                             bind_str += ":ro"
                         binds.append(bind_str)
                     
@@ -601,7 +598,8 @@ class PortainerContainer(models.Model):
                 
         except Exception as e:
             _logger.error(f"Error creating container in Portainer: {str(e)}")
-            return False
+            # Re-raise the exception with details instead of returning False
+            raise Exception(f"Error creating container in Portainer: {str(e)}")
     
     def _update_container_name_in_portainer(self, old_name):
         """Update container name in Portainer
