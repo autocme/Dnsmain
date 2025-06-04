@@ -607,7 +607,7 @@ class PortainerContainer(models.Model):
                 
             # Update the Odoo record with the container ID
             self.write({'container_id': container_id})
-            
+            self.action_refresh()
             # Start the container if specified
             try:
                 # Start the container
@@ -1276,8 +1276,8 @@ class PortainerContainer(models.Model):
             
             # Parse port data from Portainer
             host_config = portainer_data.get('HostConfig', {})
-            port_bindings = host_config.get('PortBindings', {})
-            exposed_ports = portainer_data.get('Config', {}).get('ExposedPorts', {})
+            port_bindings = host_config.get('PortBindings') or {}
+            exposed_ports = portainer_data.get('Config', {}).get('ExposedPorts') or {}
             
             # Build expected port data
             expected_ports = []
