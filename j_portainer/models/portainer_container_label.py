@@ -106,7 +106,7 @@ class PortainerContainerLabel(models.Model):
             api = self.env['j_portainer.api']
             result = api.update_container_labels(
                 container.server_id.id,
-                container.environment_id,
+                container.environment_id.environment_id,
                 container.container_id,
                 label_dict
             )
