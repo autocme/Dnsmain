@@ -54,6 +54,7 @@
         'wizards/image_remove_wizard_view.xml',
         'wizards/template_deploy_wizard_view.xml',
         'wizards/container_join_network_wizard_views.xml',
+        'wizards/container_deploy_wizard_views.xml',
         'wizards/api_log_config_wizard_view.xml',
         'views/menu_views.xml',
     ],

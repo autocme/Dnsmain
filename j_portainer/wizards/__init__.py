@@ -7,4 +7,5 @@ from . import container_remove_wizard
 from . import image_remove_wizard
 from . import template_deploy_wizard
 from . import container_join_network_wizard
+from . import container_deploy_wizard
 from . import api_log_config_wizard

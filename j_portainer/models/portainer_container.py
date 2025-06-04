@@ -34,7 +34,8 @@ class PortainerContainer(models.Model):
             'status': '',           # Will be updated from Portainer
             'state': 'created',     # Default state for new container
             'last_sync': False,     # Will be set after sync
-            'name': self.name + ' (Copy)',  # Add suffix to avoid name conflicts
+            'details': False,     # Will be set after sync
+'name': self.name + ' (Copy)',  # Add suffix to avoid name conflicts
         })
         
         # Create the new container record
@@ -65,11 +66,51 @@ class PortainerContainer(models.Model):
     
     def write(self, vals):
         """Override write to handle changes that need to be synchronized to Portainer"""
+        import json
+        
         # Store the old name if name is being changed
         old_names = {}
         if 'name' in vals:
             for record in self:
                 old_names[record.id] = record.name
+        
+        # Fields that can be synced immediately
+        immediate_sync_fields = ['name', 'restart_policy']
+        
+        # Check if any field requiring container recreation is being changed
+        config_fields = ['image', 'image_id', 'always_pull_image', 'ports', 'volumes', 'labels', 
+                        'publish_all_ports', 'privileged', 'init_process', 'shm_size', 'memory_reservation', 
+                        'memory_limit', 'cpu_limit']
+        
+        # Store original config on first change if not already stored and not during sync
+        if not self.env.context.get('sync_from_portainer'):
+            for record in self:
+                if record.container_id and not record.original_config:
+                    original_config = {
+                        'image': record.image or '',
+                        'always_pull_image': record.always_pull_image,
+                        'restart_policy': record.restart_policy,
+                        'publish_all_ports': record.publish_all_ports,
+                        'privileged': record.privileged,
+                        'init_process': record.init_process,
+                        'shm_size': record.shm_size,
+                        'memory_reservation': record.memory_reservation,
+                        'memory_limit': record.memory_limit,
+                        'cpu_limit': record.cpu_limit,
+                        'Environment Variables': len(record.env_ids),
+                        'Port Mappings': len(record.port_ids),
+                        'Volume Mappings': len(record.volume_ids),
+                        'Networks': len(record.network_ids),
+                        'Labels': len(record.label_ids),
+                    }
+                    vals['original_config'] = json.dumps(original_config)
+        
+        # Check if configuration changes require pending status
+        has_config_changes = any(field in vals for field in config_fields)
+        if has_config_changes and not self.env.context.get('sync_from_portainer'):
+            for record in self:
+                if record.container_id:  # Only for existing containers
+                    vals['has_pending_changes'] = True
         
         # Perform the standard write operation
         result = super(PortainerContainer, self).write(vals)
@@ -193,6 +234,11 @@ class PortainerContainer(models.Model):
     is_created_in_portainer = fields.Boolean('Created in Portainer', compute='_compute_portainer_status')
     can_manage_container = fields.Boolean('Can Manage Container', compute='_compute_portainer_status')
     
+    # Pending changes tracking
+    has_pending_changes = fields.Boolean('Has Pending Changes', default=False)
+    pending_changes_message = fields.Text('Pending Changes Message', compute='_compute_pending_changes_message')
+    original_config = fields.Text('Original Configuration', help="JSON of original configuration for change tracking")
+    
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, default=lambda self: self._default_server_id())
     environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True, 
                                     domain="[('server_id', '=', server_id)]", default=lambda self: self._default_environment_id())
@@ -295,6 +341,62 @@ class PortainerContainer(models.Model):
         for record in self:
             record.is_created_in_portainer = bool(record.container_id)
             record.can_manage_container = bool(record.container_id)
+    
+    @api.depends('image', 'image_id', 'always_pull_image', 'restart_policy', 'ports', 'volumes', 'labels', 
+                 'publish_all_ports', 'privileged', 'init_process', 'shm_size', 'memory_reservation', 
+                 'memory_limit', 'cpu_limit', 'label_ids', 'volume_ids', 'network_ids', 'env_ids', 'port_ids')
+    def _compute_pending_changes_message(self):
+        """Compute pending changes message with specific field names"""
+        import json
+        
+        for record in self:
+            if not record.original_config or not record.has_pending_changes:
+                record.pending_changes_message = ""
+                continue
+                
+            try:
+                original = json.loads(record.original_config)
+                changed_fields = []
+                
+                # Check main fields
+                current_config = {
+                    'image': record.image or '',
+                    'always_pull_image': record.always_pull_image,
+                    'restart_policy': record.restart_policy,
+                    'publish_all_ports': record.publish_all_ports,
+                    'privileged': record.privileged,
+                    'init_process': record.init_process,
+                    'shm_size': record.shm_size,
+                    'memory_reservation': record.memory_reservation,
+                    'memory_limit': record.memory_limit,
+                    'cpu_limit': record.cpu_limit,
+                }
+                
+                for field, current_value in current_config.items():
+                    if field in original and original[field] != current_value:
+                        field_label = record._fields[field].string if field in record._fields else field
+                        changed_fields.append(field_label)
+                
+                # Check related records counts
+                current_counts = {
+                    'Environment Variables': len(record.env_ids),
+                    'Port Mappings': len(record.port_ids),
+                    'Volume Mappings': len(record.volume_ids),
+                    'Networks': len(record.network_ids),
+                    'Labels': len(record.label_ids),
+                }
+                
+                for field, current_count in current_counts.items():
+                    if field in original and original[field] != current_count:
+                        changed_fields.append(field)
+                
+                if changed_fields:
+                    record.pending_changes_message = "Changed fields: " + ", ".join(changed_fields)
+                else:
+                    record.pending_changes_message = ""
+                    
+            except (json.JSONDecodeError, KeyError):
+                record.pending_changes_message = "Configuration changes detected"
     
     def _get_api(self):
         """Get API client"""
@@ -1693,7 +1795,29 @@ class PortainerContainer(models.Model):
         }
         
     def deploy(self):
-        """Deploy a new container with the same configuration as this one"""
+        """Deploy container - recreate existing or create new container"""
+        self.ensure_one()
+        
+        # Check if container already exists in Portainer
+        if self.container_id:
+            # Show confirmation dialog for existing container
+            return {
+                'type': 'ir.actions.act_window',
+                'name': 'Deploy Container',
+                'res_model': 'j_portainer.container.deploy.wizard',
+                'view_mode': 'form',
+                'target': 'new',
+                'context': {
+                    'default_container_id': self.id,
+                    'default_container_name': self.name,
+                }
+            }
+        
+        # For new containers, proceed with direct deployment
+        return self._deploy_container()
+    
+    def _deploy_container(self):
+        """Internal method to deploy the container"""
         self.ensure_one()
         
         # Get API client

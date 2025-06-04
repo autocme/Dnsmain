@@ -46,15 +46,23 @@
                             class="btn-success" 
                             help="Deploy a new container based on this configuration"/>
                 </header>
-                
-                <!-- Message banner for containers not created in Portainer -->
-                <div class="alert alert-info" role="alert" invisible="is_created_in_portainer">
-                    <strong>Container Not Created in Portainer</strong><br/>
-                    This container exists only in Odoo and has not been created in Portainer yet. 
-                    Click the <strong>"Create in Portainer"</strong> button above to create it in Portainer and start managing it.
-                </div>
-                
                 <sheet>
+                    <!-- Pending Changes Warning Banner -->
+                    <div class="alert alert-warning" role="alert" 
+                         invisible="not has_pending_changes">
+                        <strong>Configuration changes detected.</strong><br/>
+                        Changes will not be applied to Portainer until you deploy the container.<br/>
+                        <span name="pending_changes_message"/>
+                    </div>
+                    
+                    <!-- Container Not Created Banner -->
+                    <div class="alert alert-info" role="alert" 
+                         invisible="is_created_in_portainer">
+                        <strong>Container Not Created in Portainer</strong><br/>
+                        This container record exists in Odoo but has not been created in Portainer yet. 
+                        Use the "Create in Portainer" button to create it.
+                    </div>
+                    
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_logs" string="Logs" type="object" class="oe_stat_button"
                                 invisible="not can_manage_container"
@@ -150,7 +158,7 @@
                                         help="Execute 'du -sh' command inside the container to check volume usage"/>
                                 </tree>
                             </field>
-                            <div class="alert alert-info" role="alert">
+                            <div class="alert alert-info text-center" role="alert">
                                 <span class="fa fa-info-circle"/> Volume mappings are typically set when a container is created. Changes here are for documentation purposes only and won't affect the running container.
                             </div>
                         </page>
