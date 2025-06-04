@@ -1823,7 +1823,7 @@ class PortainerCustomTemplate(models.Model):
             'name': self.title,
             'server_id': self.server_id.id,
             'environment_id': self.environment_id.id,
-            'stack_file_content': self.fileContent or self.compose_file,
+            'content': self.fileContent,
             'type': 'compose',  # Default to compose type
         }
         
