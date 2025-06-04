@@ -30,7 +30,9 @@
         <field name="arch" type="xml">
             <form string="Custom Template">
                 <header>
-                    <button name="action_deploy" string="Deploy" type="object" class="oe_highlight" help="Deploy this template"/>
+                    <button name="action_create_stack" string="Create Stack" type="object" class="btn-primary"
+                            help="Create a stack record using this template's configuration"/>
+                    <!-- <button name="action_deploy" string="Deploy" type="object" class="oe_highlight" help="Deploy this template"/> -->
                     <!-- <button name="action_create_in_portainer" string="Create in Portainer" type="object" 
                             class="btn-primary" help="Create this template in Portainer using direct file upload API"/> -->
                     <button name="remove_custom_template" string="Remove Template" type="object" class="oe_link"
