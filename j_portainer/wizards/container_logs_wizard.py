@@ -103,7 +103,7 @@ Suggestions:
             str: Container logs
         """
         server = container.server_id
-        endpoint_id = container.environment_id
+        endpoint_id = container.environment_id.environment_id  # Get the actual numeric ID
         container_id = container.container_id
         
         # Build params
