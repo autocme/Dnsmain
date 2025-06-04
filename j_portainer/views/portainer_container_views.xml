@@ -60,6 +60,7 @@
                             <field name="server_id"/>
                             <field name="environment_id"/>
                             <field name="last_sync" readonly="1"/>
+                            <button name="action_create_in_portainer" type="object" string="Create in Portainer" class="btn-success" icon="fa-plus" attrs="{'invisible': [('container_id', '!=', False)]}"/>
                         </group>
                         <group>
                             <field name="create_date" invisible="1"/>
@@ -144,7 +145,7 @@
                                 </tree>
                             </field>
                         </page>
-                        
+
                         <page string="Env" name="env_vars">
                             <div class="oe_button_box">
 <!--                                <button name="sync_env_vars" string="Sync Environment Variables" type="object" -->
@@ -190,7 +191,7 @@
                                 <field name="cpu_limit"/>
                             </group>
                         </page>
-                        
+
                         <page string="Capabilities" name="capabilities">
                             <group string="Linux Capabilities" name="linux_capabilities">
                                 <group>
@@ -236,7 +237,7 @@
                                 </group>
                             </group>
                         </page>
-                        
+
                         <page string="Details" name="details">
                             <field name="details" widget="html" readonly="1"/>
                         </page>

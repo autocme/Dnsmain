@@ -182,25 +182,54 @@ class PortainerContainer(models.Model):
                 record = super().create(vals)
                 records |= record
             else:
-                # For manual creation, create container in Portainer first
-                if not vals.get('container_id'):
-                    # This is manual creation - create a temporary record to use the creation logic
-                    temp_record = super().create(vals)
-                    try:
-                        # Attempt to create the container in Portainer
-                        temp_record._create_container_in_portainer()
-                        records |= temp_record
-                    except Exception as e:
-                        # Clean up temporary record on any error
-                        temp_record.unlink()
-                        # Show the actual detailed error instead of generic message
-                        raise UserError(_("Error creating container: %s") % str(e))
-                else:
-                    # Already has container_id, create normally
-                    record = super().create(vals)
-                    records |= record
+                # For manual creation, only create the Odoo record
+                # Container creation in Portainer will be done explicitly via button/action
+                record = super().create(vals)
+                records |= record
                     
         return records
+        
+    def action_create_in_portainer(self):
+        """Explicitly create the container in Portainer"""
+        self.ensure_one()
+        
+        if self.container_id:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Container Already Exists'),
+                    'message': _('This container already exists in Portainer'),
+                    'sticky': False,
+                    'type': 'warning',
+                }
+            }
+        
+        try:
+            # Attempt to create the container in Portainer
+            self._create_container_in_portainer()
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Container Created'),
+                    'message': _('Container %s has been created in Portainer successfully') % self.name,
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+        except Exception as e:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Creation Failed'),
+                    'message': _('Error creating container: %s') % str(e),
+                    'sticky': True,
+                    'type': 'danger',
+                }
+            }
     
 
     
