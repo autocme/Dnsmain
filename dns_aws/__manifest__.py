@@ -5,7 +5,7 @@
 
 {
     'name': 'DNS AWS Integration',
-    'version': '1.0',
+    'version': '1.1',
     'category': 'Tools',
     'summary': 'Integrate DNS Management with AWS Route 53',
     'description': """
