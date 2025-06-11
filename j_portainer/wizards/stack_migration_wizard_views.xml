@@ -18,6 +18,10 @@
                     </group>
                     
                     <group>
+                        <field name="handle_conflicts" widget="radio" options="{'horizontal': false}"/>
+                    </group>
+                    
+                    <group>
                         <group string="Source Configuration">
                             <field name="source_stack_id" options="{'no_create': true, 'no_edit': true}"/>
                         </group>
