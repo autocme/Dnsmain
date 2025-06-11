@@ -16,6 +16,10 @@ author = "agent"
 task = "workflow.run"
 args = "Odoo Server"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Test Server"
+
 [[workflows.workflow]]
 name = "Odoo Server"
 author = "agent"
@@ -25,5 +29,18 @@ task = "shell.exec"
 args = "python3 -m odoo --addons-path=. --database=postgresql://postgres:password@localhost:5432/odoo_db --db-filter=odoo_db --http-port=5000"
 waitForPort = 5000
 
+[[workflows.workflow]]
+name = "Test Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_server.py"
+waitForPort = 5000
+
 [deployment]
 run = ["sh", "-c", "rm -rf odoo_repo 2>/dev/null || true && git clone https://github.com/odoo/odoo.git -b 17.0 --depth=1 odoo_repo && pip install -e odoo_repo && python -m odoo --addons-path=. -d testdb -i dns_base --no-http --stop-after-init && python -m odoo --addons-path=. -d testdb --dev=all"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
