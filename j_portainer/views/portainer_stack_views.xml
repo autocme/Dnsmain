@@ -124,12 +124,16 @@
         <field name="name">j_portainer.stack.tree</field>
         <field name="model">j_portainer.stack</field>
         <field name="arch" type="xml">
-            <tree string="Stacks">
+            <tree string="Stacks"
+                  decoration-success="status == '1'"
+                  decoration-danger="status == '2'"
+                  decoration-muted="status == '0'">
                 <field name="name"/>
                 <field name="type"/>
                 <field name="status" widget="badge" 
-                       decoration-success="status == 1"
-                       decoration-danger="status == 2"/>
+                       decoration-success="status == '1'"
+                       decoration-danger="status == '2'"
+                       decoration-muted="status == '0'"/>
                 <field name="server_id"/>
                 <field name="environment_id"/>
                 <field name="creation_date"/>

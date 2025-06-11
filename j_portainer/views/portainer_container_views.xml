@@ -283,12 +283,19 @@
         <field name="name">j_portainer.container.tree</field>
         <field name="model">j_portainer.container</field>
         <field name="arch" type="xml">
-            <tree string="Containers">
+            <tree string="Containers" 
+                  decoration-success="state == 'running'"
+                  decoration-warning="state == 'paused'"
+                  decoration-danger="state in ['stopped', 'exited', 'dead']"
+                  decoration-info="state == 'created'"
+                  decoration-muted="state == 'removing'">
                 <field name="name"/>
                 <field name="state" widget="badge"
                        decoration-success="state == 'running'"
                        decoration-warning="state == 'paused'"
-                       decoration-danger="state in ['stopped', 'exited', 'dead']"/>
+                       decoration-danger="state in ['stopped', 'exited', 'dead']"
+                       decoration-info="state == 'created'"
+                       decoration-muted="state == 'removing'"/>
                 <field name="image"/>
                 <field name="restart_policy" widget="badge"
                        decoration-info="restart_policy == 'no'"
