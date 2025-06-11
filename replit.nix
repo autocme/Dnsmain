@@ -1,5 +1,7 @@
 {pkgs}: {
   deps = [
+    pkgs.curl
+    pkgs.wget
     pkgs.tk
     pkgs.tcl
     pkgs.openjpeg
