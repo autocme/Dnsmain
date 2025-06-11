@@ -9,6 +9,8 @@
                 <header>
                     <button name="sync_resources" string="Sync Resources" type="object"
                             class="btn-primary"/>
+                    <button name="action_remove_environment" string="Remove Environment" type="object"
+                            class="btn-secondary" confirm="Are you sure you want to remove this environment from Portainer? This action cannot be undone."/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">

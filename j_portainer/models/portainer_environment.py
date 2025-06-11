@@ -549,6 +549,61 @@ docker service create \\
             }
         }
     
+    def action_remove_environment(self):
+        """Remove environment from Portainer and Odoo"""
+        self.ensure_one()
+        
+        if not self.environment_id:
+            raise UserError(_("Cannot remove environment: No Portainer environment ID found"))
+        
+        if self.server_id.status != 'connected':
+            raise UserError(_("Server must be connected to remove environments"))
+        
+        try:
+            import requests
+            import logging
+            _logger = logging.getLogger(__name__)
+            
+            # Prepare headers with authentication
+            headers = {
+                'X-API-Key': self.server_id.api_key,
+                'Content-Type': 'application/json'
+            }
+            
+            # Call Portainer API to remove environment
+            response = requests.delete(
+                f"{self.server_id.url}/api/endpoints/{self.environment_id}",
+                headers=headers,
+                timeout=30
+            )
+            
+            if response.status_code in [200, 204]:
+                _logger.info(f"Environment {self.name} successfully removed from Portainer")
+                
+                # Only remove from Odoo after successful removal from Portainer
+                self.unlink()
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Success'),
+                        'message': _('Environment "%s" has been removed from Portainer and Odoo') % self.name,
+                        'type': 'success',
+                        'sticky': False,
+                    }
+                }
+            else:
+                error_msg = response.text if hasattr(response, 'text') else f"HTTP {response.status_code}"
+                _logger.error(f"Failed to remove environment from Portainer: {error_msg}")
+                raise UserError(_("Failed to remove environment from Portainer: %s") % error_msg)
+                
+        except Exception as e:
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.error(f"Error removing environment: {str(e)}")
+            raise UserError(_("Error removing environment: %s") % str(e))
+    
     def action_view_stacks(self):
         """View stacks for this environment"""
         self.ensure_one()
