@@ -1,0 +1,117 @@
+post:
+      consumes:
+      - multipart/form-data
+      description: |-
+        Create a new environment(endpoint) that will be used to manage an environment(endpoint).
+        **Access policy**: administrator
+      operationId: EndpointCreate
+      parameters:
+      - description: 'Name that will be used to identify this environment(endpoint)
+          (example: my-environment)'
+        in: formData
+        name: Name
+        required: true
+        type: string
+      - description: 'Environment(Endpoint) type. Value must be one of: 1 (Local Docker
+          environment), 2 (Agent environment), 3 (Azure environment), 4 (Edge agent
+          environment) or 5 (Local Kubernetes Environment)'
+        in: formData
+        name: EndpointCreationType
+        required: true
+        type: integer
+      - description: 'URL or IP address of a Docker host (example: docker.mydomain.tld:2375).
+          Defaults to local if not specified (Linux: /var/run/docker.sock, Windows:
+          //./pipe/docker_engine). Cannot be empty if EndpointCreationType is set
+          to 4 (Edge agent environment)'
+        in: formData
+        name: URL
+        type: string
+      - description: 'URL or IP address where exposed containers will be reachable.
+          Defaults to URL if not specified (example: docker.mydomain.tld:2375)'
+        in: formData
+        name: PublicURL
+        type: string
+      - description: Environment(Endpoint) group identifier. If not specified will
+          default to 1 (unassigned).
+        in: formData
+        name: GroupID
+        type: integer
+      - description: Require TLS to connect against this environment(endpoint). Must
+          be true if EndpointCreationType is set to 2 (Agent environment)
+        in: formData
+        name: TLS
+        type: boolean
+      - description: Skip server verification when using TLS. Must be true if EndpointCreationType
+          is set to 2 (Agent environment)
+        in: formData
+        name: TLSSkipVerify
+        type: boolean
+      - description: Skip client verification when using TLS. Must be true if EndpointCreationType
+          is set to 2 (Agent environment)
+        in: formData
+        name: TLSSkipClientVerify
+        type: boolean
+      - description: TLS CA certificate file
+        in: formData
+        name: TLSCACertFile
+        type: file
+      - description: TLS client certificate file
+        in: formData
+        name: TLSCertFile
+        type: file
+      - description: TLS client key file
+        in: formData
+        name: TLSKeyFile
+        type: file
+      - description: Azure application ID. Required if environment(endpoint) type
+          is set to 3
+        in: formData
+        name: AzureApplicationID
+        type: string
+      - description: Azure tenant ID. Required if environment(endpoint) type is set
+          to 3
+        in: formData
+        name: AzureTenantID
+        type: string
+      - description: Azure authentication key. Required if environment(endpoint) type
+          is set to 3
+        in: formData
+        name: AzureAuthenticationKey
+        type: string
+      - description: List of tag identifiers to which this environment(endpoint) is
+          associated
+        in: formData
+        items:
+          type: integer
+        name: TagIds
+        type: array
+      - description: The check in interval for edge agent (in seconds)
+        in: formData
+        name: EdgeCheckinInterval
+        type: integer
+      - description: URL or IP address that will be used to establish a reverse tunnel
+        in: formData
+        name: EdgeTunnelServerAddress
+        required: true
+        type: string
+      - description: List of GPUs - json stringified array of {name, value} structs
+        in: formData
+        name: Gpus
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/portainer.Endpoint'
+        "400":
+          description: Invalid request
+        "500":
+          description: Server error
+      security:
+      - ApiKeyAuth: []
+      - jwt: []
+      summary: Create a new environment(endpoint)
+      tags:
+      - endpoints

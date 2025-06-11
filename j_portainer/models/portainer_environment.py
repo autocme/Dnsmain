@@ -172,30 +172,39 @@ docker service create \\
             if server.status != 'connected':
                 raise UserError(_("Server must be connected to create environments"))
             
-            # Prepare data for Portainer API
-            # Portainer v2.27.4 endpoint types:
-            # 1 = Docker Standalone (direct socket/API)
-            # 2 = Agent endpoint (Agent connection)
-            # 3 = Azure ACI
-            # 4 = Edge Agent
-            # 5 = Docker Swarm (direct socket/API)
+            # Prepare data for Portainer API (multipart/form-data format)
+            # Portainer v2.27.4 endpoint creation types:
+            # 1 = Local Docker environment (direct socket/API)
+            # 2 = Agent environment (Agent connection)
+            # 3 = Azure environment
+            # 4 = Edge agent environment
+            # 5 = Local Kubernetes Environment
             
             connection_method = vals.get('connection_method', 'agent')
             environment_type = vals.get('type', '1')
             
             if connection_method == 'agent':
-                portainer_endpoint_type = 2  # Agent endpoint
-            elif environment_type == '2':  # Docker Swarm
-                portainer_endpoint_type = 5  # Docker Swarm direct
+                portainer_endpoint_type = 2  # Agent environment
+            elif environment_type == '2':  # Docker Swarm - use direct connection
+                portainer_endpoint_type = 1  # Local Docker environment
             else:
-                portainer_endpoint_type = 1  # Docker Standalone direct
+                portainer_endpoint_type = 1  # Local Docker environment
             
+            # Build form data according to API specification
             environment_data = {
                 'Name': vals['name'],
-                'EndpointType': portainer_endpoint_type,
+                'EndpointCreationType': str(portainer_endpoint_type),
                 'URL': f"tcp://{vals['url']}:9001",
-                'GroupID': int(vals.get('group_id', 1))
+                'GroupID': str(vals.get('group_id', 1))
             }
+            
+            # For Agent environments (type 2), TLS fields are required to be true
+            if portainer_endpoint_type == 2:
+                environment_data.update({
+                    'TLS': 'true',
+                    'TLSSkipVerify': 'true',
+                    'TLSSkipClientVerify': 'true'
+                })
             
             # Add optional fields only if they have values
             public_url = vals.get('public_url', '').strip()
@@ -203,8 +212,8 @@ docker service create \\
                 environment_data['PublicURL'] = public_url
             
             try:
-                # Create environment in Portainer
-                response = server._make_api_request('/api/endpoints', 'POST', data=environment_data)
+                # Create environment in Portainer using multipart/form-data
+                response = server._make_api_request('/api/endpoints', 'POST', data=environment_data, use_multipart=True)
                 
                 if response.status_code not in [200, 201]:
                     # Parse error message from response
