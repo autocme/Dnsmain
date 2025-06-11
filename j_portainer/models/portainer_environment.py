@@ -190,6 +190,9 @@ docker service create \\
             else:
                 portainer_endpoint_type = 1  # Local Docker environment
             
+            # Validate URL format before proceeding
+            self._validate_environment_url(vals['url'])
+            
             # Build form data according to API specification
             # Use the exact URL provided by the user
             user_url = vals['url']
