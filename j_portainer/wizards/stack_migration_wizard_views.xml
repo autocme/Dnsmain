@@ -29,16 +29,16 @@
                     <notebook>
                         <page string="Configuration Preview" name="config_preview">
                             <group>
-                                <field name="source_compose_content" widget="text" readonly="1" 
+                                <field name="source_content" widget="text" readonly="1" 
                                        string="Docker Compose Content"/>
                             </group>
                             <group>
-                                <field name="source_environment_variables" widget="text" readonly="1" 
-                                       string="Environment Variables"/>
+                                <field name="source_file_content" widget="text" readonly="1" 
+                                       string="Stack File Content"/>
                             </group>
                             <group>
-                                <field name="source_labels" widget="text" readonly="1" 
-                                       string="Labels"/>
+                                <field name="source_details" widget="text" readonly="1" 
+                                       string="Stack Details"/>
                             </group>
                         </page>
                     </notebook>
