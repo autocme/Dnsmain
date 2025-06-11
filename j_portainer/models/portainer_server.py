@@ -1374,12 +1374,28 @@ class PortainerServer(models.Model):
                     
                     # Check if this volume is used by any container
                     in_use = False
+                    connected_containers = []
                     for container in containers:
                         mounts = container.get('Mounts', [])
                         for mount in mounts:
+                            # Check for volume mounts (named volumes)
                             if mount.get('Type') == 'volume' and mount.get('Name') == volume_name:
                                 in_use = True
-                                break
+                                connected_containers.append({
+                                    'container_name': container.get('Names', [''])[0].lstrip('/'),
+                                    'container_id': container.get('Id', ''),
+                                    'destination': mount.get('Destination', ''),
+                                    'mode': mount.get('Mode', 'rw')
+                                })
+                            # Also check for bind mounts where source matches volume mountpoint
+                            elif mount.get('Type') == 'bind' and mount.get('Source') == volume.get('Mountpoint'):
+                                in_use = True
+                                connected_containers.append({
+                                    'container_name': container.get('Names', [''])[0].lstrip('/'),
+                                    'container_id': container.get('Id', ''),
+                                    'destination': mount.get('Destination', ''),
+                                    'mode': mount.get('Mode', 'rw')
+                                })
                         if in_use:
                             break
                     
@@ -1395,6 +1411,7 @@ class PortainerServer(models.Model):
                         'labels': json.dumps(volume.get('Labels', {})),
                         'details': json.dumps(details, indent=2) if details else '',
                         'in_use': in_use,  # Add in_use field based on container usage
+                        'connected_containers': json.dumps(connected_containers) if connected_containers else '',
                     }
 
                     if existing_volume:
