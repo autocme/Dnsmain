@@ -314,10 +314,11 @@ docker service create \\
                         
                         _logger.info(f"Trying direct Docker connection with data: {fallback_data}")
                         
-                        response = requests.post(
-                            f"{server.url}/api/endpoints",
-                            headers=headers,
-                            files=fallback_data,
+                        response = server._make_api_request(
+                            '/api/endpoints',
+                            method='POST',
+                            data=fallback_data,
+                            use_multipart=True,
                             timeout=30
                         )
                         
@@ -560,20 +561,13 @@ docker service create \\
             raise UserError(_("Server must be connected to remove environments"))
         
         try:
-            import requests
             import logging
             _logger = logging.getLogger(__name__)
             
-            # Prepare headers with authentication
-            headers = {
-                'X-API-Key': self.server_id.api_key,
-                'Content-Type': 'application/json'
-            }
-            
-            # Call Portainer API to remove environment
-            response = requests.delete(
-                f"{self.server_id.url}/api/endpoints/{self.environment_id}",
-                headers=headers,
+            # Use server's API method which handles SSL verification properly
+            response = self.server_id._make_api_request(
+                f'/api/endpoints/{self.environment_id}',
+                method='DELETE',
                 timeout=30
             )
             
