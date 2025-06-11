@@ -108,6 +108,16 @@
                             <field name="platform"/>
                         </group>
                         <field name="docker_command" widget="text" nolabel="1" placeholder="Docker command will be generated automatically based on your selections"/>
+                        <div class="alert alert-info" role="alert" invisible="environment_id != False">
+                            <strong>Setup Instructions:</strong>
+                            <ol>
+                                <li>Copy the generated Docker command above</li>
+                                <li>Run it on your target Docker host</li>
+                                <li>Ensure the agent is accessible on port 9001</li>
+                                <li>Click Save to create the environment in Portainer</li>
+                            </ol>
+                            <p><strong>Note:</strong> For Docker Swarm, the command creates a network and deploys the agent as a global service across all nodes.</p>
+                        </div>
                     </group>
 
                     <notebook>
