@@ -191,10 +191,16 @@ docker service create \\
                 portainer_endpoint_type = 1  # Local Docker environment
             
             # Build form data according to API specification
+            # For Agent environments, URL should be the host IP without protocol/port
+            if portainer_endpoint_type == 2:  # Agent environment
+                api_url = vals['url']  # Just the IP address for Agent
+            else:
+                api_url = f"tcp://{vals['url']}:2376"  # Docker API with standard port
+            
             environment_data = {
                 'Name': vals['name'],
                 'EndpointCreationType': str(portainer_endpoint_type),
-                'URL': f"tcp://{vals['url']}:9001",
+                'URL': api_url,
                 'GroupID': str(vals.get('group_id', 1))
             }
             
