@@ -611,7 +611,7 @@ class PortainerServer(models.Model):
                     'name': env_name,
                     'url': env.get('URL', ''),
                     'status': 'up' if env.get('Status') == 1 else 'down',
-                    'type': env.get('Type', 0),
+                    'type': str(env.get('Type', 1)),  # Convert to string for selection field
                     'public_url': env.get('PublicURL', ''),
                     'group_id': env.get('GroupId'),
                     'group_name': env.get('GroupName', ''),
