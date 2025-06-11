@@ -13,31 +13,38 @@ class PortainerEnvironment(models.Model):
     _description = 'Portainer Environment'
     _order = 'name'
     
-    name = fields.Char('Name', required=True)
-    environment_id = fields.Integer('Environment ID', copy=False)
-    url = fields.Char('URL')
+    name = fields.Char('Environment Name', required=True)
+    environment_id = fields.Integer('Environment ID', copy=False, readonly=True)
+    url = fields.Char('Environment Address', required=True, help="IP address or hostname of the environment")
     status = fields.Selection([
         ('up', 'Up'),
         ('down', 'Down')
-    ], string='Status', default='down')
+    ], string='Status', default='down', readonly=True)
     type = fields.Selection([
         ('1', 'Docker Standalone'),
         ('2', 'Docker Swarm'),
         ('3', 'Edge Agent'),
         ('4', 'Azure ACI'),
         ('5', 'Kubernetes')
-    ], string='Type', help="Environment type from Portainer")
-    public_url = fields.Char('Public URL')
-    group_id = fields.Integer('Group ID')
-    group_name = fields.Char('Group')
-    tags = fields.Char('Tags')
-    details = fields.Text('Details')
-    active = fields.Boolean('Active', default=True, 
+    ], string='Type', help="Environment type from Portainer", default='3', readonly=True)
+    public_url = fields.Char('Public URL', readonly=True)
+    group_id = fields.Integer('Group ID', readonly=True)
+    group_name = fields.Char('Group', readonly=True)
+    tags = fields.Char('Tags', readonly=True)
+    details = fields.Text('Details', readonly=True)
+    active = fields.Boolean('Active', default=True, readonly=True,
                           help="If unchecked, it means this environment no longer exists in Portainer, "
                                "but it's kept in Odoo for reference and to maintain relationships with templates")
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
-    server_id = fields.Many2one('j_portainer.server', string='Server', required=True)
+    # Manual creation fields
+    docker_command = fields.Text('Docker Command', required=True, help="Command to run the Portainer agent")
+    platform = fields.Selection([
+        ('linux', 'Linux / Windows WSL'),
+        ('windows', 'Windows WCS')
+    ], string='Platform', default='linux', required=True, help="Target platform for the agent")
+    
+    server_id = fields.Many2one('j_portainer.server', string='Server', required=True, default=lambda self: self._default_server_id())
     
     _sql_constraints = [
         ('unique_environment_per_server', 'unique(server_id, environment_id)', 
@@ -51,6 +58,128 @@ class PortainerEnvironment(models.Model):
     volume_count = fields.Integer('Volumes', compute='_compute_resource_counts')
     network_count = fields.Integer('Networks', compute='_compute_resource_counts')
     stack_count = fields.Integer('Stacks', compute='_compute_resource_counts')
+    
+    def _default_server_id(self):
+        """Default server selection"""
+        return self.env['j_portainer.server'].search([('status', '=', 'connected')], limit=1)
+    
+    @api.onchange('platform')
+    def _onchange_platform(self):
+        """Generate Docker command based on platform"""
+        for record in self:
+            if record.platform == 'linux':
+                record.docker_command = """docker run -d \\
+  -p 9001:9001 \\
+  --name portainer_agent \\
+  --restart=always \\
+  -v /var/run/docker.sock:/var/run/docker.sock \\
+  -v /var/lib/docker/volumes:/var/lib/docker/volumes \\
+  -v /:/host \\
+  portainer/agent:2.27.4"""
+            elif record.platform == 'windows':
+                record.docker_command = """docker run -d \\
+  -p 9001:9001 \\
+  --name portainer_agent \\
+  --restart=always \\
+  -v C:\\:C:\\host \\
+  -v C:\\ProgramData\\docker\\volumes:C:\\ProgramData\\docker\\volumes \\
+  -v \\\\.\\pipe\\docker_engine:\\\\.\\pipe\\docker_engine \\
+  portainer/agent:2.27.4"""
+    
+    @api.model
+    def default_get(self, fields_list):
+        """Set default values including docker command"""
+        result = super().default_get(fields_list)
+        
+        # Set default docker command for Linux platform
+        if 'docker_command' in fields_list:
+            result['docker_command'] = """docker run -d \\
+  -p 9001:9001 \\
+  --name portainer_agent \\
+  --restart=always \\
+  -v /var/run/docker.sock:/var/run/docker.sock \\
+  -v /var/lib/docker/volumes:/var/lib/docker/volumes \\
+  -v /:/host \\
+  portainer/agent:2.27.4"""
+        
+        return result
+    
+    @api.model
+    def create(self, vals):
+        """Override create to handle manual environment creation via Portainer API"""
+        # Check if this is a manual creation (no environment_id means manual creation)
+        if not vals.get('environment_id'):
+            # Validate required fields for manual creation
+            required_fields = ['name', 'url', 'server_id']
+            for field in required_fields:
+                if not vals.get(field):
+                    raise UserError(_("Field '%s' is required for manual environment creation") % field)
+            
+            # Get server record
+            server = self.env['j_portainer.server'].browse(vals['server_id'])
+            if not server:
+                raise UserError(_("Server not found"))
+            
+            if server.status != 'connected':
+                raise UserError(_("Server must be connected to create environments"))
+            
+            # Prepare data for Portainer API
+            environment_data = {
+                'Name': vals['name'],
+                'EndpointType': 3,  # Agent endpoint type
+                'URL': f"tcp://{vals['url']}:9001",  # Agent URL format
+                'PublicURL': vals.get('public_url', ''),
+                'GroupID': vals.get('group_id', 1),  # Default group
+                'TLS': False,  # Agent doesn't use TLS by default
+                'TLSSkipVerify': False,
+                'TLSSkipClientVerify': False,
+                'EdgeKey': '',
+                'EdgeID': '',
+                'EdgeCheckinInterval': 0,
+                'UserAccessPolicies': {},
+                'TeamAccessPolicies': {},
+                'TagIDs': []
+            }
+            
+            try:
+                # Create environment in Portainer
+                response = server._make_api_request('/api/endpoints', 'POST', data=environment_data)
+                
+                if response.status_code not in [200, 201]:
+                    # Parse error message from response
+                    try:
+                        error_data = response.json()
+                        error_message = error_data.get('message', response.text)
+                    except:
+                        error_message = response.text if response.text else f"HTTP {response.status_code} error"
+                    
+                    raise UserError(_("Failed to create environment in Portainer: %s") % error_message)
+                
+                # Parse successful response
+                portainer_env = response.json()
+                
+                # Update vals with data from Portainer response
+                vals.update({
+                    'environment_id': portainer_env.get('Id'),
+                    'url': portainer_env.get('URL', vals['url']),
+                    'status': 'up' if portainer_env.get('Status') == 1 else 'down',
+                    'type': str(portainer_env.get('Type', 3)),
+                    'public_url': portainer_env.get('PublicURL', ''),
+                    'group_id': portainer_env.get('GroupId'),
+                    'group_name': portainer_env.get('GroupName', ''),
+                    'active': True,
+                    'last_sync': fields.Datetime.now()
+                })
+                
+            except UserError:
+                # Re-raise UserError without modification
+                raise
+            except Exception as e:
+                _logger.error(f"Error creating environment in Portainer: {str(e)}")
+                raise UserError(_("Error creating environment in Portainer: %s") % str(e))
+        
+        # Create the record in Odoo
+        return super().create(vals)
     
     @api.depends()
     def _compute_resource_counts(self):
