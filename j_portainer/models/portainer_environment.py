@@ -205,9 +205,9 @@ docker service create \\
             connection_method = vals.get('connection_method', 'agent')
             environment_type = vals.get('type', '1')
             
-            # Try Edge Agent first (type 4) for remote agent connections
+            # Use regular Agent connection (type 2) for remote agent connections
             if connection_method == 'agent':
-                portainer_endpoint_type = 4  # Edge Agent environment (for remote connections)
+                portainer_endpoint_type = 2  # Agent environment
             elif environment_type == '2':  # Docker Swarm - use direct connection
                 portainer_endpoint_type = 1  # Local Docker environment
             else:
@@ -221,9 +221,12 @@ docker service create \\
             user_url = vals['url']
             
             # Format URL correctly based on connection type
-            if portainer_endpoint_type == 4:  # Edge Agent environment
-                # For Edge Agent environments, URL should be empty - the agent address goes in EdgeTunnelServerAddress
-                api_url = ""
+            if portainer_endpoint_type == 2:  # Agent environment
+                # For Agent environments, use the agent URL with tcp:// prefix
+                if not user_url.startswith('tcp://'):
+                    api_url = f"tcp://{user_url}"
+                else:
+                    api_url = user_url
             else:
                 # For direct Docker connections, ensure tcp:// prefix if not present
                 if not user_url.startswith('tcp://'):
@@ -238,11 +241,12 @@ docker service create \\
                 'GroupID': str(vals.get('group_id', 1))
             }
             
-            # For Edge Agent environments (type 4), add agent-specific parameters
-            if portainer_endpoint_type == 4:
+            # For Agent environments (type 2), add TLS parameters
+            if portainer_endpoint_type == 2:
                 environment_data.update({
-                    'EdgeTunnelServerAddress': user_url,  # Agent connection address
-                    'EdgeCheckinInterval': '5'  # Check-in interval in seconds
+                    'TLS': 'true',
+                    'TLSSkipVerify': 'true',
+                    'TLSSkipClientVerify': 'true'
                 })
             
             # Add optional fields only if they have values
@@ -290,30 +294,24 @@ docker service create \\
                 _logger = logging.getLogger(__name__)
                 _logger.error(f"Error creating environment in Portainer: {str(e)}")
                 
-                # If this was an Edge Agent connection (type 4) and it failed, try regular Agent (type 2)
-                if portainer_endpoint_type == 4 and connection_method == 'agent':
+                # If this was an Agent connection and it failed, try direct Docker connection as fallback
+                if portainer_endpoint_type == 2 and connection_method == 'agent':
                     try:
-                        _logger.info("Edge Agent connection failed, trying regular Agent connection...")
+                        _logger.info("Agent connection failed, trying direct Docker connection...")
                         
-                        # Retry with regular Agent connection (type 2)
+                        # Retry with direct Docker connection (type 1)
                         fallback_data = environment_data.copy()
-                        fallback_data['EndpointCreationType'] = '2'  # Regular Agent
+                        fallback_data['EndpointCreationType'] = '1'  # Direct Docker
                         
-                        # For regular Agent, use tcp:// URL format
+                        # For direct Docker, ensure tcp:// URL format
                         fallback_data['URL'] = f"tcp://{user_url}"
                         
-                        # Remove Edge-specific parameters
-                        fallback_data.pop('EdgeTunnelServerAddress', None)
-                        fallback_data.pop('EdgeCheckinInterval', None)
+                        # Remove Agent-specific TLS parameters for direct connection
+                        fallback_data.pop('TLS', None)
+                        fallback_data.pop('TLSSkipVerify', None)
+                        fallback_data.pop('TLSSkipClientVerify', None)
                         
-                        # Add TLS parameters for regular Agent
-                        fallback_data.update({
-                            'TLS': 'true',
-                            'TLSSkipVerify': 'true',
-                            'TLSSkipClientVerify': 'true'
-                        })
-                        
-                        _logger.info(f"Trying regular Agent connection with data: {fallback_data}")
+                        _logger.info(f"Trying direct Docker connection with data: {fallback_data}")
                         
                         response = requests.post(
                             f"{server.url}/api/endpoints",
@@ -323,7 +321,7 @@ docker service create \\
                         )
                         
                         if response.status_code in [200, 201]:
-                            _logger.info("Regular Agent connection succeeded")
+                            _logger.info("Direct Docker connection succeeded")
                             portainer_env = response.json()
                             vals.update({
                                 'environment_id': portainer_env.get('Id'),
@@ -341,7 +339,7 @@ docker service create \\
                             raise UserError(_("Failed to create environment in Portainer: %s") % error_msg)
                             
                     except Exception as fallback_error:
-                        _logger.error(f"Fallback Agent connection also failed: {str(fallback_error)}")
+                        _logger.error(f"Fallback direct Docker connection also failed: {str(fallback_error)}")
                         raise UserError(_("Failed to create environment in Portainer: %s") % str(e))
                 else:
                     raise UserError(_("Failed to create environment in Portainer: %s") % str(e))
