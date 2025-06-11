@@ -574,15 +574,17 @@ docker service create \\
             if response.status_code in [200, 204]:
                 _logger.info(f"Environment {self.name} successfully removed from Portainer")
                 
+                name = self.name
                 # Only remove from Odoo after successful removal from Portainer
                 self.unlink()
+                self.env.cr.commit()
                 
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
                         'title': _('Success'),
-                        'message': _('Environment "%s" has been removed from Portainer and Odoo') % self.name,
+                        'message': _('Environment "%s" has been removed from Portainer and Odoo') % name,
                         'type': 'success',
                         'sticky': False,
                     }
