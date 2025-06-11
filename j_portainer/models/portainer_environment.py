@@ -153,6 +153,39 @@ docker service create \\
         
         return result
     
+    def _sanitize_environment_name(self, name):
+        """Sanitize environment name for Portainer API requirements
+        
+        Portainer environment names must:
+        - Be alphanumeric with underscores only
+        - Not contain hyphens, spaces, or special characters
+        - Be between 1-64 characters
+        """
+        import re
+        
+        if not name:
+            return name
+            
+        # Replace hyphens and spaces with underscores
+        sanitized = name.replace('-', '_').replace(' ', '_')
+        
+        # Remove any non-alphanumeric characters except underscores
+        sanitized = re.sub(r'[^a-zA-Z0-9_]', '', sanitized)
+        
+        # Remove consecutive underscores
+        sanitized = re.sub(r'_+', '_', sanitized)
+        
+        # Remove leading/trailing underscores
+        sanitized = sanitized.strip('_')
+        
+        # Ensure it's not empty and within length limits
+        if not sanitized:
+            sanitized = 'environment'
+        elif len(sanitized) > 64:
+            sanitized = sanitized[:64].rstrip('_')
+            
+        return sanitized
+    
     @api.model
     def create(self, vals):
         """Override create to handle manual environment creation via Portainer API"""
@@ -169,6 +202,10 @@ docker service create \\
             sanitized_name = self._sanitize_environment_name(original_name)
             if sanitized_name != original_name:
                 vals['name'] = sanitized_name
+                # Log the name change for user awareness
+                import logging
+                _logger = logging.getLogger(__name__)
+                _logger.info(f"Environment name sanitized from '{original_name}' to '{sanitized_name}' for Portainer compatibility")
             
             # Get server record
             server = self.env['j_portainer.server'].browse(vals['server_id'])
