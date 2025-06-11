@@ -66,7 +66,7 @@
         <field name="name">j_portainer.volume.tree</field>
         <field name="model">j_portainer.volume</field>
         <field name="arch" type="xml">
-            <tree string="Volumes">
+            <tree string="Volumes" decoration-success="in_use == True" decoration-muted="in_use == False and container_count == 0">
                 <field name="name"/>
                 <field name="driver"/>
                 <field name="mountpoint"/>
