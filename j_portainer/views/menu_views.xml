@@ -7,10 +7,10 @@
               sequence="75"/>
 
     <!-- Resources Section -->
-    <!-- <menuitem id="menu_j_portainer_resources"
+    <menuitem id="menu_j_portainer_resources"
               name="Resources"
               parent="menu_j_portainer_root"
-              sequence="20"/> -->
+              sequence="20"/>
 
     <!-- Containers Menu (Main) -->
     <menuitem id="menu_j_portainer_containers"
