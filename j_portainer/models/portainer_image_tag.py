@@ -78,7 +78,7 @@ class PortainerImageTag(models.Model):
             
             # Skip Portainer API calls during sync operations
             # Check if this is a sync operation by looking for sync context
-            if self.env.context.get('sync_operation') or vals.get('_sync_mode'):
+            if self.env.context.get('sync_operation'):
                 continue  # Skip API call during sync
             
             # Prepare new tag name for Portainer

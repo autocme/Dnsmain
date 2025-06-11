@@ -322,10 +322,8 @@ class PortainerImage(models.Model):
                 
                 # Create only missing tags with sync context to skip API calls
                 if tag_vals_list:
-                    # Mark these as sync mode to prevent API calls to Portainer
-                    for tag_vals in tag_vals_list:
-                        tag_vals['_sync_mode'] = True
-                    self.env['j_portainer.image.tag'].create(tag_vals_list)
+                    # Use context to mark as sync mode to prevent API calls to Portainer
+                    self.env['j_portainer.image.tag'].with_context(sync_operation=True).create(tag_vals_list)
                     _logger.info(f"Created {len(tag_vals_list)} new tag records for image {image.image_id}")
                 
                 # Remove tags that shouldn't exist anymore
