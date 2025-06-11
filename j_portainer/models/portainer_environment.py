@@ -289,7 +289,62 @@ docker service create \\
                 import logging
                 _logger = logging.getLogger(__name__)
                 _logger.error(f"Error creating environment in Portainer: {str(e)}")
-                raise UserError(_("Error creating environment in Portainer: %s") % str(e))
+                
+                # If this was an Edge Agent connection (type 4) and it failed, try regular Agent (type 2)
+                if portainer_endpoint_type == 4 and connection_method == 'agent':
+                    try:
+                        _logger.info("Edge Agent connection failed, trying regular Agent connection...")
+                        
+                        # Retry with regular Agent connection (type 2)
+                        fallback_data = environment_data.copy()
+                        fallback_data['EndpointCreationType'] = '2'  # Regular Agent
+                        
+                        # For regular Agent, use tcp:// URL format
+                        fallback_data['URL'] = f"tcp://{user_url}"
+                        
+                        # Remove Edge-specific parameters
+                        fallback_data.pop('EdgeTunnelServerAddress', None)
+                        fallback_data.pop('EdgeCheckinInterval', None)
+                        
+                        # Add TLS parameters for regular Agent
+                        fallback_data.update({
+                            'TLS': 'true',
+                            'TLSSkipVerify': 'true',
+                            'TLSSkipClientVerify': 'true'
+                        })
+                        
+                        _logger.info(f"Trying regular Agent connection with data: {fallback_data}")
+                        
+                        response = requests.post(
+                            f"{server.url}/api/endpoints",
+                            headers=headers,
+                            files=fallback_data,
+                            timeout=30
+                        )
+                        
+                        if response.status_code in [200, 201]:
+                            _logger.info("Regular Agent connection succeeded")
+                            portainer_env = response.json()
+                            vals.update({
+                                'environment_id': portainer_env.get('Id'),
+                                'url': portainer_env.get('URL', vals['url']),
+                                'status': 'up' if portainer_env.get('Status') == 1 else 'down',
+                                'type': str(portainer_env.get('Type', vals.get('type', '1'))),
+                                'public_url': portainer_env.get('PublicURL', ''),
+                                'group_id': portainer_env.get('GroupId'),
+                                'group_name': portainer_env.get('GroupName', ''),
+                                'active': True,
+                                'last_sync': fields.Datetime.now()
+                            })
+                        else:
+                            error_msg = response.text if hasattr(response, 'text') else str(e)
+                            raise UserError(_("Failed to create environment in Portainer: %s") % error_msg)
+                            
+                    except Exception as fallback_error:
+                        _logger.error(f"Fallback Agent connection also failed: {str(fallback_error)}")
+                        raise UserError(_("Failed to create environment in Portainer: %s") % str(e))
+                else:
+                    raise UserError(_("Failed to create environment in Portainer: %s") % str(e))
         
         # Create the record in Odoo
         return super().create(vals)
