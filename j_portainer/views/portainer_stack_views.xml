@@ -13,6 +13,8 @@
                     <button name="action_stop" string="Stop" type="object" 
                             class="btn-warning"
                             invisible="status != '1'"/>
+                    <button name="action_open_migration_wizard" string="Migrate/Duplicate" type="object" 
+                            class="btn-secondary"/>
                     <button name="action_remove" string="Remove" type="object" 
                             class="btn-danger" 
                             confirm="Are you sure you want to remove this stack?"/>
