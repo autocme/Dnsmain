@@ -175,20 +175,19 @@ docker service create \\
             # Prepare data for Portainer API
             endpoint_type = int(vals.get('type', '1'))  # Use selected environment type
             
+            # For Agent connections, EndpointType should be 2 (Agent endpoint)
+            # regardless of whether it's Docker Standalone or Swarm
+            portainer_endpoint_type = 2 if vals.get('connection_method', 'agent') == 'agent' else endpoint_type
+            
             environment_data = {
                 'Name': vals['name'],
-                'EndpointType': endpoint_type,  # Use selected type (1=Standalone, 2=Swarm)
+                'EndpointType': portainer_endpoint_type,  # 2 = Agent endpoint
                 'URL': f"tcp://{vals['url']}:9001",  # Agent URL format
                 'PublicURL': vals.get('public_url', ''),
-                'GroupID': vals.get('group_id', 1),  # Default group
+                'GroupID': int(vals.get('group_id', 1)),  # Ensure integer
                 'TLS': False,  # Agent doesn't use TLS by default
                 'TLSSkipVerify': False,
                 'TLSSkipClientVerify': False,
-                'EdgeKey': '',
-                'EdgeID': '',
-                'EdgeCheckinInterval': 0,
-                'UserAccessPolicies': {},
-                'TeamAccessPolicies': {},
                 'TagIDs': []
             }
             
