@@ -113,7 +113,7 @@ class StackMigrationWizard(models.TransientModel):
                 # Check if stack name already exists in target environment
                 existing_stack = self.env['j_portainer.stack'].search([
                     ('name', '=', wizard.new_stack_name),
-                    ('environment_id', '=', wizard.target_environment_id.environment_id),
+                    ('environment_id', '=', wizard.target_environment_id.id),
                     ('server_id', '=', wizard.target_environment_id.server_id.id)
                 ])
                 if existing_stack:
@@ -137,8 +137,7 @@ class StackMigrationWizard(models.TransientModel):
             stack_vals = {
                 'name': self.new_stack_name,
                 'server_id': self.target_environment_id.server_id.id,
-                'environment_id': self.target_environment_id.environment_id,
-                'environment_name': self.target_environment_id.name,
+                'environment_id': self.target_environment_id.id,  # Use Odoo environment record ID, not Portainer ID
                 'content': self.source_stack_id.content or '',
                 'file_content': self.source_stack_id.file_content or '',
                 'type': self.source_stack_id.type,
