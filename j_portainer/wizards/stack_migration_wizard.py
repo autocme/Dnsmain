@@ -3,6 +3,9 @@
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class StackMigrationWizard(models.TransientModel):
@@ -150,7 +153,14 @@ class StackMigrationWizard(models.TransientModel):
             # Handle dependencies if required
             processed_content = source_content
             if self.handle_dependencies in ['create_missing', 'abort']:
+                _logger.info(f"Starting dependency analysis for stack migration. Handle mode: {self.handle_dependencies}")
                 processed_content = self._handle_stack_dependencies(source_content)
+                _logger.info("Dependency analysis completed successfully")
+            
+            # Emergency fallback: Create traefik-net if it doesn't exist (common network issue)
+            if 'traefik-net' in source_content and self.handle_dependencies == 'create_missing':
+                _logger.info("Detected traefik-net reference, ensuring it exists")
+                self._create_missing_networks(['traefik-net'])
             
             # Prepare stack data for creation
             stack_vals = {
@@ -223,12 +233,16 @@ class StackMigrationWizard(models.TransientModel):
             if not isinstance(compose_data, dict):
                 return stack_content
             
-            # Extract external networks
+            # Extract external networks with better detection
             external_networks = []
             networks_section = compose_data.get('networks', {})
             
+            # Check explicitly declared external networks
             for network_name, network_config in networks_section.items():
                 if isinstance(network_config, dict) and network_config.get('external'):
+                    external_networks.append(network_name)
+                elif network_config is True or network_config == 'external':
+                    # Handle shorthand external: true
                     external_networks.append(network_name)
             
             # Also check for external networks referenced in services
@@ -241,6 +255,14 @@ class StackMigrationWizard(models.TransientModel):
                             if isinstance(network, str) and network not in networks_section:
                                 # This might be an external network referenced without declaration
                                 external_networks.append(network)
+                    elif isinstance(service_networks, dict):
+                        # Handle networks defined as dict with aliases
+                        for network_name in service_networks.keys():
+                            if network_name not in networks_section:
+                                external_networks.append(network_name)
+            
+            _logger.info(f"Raw compose data networks section: {networks_section}")
+            _logger.info(f"Detected external networks: {external_networks}")
             
             external_networks = list(set(external_networks))  # Remove duplicates
             
@@ -281,29 +303,65 @@ class StackMigrationWizard(models.TransientModel):
                     try:
                         _logger.info(f"Creating missing network: {network_name}")
                         
-                        # Create network via Portainer API
+                        # Create network via Docker API (direct endpoint)
+                        network_config = {
+                            'Name': network_name,
+                            'Driver': 'bridge',
+                            'CheckDuplicate': True,
+                            'Labels': {
+                                'created_by': 'odoo_migration_wizard',
+                                'migrated_from': self.source_stack_id.environment_id.name
+                            },
+                            'IPAM': {
+                                'Driver': 'default'
+                            }
+                        }
+                        
                         response = self.target_environment_id.server_id._make_api_request(
                             f'/api/endpoints/{self.target_environment_id.environment_id}/docker/networks',
                             method='POST',
-                            data={
-                                'Name': network_name,
-                                'Driver': 'bridge',
-                                'CheckDuplicate': True,
-                                'Labels': {
-                                    'created_by': 'odoo_migration_wizard',
-                                    'migrated_from': self.source_stack_id.environment_id.name
-                                }
-                            }
+                            data=network_config
                         )
                         
                         if response.status_code in [200, 201]:
                             _logger.info(f"Successfully created network: {network_name}")
+                            
+                            # Wait a moment for network to be fully registered
+                            import time
+                            time.sleep(2)
+                            
+                            # Verify network was created by checking Docker API
+                            try:
+                                check_response = self.target_environment_id.server_id._make_api_request(
+                                    f'/api/endpoints/{self.target_environment_id.environment_id}/docker/networks',
+                                    method='GET'
+                                )
+                                if check_response.status_code == 200:
+                                    networks = check_response.json()
+                                    network_exists = any(net.get('Name') == network_name for net in networks)
+                                    if not network_exists:
+                                        raise UserError(_("Network '%s' was created but not found in Docker. Please try again.") % network_name)
+                                    _logger.info(f"Verified network {network_name} exists in Docker")
+                            except Exception as verify_error:
+                                _logger.warning(f"Could not verify network creation: {verify_error}")
+                            
+                            # Sync the network to Odoo to ensure it's available
+                            try:
+                                self.target_environment_id.sync_networks()
+                            except:
+                                pass  # Continue even if sync fails
+                                
                         else:
                             _logger.warning(f"Failed to create network {network_name}: {response.text}")
+                            # For critical networks, we might want to fail the migration
+                            if self.handle_dependencies == 'create_missing':
+                                raise UserError(_("Failed to create required network '%s': %s") % (network_name, response.text))
                             
                     except Exception as network_error:
                         _logger.warning(f"Could not create network {network_name}: {str(network_error)}")
-                        # Continue with other networks
+                        if self.handle_dependencies == 'create_missing':
+                            raise UserError(_("Failed to create required network '%s': %s") % (network_name, str(network_error)))
+                        # Continue with other networks for ignore mode
                         continue
                         
         except Exception as e:
