@@ -262,8 +262,9 @@ class PortainerImage(models.Model):
                 }
                 record.all_tags = json.dumps([new_tag_info])
                 
-                # Sync image tags to create the tag record immediately
-                record._sync_image_tags()
+                # Sync image tags to create the tag record immediately (skip during sync operations)
+                if not self.env.context.get('sync_operation'):
+                    record._sync_image_tags()
         
         return result_records
     
@@ -319,8 +320,11 @@ class PortainerImage(models.Model):
                                 'image_id': image.id
                             })
                 
-                # Create only missing tags
+                # Create only missing tags with sync context to skip API calls
                 if tag_vals_list:
+                    # Mark these as sync mode to prevent API calls to Portainer
+                    for tag_vals in tag_vals_list:
+                        tag_vals['_sync_mode'] = True
                     self.env['j_portainer.image.tag'].create(tag_vals_list)
                     _logger.info(f"Created {len(tag_vals_list)} new tag records for image {image.image_id}")
                 
