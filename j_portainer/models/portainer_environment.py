@@ -192,18 +192,27 @@ docker service create \\
             }
             
             try:
+                # Log the request for debugging
+                import logging
+                _logger = logging.getLogger(__name__)
+                _logger.info(f"Creating environment with payload: {environment_data}")
+                
                 # Create environment in Portainer
                 response = server._make_api_request('/api/endpoints', 'POST', data=environment_data)
+                
+                _logger.info(f"Portainer API response: Status {response.status_code}, Body: {response.text}")
                 
                 if response.status_code not in [200, 201]:
                     # Parse error message from response
                     try:
                         error_data = response.json()
                         error_message = error_data.get('message', response.text)
+                        if isinstance(error_data, dict) and 'details' in error_data:
+                            error_message += f" Details: {error_data['details']}"
                     except:
                         error_message = response.text if response.text else f"HTTP {response.status_code} error"
                     
-                    raise UserError(_("Failed to create environment in Portainer: %s") % error_message)
+                    raise UserError(_("Failed to create environment in Portainer: %s\n\nRequest payload was: %s") % (error_message, str(environment_data)))
                 
                 # Parse successful response
                 portainer_env = response.json()
