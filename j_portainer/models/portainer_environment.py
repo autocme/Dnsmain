@@ -205,8 +205,9 @@ docker service create \\
             connection_method = vals.get('connection_method', 'agent')
             environment_type = vals.get('type', '1')
             
+            # Try Edge Agent first (type 4) for remote agent connections
             if connection_method == 'agent':
-                portainer_endpoint_type = 2  # Agent environment
+                portainer_endpoint_type = 4  # Edge Agent environment (for remote connections)
             elif environment_type == '2':  # Docker Swarm - use direct connection
                 portainer_endpoint_type = 1  # Local Docker environment
             else:
@@ -219,9 +220,10 @@ docker service create \\
             # Use the exact URL provided by the user
             user_url = vals['url']
             
-            if portainer_endpoint_type == 2:  # Agent environment
-                # For Agent environments, use the URL as provided (should be IP:PORT format)
-                api_url = user_url
+            # Format URL correctly based on connection type
+            if portainer_endpoint_type == 4:  # Edge Agent environment
+                # For Edge Agent environments, URL should be empty - the agent address goes in EdgeTunnelServerAddress
+                api_url = ""
             else:
                 # For direct Docker connections, ensure tcp:// prefix if not present
                 if not user_url.startswith('tcp://'):
@@ -236,12 +238,11 @@ docker service create \\
                 'GroupID': str(vals.get('group_id', 1))
             }
             
-            # For Agent environments (type 2), TLS fields are required to be true
-            if portainer_endpoint_type == 2:
+            # For Edge Agent environments (type 4), add agent-specific parameters
+            if portainer_endpoint_type == 4:
                 environment_data.update({
-                    'TLS': 'true',
-                    'TLSSkipVerify': 'true',
-                    'TLSSkipClientVerify': 'true'
+                    'EdgeTunnelServerAddress': user_url,  # Agent connection address
+                    'EdgeCheckinInterval': '5'  # Check-in interval in seconds
                 })
             
             # Add optional fields only if they have values
