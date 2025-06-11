@@ -117,6 +117,7 @@
                                 <li>Click Save to create the environment in Portainer</li>
                             </ol>
                             <p><strong>Note:</strong> For Docker Swarm, the command creates a network and deploys the agent as a global service across all nodes.</p>
+                            <p><strong>Environment Naming:</strong> Names with hyphens (like "remote-docker-01") will be automatically converted to underscores ("remote_docker_01") for Portainer compatibility.</p>
                         </div>
                     </group>
 
