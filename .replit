@@ -22,7 +22,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python3 -m odoo --addons-path=. --database=postgresql://postgres:password@localhost:5432/odoo_db --db-filter=odoo_db --http-port=5000"
+args = "./odoo/odoo-bin --addons-path=. --database=postgresql://postgres:password@localhost:5432/odoo_db --db-filter=odoo_db --http-port=5000"
 waitForPort = 5000
 
 [deployment]
