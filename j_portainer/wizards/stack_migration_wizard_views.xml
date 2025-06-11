@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Stack Migration Wizard Form View -->
+    <record id="view_stack_migration_wizard_form" model="ir.ui.view">
+        <field name="name">j_portainer.stack_migration_wizard.form</field>
+        <field name="model">j_portainer.stack_migration_wizard</field>
+        <field name="arch" type="xml">
+            <form string="Stack Migration/Duplication">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="migration_type" widget="radio" options="{'horizontal': true}"/>
+                        </h1>
+                    </div>
+                    
+                    <group>
+                        <group string="Source Configuration">
+                            <field name="source_stack_id" options="{'no_create': true, 'no_edit': true}"/>
+                        </group>
+                        <group string="Target Configuration">
+                            <field name="target_environment_id" 
+                                   domain="[('active', '=', True), ('status', '=', 'up')]"
+                                   options="{'no_create': true, 'no_edit': true}"/>
+                            <field name="target_server_id" readonly="1"/>
+                            <field name="new_stack_name" placeholder="Enter new stack name"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Configuration Preview" name="config_preview">
+                            <group>
+                                <field name="source_compose_content" widget="text" readonly="1" 
+                                       string="Docker Compose Content"/>
+                            </group>
+                            <group>
+                                <field name="source_environment_variables" widget="text" readonly="1" 
+                                       string="Environment Variables"/>
+                            </group>
+                            <group>
+                                <field name="source_labels" widget="text" readonly="1" 
+                                       string="Labels"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <footer>
+                    <button name="action_migrate_stack" string="Execute Migration" type="object" 
+                            class="btn-primary" confirm="Are you sure you want to proceed with this migration?"/>
+                    <button name="action_cancel" string="Cancel" type="object" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Stack Migration Wizard Action -->
+    <record id="action_stack_migration_wizard" model="ir.actions.act_window">
+        <field name="name">Stack Migration/Duplication</field>
+        <field name="res_model">j_portainer.stack_migration_wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'active_id': active_id}</field>
+    </record>
+</odoo>

@@ -440,6 +440,23 @@ class PortainerStack(models.Model):
     def action_remove(self):
         """Action to remove the stack (wrapper for remove method)"""
         return self.remove()
+    
+    def action_open_migration_wizard(self):
+        """Open stack migration/duplication wizard"""
+        self.ensure_one()
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Stack Migration/Duplication'),
+            'res_model': 'j_portainer.stack_migration_wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_source_stack_id': self.id,
+                'active_id': self.id,
+                'active_model': 'j_portainer.stack'
+            }
+        }
 
     
     @api.model
