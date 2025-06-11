@@ -39,20 +39,20 @@ class StackMigrationWizard(models.TransientModel):
     ], string='Migration Type', default='duplicate', required=True)
     
     # Configuration fields from source stack
-    source_compose_content = fields.Text(
+    source_content = fields.Text(
         string='Docker Compose Content',
         readonly=True,
         help="Compose file content from source stack"
     )
-    source_environment_variables = fields.Text(
-        string='Environment Variables',
+    source_file_content = fields.Text(
+        string='Stack File Content',
         readonly=True,
-        help="Environment variables from source stack"
+        help="Stack file content from source stack"
     )
-    source_labels = fields.Text(
-        string='Labels',
+    source_details = fields.Text(
+        string='Stack Details',
         readonly=True,
-        help="Labels from source stack"
+        help="Stack details from source stack"
     )
     
     @api.depends('target_environment_id')
@@ -66,9 +66,9 @@ class StackMigrationWizard(models.TransientModel):
         """Load source stack configuration when source is selected"""
         if self.source_stack_id:
             self.new_stack_name = f"{self.source_stack_id.name}_copy"
-            self.source_compose_content = self.source_stack_id.compose_content
-            self.source_environment_variables = self.source_stack_id.environment_variables
-            self.source_labels = self.source_stack_id.labels
+            self.source_content = self.source_stack_id.content
+            self.source_file_content = self.source_stack_id.file_content
+            self.source_details = self.source_stack_id.details
 
     @api.model
     def default_get(self, fields_list):
@@ -82,9 +82,9 @@ class StackMigrationWizard(models.TransientModel):
             if source_stack.exists():
                 result['source_stack_id'] = source_stack_id
                 result['new_stack_name'] = f"{source_stack.name}_copy"
-                result['source_compose_content'] = source_stack.compose_content
-                result['source_environment_variables'] = source_stack.environment_variables
-                result['source_labels'] = source_stack.labels
+                result['source_content'] = source_stack.content
+                result['source_file_content'] = source_stack.file_content
+                result['source_details'] = source_stack.details
         
         return result
 
@@ -139,12 +139,12 @@ class StackMigrationWizard(models.TransientModel):
                 'server_id': self.target_environment_id.server_id.id,
                 'environment_id': self.target_environment_id.environment_id,
                 'environment_name': self.target_environment_id.name,
-                'compose_content': self.source_stack_id.compose_content,
-                'environment_variables': self.source_stack_id.environment_variables or '',
-                'labels': self.source_stack_id.labels or '',
+                'content': self.source_stack_id.content or '',
+                'file_content': self.source_stack_id.file_content or '',
                 'type': self.source_stack_id.type,
-                'status': 'inactive',  # Will be set by create method
-                'active': True
+                'build_method': self.source_stack_id.build_method,
+                'status': '0',  # Unknown status initially
+                'stack_id': 0,  # Will be set by create method after API call
             }
             
             # Create new stack (this will trigger API call to Portainer)
