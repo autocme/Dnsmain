@@ -191,9 +191,10 @@ docker service create \\
                 portainer_endpoint_type = 1  # Local Docker environment
             
             # Build form data according to API specification
-            # For Agent environments, URL should be the host IP without protocol/port
+            # For Agent environments, we need the agent URL format that Portainer expects
             if portainer_endpoint_type == 2:  # Agent environment
-                api_url = vals['url']  # Just the IP address for Agent
+                # Agent URL format should be IP:PORT without protocol
+                api_url = f"{vals['url']}:9001"
             else:
                 api_url = f"tcp://{vals['url']}:2376"  # Docker API with standard port
             
