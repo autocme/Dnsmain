@@ -48,6 +48,13 @@ class StackMigrationWizard(models.TransientModel):
     ], string='Handle Dependencies', default='create_missing', required=True,
        help="How to handle missing external networks and volumes")
     
+    handle_conflicts = fields.Selection([
+        ('fail', 'Fail if Container Names Conflict'),
+        ('rename', 'Auto-rename Conflicting Containers'),
+        ('force_recreate', 'Stop and Replace Existing Containers')
+    ], string='Handle Container Conflicts', default='rename', required=True,
+       help="How to handle existing containers with same names")
+    
     # Configuration fields from source stack
     source_content = fields.Text(
         string='Docker Compose Content',
@@ -161,6 +168,12 @@ class StackMigrationWizard(models.TransientModel):
             if 'traefik-net' in source_content and self.handle_dependencies == 'create_missing':
                 _logger.info("Detected traefik-net reference, ensuring it exists")
                 self._create_missing_networks(['traefik-net'])
+            
+            # Handle container name conflicts
+            if self.handle_conflicts in ['rename', 'force_recreate']:
+                _logger.info(f"Starting container conflict resolution. Handle mode: {self.handle_conflicts}")
+                processed_content = self._handle_container_conflicts(processed_content)
+                _logger.info("Container conflict resolution completed")
             
             # Prepare stack data for creation
             stack_vals = {
@@ -368,6 +381,130 @@ class StackMigrationWizard(models.TransientModel):
             _logger.error(f"Error creating missing networks: {str(e)}")
             # Don't fail the migration for network creation issues
             pass
+
+    def _handle_container_conflicts(self, stack_content):
+        """Handle container name conflicts by renaming or removing existing containers"""
+        import yaml
+        import uuid
+        
+        try:
+            # Parse docker-compose content
+            if not stack_content.strip():
+                return stack_content
+                
+            # Try to parse as YAML
+            try:
+                compose_data = yaml.safe_load(stack_content)
+            except yaml.YAMLError:
+                _logger.warning("Could not parse compose content as YAML, skipping conflict resolution")
+                return stack_content
+            
+            if not isinstance(compose_data, dict):
+                return stack_content
+            
+            services_section = compose_data.get('services', {})
+            modified = False
+            
+            for service_name, service_config in services_section.items():
+                if isinstance(service_config, dict):
+                    container_name = service_config.get('container_name')
+                    
+                    if container_name:
+                        # Check if container with this name exists
+                        if self._container_exists(container_name):
+                            _logger.info(f"Found conflicting container: {container_name}")
+                            
+                            if self.handle_conflicts == 'rename':
+                                # Rename the container in compose file
+                                new_name = f"{container_name}_{self.new_stack_name}_{uuid.uuid4().hex[:8]}"
+                                service_config['container_name'] = new_name
+                                _logger.info(f"Renamed container from {container_name} to {new_name}")
+                                modified = True
+                                
+                            elif self.handle_conflicts == 'force_recreate':
+                                # Stop and remove existing container
+                                self._stop_and_remove_container(container_name)
+                                _logger.info(f"Stopped and removed existing container: {container_name}")
+            
+            if modified:
+                # Convert back to YAML
+                import yaml
+                return yaml.dump(compose_data, default_flow_style=False, sort_keys=False)
+            else:
+                return stack_content
+                
+        except Exception as e:
+            _logger.error(f"Error handling container conflicts: {str(e)}")
+            if self.handle_conflicts == 'force_recreate':
+                raise UserError(_("Failed to resolve container conflicts: %s") % str(e))
+            return stack_content
+
+    def _container_exists(self, container_name):
+        """Check if a container with the given name exists in the target environment"""
+        try:
+            response = self.target_environment_id.server_id._make_api_request(
+                f'/api/endpoints/{self.target_environment_id.environment_id}/docker/containers/json?all=true',
+                method='GET'
+            )
+            
+            if response.status_code == 200:
+                containers = response.json()
+                for container in containers:
+                    names = container.get('Names', [])
+                    # Container names in Docker API start with '/'
+                    if f'/{container_name}' in names or container_name in names:
+                        return True
+            return False
+            
+        except Exception as e:
+            _logger.warning(f"Could not check container existence: {str(e)}")
+            return False
+
+    def _stop_and_remove_container(self, container_name):
+        """Stop and remove an existing container"""
+        try:
+            # First, find the container by name
+            response = self.target_environment_id.server_id._make_api_request(
+                f'/api/endpoints/{self.target_environment_id.environment_id}/docker/containers/json?all=true',
+                method='GET'
+            )
+            
+            if response.status_code != 200:
+                return
+                
+            containers = response.json()
+            container_id = None
+            
+            for container in containers:
+                names = container.get('Names', [])
+                if f'/{container_name}' in names or container_name in names:
+                    container_id = container.get('Id')
+                    break
+            
+            if not container_id:
+                return
+            
+            # Stop the container
+            stop_response = self.target_environment_id.server_id._make_api_request(
+                f'/api/endpoints/{self.target_environment_id.environment_id}/docker/containers/{container_id}/stop',
+                method='POST'
+            )
+            
+            if stop_response.status_code in [200, 204, 304]:  # 304 = already stopped
+                _logger.info(f"Stopped container {container_name}")
+            
+            # Remove the container
+            remove_response = self.target_environment_id.server_id._make_api_request(
+                f'/api/endpoints/{self.target_environment_id.environment_id}/docker/containers/{container_id}',
+                method='DELETE'
+            )
+            
+            if remove_response.status_code in [200, 204]:
+                _logger.info(f"Removed container {container_name}")
+            
+        except Exception as e:
+            _logger.error(f"Error stopping/removing container {container_name}: {str(e)}")
+            raise UserError(_("Failed to remove conflicting container '%s': %s") % (container_name, str(e)))
 
     def action_cancel(self):
         """Cancel wizard"""
