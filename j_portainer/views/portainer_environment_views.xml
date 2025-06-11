@@ -99,13 +99,15 @@
                         </group>
                     </group>
                     
-                    <group string="Agent Configuration" invisible="environment_id != False">
+                    <group string="Environment Configuration" invisible="environment_id != False">
+                        <group>
+                            <field name="type" readonly="environment_id != False"/>
+                            <field name="connection_method"/>
+                        </group>
                         <group>
                             <field name="platform"/>
                         </group>
-                        <group>
-                        </group>
-                        <field name="docker_command" widget="text" nolabel="1" placeholder="Docker command will be generated automatically"/>
+                        <field name="docker_command" widget="text" nolabel="1" placeholder="Docker command will be generated automatically based on your selections"/>
                     </group>
 
                     <notebook>
@@ -131,6 +133,7 @@
                        decoration-success="status == 'up'"
                        decoration-danger="status == 'down'"/>
                 <field name="type"/>
+                <field name="connection_method" optional="hide"/>
                 <field name="container_count" sum="Total Containers"/>
                 <field name="running_container_count" sum="Running Containers"/>
                 <field name="image_count" sum="Total Images"/>
@@ -151,6 +154,7 @@
             <search string="Search Portainer Environments">
                 <field name="name"/>
                 <field name="server_id"/>
+                <field name="url"/>
                 <field name="group_name"/>
                 <field name="tags"/>
                 <separator/>
@@ -161,12 +165,17 @@
                 <filter string="Docker Swarm" name="docker_swarm" domain="[('type', '=', '2')]"/>
                 <filter string="Edge Agent" name="edge_agent" domain="[('type', '=', '3')]"/>
                 <separator/>
+                <filter string="Agent Connection" name="agent_connection" domain="[('connection_method', '=', 'agent')]"/>
+                <filter string="API Connection" name="api_connection" domain="[('connection_method', '=', 'api')]"/>
+                <filter string="Socket Connection" name="socket_connection" domain="[('connection_method', '=', 'socket')]"/>
+                <separator/>
                 <filter string="Active" name="active" domain="[('active', '=', True)]"/>
                 <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
                 <group expand="0" string="Group By">
                     <filter string="Server" name="group_by_server" domain="[]" context="{'group_by': 'server_id'}"/>
                     <filter string="Status" name="group_by_status" domain="[]" context="{'group_by': 'status'}"/>
                     <filter string="Type" name="group_by_type" domain="[]" context="{'group_by': 'type'}"/>
+                    <filter string="Connection Method" name="group_by_connection" domain="[]" context="{'group_by': 'connection_method'}"/>
                     <filter string="Group" name="group_by_group" domain="[]" context="{'group_by': 'group_name'}"/>
                 </group>
             </search>
@@ -179,7 +188,7 @@
         <field name="res_model">j_portainer.environment</field>
         <field name="view_mode">tree,form</field>
         <field name="search_view_id" ref="view_portainer_environment_search"/>
-        <field name="context">{'search_default_active': 1, 'search_default_group_by_server': 1}</field>
+        <field name="context">{'search_default_active': 1, 'search_default_agent_connection': 1, 'search_default_group_by_server': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 No environments found
