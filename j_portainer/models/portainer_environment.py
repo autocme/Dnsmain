@@ -153,6 +153,28 @@ docker service create \\
         
         return result
     
+    def _validate_environment_url(self, url):
+        """Validate environment URL format - should be IP:PORT or HOST:PORT"""
+        import re
+        
+        if not url:
+            raise UserError(_("Environment address is required"))
+        
+        if ':' not in url:
+            raise UserError(_("Environment address must include port number. Format: <IP>:<PORT> or <HOST>:<PORT>\nExample: 192.168.1.100:9001"))
+        
+        url_pattern = r'^[a-zA-Z0-9.-]+:\d+$'
+        if not re.match(url_pattern, url):
+            raise UserError(_("Invalid environment address format. Must be <IP>:<PORT> or <HOST>:<PORT>\nExample: 192.168.1.100:9001"))
+        
+        try:
+            host, port = url.rsplit(':', 1)
+            port_num = int(port)
+            if not (1 <= port_num <= 65535):
+                raise UserError(_("Port number must be between 1 and 65535"))
+        except ValueError:
+            raise UserError(_("Invalid port number in environment address"))
+    
     @api.model
     def create(self, vals):
         """Override create to handle manual environment creation via Portainer API"""
