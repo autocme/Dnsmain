@@ -282,6 +282,7 @@ docker service create \\
                     'public_url': portainer_env.get('PublicURL', ''),
                     'group_id': portainer_env.get('GroupId'),
                     'group_name': portainer_env.get('GroupName', ''),
+                    'details': str(portainer_env) if portainer_env else '',
                     'active': True,
                     'last_sync': fields.Datetime.now()
                 })
@@ -331,6 +332,7 @@ docker service create \\
                                 'public_url': portainer_env.get('PublicURL', ''),
                                 'group_id': portainer_env.get('GroupId'),
                                 'group_name': portainer_env.get('GroupName', ''),
+                                'details': str(portainer_env) if portainer_env else '',
                                 'active': True,
                                 'last_sync': fields.Datetime.now()
                             })
