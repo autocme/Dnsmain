@@ -316,7 +316,22 @@ class StackMigrationWizard(models.TransientModel):
                     try:
                         _logger.info(f"Creating missing network: {network_name}")
                         
-                        # Create network via Docker API (direct endpoint)
+                        # First check if network actually exists in Docker (bypass Odoo sync issues)
+                        check_response = self.target_environment_id.server_id._make_api_request(
+                            f'/api/endpoints/{self.target_environment_id.environment_id}/docker/networks',
+                            method='GET'
+                        )
+                        
+                        network_exists_in_docker = False
+                        if check_response.status_code == 200:
+                            docker_networks = check_response.json()
+                            network_exists_in_docker = any(net.get('Name') == network_name for net in docker_networks)
+                            
+                        if network_exists_in_docker:
+                            _logger.info(f"Network {network_name} already exists in Docker, skipping creation")
+                            continue
+                        
+                        # Try multiple API endpoints for network creation
                         network_config = {
                             'Name': network_name,
                             'Driver': 'bridge',
@@ -330,14 +345,34 @@ class StackMigrationWizard(models.TransientModel):
                             }
                         }
                         
-                        response = self.target_environment_id.server_id._make_api_request(
+                        # Try different API endpoints that might work
+                        api_endpoints = [
+                            f'/api/endpoints/{self.target_environment_id.environment_id}/docker/networks/create',
                             f'/api/endpoints/{self.target_environment_id.environment_id}/docker/networks',
-                            method='POST',
-                            data=network_config
-                        )
+                            f'/api/docker/{self.target_environment_id.environment_id}/networks/create'
+                        ]
                         
-                        if response.status_code in [200, 201]:
-                            _logger.info(f"Successfully created network: {network_name}")
+                        response = None
+                        successful_endpoint = None
+                        
+                        for endpoint in api_endpoints:
+                            try:
+                                response = self.target_environment_id.server_id._make_api_request(
+                                    endpoint,
+                                    method='POST',
+                                    data=network_config
+                                )
+                                if response.status_code in [200, 201]:
+                                    successful_endpoint = endpoint
+                                    break
+                                elif response.status_code != 404:  # Not a "not found" error, might be worth noting
+                                    _logger.warning(f"API endpoint {endpoint} returned {response.status_code}: {response.text}")
+                            except Exception as api_error:
+                                _logger.warning(f"Failed to try endpoint {endpoint}: {api_error}")
+                                continue
+                        
+                        if successful_endpoint and response and response.status_code in [200, 201]:
+                            _logger.info(f"Successfully created network: {network_name} using endpoint: {successful_endpoint}")
                             
                             # Wait a moment for network to be fully registered
                             import time
@@ -353,8 +388,9 @@ class StackMigrationWizard(models.TransientModel):
                                     networks = check_response.json()
                                     network_exists = any(net.get('Name') == network_name for net in networks)
                                     if not network_exists:
-                                        raise UserError(_("Network '%s' was created but not found in Docker. Please try again.") % network_name)
-                                    _logger.info(f"Verified network {network_name} exists in Docker")
+                                        _logger.warning(f"Network {network_name} was created but not found in listing")
+                                    else:
+                                        _logger.info(f"Verified network {network_name} exists in Docker")
                             except Exception as verify_error:
                                 _logger.warning(f"Could not verify network creation: {verify_error}")
                             
@@ -365,10 +401,23 @@ class StackMigrationWizard(models.TransientModel):
                                 pass  # Continue even if sync fails
                                 
                         else:
-                            _logger.warning(f"Failed to create network {network_name}: {response.text}")
-                            # For critical networks, we might want to fail the migration
-                            if self.handle_dependencies == 'create_missing':
-                                raise UserError(_("Failed to create required network '%s': %s") % (network_name, response.text))
+                            # All API endpoints failed, try Odoo network model as fallback
+                            _logger.warning(f"All API endpoints failed for network {network_name}, trying Odoo model")
+                            try:
+                                _logger.info(f"Attempting to create network {network_name} via Odoo model")
+                                network_record = self.env['j_portainer.network'].create({
+                                    'name': network_name,
+                                    'driver': 'bridge',
+                                    'server_id': self.target_environment_id.server_id.id,
+                                    'environment_id': self.target_environment_id.id,
+                                    'public': True,
+                                    'attachable': True,
+                                })
+                                _logger.info(f"Successfully created network {network_name} via Odoo model")
+                            except Exception as odoo_error:
+                                _logger.error(f"Failed to create network {network_name} via Odoo: {odoo_error}")
+                                if self.handle_dependencies == 'create_missing':
+                                    raise UserError(_("Failed to create required network '%s': All API endpoints failed, Odoo method also failed (%s)") % (network_name, str(odoo_error)))
                             
                     except Exception as network_error:
                         _logger.warning(f"Could not create network {network_name}: {str(network_error)}")
