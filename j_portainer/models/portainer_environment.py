@@ -164,6 +164,12 @@ docker service create \\
                 if not vals.get(field):
                     raise UserError(_("Field '%s' is required for manual environment creation") % field)
             
+            # Validate and sanitize environment name for Portainer
+            original_name = vals['name']
+            sanitized_name = self._sanitize_environment_name(original_name)
+            if sanitized_name != original_name:
+                vals['name'] = sanitized_name
+            
             # Get server record
             server = self.env['j_portainer.server'].browse(vals['server_id'])
             if not server:
