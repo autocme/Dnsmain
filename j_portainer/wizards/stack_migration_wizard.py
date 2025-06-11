@@ -133,15 +133,21 @@ class StackMigrationWizard(models.TransientModel):
             raise UserError(_("New stack name is required"))
         
         try:
+            # Determine the appropriate content and build method
+            source_content = self.source_stack_id.content or self.source_stack_id.file_content or ''
+            
+            # Ensure we have content for web_editor method
+            if not source_content:
+                raise UserError(_("Source stack has no content to migrate. Cannot create stack without compose content."))
+            
             # Prepare stack data for creation
             stack_vals = {
                 'name': self.new_stack_name,
                 'server_id': self.target_environment_id.server_id.id,
                 'environment_id': self.target_environment_id.id,  # Use Odoo environment record ID, not Portainer ID
-                'content': self.source_stack_id.content or '',
-                'file_content': self.source_stack_id.file_content or '',
+                'content': source_content,
+                'build_method': 'web_editor',  # Always use web_editor for migrations
                 'type': self.source_stack_id.type,
-                'build_method': self.source_stack_id.build_method,
                 'status': '0',  # Unknown status initially
                 'stack_id': 0,  # Will be set by create method after API call
             }
