@@ -17,7 +17,7 @@
               name="Containers"
               parent="menu_j_portainer_root"
               action="action_portainer_container"
-              sequence="10"/>
+              sequence="11"/>
 
     <!-- Volumes Menu -->
     <menuitem id="menu_j_portainer_volumes"
@@ -38,7 +38,7 @@
               name="Stacks"
               parent="menu_j_portainer_root"
               action="action_portainer_stack"
-              sequence="40"/>
+              sequence="10"/>
 
     <!-- Images Menu -->
     <menuitem id="menu_j_portainer_images"
@@ -59,7 +59,7 @@
               name="C Templates"
               parent="menu_j_portainer_root"
               action="action_portainer_custom_template"
-              sequence="65"/>
+              sequence="9"/>
 
     <!-- Configuration Section -->
     <menuitem id="menu_j_portainer_configuration"
