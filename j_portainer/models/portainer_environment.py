@@ -26,7 +26,7 @@ class PortainerEnvironment(models.Model):
         ('3', 'Edge Agent'),
         ('4', 'Azure ACI'),
         ('5', 'Kubernetes')
-    ], string='Type', help="Environment type from Portainer", default='3', readonly=True)
+    ], string='Environment Type', help="Type of Docker environment", default='1', readonly="environment_id != False")
     public_url = fields.Char('Public URL', readonly=True)
     group_id = fields.Integer('Group ID', readonly=True)
     group_name = fields.Char('Group', readonly=True)
@@ -38,6 +38,11 @@ class PortainerEnvironment(models.Model):
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
     # Manual creation fields
+    connection_method = fields.Selection([
+        ('agent', 'Portainer Agent'),
+        ('api', 'Docker API'),
+        ('socket', 'Docker Socket')
+    ], string='Connection Method', default='agent', required=True, readonly="environment_id != False", help="Method to connect to Docker environment")
     docker_command = fields.Text('Docker Command', required=True, help="Command to run the Portainer agent")
     platform = fields.Selection([
         ('linux', 'Linux / Windows WSL'),
@@ -63,12 +68,25 @@ class PortainerEnvironment(models.Model):
         """Default server selection"""
         return self.env['j_portainer.server'].search([('status', '=', 'connected')], limit=1)
     
-    @api.onchange('platform')
-    def _onchange_platform(self):
-        """Generate Docker command based on platform"""
+    @api.onchange('type', 'platform', 'connection_method')
+    def _onchange_docker_command(self):
+        """Generate Docker command based on environment type, platform, and connection method"""
         for record in self:
-            if record.platform == 'linux':
-                record.docker_command = """docker run -d \\
+            if record.connection_method == 'agent':
+                if record.type == '1':  # Docker Standalone
+                    record._generate_standalone_agent_command()
+                elif record.type == '2':  # Docker Swarm
+                    record._generate_swarm_agent_command()
+                else:
+                    record.docker_command = ""
+            else:
+                # For API and Socket connection methods (future implementation)
+                record.docker_command = f"Connection via {record.connection_method} - Implementation pending"
+    
+    def _generate_standalone_agent_command(self):
+        """Generate Docker Standalone Agent command"""
+        if self.platform == 'linux':
+            self.docker_command = """docker run -d \\
   -p 9001:9001 \\
   --name portainer_agent \\
   --restart=always \\
@@ -76,8 +94,8 @@ class PortainerEnvironment(models.Model):
   -v /var/lib/docker/volumes:/var/lib/docker/volumes \\
   -v /:/host \\
   portainer/agent:2.27.4"""
-            elif record.platform == 'windows':
-                record.docker_command = """docker run -d \\
+        elif self.platform == 'windows':
+            self.docker_command = """docker run -d \\
   -p 9001:9001 \\
   --name portainer_agent \\
   --restart=always \\
@@ -86,12 +104,43 @@ class PortainerEnvironment(models.Model):
   -v \\\\.\\pipe\\docker_engine:\\\\.\\pipe\\docker_engine \\
   portainer/agent:2.27.4"""
     
+    def _generate_swarm_agent_command(self):
+        """Generate Docker Swarm Agent command"""
+        if self.platform == 'linux':
+            self.docker_command = """docker network create \\
+  --driver overlay \\
+  portainer_agent_network
+
+docker service create \\
+  --name portainer_agent \\
+  --network portainer_agent_network \\
+  -p 9001:9001/tcp \\
+  --mode global \\
+  --constraint 'node.platform.os == linux' \\
+  --mount type=bind,src=//var/run/docker.sock,dst=/var/run/docker.sock \\
+  --mount type=bind,src=//var/lib/docker/volumes,dst=/var/lib/docker/volumes \\
+  --mount type=bind,src=//,dst=/host \\
+  portainer/agent:2.27.4"""
+        elif self.platform == 'windows':
+            self.docker_command = """docker network create \\
+  --driver overlay \\
+  portainer_agent_network && \\
+docker service create \\
+  --name portainer_agent \\
+  --network portainer_agent_network \\
+  -p 9001:9001/tcp \\
+  --mode global \\
+  --constraint 'node.platform.os == windows' \\
+  --mount type=npipe,src=\\\\.\\pipe\\docker_engine,dst=\\\\.\\pipe\\docker_engine \\
+  --mount type=bind,src=C:\\ProgramData\\docker\\volumes,dst=C:\\ProgramData\\docker\\volumes \\
+  portainer/agent:2.27.4"""
+    
     @api.model
     def default_get(self, fields_list):
         """Set default values including docker command"""
         result = super().default_get(fields_list)
         
-        # Set default docker command for Linux platform
+        # Set default docker command for Docker Standalone + Linux platform
         if 'docker_command' in fields_list:
             result['docker_command'] = """docker run -d \\
   -p 9001:9001 \\
@@ -124,9 +173,11 @@ class PortainerEnvironment(models.Model):
                 raise UserError(_("Server must be connected to create environments"))
             
             # Prepare data for Portainer API
+            endpoint_type = int(vals.get('type', '1'))  # Use selected environment type
+            
             environment_data = {
                 'Name': vals['name'],
-                'EndpointType': 3,  # Agent endpoint type
+                'EndpointType': endpoint_type,  # Use selected type (1=Standalone, 2=Swarm)
                 'URL': f"tcp://{vals['url']}:9001",  # Agent URL format
                 'PublicURL': vals.get('public_url', ''),
                 'GroupID': vals.get('group_id', 1),  # Default group
