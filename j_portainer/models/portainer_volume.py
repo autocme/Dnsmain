@@ -26,8 +26,6 @@ class PortainerVolume(models.Model):
     labels_html = fields.Html('Labels HTML', compute='_compute_labels_html')
     details = fields.Text('Details')
     in_use = fields.Boolean('In Use', default=False, help="Whether the volume is currently used by any containers")
-    connected_containers = fields.Text('Connected Containers', help="JSON data of containers using this volume")
-    connected_containers_html = fields.Html('Connected Containers', compute='_compute_connected_containers_html')
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, default=lambda self: self._default_server_id())
     environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True, 
@@ -384,36 +382,3 @@ class PortainerVolume(models.Model):
             _logger.error(f"Error creating volume {name}: {str(e)}")
             return False
 
-    @api.depends('connected_containers')
-    def _compute_connected_containers_html(self):
-        """Format connected containers as HTML table"""
-        for record in self:
-            if not record.connected_containers:
-                record.connected_containers_html = '<p>No containers connected</p>'
-                continue
-                
-            try:
-                containers_data = json.loads(record.connected_containers)
-                if not containers_data:
-                    record.connected_containers_html = '<p>No containers connected</p>'
-                    continue
-                    
-                html = '<table class="table table-bordered table-sm">'
-                html += '<thead><tr><th>Container</th><th>Destination</th><th>Mode</th></tr></thead><tbody>'
-                
-                for container in containers_data:
-                    container_name = container.get('container_name', 'Unknown')
-                    destination = container.get('destination', 'Unknown')
-                    mode = container.get('mode', 'rw')
-                    
-                    # Format mode with color coding
-                    mode_class = 'text-success' if mode == 'rw' else 'text-warning'
-                    mode_html = f'<span class="{mode_class}">{mode}</span>'
-                    
-                    html += f'<tr><td>{container_name}</td><td>{destination}</td><td>{mode_html}</td></tr>'
-                
-                html += '</tbody></table>'
-                record.connected_containers_html = html
-                
-            except Exception as e:
-                record.connected_containers_html = f'<p class="text-danger">Error parsing container data: {str(e)}</p>'

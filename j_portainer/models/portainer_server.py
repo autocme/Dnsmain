@@ -1411,7 +1411,6 @@ class PortainerServer(models.Model):
                         'labels': json.dumps(volume.get('Labels', {})),
                         'details': json.dumps(details, indent=2) if details else '',
                         'in_use': in_use,  # Add in_use field based on container usage
-                        'connected_containers': json.dumps(connected_containers) if connected_containers else '',
                     }
 
                     if existing_volume:
