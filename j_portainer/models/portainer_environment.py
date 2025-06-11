@@ -173,23 +173,34 @@ docker service create \\
                 raise UserError(_("Server must be connected to create environments"))
             
             # Prepare data for Portainer API
-            endpoint_type = int(vals.get('type', '1'))  # Use selected environment type
+            # Portainer v2.27.4 endpoint types:
+            # 1 = Docker Standalone (direct socket/API)
+            # 2 = Agent endpoint (Agent connection)
+            # 3 = Azure ACI
+            # 4 = Edge Agent
+            # 5 = Docker Swarm (direct socket/API)
             
-            # For Agent connections, EndpointType should be 2 (Agent endpoint)
-            # regardless of whether it's Docker Standalone or Swarm
-            portainer_endpoint_type = 2 if vals.get('connection_method', 'agent') == 'agent' else endpoint_type
+            connection_method = vals.get('connection_method', 'agent')
+            environment_type = vals.get('type', '1')
+            
+            if connection_method == 'agent':
+                portainer_endpoint_type = 2  # Agent endpoint
+            elif environment_type == '2':  # Docker Swarm
+                portainer_endpoint_type = 5  # Docker Swarm direct
+            else:
+                portainer_endpoint_type = 1  # Docker Standalone direct
             
             environment_data = {
                 'Name': vals['name'],
-                'EndpointType': portainer_endpoint_type,  # 2 = Agent endpoint
-                'URL': f"tcp://{vals['url']}:9001",  # Agent URL format
-                'PublicURL': vals.get('public_url', ''),
-                'GroupID': int(vals.get('group_id', 1)),  # Ensure integer
-                'TLS': False,  # Agent doesn't use TLS by default
-                'TLSSkipVerify': False,
-                'TLSSkipClientVerify': False,
-                'TagIDs': []
+                'EndpointType': portainer_endpoint_type,
+                'URL': f"tcp://{vals['url']}:9001",
+                'GroupID': int(vals.get('group_id', 1))
             }
+            
+            # Add optional fields only if they have values
+            public_url = vals.get('public_url', '').strip()
+            if public_url:
+                environment_data['PublicURL'] = public_url
             
             try:
                 # Log the request for debugging
