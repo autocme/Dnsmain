@@ -1535,13 +1535,29 @@ class PortainerContainer(models.Model):
                 destination = mount.get('Destination', '')
                 mode = 'ro' if mount.get('Mode', '') == 'ro' else 'rw'
                 mount_type = mount.get('Type', '')
+                mount_name = mount.get('Name', '')
                 
                 if source and destination:
-                    expected_volumes.append({
+                    volume_data = {
                         'name': source,
                         'container_path': destination,
                         'mode': mode,
-                    })
+                        'type': mount_type if mount_type else 'volume',
+                    }
+                    
+                    # For named volumes, try to link to the volume record
+                    if mount_type == 'volume' and mount_name:
+                        volume_record = self.env['j_portainer.volume'].search([
+                            ('server_id', '=', self.server_id.id),
+                            ('environment_id', '=', self.environment_id.id),
+                            ('name', '=', mount_name)
+                        ], limit=1)
+                        
+                        if volume_record:
+                            volume_data['volume_id'] = volume_record.id
+                            volume_data['name'] = mount_name  # Use the volume name instead of source path
+                    
+                    expected_volumes.append(volume_data)
             
             # Compare and sync
             volumes_to_keep = []
@@ -1555,9 +1571,26 @@ class PortainerContainer(models.Model):
                     if (current_volume.name == expected_volume['name'] and
                         current_volume.container_path == expected_volume['container_path']):
                         
-                        # Check if update needed
+                        # Check if update needed (including volume_id and type)
+                        needs_update = False
+                        update_data = {}
+                        
                         if current_volume.mode != expected_volume['mode']:
-                            volumes_to_update.append((current_volume, expected_volume))
+                            update_data['mode'] = expected_volume['mode']
+                            needs_update = True
+                            
+                        if current_volume.type != expected_volume.get('type', 'volume'):
+                            update_data['type'] = expected_volume.get('type', 'volume')
+                            needs_update = True
+                            
+                        expected_volume_id = expected_volume.get('volume_id')
+                        current_volume_id = current_volume.volume_id.id if current_volume.volume_id else False
+                        if current_volume_id != expected_volume_id:
+                            update_data['volume_id'] = expected_volume_id
+                            needs_update = True
+                        
+                        if needs_update:
+                            volumes_to_update.append((current_volume, update_data))
                         else:
                             volumes_to_keep.append(current_volume)
                         
@@ -1576,8 +1609,8 @@ class PortainerContainer(models.Model):
                     volumes_to_create.append(expected_volume)
             
             # Update changed volumes
-            for volume_record, new_data in volumes_to_update:
-                volume_record.with_context(sync_from_portainer=True).write(new_data)
+            for volume_record, update_data in volumes_to_update:
+                volume_record.with_context(sync_from_portainer=True).write(update_data)
             
             # Create new volumes
             for volume_data in volumes_to_create:
