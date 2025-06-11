@@ -1144,7 +1144,7 @@ class PortainerServer(models.Model):
                             updated_count += 1
                         else:
                             # Create new image record
-                            self.env['j_portainer.image'].create(image_data)
+                            self.env['j_portainer.image'].with_context(sync_operation=True).create(image_data)
                             created_count += 1
                         
                         image_count += 1
@@ -1189,7 +1189,7 @@ class PortainerServer(models.Model):
                                     updated_count += 1
                                 else:
                                     # Create new image record
-                                    self.env['j_portainer.image'].create(image_data)
+                                    self.env['j_portainer.image'].with_context(sync_operation=True).create(image_data)
                                     created_count += 1
                                 
                                 image_count += 1
@@ -1224,7 +1224,7 @@ class PortainerServer(models.Model):
                             updated_count += 1
                         else:
                             # Create new image record
-                            self.env['j_portainer.image'].create(image_data)
+                            self.env['j_portainer.image'].with_context(sync_operation=True).create(image_data)
                             created_count += 1
 
                         image_count += 1

@@ -76,10 +76,15 @@ class PortainerImageTag(models.Model):
                 tag = 'latest'
                 vals['tag'] = tag
             
+            # Skip Portainer API calls during sync operations
+            # Check if this is a sync operation by looking for sync context
+            if self.env.context.get('sync_operation') or vals.get('_sync_mode'):
+                continue  # Skip API call during sync
+            
             # Prepare new tag name for Portainer
             new_tag_name = f"{repository}:{tag}"
             
-            # Call Portainer API to tag the image
+            # Call Portainer API to tag the image only for manual tag creation
             try:
                 api = self.env['j_portainer.api']
                 response = api.direct_api_call(
