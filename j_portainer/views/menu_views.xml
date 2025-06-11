@@ -1,114 +1,114 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- Main Menu -->
-    <menuitem id="menu_j_portainer_root" 
-              name="Portainer" 
+    <menuitem id="menu_j_portainer_root"
+              name="Portainer"
               web_icon="j_portainer,static/description/icon.png"
               sequence="75"/>
-    
+
+    <!-- Resources Section -->
+    <menuitem id="menu_j_portainer_resources"
+              name="Resources"
+              parent="menu_j_portainer_root"
+              sequence="20"/>
+
     <!-- Containers Menu (Main) -->
-    <menuitem id="menu_j_portainer_containers" 
-              name="Containers" 
-              parent="menu_j_portainer_root" 
+    <menuitem id="menu_j_portainer_containers"
+              name="Containers"
+              parent="menu_j_portainer_resources"
               action="action_portainer_container"
               sequence="10"/>
 
-    <!-- Resources Section -->
-    <menuitem id="menu_j_portainer_resources" 
-              name="Resources" 
-              parent="menu_j_portainer_root" 
-              sequence="20"/>
-              
-    <!-- Images Menu -->
-    <menuitem id="menu_j_portainer_images" 
-              name="Images" 
-              parent="menu_j_portainer_resources" 
-              action="action_portainer_image"
-              sequence="10"/>
-              
     <!-- Volumes Menu -->
-    <menuitem id="menu_j_portainer_volumes" 
-              name="Volumes" 
-              parent="menu_j_portainer_resources" 
+    <menuitem id="menu_j_portainer_volumes"
+              name="Volumes"
+              parent="menu_j_portainer_resources"
               action="action_portainer_volume"
               sequence="20"/>
-              
+
     <!-- Networks Menu -->
-    <menuitem id="menu_j_portainer_networks" 
-              name="Networks" 
-              parent="menu_j_portainer_resources" 
+    <menuitem id="menu_j_portainer_networks"
+              name="Networks"
+              parent="menu_j_portainer_resources"
               action="action_portainer_network"
               sequence="30"/>
-              
-    <!-- Templates Menu -->
-    <menuitem id="menu_j_portainer_templates" 
-              name="Templates" 
-              parent="menu_j_portainer_resources" 
-              action="action_portainer_template"
-              sequence="40"/>
-              
-    <!-- Custom Templates Menu -->
-    <menuitem id="menu_j_portainer_custom_templates" 
-              name="Custom Templates" 
-              parent="menu_j_portainer_resources" 
-              action="action_portainer_custom_template"
-              sequence="45"/>
-              
+
     <!-- Stacks Menu -->
-    <menuitem id="menu_j_portainer_stacks" 
-              name="Stacks" 
-              parent="menu_j_portainer_resources" 
+    <menuitem id="menu_j_portainer_stacks"
+              name="Stacks"
+              parent="menu_j_portainer_resources"
               action="action_portainer_stack"
+              sequence="40"/>
+
+    <!-- Images Menu -->
+    <menuitem id="menu_j_portainer_images"
+              name="Images"
+              parent="menu_j_portainer_resources"
+              action="action_portainer_image"
               sequence="50"/>
-              
-    <!-- Environments Menu -->
-    <menuitem id="menu_j_portainer_environments" 
-              name="Environments" 
-              parent="menu_j_portainer_resources" 
-              action="action_portainer_environment"
+
+    <!-- Templates Menu -->
+    <menuitem id="menu_j_portainer_templates"
+              name="Templates"
+              parent="menu_j_portainer_resources"
+              action="action_portainer_template"
               sequence="60"/>
 
+    <!-- Custom Templates Menu -->
+    <menuitem id="menu_j_portainer_custom_templates"
+              name="C Templates"
+              parent="menu_j_portainer_resources"
+              action="action_portainer_custom_template"
+              sequence="65"/>
+
     <!-- Configuration Section -->
-    <menuitem id="menu_j_portainer_configuration" 
-              name="Configuration" 
+    <menuitem id="menu_j_portainer_configuration"
+              name="Configuration"
               parent="menu_j_portainer_root"
               sequence="80"/>
-              
+
     <!-- Servers Menu -->
-    <menuitem id="menu_j_portainer_servers" 
-              name="Servers" 
-              parent="menu_j_portainer_configuration" 
+    <menuitem id="menu_j_portainer_servers"
+              name="Servers"
+              parent="menu_j_portainer_configuration"
               action="action_portainer_server"
               sequence="10"/>
-              
-    <!-- Synchronize Menu -->
-    <menuitem id="menu_j_portainer_sync_wizard" 
-              name="Synchronize" 
-              parent="menu_j_portainer_configuration" 
-              action="action_portainer_sync_wizard"
+
+    <!-- Environments Menu -->
+    <menuitem id="menu_j_portainer_environments"
+              name="Environments"
+              parent="menu_j_portainer_configuration"
+              action="action_portainer_environment"
               sequence="20"/>
-              
-    <!-- Git Credentials Menu -->
-    <menuitem id="menu_j_portainer_git_credentials" 
-              name="Git Credentials" 
-              parent="menu_j_portainer_configuration" 
-              action="action_portainer_git_credentials"
+
+    <!-- Synchronize Menu -->
+    <menuitem id="menu_j_portainer_sync_wizard"
+              name="Synchronize"
+              parent="menu_j_portainer_configuration"
+              action="action_portainer_sync_wizard"
               sequence="30"/>
-              
+
+    <!-- Git Credentials Menu -->
+    <menuitem id="menu_j_portainer_git_credentials"
+              name="Git Credentials"
+              parent="menu_j_portainer_configuration"
+              action="action_portainer_git_credentials"
+              sequence="40"/>
+
     <!-- API Logs Menu -->
-    <menuitem id="menu_j_portainer_api_logs" 
-              name="API Logs" 
-              parent="menu_j_portainer_configuration" 
+    <menuitem id="menu_j_portainer_api_logs"
+              name="API Logs"
+              parent="menu_j_portainer_configuration"
               action="action_portainer_api_log"
-              sequence="40"
+              sequence="50"
               groups="j_portainer.group_j_portainer_manager"/>
-              
+
     <!-- API Log Configuration Menu -->
-    <menuitem id="menu_j_portainer_api_log_config" 
-              name="Log Retention Settings" 
-              parent="menu_j_portainer_configuration" 
+    <menuitem id="menu_j_portainer_api_log_config"
+              name="Log Retention Settings"
+              parent="menu_j_portainer_configuration"
               action="action_portainer_api_log_config"
-              sequence="45"
+              sequence="55"
               groups="j_portainer.group_j_portainer_manager"/>
 
 </odoo>
