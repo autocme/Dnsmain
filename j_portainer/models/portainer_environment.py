@@ -20,7 +20,13 @@ class PortainerEnvironment(models.Model):
         ('up', 'Up'),
         ('down', 'Down')
     ], string='Status', default='down')
-    type = fields.Integer('Type', help="1 = Local, 2 = Remote, 3 = Edge Agent, 4 = Azure ACI, 5 = Kubernetes")
+    type = fields.Selection([
+        ('1', 'Docker Standalone'),
+        ('2', 'Docker Swarm'),
+        ('3', 'Edge Agent'),
+        ('4', 'Azure ACI'),
+        ('5', 'Kubernetes')
+    ], string='Type', help="Environment type from Portainer")
     public_url = fields.Char('Public URL')
     group_id = fields.Integer('Group ID')
     group_name = fields.Char('Group')
@@ -85,14 +91,8 @@ class PortainerEnvironment(models.Model):
     def get_type_name(self):
         """Get type name"""
         self.ensure_one()
-        types = {
-            1: 'Local',
-            2: 'Remote',
-            3: 'Edge Agent',
-            4: 'Azure ACI',
-            5: 'Kubernetes'
-        }
-        return types.get(self.type, 'Unknown')
+        type_labels = dict(self._fields['type'].selection)
+        return type_labels.get(self.type, 'Unknown')
         
     def get_status_color(self):
         """Get status color"""

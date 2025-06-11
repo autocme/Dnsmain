@@ -45,6 +45,7 @@
                     <button name="deploy" string="Deploy Container" type="object" invisible="not can_manage_container" 
                             class="btn-success" 
                             help="Deploy a new container based on this configuration"/>
+                    <field name="state" widget="statusbar" options="{'clickable': false}"/>
                 </header>
                 <sheet>
                     <!-- Pending Changes Warning Banner -->
@@ -99,12 +100,12 @@
                             <field name="image" readonly="1"/>
                             <field name="always_pull_image" widget="boolean_toggle"/>
                             <field name="created" readonly="1"/>
-                            <field name="state" widget="badge"
+                            <!-- <field name="state" widget="badge"
                                    decoration-success="state == 'running'"
                                    decoration-warning="state == 'paused'"
                                    decoration-danger="state in ['stopped', 'exited', 'dead']"
-                                   readonly="1"/>
-                            <field name="status" readonly="1"/>
+                                   readonly="1"/> -->
+                            <!-- <field name="status" readonly="1"/> -->
                             <field name="restart_policy"
                                    decoration-info="restart_policy == 'no'"
                                    decoration-success="restart_policy == 'always'"
