@@ -203,15 +203,8 @@ docker service create \\
                 environment_data['PublicURL'] = public_url
             
             try:
-                # Log the request for debugging
-                import logging
-                _logger = logging.getLogger(__name__)
-                _logger.info(f"Creating environment with payload: {environment_data}")
-                
                 # Create environment in Portainer
                 response = server._make_api_request('/api/endpoints', 'POST', data=environment_data)
-                
-                _logger.info(f"Portainer API response: Status {response.status_code}, Body: {response.text}")
                 
                 if response.status_code not in [200, 201]:
                     # Parse error message from response
@@ -223,7 +216,7 @@ docker service create \\
                     except:
                         error_message = response.text if response.text else f"HTTP {response.status_code} error"
                     
-                    raise UserError(_("Failed to create environment in Portainer: %s\n\nRequest payload was: %s") % (error_message, str(environment_data)))
+                    raise UserError(_("Failed to create environment in Portainer: %s") % error_message)
                 
                 # Parse successful response
                 portainer_env = response.json()
@@ -233,7 +226,7 @@ docker service create \\
                     'environment_id': portainer_env.get('Id'),
                     'url': portainer_env.get('URL', vals['url']),
                     'status': 'up' if portainer_env.get('Status') == 1 else 'down',
-                    'type': str(portainer_env.get('Type', 3)),
+                    'type': str(portainer_env.get('Type', vals.get('type', '1'))),
                     'public_url': portainer_env.get('PublicURL', ''),
                     'group_id': portainer_env.get('GroupId'),
                     'group_name': portainer_env.get('GroupName', ''),
@@ -245,6 +238,8 @@ docker service create \\
                 # Re-raise UserError without modification
                 raise
             except Exception as e:
+                import logging
+                _logger = logging.getLogger(__name__)
                 _logger.error(f"Error creating environment in Portainer: {str(e)}")
                 raise UserError(_("Error creating environment in Portainer: %s") % str(e))
         
