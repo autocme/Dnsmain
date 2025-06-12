@@ -49,8 +49,8 @@
                     
                     <footer>
                         <button string="Restore Backup" name="action_restore_backup" type="object" 
-                                class="btn-danger" attrs="{'invisible': [('confirm_restore', '=', False)]}"/>
-                        <button string="Cancel" name="action_cancel" type="object" class="btn-secondary"/>
+                                class="btn-danger" invisible="confirm_restore == False"/>
+                        <button string="Cancel" special="cancel" type="object" class="btn-secondary"/>
                     </footer>
                 </form>
             </field>

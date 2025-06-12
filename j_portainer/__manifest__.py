@@ -26,11 +26,18 @@
     'author': 'Your Company',
     'category': 'Administration',
     'depends': ['base', 'mail'],
+    'external_dependencies': {
+        'python': ['pyyaml'],
+    },
     'data': [
         'security/portainer_security.xml',
         'security/ir.model.access.csv',
         'data/cron_data.xml',
         'data/resource_type_data.xml',
+
+        'wizards/backup_wizard_views.xml',
+        'wizards/restore_wizard_views.xml',
+        
         'views/portainer_sync_schedule_views.xml',
         'views/portainer_server_views.xml',
         'views/portainer_environment_views.xml',
@@ -57,8 +64,7 @@
         'wizards/container_deploy_wizard_views.xml',
         'wizards/api_log_config_wizard_view.xml',
         'wizards/stack_migration_wizard_views.xml',
-        'wizards/backup_wizard_views.xml',
-        'wizards/restore_wizard_views.xml',
+        
         'views/menu_views.xml',
     ],
     'demo': [],

@@ -167,7 +167,3 @@ class PortainerRestoreWizard(models.TransientModel):
             
         except Exception as e:
             _logger.warning(f"Could not clear server cache: {str(e)}")
-    
-    def action_cancel(self):
-        """Cancel restore wizard"""
-        return {'type': 'ir.actions.act_window_close'}
