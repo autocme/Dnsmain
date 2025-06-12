@@ -64,6 +64,10 @@
         'wizards/container_deploy_wizard_views.xml',
         'wizards/api_log_config_wizard_view.xml',
         'wizards/stack_migration_wizard_views.xml',
+        'wizards/backup_wizard_views.xml',
+        'wizards/restore_wizard_views.xml',
+        'views/portainer_backup_schedule_views.xml',
+        'views/portainer_backup_history_views.xml',
         
         'views/menu_views.xml',
     ],

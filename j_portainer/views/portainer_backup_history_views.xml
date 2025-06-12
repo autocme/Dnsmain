@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Backup History Form View -->
+        <record id="view_portainer_backup_history_form" model="ir.ui.view">
+            <field name="name">j_portainer.backup.history.form</field>
+            <field name="model">j_portainer.backup.history</field>
+            <field name="arch" type="xml">
+                <form string="Backup History" create="false" edit="false">
+                    <header>
+                        <button name="action_download_backup" type="object" 
+                                string="Download Backup" class="btn-primary"
+                                attrs="{'invisible': [('backup_file', '=', False)]}"
+                                groups="j_portainer.group_j_portainer_manager"/>
+                        <button name="action_delete_backup" type="object" 
+                                string="Delete Backup" class="btn-secondary"
+                                confirm="Are you sure you want to delete this backup?"
+                                groups="j_portainer.group_j_portainer_manager"/>
+                        <field name="status" widget="statusbar"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="display_name" readonly="1"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="server_id" readonly="1"/>
+                                <field name="schedule_id" readonly="1"/>
+                                <field name="backup_date" readonly="1"/>
+                                <field name="manual_backup" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="backup_file" readonly="1"/>
+                                <field name="filename" readonly="1"/>
+                                <field name="file_size_mb" readonly="1"/>
+                                <field name="download_url" readonly="1" widget="url"/>
+                            </group>
+                        </group>
+                        <group string="Status Information" attrs="{'invisible': [('status', '!=', 'failed')]}">
+                            <field name="error_message" readonly="1" widget="text"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Backup History Tree View -->
+        <record id="view_portainer_backup_history_tree" model="ir.ui.view">
+            <field name="name">j_portainer.backup.history.tree</field>
+            <field name="model">j_portainer.backup.history</field>
+            <field name="arch" type="xml">
+                <tree string="Backup History" create="false" edit="false">
+                    <field name="server_id"/>
+                    <field name="backup_date"/>
+                    <field name="status" decoration-success="status == 'success'" 
+                           decoration-danger="status == 'failed'" 
+                           decoration-warning="status == 'in_progress'"/>
+                    <field name="manual_backup"/>
+                    <field name="file_size_mb"/>
+                    <field name="filename"/>
+                    <button name="action_download_backup" type="object" 
+                            string="Download" class="btn-link"
+                            attrs="{'invisible': [('backup_file', '=', False)]}"
+                            groups="j_portainer.group_j_portainer_manager"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Backup History Search View -->
+        <record id="view_portainer_backup_history_search" model="ir.ui.view">
+            <field name="name">j_portainer.backup.history.search</field>
+            <field name="model">j_portainer.backup.history</field>
+            <field name="arch" type="xml">
+                <search string="Backup History">
+                    <field name="server_id"/>
+                    <field name="backup_date"/>
+                    <field name="status"/>
+                    <field name="manual_backup"/>
+                    <filter string="Successful" name="successful" domain="[('status', '=', 'success')]"/>
+                    <filter string="Failed" name="failed" domain="[('status', '=', 'failed')]"/>
+                    <filter string="Manual Backups" name="manual" domain="[('manual_backup', '=', True)]"/>
+                    <filter string="Scheduled Backups" name="scheduled" domain="[('manual_backup', '=', False)]"/>
+                    <separator/>
+                    <filter string="This Week" name="this_week" 
+                            domain="[('backup_date', '>=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                    <filter string="This Month" name="this_month" 
+                            domain="[('backup_date', '>=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
+                    <group expand="0" string="Group By">
+                        <filter string="Server" name="group_server" domain="[]" context="{'group_by': 'server_id'}"/>
+                        <filter string="Status" name="group_status" domain="[]" context="{'group_by': 'status'}"/>
+                        <filter string="Backup Type" name="group_type" domain="[]" context="{'group_by': 'manual_backup'}"/>
+                        <filter string="Date" name="group_date" domain="[]" context="{'group_by': 'backup_date:day'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Backup History Action -->
+        <record id="action_portainer_backup_history" model="ir.actions.act_window">
+            <field name="name">Backup History</field>
+            <field name="res_model">j_portainer.backup.history</field>
+            <field name="view_mode">tree,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No backup history found!
+                </p>
+                <p>
+                    Backup history records will appear here after you create backups manually or through scheduled automation.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>
