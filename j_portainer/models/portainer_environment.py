@@ -43,7 +43,7 @@ class PortainerEnvironment(models.Model):
         ('api', 'Docker API'),
         ('socket', 'Docker Socket')
     ], string='Connection Method', default='agent', required=True, readonly="environment_id != False", help="Method to connect to Docker environment")
-    docker_command = fields.Text('Docker Command', required=True, help="Command to run the Portainer agent")
+    docker_command = fields.Text('Docker Command', help="Command to run the Portainer agent")
     platform = fields.Selection([
         ('linux', 'Linux / Windows WSL'),
         ('windows', 'Windows WCS')
