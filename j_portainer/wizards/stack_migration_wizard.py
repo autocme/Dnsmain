@@ -139,7 +139,8 @@ class StackMigrationWizard(models.TransientModel):
     def action_migrate_stack(self):
         """Execute stack migration/duplication"""
         self.ensure_one()
-        
+        import logging
+        _logger = logging.getLogger(__name__)
         if not self.source_stack_id:
             raise UserError(_("Source stack is required"))
         
@@ -194,43 +195,49 @@ class StackMigrationWizard(models.TransientModel):
             except Exception as create_error:
                 # Check if this is a database sync issue after successful Portainer creation
                 error_msg = str(create_error)
-                _logger.error(f"Stack creation/sync error: {error_msg}")
-                
-                # Provide specific error messages based on the type of constraint violation
-                # Note: image_id issues should be rare now since we auto-create minimal image records
-                if "image_id" in error_msg and ("not-null" in error_msg.lower() or "null value" in error_msg.lower()):
-                    raise UserError(_(
-                        "Stack '%s' was created successfully in Portainer, but container synchronization failed due to image record issues.\n\n"
-                        "This is unusual since image records should be created automatically.\n"
-                        "Please try manually syncing: Go to your target server → Images tab → Click 'Sync Images'\n\n"
-                        "Technical details: %s"
-                    ) % (self.new_stack_name, error_msg))
+                if "bad query" in error_msg.lower() or "sql" in error_msg.lower():
+                    # This is likely a database sync issue after successful Portainer creation
+                    _logger.warning(f"Stack created in Portainer but database sync failed: {create_error}")
                     
-                elif "violates" in error_msg.lower() and "constraint" in error_msg.lower():
-                    # Extract constraint name if possible
-                    constraint_info = error_msg
-                    if "unique" in error_msg.lower():
-                        raise UserError(_(
-                            "Stack '%s' was created successfully in Portainer, but database sync failed due to a uniqueness constraint violation.\n\n"
-                            "This usually means:\n"
-                            "- A container or resource with the same name/ID already exists\n"
-                            "- Try using different names in your compose file\n\n"
-                            "Technical details: %s"
-                        ) % (self.new_stack_name, constraint_info))
-                    else:
-                        raise UserError(_(
-                            "Stack '%s' was created successfully in Portainer, but database sync failed due to a constraint violation.\n\n"
-                            "Technical details: %s"
-                        ) % (self.new_stack_name, constraint_info))
-                        
-                elif "bad query" in error_msg.lower() or "sql" in error_msg.lower():
-                    raise UserError(_(
-                        "Stack '%s' was created successfully in Portainer, but database synchronization failed due to a SQL error.\n\n"
-                        "The stack is running in Portainer but may not appear correctly in Odoo until you manually sync.\n\n"
-                        "Technical details: %s"
-                    ) % (self.new_stack_name, error_msg))
+                    # Try to find the stack that was created in Portainer
+                    import time
+                    time.sleep(2)  # Wait for potential sync completion
+                    
+                    # Search for the stack that should now exist
+                    new_stack = self.env['j_portainer.stack'].search([
+                        ('server_id', '=', self.target_environment_id.server_id.id),
+                        ('environment_id', '=', self.target_environment_id.id),
+                        ('name', '=', self.new_stack_name)
+                    ], limit=1, order='id desc')
+                    
+                    if not new_stack:
+                        # Create a minimal record to represent the successful Portainer stack
+                        try:
+                            new_stack = self.env['j_portainer.stack'].with_context(skip_portainer_creation=True).create({
+                                'name': self.new_stack_name,
+                                'server_id': self.target_environment_id.server_id.id,
+                                'environment_id': self.target_environment_id.id,
+                                'content': stack_vals['content'],
+                                'build_method': stack_vals['build_method'],
+                                'status': '1',  # Active
+                                'stack_id': 0,  # Will be updated on next sync
+                            })
+                            _logger.info(f"Created minimal Odoo record for successfully migrated stack: {self.new_stack_name}")
+                        except Exception as fallback_error:
+                            _logger.error(f"Failed to create fallback record: {fallback_error}")
+                            # At this point, acknowledge the Portainer success but mention sync issues
+                            return {
+                                'type': 'ir.actions.client',
+                                'tag': 'display_notification',
+                                'params': {
+                                    'title': _('Stack Migration Completed'),
+                                    'message': _('Stack "%s" was successfully created in Portainer, but there were database synchronization issues. Please check the Portainer interface to verify the stack is running.') % self.new_stack_name,
+                                    'sticky': True,
+                                    'type': 'warning',
+                                }
+                            }
                 else:
-                    # Re-raise the original error for other types of failures
+                    # This is a genuine Portainer API failure
                     raise create_error
             
             # If migration (not duplication), deactivate source stack
