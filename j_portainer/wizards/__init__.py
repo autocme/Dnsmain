@@ -10,3 +10,5 @@ from . import container_join_network_wizard
 from . import container_deploy_wizard
 from . import api_log_config_wizard
 from . import stack_migration_wizard
+from . import backup_wizard
+from . import restore_wizard

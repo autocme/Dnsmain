@@ -207,6 +207,63 @@
                         <page string="Server Info" name="server_info">
                             <field name="portainer_info" widget="html" readonly="1"/>
                         </page>
+
+                        <page string="Backup &amp; Restore" name="backup_restore">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h4>Create Backup</h4>
+                                        </div>
+                                        <div class="card-body">
+                                            <p>Create a complete backup of your Portainer instance including all configurations, stacks, containers, and settings.</p>
+                                            <ul>
+                                                <li>Encrypted with password protection</li>
+                                                <li>Includes all Portainer data</li>
+                                                <li>Can be restored on any Portainer instance</li>
+                                                <li>Downloadable archive file</li>
+                                            </ul>
+                                            <button name="%(action_portainer_backup_wizard)d" string="Create Backup" 
+                                                    type="action" class="btn btn-primary" icon="fa-download"
+                                                    context="{'default_server_id': active_id}"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h4>Restore Backup</h4>
+                                        </div>
+                                        <div class="card-body">
+                                            <p><strong>⚠️ WARNING:</strong> This will completely replace your current Portainer instance.</p>
+                                            <ul>
+                                                <li>All current data will be overwritten</li>
+                                                <li>Operation cannot be undone</li>
+                                                <li>Requires backup password</li>
+                                                <li>Users will need to re-authenticate</li>
+                                            </ul>
+                                            <button name="%(action_portainer_restore_wizard)d" string="Restore Backup" 
+                                                    type="action" class="btn btn-danger" icon="fa-upload"
+                                                    context="{'default_server_id': active_id}"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <div class="alert alert-info">
+                                    <strong>Best Practices:</strong>
+                                    <ul>
+                                        <li>Create regular backups before making major changes</li>
+                                        <li>Store backup files in a secure location</li>
+                                        <li>Remember your backup passwords</li>
+                                        <li>Test restore procedures in development environments</li>
+                                        <li>Verify all services after restore operations</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </page>
                     </notebook>
                 </sheet>
                 <div class="oe_chatter">
