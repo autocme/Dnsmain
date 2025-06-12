@@ -11,7 +11,7 @@
                     <header>
                         <button name="action_download_backup" type="object" 
                                 string="Download Backup" class="btn-primary"
-                                attrs="{'invisible': [('backup_file', '=', False)]}"
+                                invisible="backup_file == False"
                                 groups="j_portainer.group_j_portainer_manager"/>
                         <button name="action_delete_backup" type="object" 
                                 string="Delete Backup" class="btn-secondary"
@@ -39,7 +39,7 @@
                                 <field name="download_url" readonly="1" widget="url"/>
                             </group>
                         </group>
-                        <group string="Status Information" attrs="{'invisible': [('status', '!=', 'failed')]}">
+                        <group string="Status Information" invisible="status == 'failed'">
                             <field name="error_message" readonly="1" widget="text"/>
                         </group>
                     </sheet>
@@ -61,9 +61,10 @@
                     <field name="manual_backup"/>
                     <field name="file_size_mb"/>
                     <field name="filename"/>
-                    <button name="action_download_backup" type="object" 
+                    <field name="backup_file" invisible="1"/>
+                    <button name="action_download_backup" type="object"
                             string="Download" class="btn-link"
-                            attrs="{'invisible': [('backup_file', '=', False)]}"
+                            invisible="backup_file == False"
                             groups="j_portainer.group_j_portainer_manager"/>
                 </tree>
             </field>

@@ -210,21 +210,29 @@
 
                         <page string="Backup &amp; Restore" name="backup_restore">
                             <!-- Backup Schedule Section -->
-                            <group string="Backup Schedule" col="4">
+                            <group string="Backup Schedule">
+                                <group>
+
                                 <field name="backup_schedule_id" invisible="1"/>
-                                <label for="backup_schedule_active" string="Enable Automated Backups"/>
-                                <field name="backup_schedule_active" nolabel="1" widget="boolean_toggle"/>
+<!--                                <label for="backup_schedule_active" string="Enable Automated Backups"/>-->
+                                <field name="backup_schedule_active" invisible="1" nolabel="1" widget="boolean_toggle"/>
                                 <label for="backup_schedule_days" string="Backup Every (Days)"/>
                                 <field name="backup_schedule_days" nolabel="1"/>
                                 <label for="backup_schedule_password" string="Backup Password"/>
                                 <field name="backup_schedule_password" nolabel="1" password="True"/>
+                                                                    <button name="action_execute_scheduled_backup_now" string="Execute Backup Now"
+                                        type="object" class="btn btn-success" icon="fa-play"
+                                        invisible="backup_schedule_active == False"/>
+
+                                </group>
+                                    <group>
+
                                 <label for="backup_schedule_last_backup" string="Last Backup"/>
                                 <field name="backup_schedule_last_backup" nolabel="1" readonly="1"/>
                                 <label for="backup_schedule_next_backup" string="Next Backup"/>
                                 <field name="backup_schedule_next_backup" nolabel="1" readonly="1"/>
-                                <button name="action_execute_scheduled_backup_now" string="Execute Backup Now" 
-                                        type="object" class="btn btn-success" icon="fa-play"
-                                        attrs="{'invisible': [('backup_schedule_active', '=', False)]}"/>
+                                    </group>
+
                             </group>
 
                             <separator string="Manual Backup &amp; Restore"/>
@@ -282,9 +290,10 @@
                                     <field name="manual_backup"/>
                                     <field name="file_size_mb"/>
                                     <field name="filename"/>
-                                    <button name="action_download_backup" type="object" 
+                                    <field name="backup_file"/>
+                                    <button name="action_download_backup" type="object"
                                             string="Download" class="btn-link" icon="fa-download"
-                                            attrs="{'invisible': [('backup_file', '=', False)]}"
+                                            invisible="backup_file == False"
                                             groups="j_portainer.group_j_portainer_manager"/>
                                     <button name="action_delete_backup" type="object" 
                                             string="Delete" class="btn-link" icon="fa-trash"
