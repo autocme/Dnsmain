@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Backup Schedule Form View -->
+        <record id="view_portainer_backup_schedule_form" model="ir.ui.view">
+            <field name="name">j_portainer.backup.schedule.form</field>
+            <field name="model">j_portainer.backup.schedule</field>
+            <field name="arch" type="xml">
+                <form string="Backup Schedule">
+                    <header>
+                        <button name="action_execute_backup_now" type="object" 
+                                string="Execute Backup Now" class="btn-primary"
+                                groups="j_portainer.group_j_portainer_manager"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="display_name" readonly="1"/>
+                            </h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="server_id" readonly="1"/>
+                                <field name="active"/>
+                                <field name="schedule_days"/>
+                            </group>
+                            <group>
+                                <field name="backup_password" password="True"/>
+                                <field name="last_backup" readonly="1"/>
+                                <field name="next_backup" readonly="1"/>
+                            </group>
+                        </group>
+                        <group string="Statistics">
+                            <group>
+                                <field name="total_backups" readonly="1"/>
+                                <field name="backup_size_total" readonly="1"/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Backup Schedule Tree View -->
+        <record id="view_portainer_backup_schedule_tree" model="ir.ui.view">
+            <field name="name">j_portainer.backup.schedule.tree</field>
+            <field name="model">j_portainer.backup.schedule</field>
+            <field name="arch" type="xml">
+                <tree string="Backup Schedules">
+                    <field name="server_id"/>
+                    <field name="active"/>
+                    <field name="schedule_days"/>
+                    <field name="last_backup"/>
+                    <field name="next_backup"/>
+                    <field name="total_backups"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Backup Schedule Action -->
+        <record id="action_portainer_backup_schedule" model="ir.actions.act_window">
+            <field name="name">Backup Schedules</field>
+            <field name="res_model">j_portainer.backup.schedule</field>
+            <field name="view_mode">tree,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Create your first backup schedule!
+                </p>
+                <p>
+                    Backup schedules allow you to automatically create backups of your Portainer servers at regular intervals.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

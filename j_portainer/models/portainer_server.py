@@ -169,6 +169,37 @@ class PortainerServer(models.Model):
             server.backup_history_count = self.env['j_portainer.backup.history'].search_count([
                 ('server_id', '=', server.id)
             ])
+    
+    def _compute_backup_schedule_fields(self):
+        """Compute backup schedule fields for form view"""
+        for server in self:
+            schedule = server.get_backup_schedule()
+            server.backup_schedule_active = schedule.active if schedule else False
+            server.backup_schedule_days = schedule.schedule_days if schedule else 1
+            server.backup_schedule_password = schedule.backup_password if schedule else 'default_password_change_me'
+            server.backup_schedule_last_backup = schedule.last_backup if schedule else False
+            server.backup_schedule_next_backup = schedule.next_backup if schedule else False
+    
+    def _inverse_backup_schedule_active(self):
+        """Update backup schedule active status"""
+        for server in self:
+            schedule = server.get_backup_schedule()
+            if schedule:
+                schedule.active = server.backup_schedule_active
+    
+    def _inverse_backup_schedule_days(self):
+        """Update backup schedule days"""
+        for server in self:
+            schedule = server.get_backup_schedule()
+            if schedule and server.backup_schedule_days:
+                schedule.schedule_days = server.backup_schedule_days
+    
+    def _inverse_backup_schedule_password(self):
+        """Update backup schedule password"""
+        for server in self:
+            schedule = server.get_backup_schedule()
+            if schedule and server.backup_schedule_password:
+                schedule.backup_password = server.backup_schedule_password
 
     # Related Resources
     container_ids = fields.One2many('j_portainer.container', 'server_id', string='Containers')
@@ -188,6 +219,13 @@ class PortainerServer(models.Model):
     backup_schedule_id = fields.One2many('j_portainer.backup.schedule', 'server_id', string='Backup Schedule')
     backup_history_ids = fields.One2many('j_portainer.backup.history', 'server_id', string='Backup History')
     backup_history_count = fields.Integer('Backup History Count', compute='_compute_backup_history_count')
+    
+    # Backup Schedule computed fields for form view
+    backup_schedule_active = fields.Boolean('Backup Schedule Active', compute='_compute_backup_schedule_fields', inverse='_inverse_backup_schedule_active')
+    backup_schedule_days = fields.Integer('Backup Schedule Days', compute='_compute_backup_schedule_fields', inverse='_inverse_backup_schedule_days')
+    backup_schedule_password = fields.Char('Backup Schedule Password', compute='_compute_backup_schedule_fields', inverse='_inverse_backup_schedule_password')
+    backup_schedule_last_backup = fields.Datetime('Last Scheduled Backup', compute='_compute_backup_schedule_fields')
+    backup_schedule_next_backup = fields.Datetime('Next Scheduled Backup', compute='_compute_backup_schedule_fields')
 
     _sql_constraints = [
         ('name_unique', 'UNIQUE(name)', 'Server name must be unique!')
@@ -2668,3 +2706,22 @@ class PortainerServer(models.Model):
             })
             
         return schedule
+    
+    def action_execute_scheduled_backup_now(self):
+        """Execute scheduled backup manually from server form"""
+        self.ensure_one()
+        
+        schedule = self.get_backup_schedule()
+        if not schedule:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('No Backup Schedule'),
+                    'message': _('No backup schedule found for this server.'),
+                    'sticky': False,
+                    'type': 'warning',
+                }
+            }
+        
+        return schedule.action_execute_backup_now()

@@ -26,3 +26,5 @@ from . import portainer_container_env
 from . import portainer_container_port
 from . import portainer_resource_type
 from . import portainer_sync_schedule
+from . import portainer_backup_schedule
+from . import portainer_backup_history
