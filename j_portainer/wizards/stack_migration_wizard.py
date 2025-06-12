@@ -194,9 +194,45 @@ class StackMigrationWizard(models.TransientModel):
             except Exception as create_error:
                 # Check if this is a database sync issue after successful Portainer creation
                 error_msg = str(create_error)
-                if "bad query" in error_msg.lower() or "sql" in error_msg.lower():
-                    # This is likely a database sync issue after successful Portainer creation
-                    _logger.warning(f"Stack created in Portainer but database sync failed: {create_error}")
+                _logger.error(f"Stack creation/sync error: {error_msg}")
+                
+                # Provide specific error messages based on the type of constraint violation
+                if "image_id" in error_msg and ("not-null" in error_msg.lower() or "null value" in error_msg.lower()):
+                    raise UserError(_(
+                        "Stack '%s' was created successfully in Portainer, but container synchronization failed because some containers use images that haven't been synced to Odoo yet.\n\n"
+                        "To fix this:\n"
+                        "1. Go to your target server's 'Images' tab\n"
+                        "2. Click 'Sync Images' to sync all images from Portainer\n"
+                        "3. Then go to 'Containers' tab and click 'Sync Containers'\n\n"
+                        "Technical details: %s"
+                    ) % (self.new_stack_name, error_msg))
+                    
+                elif "violates" in error_msg.lower() and "constraint" in error_msg.lower():
+                    # Extract constraint name if possible
+                    constraint_info = error_msg
+                    if "unique" in error_msg.lower():
+                        raise UserError(_(
+                            "Stack '%s' was created successfully in Portainer, but database sync failed due to a uniqueness constraint violation.\n\n"
+                            "This usually means:\n"
+                            "- A container or resource with the same name/ID already exists\n"
+                            "- Try using different names in your compose file\n\n"
+                            "Technical details: %s"
+                        ) % (self.new_stack_name, constraint_info))
+                    else:
+                        raise UserError(_(
+                            "Stack '%s' was created successfully in Portainer, but database sync failed due to a constraint violation.\n\n"
+                            "Technical details: %s"
+                        ) % (self.new_stack_name, constraint_info))
+                        
+                elif "bad query" in error_msg.lower() or "sql" in error_msg.lower():
+                    raise UserError(_(
+                        "Stack '%s' was created successfully in Portainer, but database synchronization failed due to a SQL error.\n\n"
+                        "The stack is running in Portainer but may not appear correctly in Odoo until you manually sync.\n\n"
+                        "Technical details: %s"
+                    ) % (self.new_stack_name, error_msg))
+                else:
+                    # Re-raise the original error for other types of failures
+                    raise create_error
                     
                     # Try to find the stack that was created in Portainer
                     import time
