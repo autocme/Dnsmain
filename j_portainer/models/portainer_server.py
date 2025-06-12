@@ -162,6 +162,13 @@ class PortainerServer(models.Model):
             server.sync_schedules_count = self.env['j_portainer.sync.schedule'].search_count([
                 ('server_id', '=', server.id)
             ])
+    
+    def _compute_backup_history_count(self):
+        """Compute the number of backup history records for this server"""
+        for server in self:
+            server.backup_history_count = self.env['j_portainer.backup.history'].search_count([
+                ('server_id', '=', server.id)
+            ])
 
     # Related Resources
     container_ids = fields.One2many('j_portainer.container', 'server_id', string='Containers')
@@ -176,6 +183,11 @@ class PortainerServer(models.Model):
     # Sync Schedule relationship
     sync_schedule_ids = fields.One2many('j_portainer.sync.schedule', 'server_id', string='Sync Schedules')
     sync_schedules_count = fields.Integer('Sync Schedules Count', compute='_compute_sync_schedules_count')
+    
+    # Backup Schedule relationship (one-to-one)
+    backup_schedule_id = fields.One2many('j_portainer.backup.schedule', 'server_id', string='Backup Schedule')
+    backup_history_ids = fields.One2many('j_portainer.backup.history', 'server_id', string='Backup History')
+    backup_history_count = fields.Integer('Backup History Count', compute='_compute_backup_history_count')
 
     _sql_constraints = [
         ('name_unique', 'UNIQUE(name)', 'Server name must be unique!')
@@ -186,6 +198,8 @@ class PortainerServer(models.Model):
         records = super().create(vals_list)
         for record in records:
             record.test_connection()
+            # Auto-create backup schedule for each new server
+            record._create_default_backup_schedule()
         return records
 
     def write(self, vals):
@@ -2570,3 +2584,87 @@ class PortainerServer(models.Model):
         except Exception as e:
             _logger.error(f"Error during full sync: {str(e)}")
             raise UserError(_("Error during full sync: %s") % str(e))
+
+    def _create_default_backup_schedule(self):
+        """Create default backup schedule for new server"""
+        self.ensure_one()
+        
+        # Check if backup schedule already exists
+        existing_schedule = self.env['j_portainer.backup.schedule'].search([
+            ('server_id', '=', self.id)
+        ], limit=1)
+        
+        if not existing_schedule:
+            # Create default backup schedule
+            self.env['j_portainer.backup.schedule'].create({
+                'server_id': self.id,
+                'backup_password': 'default_password_change_me',
+                'schedule_days': 1,
+                'active': True,
+            })
+            _logger.info(f"Created default backup schedule for server: {self.name}")
+
+    @api.model
+    def _execute_scheduled_backups(self):
+        """Cron method to execute scheduled backups for all servers"""
+        _logger.info("Starting scheduled backup execution check")
+        
+        try:
+            # Get all active backup schedules
+            schedules = self.env['j_portainer.backup.schedule'].search([
+                ('active', '=', True)
+            ])
+            
+            executed_count = 0
+            total_schedules = len(schedules)
+            
+            _logger.info(f"Found {total_schedules} active backup schedules to check")
+            
+            for schedule in schedules:
+                try:
+                    if schedule.is_backup_due():
+                        _logger.info(f"Executing scheduled backup for server: {schedule.server_id.name}")
+                        success = schedule.execute_backup()
+                        if success:
+                            executed_count += 1
+                        else:
+                            _logger.warning(f"Scheduled backup failed for server: {schedule.server_id.name}")
+                    else:
+                        _logger.debug(f"Backup not due for server: {schedule.server_id.name}")
+                except Exception as e:
+                    _logger.error(f"Error executing scheduled backup for server {schedule.server_id.name}: {str(e)}")
+                    continue
+            
+            _logger.info(f"Scheduled backup execution complete: {executed_count} backups executed out of {total_schedules} schedules checked")
+            
+            # Optional: Clean up old backup files for servers with successful backups
+            for schedule in schedules:
+                try:
+                    # Clean up old backups, keeping only 10 most recent per server
+                    self.env['j_portainer.backup.history'].cleanup_old_backups(
+                        schedule.server_id.id, keep_count=10
+                    )
+                except Exception as e:
+                    _logger.warning(f"Error during backup cleanup for server {schedule.server_id.name}: {str(e)}")
+                    
+        except Exception as e:
+            _logger.error(f"Error in scheduled backup execution: {str(e)}")
+            
+    def get_backup_schedule(self):
+        """Get backup schedule for this server (creates one if it doesn't exist)"""
+        self.ensure_one()
+        
+        schedule = self.env['j_portainer.backup.schedule'].search([
+            ('server_id', '=', self.id)
+        ], limit=1)
+        
+        if not schedule:
+            # Create default backup schedule if none exists
+            schedule = self.env['j_portainer.backup.schedule'].create({
+                'server_id': self.id,
+                'backup_password': 'default_password_change_me',
+                'schedule_days': 1,
+                'active': True,
+            })
+            
+        return schedule
