@@ -113,6 +113,10 @@ class PortainerStack(models.Model):
         if vals.get('stack_id'):
             return super().create(vals)
         
+        # If skip_portainer_creation context is set, create record without Portainer API call
+        if self.env.context.get('skip_portainer_creation'):
+            return super().create(vals)
+        
         # New stack creation - create in Portainer first using existing method
         try:
             # Get required data
@@ -172,17 +176,51 @@ class PortainerStack(models.Model):
                     error_details = f"Server: {server.name}, Status: {server.status}"
                     raise UserError(f"Failed to create stack in Portainer. {error_details}")
             
-            # If successful, the create_stack method triggers sync_stacks which creates the Odoo record
-            # We need to find the newly created record and return it
-            # Wait a moment for the sync to complete
-            self.env.cr.commit()
-            
-            # Find the newly created stack
-            new_stack = self.env['j_portainer.stack'].search([
-                ('server_id', '=', server_id),
-                ('environment_id', '=', environment_id),
-                ('name', '=', name)
-            ], limit=1, order='id desc')
+            # If successful, handle potential database sync issues separately
+            try:
+                # The create_stack method triggers sync_stacks which creates the Odoo record
+                # We need to find the newly created record and return it
+                # Wait a moment for the sync to complete
+                self.env.cr.commit()
+                
+                # Find the newly created stack
+                new_stack = self.env['j_portainer.stack'].search([
+                    ('server_id', '=', server_id),
+                    ('environment_id', '=', environment_id),
+                    ('name', '=', name)
+                ], limit=1, order='id desc')
+                
+            except Exception as sync_error:
+                # Stack was created in Portainer but sync failed
+                _logger.warning(f"Stack '{name}' created successfully in Portainer but database sync failed: {sync_error}")
+                
+                # Try to find the stack manually or create a minimal record
+                try:
+                    environment = self.env['j_portainer.environment'].browse(environment_id)
+                    server = self.env['j_portainer.server'].browse(server_id)
+                    
+                    # Try sync again with error handling
+                    server.sync_stacks(environment.environment_id)
+                    
+                    # Look for the stack again
+                    new_stack = self.env['j_portainer.stack'].search([
+                        ('server_id', '=', server_id),
+                        ('environment_id', '=', environment_id),
+                        ('name', '=', name)
+                    ], limit=1, order='id desc')
+                    
+                except Exception as retry_error:
+                    _logger.error(f"Failed to sync stack after creation: {retry_error}")
+                    # Create a minimal record manually to represent the successfully created stack
+                    new_stack = super().create({
+                        'name': name,
+                        'server_id': server_id,
+                        'environment_id': environment_id,
+                        'content': vals.get('content', ''),
+                        'build_method': vals.get('build_method', 'web_editor'),
+                        'status': '1',  # Active status
+                        'stack_id': 0,  # Will be updated on next sync
+                    })
             
             if new_stack:
                 # Update any additional fields from vals that weren't set during sync

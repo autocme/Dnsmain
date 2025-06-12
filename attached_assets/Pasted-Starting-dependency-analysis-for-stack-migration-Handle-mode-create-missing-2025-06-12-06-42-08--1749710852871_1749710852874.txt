@@ -1,0 +1,393 @@
+Starting dependency analysis for stack migration. Handle mode: create_missing 
+2025-06-12 06:42:08,942 31868 INFO j-port odoo.addons.j_portainer.wizards.stack_migration_wizard: Raw compose data networks section: {'traefik-net': {'external': True}} 
+2025-06-12 06:42:08,942 31868 INFO j-port odoo.addons.j_portainer.wizards.stack_migration_wizard: Detected external networks: ['traefik-net'] 
+2025-06-12 06:42:08,942 31868 INFO j-port odoo.addons.j_portainer.wizards.stack_migration_wizard: Found external networks: ['traefik-net'] 
+2025-06-12 06:42:08,949 31868 INFO j-port odoo.addons.j_portainer.wizards.stack_migration_wizard: Creating missing network: traefik-net 
+2025-06-12 06:42:10,404 31868 INFO j-port odoo.addons.j_portainer.wizards.stack_migration_wizard: Successfully created network: traefik-net using endpoint: /api/endpoints/4/docker/networks/create 
+2025-06-12 06:42:13,225 31868 INFO j-port odoo.addons.j_portainer.wizards.stack_migration_wizard: Verified network traefik-net exists in Docker 
+2025-06-12 06:42:13,226 31868 INFO j-port odoo.addons.j_portainer.wizards.stack_migration_wizard: Dependency analysis completed successfully 
+2025-06-12 06:42:13,227 31868 INFO j-port odoo.addons.j_portainer.wizards.stack_migration_wizard: Detected traefik-net reference, ensuring it exists 
+2025-06-12 06:42:13,229 31868 INFO j-port odoo.addons.j_portainer.wizards.stack_migration_wizard: Creating missing network: traefik-net 
+2025-06-12 06:42:14,041 31868 INFO j-port odoo.addons.j_portainer.wizards.stack_migration_wizard: Network traefik-net already exists in Docker, skipping creation 
+2025-06-12 06:42:14,042 31868 INFO j-port odoo.addons.j_portainer.wizards.stack_migration_wizard: Starting container conflict resolution. Handle mode: rename 
+2025-06-12 06:42:14,758 31868 INFO j-port odoo.addons.j_portainer.wizards.stack_migration_wizard: Container conflict resolution completed 
+2025-06-12 06:42:14,759 31868 INFO j-port odoo.addons.j_portainer.models.portainer_stack: Creating stack traefik_copy in Portainer using environment ID 4 
+2025-06-12 06:42:14,759 31868 INFO j-port odoo.addons.j_portainer.models.portainer_stack: Creating stack 'traefik_copy' using endpoint: /api/stacks/create/standalone/string?endpointId=4 
+2025-06-12 06:42:14,759 31868 INFO j-port odoo.addons.j_portainer.models.portainer_stack: Stack payload: {'Name': 'traefik_copy', 'StackFileContent': 'version: "3.8"\n\nservices:\n  traefik:\n    image: traefik:v3.0\n    container_name: traefik\n    restart: unless-stopped\n    networks:\n      - traefik-net\n    command:\n      - "--providers.docker=true"\n      - "--providers.docker.network=traefik-net"\n      - "--providers.docker.exposedbydefault=false"\n      - "--api.dashboard=true"\n      - "--entrypoints.web.address=:80"\n      - "--entrypoints.websecure.address=:443"\n      - "--log.level=DEBUG"\n      - "--accesslog=true"\n      # Let\'s Encrypt DNS challenge via Route53\n      - "--certificatesresolvers.letsencrypt.acme.email=info@jaah.it"\n      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"\n      - "--certificatesresolvers.letsencrypt.acme.dnschallenge=true"\n      - "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=route53"\n      # EntryPoints\n      - "--entrypoints.web.address=:80"\n      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"\n      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"\n      - "--entrypoints.websecure.address=:443"\n      - "--entrypoints.websecure.http.tls.certresolver=letsencrypt"\n      - "--entrypoints.websecure.http.tls.domains[0].main=10.jaah.it"\n      - "--entrypoints.websecure.http.tls.domains[0].sans=*.10.jaah.it"\n    labels:\n      - "traefik.enable=true"\n      # Redirect http(s)://www.* to non-www https://\n      - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:(www\\\\.)?.+}`)"\n      - "traefik.http.routers.http-catchall.entrypoints=web"\n      - "traefik.http.routers.http-catchall.middlewares=redirect-to-root"\n      - "traefik.http.routers.wwwsecure-catchall.rule=HostRegexp(`{host:(www\\\\.).+}`)"\n      - "traefik.http.routers.wwwsecure-catchall.entrypoints=websecure"\n      - "traefik.http.routers.wwwsecure-catchall.tls=true"\n      - "traefik.http.routers.wwwsecure-catchall.middlewares=redirect-to-root"\n      # Middleware to strip www and force HTTPS\n      - "traefik.http.middlewares.redirect-to-root.redirectregex.regex=^https?://(?:www\\\\.)?(.+)"\n      - "traefik.http.middlewares.redirect-to-root.redirectregex.replacement=https://$${1}"\n      - "traefik.http.middlewares.redirect-to-root.redirectregex.permanent=true"\n    ports:\n      - "80:80"\n      - "443:443"\n    volumes:\n      - "/var/run/docker.sock:/var/run/docker.sock:ro"\n      - "/data/compose/88/letsencrypt:/letsencrypt"\n      - "/root/.aws:/root/.aws:ro"\n    environment:\n      - AWS_REGION=us-east-1\n      - AWS_SHARED_CREDENTIALS_FILE=/root/.aws/credentials\n\nnetworks:\n  traefik-net:\n    external: true'} 
+2025-06-12 06:42:15,934 31868 INFO j-port odoo.addons.j_portainer.models.portainer_stack: Stack creation response: Status 200, Content: {"Id":229,"Name":"traefik_copy","Type":2,"EndpointId":4,"SwarmId":"","EntryPoint":"docker-compose.yml","Env":null,"ResourceControl":{"Id":399,"ResourceId":"4_traefik_copy","SubResourceIds":[],"Type":6,"UserAccesses":[],"TeamAccesses":[],"Public":false,"AdministratorsOnly":true,"System":false},"Status":1,"ProjectPath":"/data/compose/229","CreationDate":1749710535,"CreatedBy":"admin","UpdateDate":0,"UpdatedBy":"","AdditionalFiles":null,"AutoUpdate":null,"Option":null,"GitConfig":null,"FromAppTemplate":false,"Namespace":""} 
+2025-06-12 06:42:17,430 31868 INFO j-port odoo.addons.j_portainer.models.portainer_server: Removing 3 obsolete stacks from Odoo (already removed from Portainer) 
+2025-06-12 06:42:17,474 31868 INFO j-port odoo.models.unlink: User #2 deleted j_portainer.stack records with IDs: [22, 24, 23] 
+2025-06-12 06:42:17,474 31868 INFO j-port odoo.addons.j_portainer.models.portainer_server: Stack sync complete: 1 total stacks, 1 created, 0 updated, 3 removed 
+2025-06-12 06:42:19,082 31868 ERROR j-port odoo.sql_db: bad query: INSERT INTO "j_portainer_container" ("always_pull_image", "cap_audit_control", "cap_audit_write", "cap_block_suspend", "cap_chown", "cap_dac_override", "cap_dac_read_search", "cap_fowner", "cap_fsetid", "cap_ipc_lock", "cap_ipc_owner", "cap_kill", "cap_lease", "cap_linux_immutable", "cap_mac_admin", "cap_mac_override", "cap_mknod", "cap_net_admin", "cap_net_bind_service", "cap_net_broadcast", "cap_net_raw", "cap_setfcap", "cap_setgid", "cap_setpcap", "cap_setuid", "cap_sys_admin", "cap_sys_boot", "cap_sys_chroot", "cap_sys_module", "cap_sys_nice", "cap_sys_pacct", "cap_sys_ptrace", "cap_sys_rawio", "cap_sys_resource", "cap_sys_time", "cap_sys_tty_config", "cap_syslog", "cap_wake_alarm", "container_id", "cpu_limit", "create_date", "create_uid", "created", "details", "environment_id", "has_pending_changes", "image_id", "init_process", "labels", "memory_limit", "memory_reservation", "name", "ports", "privileged", "publish_all_ports", "restart_policy", "server_id", "shm_size", "stack_id", "state", "status", "volumes", "write_date", "write_uid") VALUES (false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, '8b5e0060e9b4b53f8b786ca0ed86d121e6e41190748e220e74ae1f984023afa4', 0.0, '2025-06-12 06:42:08.936799', 2, '2025-06-12 06:42:15', '{
+  "AppArmorProfile": "docker-default",
+  "Args": [
+    "--providers.docker=true",
+    "--providers.docker.network=traefik-net",
+    "--providers.docker.exposedbydefault=false",
+    "--api.dashboard=true",
+    "--entrypoints.web.address=:80",
+    "--entrypoints.websecure.address=:443",
+    "--log.level=DEBUG",
+    "--accesslog=true",
+    "--certificatesresolvers.letsencrypt.acme.email=info@jaah.it",
+    "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json",
+    "--certificatesresolvers.letsencrypt.acme.dnschallenge=true",
+    "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=route53",
+    "--entrypoints.web.address=:80",
+    "--entrypoints.web.http.redirections.entrypoint.to=websecure",
+    "--entrypoints.web.http.redirections.entrypoint.scheme=https",
+    "--entrypoints.websecure.address=:443",
+    "--entrypoints.websecure.http.tls.certresolver=letsencrypt",
+    "--entrypoints.websecure.http.tls.domains[0].main=10.jaah.it",
+    "--entrypoints.websecure.http.tls.domains[0].sans=*.10.jaah.it"
+  ],
+  "Config": {
+    "AttachStderr": true,
+    "AttachStdin": false,
+    "AttachStdout": true,
+    "Cmd": [
+      "--providers.docker=true",
+      "--providers.docker.network=traefik-net",
+      "--providers.docker.exposedbydefault=false",
+      "--api.dashboard=true",
+      "--entrypoints.web.address=:80",
+      "--entrypoints.websecure.address=:443",
+      "--log.level=DEBUG",
+      "--accesslog=true",
+      "--certificatesresolvers.letsencrypt.acme.email=info@jaah.it",
+      "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json",
+      "--certificatesresolvers.letsencrypt.acme.dnschallenge=true",
+      "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=route53",
+      "--entrypoints.web.address=:80",
+      "--entrypoints.web.http.redirections.entrypoint.to=websecure",
+      "--entrypoints.web.http.redirections.entrypoint.scheme=https",
+      "--entrypoints.websecure.address=:443",
+      "--entrypoints.websecure.http.tls.certresolver=letsencrypt",
+      "--entrypoints.websecure.http.tls.domains[0].main=10.jaah.it",
+      "--entrypoints.websecure.http.tls.domains[0].sans=*.10.jaah.it"
+    ],
+    "Domainname": "",
+    "Entrypoint": [
+      "/entrypoint.sh"
+    ],
+    "Env": [
+      "AWS_SHARED_CREDENTIALS_FILE=/root/.aws/credentials",
+      "AWS_REGION=us-east-1",
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    ],
+    "ExposedPorts": {
+      "443/tcp": {},
+      "80/tcp": {}
+    },
+    "Hostname": "8b5e0060e9b4",
+    "Image": "traefik:v3.0",
+    "Labels": {
+      "com.docker.compose.config-hash": "d2340f07051d42c42f8f0985656cfb06d4a54e508ae0f2a2335ea9f06b7df9e4",
+      "com.docker.compose.container-number": "1",
+      "com.docker.compose.depends_on": "",
+      "com.docker.compose.image": "sha256:7a4ed730cae1fd3aea7db703c77c5f27cc5550748e492cd963a386f409562568",
+      "com.docker.compose.oneoff": "False",
+      "com.docker.compose.project": "traefik_copy",
+      "com.docker.compose.project.config_files": "",
+      "com.docker.compose.project.working_dir": "/data/compose/229",
+      "com.docker.compose.service": "traefik",
+      "com.docker.compose.version": "",
+      "org.opencontainers.image.description": "A modern reverse-proxy",
+      "org.opencontainers.image.documentation": "https://docs.traefik.io",
+      "org.opencontainers.image.source": "https://github.com/traefik/traefik",
+      "org.opencontainers.image.title": "Traefik",
+      "org.opencontainers.image.url": "https://traefik.io",
+      "org.opencontainers.image.vendor": "Traefik Labs",
+      "org.opencontainers.image.version": "v3.0.4",
+      "traefik.enable": "true",
+      "traefik.http.middlewares.redirect-to-root.redirectregex.permanent": "true",
+      "traefik.http.middlewares.redirect-to-root.redirectregex.regex": "^https?://(?:www\\.)?(.+)",
+      "traefik.http.middlewares.redirect-to-root.redirectregex.replacement": "https://${1}",
+      "traefik.http.routers.http-catchall.entrypoints": "web",
+      "traefik.http.routers.http-catchall.middlewares": "redirect-to-root",
+      "traefik.http.routers.http-catchall.rule": "HostRegexp(`{host:(www\\.)?.+}`)",
+      "traefik.http.routers.wwwsecure-catchall.entrypoints": "websecure",
+      "traefik.http.routers.wwwsecure-catchall.middlewares": "redirect-to-root",
+      "traefik.http.routers.wwwsecure-catchall.rule": "HostRegexp(`{host:(www\\.).+}`)",
+      "traefik.http.routers.wwwsecure-catchall.tls": "true"
+    },
+    "OnBuild": null,
+    "OpenStdin": false,
+    "StdinOnce": false,
+    "Tty": false,
+    "User": "",
+    "Volumes": null,
+    "WorkingDir": ""
+  },
+  "Created": "2025-06-12T06:42:15.36557555Z",
+  "Driver": "overlay2",
+  "ExecIDs": null,
+  "GraphDriver": {
+    "Data": {
+      "ID": "8b5e0060e9b4b53f8b786ca0ed86d121e6e41190748e220e74ae1f984023afa4",
+      "LowerDir": "/var/lib/docker/overlay2/eb696343f159c2c212a190a08141347c088570ec12d46e500fae88bbd6eda815-init/diff:/var/lib/docker/overlay2/a528d1f8a853d060cfa909d1b7bb7dd3bca36a2cf1d6c958450582278f3152ea/diff:/var/lib/docker/overlay2/2fe6ed87c758763f478494db8deb4057523faafe4df3a9e9f8cda57a40ddedae/diff:/var/lib/docker/overlay2/31840fcb3af9870155965a9c3e382ab305e7db86e41bb64a4daef4418575888f/diff:/var/lib/docker/overlay2/2925b14a0b4b7086453a26e525cf41f9a871ed4136da8372d3933611531d96a0/diff",
+      "MergedDir": "/var/lib/docker/overlay2/eb696343f159c2c212a190a08141347c088570ec12d46e500fae88bbd6eda815/merged",
+      "UpperDir": "/var/lib/docker/overlay2/eb696343f159c2c212a190a08141347c088570ec12d46e500fae88bbd6eda815/diff",
+      "WorkDir": "/var/lib/docker/overlay2/eb696343f159c2c212a190a08141347c088570ec12d46e500fae88bbd6eda815/work"
+    },
+    "Name": "overlay2"
+  },
+  "HostConfig": {
+    "AutoRemove": false,
+    "Binds": [
+      "/var/run/docker.sock:/var/run/docker.sock:ro",
+      "/data/compose/88/letsencrypt:/letsencrypt:rw",
+      "/root/.aws:/root/.aws:ro"
+    ],
+    "BlkioDeviceReadBps": null,
+    "BlkioDeviceReadIOps": null,
+    "BlkioDeviceWriteBps": null,
+    "BlkioDeviceWriteIOps": null,
+    "BlkioWeight": 0,
+    "BlkioWeightDevice": null,
+    "CapAdd": null,
+    "CapDrop": null,
+    "Cgroup": "",
+    "CgroupParent": "",
+    "CgroupnsMode": "private",
+    "ConsoleSize": [
+      0,
+      0
+    ],
+    "ContainerIDFile": "",
+    "CpuCount": 0,
+    "CpuPercent": 0,
+    "CpuPeriod": 0,
+    "CpuQuota": 0,
+    "CpuRealtimePeriod": 0,
+    "CpuRealtimeRuntime": 0,
+    "CpuShares": 0,
+    "CpusetCpus": "",
+    "CpusetMems": "",
+    "DeviceCgroupRules": null,
+    "DeviceRequests": null,
+    "Devices": null,
+    "Dns": null,
+    "DnsOptions": null,
+    "DnsSearch": null,
+    "ExtraHosts": [],
+    "GroupAdd": null,
+    "IOMaximumBandwidth": 0,
+    "IOMaximumIOps": 0,
+    "IpcMode": "private",
+    "Isolation": "",
+    "Links": null,
+    "LogConfig": {
+      "Config": {},
+      "Type": "json-file"
+    },
+    "MaskedPaths": [
+      "/proc/asound",
+      "/proc/acpi",
+      "/proc/interrupts",
+      "/proc/kcore",
+      "/proc/keys",
+      "/proc/latency_stats",
+      "/proc/timer_list",
+      "/proc/timer_stats",
+      "/proc/sched_debug",
+      "/proc/scsi",
+      "/sys/firmware",
+      "/sys/devices/virtual/powercap"
+    ],
+    "Memory": 0,
+    "MemoryReservation": 0,
+    "MemorySwap": 0,
+    "MemorySwappiness": null,
+    "NanoCpus": 0,
+    "NetworkMode": "traefik-net",
+    "OomKillDisable": null,
+    "OomScoreAdj": 0,
+    "PidMode": "",
+    "PidsLimit": null,
+    "PortBindings": {
+      "443/tcp": [
+        {
+          "HostIp": "",
+          "HostPort": "443"
+        }
+      ],
+      "80/tcp": [
+        {
+          "HostIp": "",
+          "HostPort": "80"
+        }
+      ]
+    },
+    "Privileged": false,
+    "PublishAllPorts": false,
+    "ReadonlyPaths": [
+      "/proc/bus",
+      "/proc/fs",
+      "/proc/irq",
+      "/proc/sys",
+      "/proc/sysrq-trigger"
+    ],
+    "ReadonlyRootfs": false,
+    "RestartPolicy": {
+      "MaximumRetryCount": 0,
+      "Name": "unless-stopped"
+    },
+    "Runtime": "runc",
+    "SecurityOpt": null,
+    "ShmSize": 67108864,
+    "UTSMode": "",
+    "Ulimits": null,
+    "UsernsMode": "",
+    "VolumeDriver": "",
+    "VolumesFrom": null
+  },
+  "HostnamePath": "/var/lib/docker/containers/8b5e0060e9b4b53f8b786ca0ed86d121e6e41190748e220e74ae1f984023afa4/hostname",
+  "HostsPath": "/var/lib/docker/containers/8b5e0060e9b4b53f8b786ca0ed86d121e6e41190748e220e74ae1f984023afa4/hosts",
+  "Id": "8b5e0060e9b4b53f8b786ca0ed86d121e6e41190748e220e74ae1f984023afa4",
+  "Image": "sha256:7a4ed730cae1fd3aea7db703c77c5f27cc5550748e492cd963a386f409562568",
+  "LogPath": "/var/lib/docker/containers/8b5e0060e9b4b53f8b786ca0ed86d121e6e41190748e220e74ae1f984023afa4/8b5e0060e9b4b53f8b786ca0ed86d121e6e41190748e220e74ae1f984023afa4-json.log",
+  "MountLabel": "",
+  "Mounts": [
+    {
+      "Destination": "/var/run/docker.sock",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/var/run/docker.sock",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/letsencrypt",
+      "Mode": "rw",
+      "Propagation": "rprivate",
+      "RW": true,
+      "Source": "/data/compose/88/letsencrypt",
+      "Type": "bind"
+    },
+    {
+      "Destination": "/root/.aws",
+      "Mode": "ro",
+      "Propagation": "rprivate",
+      "RW": false,
+      "Source": "/root/.aws",
+      "Type": "bind"
+    }
+  ],
+  "Name": "/traefik",
+  "NetworkSettings": {
+    "Bridge": "",
+    "EndpointID": "",
+    "Gateway": "",
+    "GlobalIPv6Address": "",
+    "GlobalIPv6PrefixLen": 0,
+    "HairpinMode": false,
+    "IPAddress": "",
+    "IPPrefixLen": 0,
+    "IPv6Gateway": "",
+    "LinkLocalIPv6Address": "",
+    "LinkLocalIPv6PrefixLen": 0,
+    "MacAddress": "",
+    "Networks": {
+      "traefik-net": {
+        "Aliases": [
+          "traefik",
+          "traefik"
+        ],
+        "DNSNames": [
+          "traefik",
+          "8b5e0060e9b4"
+        ],
+        "DriverOpts": null,
+        "EndpointID": "c2af3889c6101e74ebff8a5e47b44c53bdee373d25984d971d207f6d6c366e52",
+        "Gateway": "172.18.0.1",
+        "GlobalIPv6Address": "",
+        "GlobalIPv6PrefixLen": 0,
+        "GwPriority": 0,
+        "IPAMConfig": null,
+        "IPAddress": "172.18.0.2",
+        "IPPrefixLen": 16,
+        "IPv6Gateway": "",
+        "Links": null,
+        "MacAddress": "86:ea:e3:b1:2f:b3",
+        "NetworkID": "6de7d549825a5acd5f771fa5defde7a99086bc2bc9db1217b43fc15aa5d58bb5"
+      }
+    },
+    "Ports": {
+      "443/tcp": [
+        {
+          "HostIp": "0.0.0.0",
+          "HostPort": "443"
+        },
+        {
+          "HostIp": "::",
+          "HostPort": "443"
+        }
+      ],
+      "80/tcp": [
+        {
+          "HostIp": "0.0.0.0",
+          "HostPort": "80"
+        },
+        {
+          "HostIp": "::",
+          "HostPort": "80"
+        }
+      ]
+    },
+    "SandboxID": "0ee57ccfd204e35eacc28e92f54516d1dbdb133f17342d6dc950927c0664e016",
+    "SandboxKey": "/var/run/docker/netns/0ee57ccfd204",
+    "SecondaryIPAddresses": null,
+    "SecondaryIPv6Addresses": null
+  },
+  "Path": "/entrypoint.sh",
+  "Platform": "linux",
+  "Portainer": {
+    "ResourceControl": {
+      "Id": 399,
+      "ResourceId": "4_traefik_copy",
+      "SubResourceIds": [],
+      "Type": 6,
+      "UserAccesses": [],
+      "TeamAccesses": [],
+      "Public": false,
+      "AdministratorsOnly": true,
+      "System": false
+    }
+  },
+  "ProcessLabel": "",
+  "ResolvConfPath": "/var/lib/docker/containers/8b5e0060e9b4b53f8b786ca0ed86d121e6e41190748e220e74ae1f984023afa4/resolv.conf",
+  "RestartCount": 0,
+  "State": {
+    "Dead": false,
+    "Error": "",
+    "ExitCode": 0,
+    "FinishedAt": "0001-01-01T00:00:00Z",
+    "OOMKilled": false,
+    "Paused": false,
+    "Pid": 58116,
+    "Restarting": false,
+    "Running": true,
+    "StartedAt": "2025-06-12T06:42:15.479151813Z",
+    "Status": "running"
+  }
+}', 3, false, NULL, false, '{"com.docker.compose.config-hash": "d2340f07051d42c42f8f0985656cfb06d4a54e508ae0f2a2335ea9f06b7df9e4", "com.docker.compose.container-number": "1", "com.docker.compose.depends_on": "", "com.docker.compose.image": "sha256:7a4ed730cae1fd3aea7db703c77c5f27cc5550748e492cd963a386f409562568", "com.docker.compose.oneoff": "False", "com.docker.compose.project": "traefik_copy", "com.docker.compose.project.config_files": "", "com.docker.compose.project.working_dir": "/data/compose/229", "com.docker.compose.service": "traefik", "com.docker.compose.version": "", "org.opencontainers.image.description": "A modern reverse-proxy", "org.opencontainers.image.documentation": "https://docs.traefik.io", "org.opencontainers.image.source": "https://github.com/traefik/traefik", "org.opencontainers.image.title": "Traefik", "org.opencontainers.image.url": "https://traefik.io", "org.opencontainers.image.vendor": "Traefik Labs", "org.opencontainers.image.version": "v3.0.4", "traefik.enable": "true", "traefik.http.middlewares.redirect-to-root.redirectregex.permanent": "true", "traefik.http.middlewares.redirect-to-root.redirectregex.regex": "^https?://(?:www\\.)?(.+)", "traefik.http.middlewares.redirect-to-root.redirectregex.replacement": "https://${1}", "traefik.http.routers.http-catchall.entrypoints": "web", "traefik.http.routers.http-catchall.middlewares": "redirect-to-root", "traefik.http.routers.http-catchall.rule": "HostRegexp(`{host:(www\\.)?.+}`)", "traefik.http.routers.wwwsecure-catchall.entrypoints": "websecure", "traefik.http.routers.wwwsecure-catchall.middlewares": "redirect-to-root", "traefik.http.routers.wwwsecure-catchall.rule": "HostRegexp(`{host:(www\\.).+}`)", "traefik.http.routers.wwwsecure-catchall.tls": "true"}', 0, 0, 'traefik', '[{"IP": "0.0.0.0", "PrivatePort": 443, "PublicPort": 443, "Type": "tcp"}, {"IP": "::", "PrivatePort": 443, "PublicPort": 443, "Type": "tcp"}, {"IP": "0.0.0.0", "PrivatePort": 80, "PublicPort": 80, "Type": "tcp"}, {"IP": "::", "PrivatePort": 80, "PublicPort": 80, "Type": "tcp"}]', false, false, 'unless-stopped', 1, 64, 25, 'running', 'running', '[{"Destination": "/var/run/docker.sock", "Mode": "ro", "Propagation": "rprivate", "RW": false, "Source": "/var/run/docker.sock", "Type": "bind"}, {"Destination": "/letsencrypt", "Mode": "rw", "Propagation": "rprivate", "RW": true, "Source": "/data/compose/88/letsencrypt", "Type": "bind"}, {"Destination": "/root/.aws", "Mode": "ro", "Propagation": "rprivate", "RW": false, "Source": "/root/.aws", "Type": "bind"}]', '2025-06-12 06:42:08.936799', 2) RETURNING "id"
+ERROR: null value in column "image_id" of relation "j_portainer_container" violates not-null constraint
+DETAIL:  Failing row contains (131, 64, 0, 0, 1, 3, 25, 2, 2, traefik, 8b5e0060e9b4b53f8b786ca0ed86d121e6e41190748e220e74ae1f984023afa4, null, null, running, running, unless-stopped, [{"IP": "0.0.0.0", "PrivatePort": 443, "PublicPort": 443, "Type"..., {"com.docker.compose.config-hash": "d2340f07051d42c42f8f0985656c..., {
+  "AppArmorProfile": "docker-default",
+  "Args": [
+    "--prov..., [{"Destination": "/var/run/docker.sock", "Mode": "ro", "Propagat..., f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, 2025-06-12 06:42:15, null, 2025-06-12 06:42:08.936799, 2025-06-12 06:42:08.936799, 0, null, f).
+ 
+2025-06-12 06:42:19,083 31868 ERROR j-port odoo.addons.j_portainer.models.portainer_server: Error syncing containers: null value in column "image_id" of relation "j_portainer_container" violates not-null constraint
+DETAIL:  Failing row contains (131, 64, 0, 0, 1, 3, 25, 2, 2, traefik, 8b5e0060e9b4b53f8b786ca0ed86d121e6e41190748e220e74ae1f984023afa4, null, null, running, running, unless-stopped, [{"IP": "0.0.0.0", "PrivatePort": 443, "PublicPort": 443, "Type"..., {"com.docker.compose.config-hash": "d2340f07051d42c42f8f0985656c..., {
+  "AppArmorProfile": "docker-default",
+  "Args": [
+    "--prov..., [{"Destination": "/var/run/docker.sock", "Mode": "ro", "Propagat..., f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, 2025-06-12 06:42:15, null, 2025-06-12 06:42:08.936799, 2025-06-12 06:42:08.936799, 0, null, f).
+ 
+2025-06-12 06:42:19,083 31868 ERROR j-port odoo.addons.j_portainer.models.portainer_stack: Error creating stack traefik_copy: Error syncing containers: null value in column "image_id" of relation "j_portainer_container" violates not-null constraint
+DETAIL:  Failing row contains (131, 64, 0, 0, 1, 3, 25, 2, 2, traefik, 8b5e0060e9b4b53f8b786ca0ed86d121e6e41190748e220e74ae1f984023afa4, null, null, running, running, unless-stopped, [{"IP": "0.0.0.0", "PrivatePort": 443, "PublicPort": 443, "Type"..., {"com.docker.compose.config-hash": "d2340f07051d42c42f8f0985656c..., {
+  "AppArmorProfile": "docker-default",
+  "Args": [
+    "--prov..., [{"Destination": "/var/run/docker.sock", "Mode": "ro", "Propagat..., f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, 2025-06-12 06:42:15, null, 2025-06-12 06:42:08.936799, 2025-06-12 06:42:08.936799, 0, null, f).
+ 
+2025-06-12 06:42:19,088 31868 WARNING j-port odoo.http: Stack migration failed: Failed to create stack in Portainer. Server: https://3.110.80.87:9443/, Status: connected
