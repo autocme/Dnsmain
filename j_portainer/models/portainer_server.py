@@ -861,6 +861,10 @@ class PortainerServer(models.Model):
                             ('environment_id', '=', env.id),
                             ('image_id', '=', image_id_value)
                         ], limit=1)
+                        
+                        # Log warning if image not found but don't block container sync
+                        if not image_record:
+                            _logger.warning(f"Container {container_name} uses image {image_id_value} which is not synced to Odoo yet")
                     
                     # Prepare data for create/update
                     container_data = {
