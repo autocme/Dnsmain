@@ -861,46 +861,6 @@ class PortainerServer(models.Model):
                             ('environment_id', '=', env.id),
                             ('image_id', '=', image_id_value)
                         ], limit=1)
-                        
-                        # If image not found, create a minimal image record to satisfy the constraint
-                        if not image_record:
-                            _logger.info(f"Creating minimal image record for container {container_name} (image: {image_id_value})")
-                            
-                            # Get image name from container Image field
-                            image_name = container.get('Image', '<unknown>')
-                            
-                            # Parse repository and tag from image name
-                            if ':' in image_name and '/' in image_name:
-                                # Full image name like registry.com/repo:tag
-                                parts = image_name.rsplit(':', 1)
-                                repository = parts[0] if len(parts) > 1 else image_name
-                                tag = parts[1] if len(parts) > 1 else 'latest'
-                            elif ':' in image_name:
-                                # Simple name like repo:tag
-                                parts = image_name.split(':', 1)
-                                repository = parts[0]
-                                tag = parts[1]
-                            else:
-                                # Just repository name
-                                repository = image_name
-                                tag = 'latest'
-                            
-                            # Create minimal image record
-                            image_data = {
-                                'server_id': self.id,
-                                'environment_id': env.id,
-                                'image_id': image_id_value,
-                                'repository': repository,
-                                'tag': tag,
-                                'created': fields.Datetime.now(),
-                                'size': 0,  # Will be updated on next image sync
-                                'virtual_size': 0,
-                                'in_use': True,
-                                'details': '{}',  # Empty JSON, will be filled on next sync
-                            }
-                            
-                            image_record = self.env['j_portainer.image'].with_context(sync_operation=True).create(image_data)
-                            _logger.info(f"Created minimal image record {image_record.id} for {repository}:{tag}")
                     
                     # Prepare data for create/update
                     container_data = {

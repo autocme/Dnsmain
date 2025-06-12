@@ -192,34 +192,35 @@ class PortainerStack(models.Model):
                 
             except Exception as sync_error:
                 # Stack was created in Portainer but sync failed
-                sync_error_msg = str(sync_error)
-                _logger.warning(f"Stack '{name}' created successfully in Portainer but database sync failed: {sync_error_msg}")
+                _logger.warning(f"Stack '{name}' created successfully in Portainer but database sync failed: {sync_error}")
                 
-                # Provide detailed error information to user
-                if "image_id" in sync_error_msg and "not-null constraint" in sync_error_msg:
-                    raise UserError(_("Stack created successfully in Portainer but container sync failed: Missing image information for containers. Error: %s") % sync_error_msg)
-                elif "violates" in sync_error_msg and "constraint" in sync_error_msg:
-                    raise UserError(_("Stack created successfully in Portainer but database sync failed due to constraint violation: %s") % sync_error_msg)
-                else:
-                    # Try to find the stack manually or create a minimal record
-                    try:
-                        environment = self.env['j_portainer.environment'].browse(environment_id)
-                        server = self.env['j_portainer.server'].browse(server_id)
-                        
-                        # Try sync again with error handling
-                        server.sync_stacks(environment.environment_id)
-                        
-                        # Look for the stack again
-                        new_stack = self.env['j_portainer.stack'].search([
-                            ('server_id', '=', server_id),
-                            ('environment_id', '=', environment_id),
-                            ('name', '=', name)
-                        ], limit=1, order='id desc')
-                        
-                    except Exception as retry_error:
-                        _logger.error(f"Failed to sync stack after creation: {retry_error}")
-                        # Provide detailed error information
-                        raise UserError(_("Stack created successfully in Portainer but failed to sync to Odoo database. Original error: %s. Retry error: %s") % (sync_error_msg, str(retry_error)))
+                # Try to find the stack manually or create a minimal record
+                try:
+                    environment = self.env['j_portainer.environment'].browse(environment_id)
+                    server = self.env['j_portainer.server'].browse(server_id)
+                    
+                    # Try sync again with error handling
+                    server.sync_stacks(environment.environment_id)
+                    
+                    # Look for the stack again
+                    new_stack = self.env['j_portainer.stack'].search([
+                        ('server_id', '=', server_id),
+                        ('environment_id', '=', environment_id),
+                        ('name', '=', name)
+                    ], limit=1, order='id desc')
+                    
+                except Exception as retry_error:
+                    _logger.error(f"Failed to sync stack after creation: {retry_error}")
+                    # Create a minimal record manually to represent the successfully created stack
+                    new_stack = super().create({
+                        'name': name,
+                        'server_id': server_id,
+                        'environment_id': environment_id,
+                        'content': vals.get('content', ''),
+                        'build_method': vals.get('build_method', 'web_editor'),
+                        'status': '1',  # Active status
+                        'stack_id': 0,  # Will be updated on next sync
+                    })
             
             if new_stack:
                 # Update any additional fields from vals that weren't set during sync
