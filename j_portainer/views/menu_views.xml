@@ -111,4 +111,20 @@
               sequence="55"
               groups="j_portainer.group_j_portainer_manager"/>
 
+    <!-- Backup Schedules Menu -->
+    <menuitem id="menu_j_portainer_backup_schedules"
+              name="Backup Schedules"
+              parent="menu_j_portainer_configuration"
+              action="action_portainer_backup_schedule"
+              sequence="60"
+              groups="j_portainer.group_j_portainer_manager"/>
+
+    <!-- Backup History Menu -->
+    <menuitem id="menu_j_portainer_backup_history"
+              name="Backup History"
+              parent="menu_j_portainer_configuration"
+              action="action_portainer_backup_history"
+              sequence="65"
+              groups="j_portainer.group_j_portainer_manager"/>
+
 </odoo>
