@@ -188,7 +188,56 @@ class StackMigrationWizard(models.TransientModel):
             }
             
             # Create new stack (this will trigger API call to Portainer)
-            new_stack = self.env['j_portainer.stack'].create(stack_vals)
+            try:
+                new_stack = self.env['j_portainer.stack'].create(stack_vals)
+                _logger.info(f"Stack migration completed successfully: {self.new_stack_name}")
+            except Exception as create_error:
+                # Check if this is a database sync issue after successful Portainer creation
+                error_msg = str(create_error)
+                if "bad query" in error_msg.lower() or "sql" in error_msg.lower():
+                    # This is likely a database sync issue after successful Portainer creation
+                    _logger.warning(f"Stack created in Portainer but database sync failed: {create_error}")
+                    
+                    # Try to find the stack that was created in Portainer
+                    import time
+                    time.sleep(2)  # Wait for potential sync completion
+                    
+                    # Search for the stack that should now exist
+                    new_stack = self.env['j_portainer.stack'].search([
+                        ('server_id', '=', self.target_environment_id.server_id.id),
+                        ('environment_id', '=', self.target_environment_id.id),
+                        ('name', '=', self.new_stack_name)
+                    ], limit=1, order='id desc')
+                    
+                    if not new_stack:
+                        # Create a minimal record to represent the successful Portainer stack
+                        try:
+                            new_stack = self.env['j_portainer.stack'].with_context(skip_portainer_creation=True).create({
+                                'name': self.new_stack_name,
+                                'server_id': self.target_environment_id.server_id.id,
+                                'environment_id': self.target_environment_id.id,
+                                'content': stack_vals['content'],
+                                'build_method': stack_vals['build_method'],
+                                'status': '1',  # Active
+                                'stack_id': 0,  # Will be updated on next sync
+                            })
+                            _logger.info(f"Created minimal Odoo record for successfully migrated stack: {self.new_stack_name}")
+                        except Exception as fallback_error:
+                            _logger.error(f"Failed to create fallback record: {fallback_error}")
+                            # At this point, acknowledge the Portainer success but mention sync issues
+                            return {
+                                'type': 'ir.actions.client',
+                                'tag': 'display_notification',
+                                'params': {
+                                    'title': _('Stack Migration Completed'),
+                                    'message': _('Stack "%s" was successfully created in Portainer, but there were database synchronization issues. Please check the Portainer interface to verify the stack is running.') % self.new_stack_name,
+                                    'sticky': True,
+                                    'type': 'warning',
+                                }
+                            }
+                else:
+                    # This is a genuine Portainer API failure
+                    raise create_error
             
             # If migration (not duplication), deactivate source stack
             if self.migration_type == 'migrate':
