@@ -114,7 +114,7 @@
                             <p>Environment address must be of the form &lt;IP&gt;:&lt;PORT&gt; or &lt;HOST&gt;:&lt;PORT&gt;.</p>
                             <p>Examples: <code>192.168.1.100:9001</code> or <code>docker-host.local:9001</code></p>
                         </div>
-                        <field name="docker_command" widget="text" nolabel="1" placeholder="Docker command will be generated automatically based on your selections"/>
+                        <field name="docker_command" widget="text" required="environment_id == False" nolabel="1" placeholder="Docker command will be generated automatically based on your selections"/>
                         <div class="alert alert-info" role="alert" invisible="environment_id != False">
                             <strong>Setup Instructions:</strong>
                             <ol>

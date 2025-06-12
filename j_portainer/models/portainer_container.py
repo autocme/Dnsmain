@@ -146,7 +146,7 @@ class PortainerContainer(models.Model):
     name = fields.Char('Name', required=True)
     container_id = fields.Char('Container ID', copy=False)
     image = fields.Char('Image', related='image_id.image_id', readonly=True, store=True)
-    image_id = fields.Many2one('j_portainer.image', string='Image', required=True)
+    image_id = fields.Many2one('j_portainer.image', string='Image', required=False)
     always_pull_image = fields.Boolean('Always Pull Image', default=False,
                                     help="Always pull the latest version of the image")
     created = fields.Datetime('Created')

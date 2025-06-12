@@ -2552,17 +2552,8 @@ class PortainerServer(models.Model):
             # Fetch missing file content for any templates
             self._fetch_missing_template_file_content()  # Use private method to avoid duplicate notifications
 
-            # Sync stacks with better error handling
-            try:
-                self.sync_stacks()
-            except Exception as stack_sync_error:
-                _logger.warning(f"Stack sync failed but continuing: {stack_sync_error}")
-            
-            # Sync containers with better error handling
-            try:
-                self.sync_containers()
-            except Exception as container_sync_error:
-                _logger.warning(f"Container sync failed but continuing: {container_sync_error}")
+            self.sync_stacks()
+            self.sync_containers()
             self.write({'last_sync': fields.Datetime.now()})
 
             return {
