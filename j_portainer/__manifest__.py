@@ -57,6 +57,8 @@
         'wizards/container_deploy_wizard_views.xml',
         'wizards/api_log_config_wizard_view.xml',
         'wizards/stack_migration_wizard_views.xml',
+        'wizards/backup_wizard_views.xml',
+        'wizards/restore_wizard_views.xml',
         'views/menu_views.xml',
     ],
     'demo': [],

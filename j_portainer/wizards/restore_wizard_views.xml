@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Restore Wizard Form View -->
+        <record id="view_portainer_restore_wizard_form" model="ir.ui.view">
+            <field name="name">portainer.restore.wizard.form</field>
+            <field name="model">j_portainer.restore.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Restore Portainer Backup">
+                    <div class="alert alert-danger" role="alert">
+                        <strong>⚠️ WARNING - DESTRUCTIVE OPERATION ⚠️</strong>
+                        <ul>
+                            <li><strong>This will completely overwrite your current Portainer instance</strong></li>
+                            <li>All existing stacks, containers, volumes, and configurations will be replaced</li>
+                            <li>This operation cannot be undone</li>
+                            <li>Ensure you have a current backup before proceeding</li>
+                            <li>All users will be logged out and need to re-authenticate</li>
+                        </ul>
+                    </div>
+                    
+                    <sheet>
+                        <group>
+                            <field name="server_id" readonly="1"/>
+                        </group>
+                        
+                        <group string="Backup File">
+                            <field name="backup_file" filename="backup_filename"/>
+                            <field name="backup_filename" invisible="1"/>
+                        </group>
+                        
+                        <group string="Restore Settings">
+                            <field name="restore_password" password="True" placeholder="Enter the backup password"/>
+                        </group>
+                        
+                        <group string="Confirmation">
+                            <field name="confirm_restore"/>
+                        </group>
+                        
+                        <div class="alert alert-info" role="alert">
+                            <strong>After Restore:</strong>
+                            <ul>
+                                <li>Refresh your browser completely</li>
+                                <li>Re-sync all data in Odoo (Environments, Images, Containers, etc.)</li>
+                                <li>Verify all stacks and containers are running correctly</li>
+                                <li>Users may need to re-login to Portainer</li>
+                            </ul>
+                        </div>
+                    </sheet>
+                    
+                    <footer>
+                        <button string="Restore Backup" name="action_restore_backup" type="object" 
+                                class="btn-danger" attrs="{'invisible': [('confirm_restore', '=', False)]}"/>
+                        <button string="Cancel" name="action_cancel" type="object" class="btn-secondary"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- Restore Wizard Action -->
+        <record id="action_portainer_restore_wizard" model="ir.actions.act_window">
+            <field name="name">Restore Backup</field>
+            <field name="res_model">j_portainer.restore.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="context">{'default_server_id': active_id}</field>
+        </record>
+    </data>
+</odoo>
