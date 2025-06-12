@@ -2544,6 +2544,7 @@ class PortainerServer(models.Model):
                         'status': str(stack.get('Status', 0)),
                         'update_date': self._parse_date_value(stack.get('UpdateDate')),
                         'file_content': file_content,
+                        'content': file_content,  # Populate both content fields
                         'details': json.dumps(stack, indent=2),
                     }
 
