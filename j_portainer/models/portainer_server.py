@@ -23,18 +23,18 @@ class PortainerServer(models.Model):
 
     def _parse_date_value(self, date_value: Any) -> Optional[datetime]:
         """Parse date value from API response
-        
+
         Handles different date formats from the Portainer API including:
         - ISO format strings (2022-01-01T00:00:00Z)
         - Integer timestamps
         - None values
-        
+
         Args:
             date_value: Date value from API response
-            
+
         Returns:
             naive datetime object or None if value cannot be parsed
-            
+
         Note:
             Returns naive datetime objects (without timezone info) as required by Odoo
         """
@@ -82,13 +82,13 @@ class PortainerServer(models.Model):
 
     def _safe_parse_timestamp(self, timestamp_value):
         """Safely parse a timestamp value to a datetime object
-        
+
         Args:
             timestamp_value: A timestamp value that could be an integer, float, or string
-            
+
         Returns:
             naive datetime object (without timezone info) or current time if parsing fails
-            
+
         Note:
             This method handles large timestamp values that could cause integer overflow
             Always returns naive datetime objects (without timezone info) as required by Odoo
@@ -155,21 +155,21 @@ class PortainerServer(models.Model):
             server.api_log_count = self.env['j_portainer.api_log'].search_count([
                 ('server_id', '=', server.id)
             ])
-    
+
     def _compute_sync_schedules_count(self):
         """Compute the number of sync schedules configured for this server"""
         for server in self:
             server.sync_schedules_count = self.env['j_portainer.sync.schedule'].search_count([
                 ('server_id', '=', server.id)
             ])
-    
+
     def _compute_backup_history_count(self):
         """Compute the number of backup history records for this server"""
         for server in self:
             server.backup_history_count = self.env['j_portainer.backup.history'].search_count([
                 ('server_id', '=', server.id)
             ])
-    
+
     def _compute_backup_schedule_fields(self):
         """Compute backup schedule fields for form view"""
         for server in self:
@@ -179,21 +179,21 @@ class PortainerServer(models.Model):
             server.backup_schedule_password = schedule.backup_password if schedule else 'default_password_change_me'
             server.backup_schedule_last_backup = schedule.last_backup if schedule else False
             server.backup_schedule_next_backup = schedule.next_backup if schedule else False
-    
+
     def _inverse_backup_schedule_active(self):
         """Update backup schedule active status"""
         for server in self:
             schedule = server.get_backup_schedule()
             if schedule:
                 schedule.active = server.backup_schedule_active
-    
+
     def _inverse_backup_schedule_days(self):
         """Update backup schedule days"""
         for server in self:
             schedule = server.get_backup_schedule()
             if schedule and server.backup_schedule_days:
                 schedule.schedule_days = server.backup_schedule_days
-    
+
     def _inverse_backup_schedule_password(self):
         """Update backup schedule password"""
         for server in self:
@@ -210,20 +210,23 @@ class PortainerServer(models.Model):
     custom_template_ids = fields.One2many('j_portainer.customtemplate', 'server_id', string='Custom Templates')
     stack_ids = fields.One2many('j_portainer.stack', 'server_id', string='Stacks')
     environment_ids = fields.One2many('j_portainer.environment', 'server_id', string='Environments')
-    
+
     # Sync Schedule relationship
     sync_schedule_ids = fields.One2many('j_portainer.sync.schedule', 'server_id', string='Sync Schedules')
     sync_schedules_count = fields.Integer('Sync Schedules Count', compute='_compute_sync_schedules_count')
-    
+
     # Backup Schedule relationship (one-to-one)
     backup_schedule_id = fields.One2many('j_portainer.backup.schedule', 'server_id', string='Backup Schedule')
     backup_history_ids = fields.One2many('j_portainer.backup.history', 'server_id', string='Backup History')
     backup_history_count = fields.Integer('Backup History Count', compute='_compute_backup_history_count')
-    
+
     # Backup Schedule computed fields for form view
-    backup_schedule_active = fields.Boolean('Backup Schedule Active', compute='_compute_backup_schedule_fields', inverse='_inverse_backup_schedule_active')
-    backup_schedule_days = fields.Integer('Backup Schedule Days', compute='_compute_backup_schedule_fields', inverse='_inverse_backup_schedule_days')
-    backup_schedule_password = fields.Char('Backup Schedule Password', compute='_compute_backup_schedule_fields', inverse='_inverse_backup_schedule_password')
+    backup_schedule_active = fields.Boolean('Backup Schedule Active', compute='_compute_backup_schedule_fields',
+                                            inverse='_inverse_backup_schedule_active')
+    backup_schedule_days = fields.Integer('Backup Schedule Days', compute='_compute_backup_schedule_fields',
+                                          inverse='_inverse_backup_schedule_days')
+    backup_schedule_password = fields.Char('Backup Schedule Password', compute='_compute_backup_schedule_fields',
+                                           inverse='_inverse_backup_schedule_password')
     backup_schedule_last_backup = fields.Datetime('Last Scheduled Backup', compute='_compute_backup_schedule_fields')
     backup_schedule_next_backup = fields.Datetime('Next Scheduled Backup', compute='_compute_backup_schedule_fields')
 
@@ -309,7 +312,7 @@ class PortainerServer(models.Model):
 
     def _get_api_key_header(self):
         """Get the API key header for authentication
-        
+
         Returns:
             str: API key header value
         """
@@ -322,7 +325,7 @@ class PortainerServer(models.Model):
     def _make_api_request(self, endpoint, method='GET', data=None, params=None, headers=None, use_multipart=False,
                           environment_id=None, timeout=None):
         """Make a request to the Portainer API
-        
+
         Args:
             endpoint (str): API endpoint (e.g., '/api/endpoints')
             method (str): HTTP method (GET, POST, PUT, DELETE)
@@ -332,7 +335,7 @@ class PortainerServer(models.Model):
             use_multipart (bool, optional): Whether to use multipart form data instead of JSON
             environment_id (int, optional): Environment ID related to this request (for logging)
             timeout (int, optional): Custom timeout in seconds (default: 15 for GET/DELETE, 30 for POST/PUT multipart)
-            
+
         Returns:
             requests.Response: API response
         """
@@ -456,7 +459,7 @@ class PortainerServer(models.Model):
 
         try:
             _logger.debug(f"Making {method} request to {url}")
-            
+
             # Set default timeouts based on method and use_multipart, or use custom timeout
             if timeout is None:
                 if use_multipart:
@@ -694,7 +697,7 @@ class PortainerServer(models.Model):
             synced_environments = self.env['j_portainer.environment'].browse(synced_env_ids)
             if synced_environments:
                 synced_environments.write({'last_sync': now})
-            
+
             self.write({
                 'last_sync': now,
                 'environment_count': len(environments)
@@ -720,7 +723,7 @@ class PortainerServer(models.Model):
 
     def sync_containers(self, environment_id=None):
         """Sync containers from Portainer
-        
+
         Args:
             environment_id (int, optional): Environment ID to sync containers for.
                 If not provided, syncs containers for all environments.
@@ -772,10 +775,10 @@ class PortainerServer(models.Model):
 
                     details = details_response.json() if details_response.status_code == 200 else {}
 
-                    # Get container state 
+                    # Get container state
                     state = details.get('State', {})
                     status = state.get('Status', 'unknown')
-                    
+
                     # Get container restart policy
                     restart_policy = 'no'  # Default to 'no' (Never)
                     host_config = details.get('HostConfig', {})
@@ -785,19 +788,19 @@ class PortainerServer(models.Model):
                             restart_policy_name = restart_policy_data.get('Name', '')
                             if restart_policy_name:
                                 restart_policy = restart_policy_name
-                    
+
                     # Determine if container is part of a stack
                     stack_id = False
                     container_labels = container.get('Labels', {})
                     if container_labels:
                         # Try multiple label patterns that Portainer might use
                         stack_name = (
-                            container_labels.get('com.docker.compose.project') or 
-                            container_labels.get('com.docker.stack.namespace') or
-                            container_labels.get('com.portainer.stack.name') or
-                            container_labels.get('io.portainer.stack.name')
+                                container_labels.get('com.docker.compose.project') or
+                                container_labels.get('com.docker.stack.namespace') or
+                                container_labels.get('com.portainer.stack.name') or
+                                container_labels.get('io.portainer.stack.name')
                         )
-                        
+
                         if stack_name:
                             # Try exact match first - use the Odoo environment record ID
                             stack = self.env['j_portainer.stack'].search([
@@ -805,7 +808,7 @@ class PortainerServer(models.Model):
                                 ('environment_id', '=', env.id),
                                 ('name', '=', stack_name)
                             ], limit=1)
-                            
+
                             # If no exact match, try case-insensitive search
                             if not stack:
                                 stack = self.env['j_portainer.stack'].search([
@@ -813,12 +816,14 @@ class PortainerServer(models.Model):
                                     ('environment_id', '=', env.id),
                                     ('name', 'ilike', stack_name)
                                 ], limit=1)
-                            
+
                             if stack:
                                 stack_id = stack.id
-                                _logger.debug(f"Container {container_name} linked to stack {stack.name} (ID: {stack.id})")
+                                _logger.debug(
+                                    f"Container {container_name} linked to stack {stack.name} (ID: {stack.id})")
                             else:
-                                _logger.debug(f"No matching stack found for container {container_name} with stack name '{stack_name}'")
+                                _logger.debug(
+                                    f"No matching stack found for container {container_name} with stack name '{stack_name}'")
 
                     # Extract volume information from container details
                     volumes_data = []
@@ -828,29 +833,29 @@ class PortainerServer(models.Model):
 
                     # Extract runtime & resource configuration
                     host_config = details.get('HostConfig', {})
-                    
+
                     # Get memory limits - convert from bytes to MB
                     memory_reservation = host_config.get('MemoryReservation', 0)
                     if memory_reservation > 0:
                         memory_reservation = int(memory_reservation / (1024 * 1024))
-                        
+
                     memory_limit = host_config.get('Memory', 0)
                     if memory_limit > 0:
                         memory_limit = int(memory_limit / (1024 * 1024))
-                    
+
                     # Get CPU limit
                     nano_cpus = host_config.get('NanoCpus', 0)
                     cpu_limit = 0.0
                     if nano_cpus > 0:
                         cpu_limit = round(nano_cpus / 1000000000.0, 2)  # Convert from nano to full CPUs
-                        
+
                     # Get shared memory size
                     shm_size = 64  # Default value
                     if 'ShmSize' in host_config:
                         shm_size_bytes = host_config.get('ShmSize', 0)
                         if shm_size_bytes > 0:
                             shm_size = int(shm_size_bytes / (1024 * 1024))  # Convert from bytes to MB
-                    
+
                     # Process Linux capabilities
                     # Initialize with default values (False for all)
                     capabilities = {
@@ -892,7 +897,7 @@ class PortainerServer(models.Model):
                         'cap_sys_tty_config': False,
                         'cap_wake_alarm': False
                     }
-                    
+
                     # Extract capability information from HostConfig
                     cap_add = host_config.get('CapAdd', [])
                     if cap_add:
@@ -903,7 +908,7 @@ class PortainerServer(models.Model):
                                 field_name = f'cap_{cap_lower}'
                                 if field_name in capabilities:
                                     capabilities[field_name] = True
-                    
+
                     # Find or create image record for this container
                     image_record = False
                     image_id_value = container.get('ImageID', '')
@@ -913,7 +918,7 @@ class PortainerServer(models.Model):
                             ('environment_id', '=', env.id),
                             ('image_id', '=', image_id_value)
                         ], limit=1)
-                    
+
                     # Prepare data for create/update
                     container_data = {
                         'server_id': self.id,
@@ -930,23 +935,23 @@ class PortainerServer(models.Model):
                         'details': json.dumps(details, indent=2) if details else '',
                         'volumes': json.dumps(volumes_data),
                         'stack_id': stack_id,
-                        
+
                         # Network port configuration
                         'publish_all_ports': host_config.get('PublishAllPorts', False),
-                        
+
                         # Runtime configuration
                         'privileged': host_config.get('Privileged', False),
                         'init_process': host_config.get('Init', False),
                         'shm_size': shm_size,
-                        
+
                         # Resource limits
                         'memory_reservation': memory_reservation,
                         'memory_limit': memory_limit,
                         'cpu_limit': cpu_limit,
-                        
+
                         # Image pull policy - not directly available from API, keep default
                         'always_pull_image': False,
-                        
+
                         # Linux Capabilities
                         'cap_audit_control': capabilities.get('cap_audit_control', False),
                         'cap_audit_write': capabilities.get('cap_audit_write', False),
@@ -995,23 +1000,24 @@ class PortainerServer(models.Model):
                         updated_count += 1
                     else:
                         # Create new container record - mark as sync operation
-                        container_record = self.env['j_portainer.container'].with_context(sync_from_portainer=True).create(container_data)
+                        container_record = self.env['j_portainer.container'].with_context(
+                            sync_from_portainer=True).create(container_data)
                         created_count += 1
-                        
+
                     # Process container labels as separate records
                     # Smart sync labels using container's smart sync method
                     labels_dict = container.get('Labels', {})
                     container_record._smart_sync_labels(details)
-                        
+
                     # Smart sync volumes using container's smart sync method
                     container_record._smart_sync_volumes(details)
-                        
+
                     # Smart sync networks using container's smart sync method
                     container_record._smart_sync_networks(details)
-                        
+
                     # Smart sync environment variables using container's smart sync method
                     container_record._smart_sync_env_vars(details)
-                        
+
                     # Smart sync ports using container's smart sync method
                     container_record._smart_sync_ports(details)
 
@@ -1019,16 +1025,22 @@ class PortainerServer(models.Model):
                     container_count += 1
 
             # Clean up containers that no longer exist in Portainer
-            # Get all containers for this server
-            all_containers = self.env['j_portainer.container'].search([
-                ('server_id', '=', self.id)
-            ])
-            
+            # Get containers for this server (filtered by environment if specified)
+            if environment_id:
+                all_containers = self.env['j_portainer.container'].search([
+                    ('server_id', '=', self.id),
+                    ('environment_id.environment_id', '=', environment_id)
+                ])
+            else:
+                all_containers = self.env['j_portainer.container'].search([
+                    ('server_id', '=', self.id)
+                ])
+
             # Filter containers that should be removed (not found in Portainer)
             containers_to_remove = all_containers.filtered(
                 lambda c: (c.environment_id.environment_id, c.container_id) not in synced_container_ids
             )
-            
+
             # Remove obsolete containers
             if containers_to_remove:
                 removed_count = len(containers_to_remove)
@@ -1040,7 +1052,7 @@ class PortainerServer(models.Model):
             # Log the statistics
             _logger.info(
                 f"Container sync complete: {container_count} total containers, {created_count} created, {updated_count} updated, {removed_count} removed")
-                
+
             # Update container-specific last_sync
             now = fields.Datetime.now()
             containers = self.env['j_portainer.container'].search([
@@ -1054,8 +1066,8 @@ class PortainerServer(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Containers Synchronized'),
-                    'message': _('%d containers found, %d created, %d updated, %d removed') % 
-                        (container_count, created_count, updated_count, removed_count),
+                    'message': _('%d containers found, %d created, %d updated, %d removed') %
+                               (container_count, created_count, updated_count, removed_count),
                     'sticky': False,
                     'type': 'success',
                 }
@@ -1067,7 +1079,7 @@ class PortainerServer(models.Model):
 
     def sync_images(self, environment_id=None):
         """Sync images from Portainer
-        
+
         Args:
             environment_id (int, optional): Environment ID to sync images for.
                 If not provided, syncs images for all environments.
@@ -1075,7 +1087,7 @@ class PortainerServer(models.Model):
         self.ensure_one()
 
         try:
-            # Keep track of synced image IDs 
+            # Keep track of synced image IDs
             synced_image_ids = []
 
             # Get environments to sync
@@ -1121,9 +1133,9 @@ class PortainerServer(models.Model):
                         f'/api/endpoints/{endpoint_id}/docker/containers/json', 'GET',
                         params={'all': True}  # Get all containers, including stopped ones
                     )
-                    
+
                     containers = containers_response.json() if containers_response.status_code == 200 else []
-                    
+
                     # Check if this image is used by any container
                     in_use = False
                     for container in containers:
@@ -1132,7 +1144,7 @@ class PortainerServer(models.Model):
                         if image_id in container_image_id or container_image_id in image_id:
                             in_use = True
                             break
-                    
+
                     # Prepare base image data
                     # Use size values directly from the API response without any conversion
                     base_image_data = {
@@ -1157,14 +1169,14 @@ class PortainerServer(models.Model):
                             primary_repository, primary_tag = primary_repo.split(':', 1)
                         else:
                             primary_repository, primary_tag = primary_repo, 'latest'
-                        
+
                         # Check if this image already exists in Odoo
                         existing_image = self.env['j_portainer.image'].search([
                             ('server_id', '=', self.id),
                             ('environment_id', '=', env.id),
                             ('image_id', '=', image_id)
                         ], limit=1)
-                        
+
                         # Prepare all tags information
                         tag_list = []
                         for repo in repos:
@@ -1172,15 +1184,15 @@ class PortainerServer(models.Model):
                                 repo_name, tag_name = repo.split(':', 1)
                             else:
                                 repo_name, tag_name = repo, 'latest'
-                            
+
                             tag_list.append({
                                 'repository': repo_name,
                                 'tag': tag_name
                             })
-                        
+
                         # Get enhanced layer information using Docker Image History API
                         enhanced_layers = self._get_enhanced_image_layers(endpoint_id, image_id)
-                        
+
                         # Prepare image data with primary repository and tag plus all tags
                         image_data = dict(base_image_data)
                         image_data.update({
@@ -1189,7 +1201,7 @@ class PortainerServer(models.Model):
                             'all_tags': json.dumps(tag_list),
                             'enhanced_layers_data': json.dumps(enhanced_layers) if enhanced_layers else ''
                         })
-                        
+
                         if existing_image:
                             # Update existing image record
                             existing_image.write(image_data)
@@ -1198,7 +1210,7 @@ class PortainerServer(models.Model):
                             # Create new image record
                             self.env['j_portainer.image'].with_context(sync_operation=True).create(image_data)
                             created_count += 1
-                        
+
                         image_count += 1
                         # Add all combinations to synced_image_ids to prevent cleanup of valid images
                         synced_image_ids.append((image_id, primary_repository, primary_tag))
@@ -1209,23 +1221,23 @@ class PortainerServer(models.Model):
                             if '@' in digest:
                                 repository = digest.split('@')[0]
                                 tag = '<none>'  # Use '<none>' as tag for images with digest only to match Portainer
-                                
+
                                 # Check if this image already exists in Odoo
                                 existing_image = self.env['j_portainer.image'].search([
                                     ('server_id', '=', self.id),
                                     ('environment_id', '=', env.id),
                                     ('image_id', '=', image_id)
                                 ], limit=1)
-                                
+
                                 # Prepare tag information
                                 tag_list = [{
                                     'repository': repository,
                                     'tag': tag
                                 }]
-                                
+
                                 # Get enhanced layer information using Docker Image History API
                                 enhanced_layers = self._get_enhanced_image_layers(endpoint_id, image_id)
-                                
+
                                 # Prepare specific image data with repository from digest
                                 image_data = dict(base_image_data)
                                 image_data.update({
@@ -1234,7 +1246,7 @@ class PortainerServer(models.Model):
                                     'all_tags': json.dumps(tag_list),
                                     'enhanced_layers_data': json.dumps(enhanced_layers) if enhanced_layers else ''
                                 })
-                                
+
                                 if existing_image:
                                     # Update existing image record
                                     existing_image.write(image_data)
@@ -1243,7 +1255,7 @@ class PortainerServer(models.Model):
                                     # Create new image record
                                     self.env['j_portainer.image'].with_context(sync_operation=True).create(image_data)
                                     created_count += 1
-                                
+
                                 image_count += 1
                                 synced_image_ids.append((image_id, repository, tag))
                                 break  # Just use the first digest
@@ -1261,7 +1273,7 @@ class PortainerServer(models.Model):
                             'repository': '<none>',
                             'tag': '<none>'
                         }]
-                        
+
                         # Prepare untagged image data
                         image_data = dict(base_image_data)
                         image_data.update({
@@ -1283,21 +1295,27 @@ class PortainerServer(models.Model):
                         synced_image_ids.append((image_id, '<none>', '<none>'))
 
             # Clean up images that no longer exist in Portainer
-            # Get all images for this server
-            all_images = self.env['j_portainer.image'].search([
-                ('server_id', '=', self.id)
-            ])
-            
+            # Get images for this server (filtered by environment if specified)
+            if environment_id:
+                all_images = self.env['j_portainer.image'].search([
+                    ('server_id', '=', self.id),
+                    ('environment_id.environment_id', '=', environment_id)
+                ])
+            else:
+                all_images = self.env['j_portainer.image'].search([
+                    ('server_id', '=', self.id)
+                ])
+
             # Collect all synced image IDs (without repository/tag)
             synced_ids = set()
             for image_tuple in synced_image_ids:
                 synced_ids.add(image_tuple[0])  # Just extract the image_id part
-            
+
             # Filter images that should be removed (not found in Portainer)
             images_to_remove = all_images.filtered(
                 lambda img: img.image_id not in synced_ids
             )
-            
+
             # Remove obsolete images
             if images_to_remove:
                 removed_count = len(images_to_remove)
@@ -1323,8 +1341,8 @@ class PortainerServer(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Images Synchronized'),
-                    'message': _('%d images found, %d created, %d updated, %d removed') % 
-                        (image_count, created_count, updated_count, removed_count),
+                    'message': _('%d images found, %d created, %d updated, %d removed') %
+                               (image_count, created_count, updated_count, removed_count),
                     'sticky': False,
                     'type': 'success',
                 }
@@ -1333,15 +1351,15 @@ class PortainerServer(models.Model):
         except Exception as e:
             _logger.error(f"Error syncing images: {str(e)}")
             raise UserError(_("Error syncing images: %s") % str(e))
-            
+
     def _get_enhanced_image_layers(self, environment_id, image_id):
         """
         Get enhanced layer information using Docker Image History API
-        
+
         Args:
             environment_id (int): Environment ID
             image_id (str): Docker image ID
-            
+
         Returns:
             list: Enhanced layer information with commands, sizes, and metadata
         """
@@ -1349,21 +1367,21 @@ class PortainerServer(models.Model):
             # Use the API client to get image history
             api = self.env['j_portainer.api']
             history_layers = api.get_image_history(self.id, environment_id, image_id)
-            
+
             if history_layers:
                 _logger.info(f"Retrieved {len(history_layers)} enhanced layers for image {image_id}")
                 return history_layers
             else:
                 _logger.warning(f"No enhanced layers retrieved for image {image_id}, keeping existing layer data")
                 return None
-                
+
         except Exception as e:
             _logger.error(f"Error getting enhanced layers for image {image_id}: {str(e)}")
             return None
 
     def sync_volumes(self, environment_id=None):
         """Sync volumes from Portainer
-        
+
         Args:
             environment_id (int, optional): Environment ID to sync volumes for.
                 If not provided, syncs volumes for all environments.
@@ -1421,9 +1439,9 @@ class PortainerServer(models.Model):
                         f'/api/endpoints/{endpoint_id}/docker/containers/json', 'GET',
                         params={'all': True}  # Get all containers, including stopped ones
                     )
-                    
+
                     containers = containers_response.json() if containers_response.status_code == 200 else []
-                    
+
                     # Check if this volume is used by any container
                     in_use = False
                     connected_containers = []
@@ -1450,7 +1468,7 @@ class PortainerServer(models.Model):
                                 })
                         if in_use:
                             break
-                    
+
                     # Prepare volume data
                     volume_data = {
                         'server_id': self.id,
@@ -1478,16 +1496,22 @@ class PortainerServer(models.Model):
                     volume_count += 1
 
             # Clean up volumes that no longer exist in Portainer
-            # Get all volumes for this server
-            all_volumes = self.env['j_portainer.volume'].search([
-                ('server_id', '=', self.id)
-            ])
-            
+            # Get volumes for this server (filtered by environment if specified)
+            if environment_id:
+                all_volumes = self.env['j_portainer.volume'].search([
+                    ('server_id', '=', self.id),
+                    ('environment_id.environment_id', '=', environment_id)
+                ])
+            else:
+                all_volumes = self.env['j_portainer.volume'].search([
+                    ('server_id', '=', self.id)
+                ])
+
             # Filter volumes that should be removed (not found in Portainer)
             volumes_to_remove = all_volumes.filtered(
                 lambda v: (v.environment_id.environment_id, v.name) not in synced_volume_names
             )
-            
+
             # Remove obsolete volumes
             if volumes_to_remove:
                 removed_count = len(volumes_to_remove)
@@ -1513,8 +1537,8 @@ class PortainerServer(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Volumes Synchronized'),
-                    'message': _('%d volumes found, %d created, %d updated, %d removed') % 
-                        (volume_count, created_count, updated_count, removed_count),
+                    'message': _('%d volumes found, %d created, %d updated, %d removed') %
+                               (volume_count, created_count, updated_count, removed_count),
                     'sticky': False,
                     'type': 'success',
                 }
@@ -1525,260 +1549,266 @@ class PortainerServer(models.Model):
             raise UserError(_("Error syncing volumes: %s") % str(e))
 
     def sync_networks(self, environment_id=None):
-                """Sync networks from Portainer
+        """Sync networks from Portainer
 
-                Args:
-                    environment_id (int, optional): Environment ID to sync networks for.
-                        If not provided, syncs networks for all environments.
-                """
-                self.ensure_one()
+        Args:
+            environment_id (int, optional): Environment ID to sync networks for.
+                If not provided, syncs networks for all environments.
+        """
+        self.ensure_one()
 
-                try:
-                    # Keep track of synced networks
-                    synced_network_ids = []
+        try:
+            # Keep track of synced networks
+            synced_network_ids = []
 
-                    # Get environments to sync
-                    if environment_id:
-                        environments = self.environment_ids.filtered(lambda e: e.environment_id == environment_id)
-                    else:
-                        environments = self.environment_ids
+            # Get environments to sync
+            if environment_id:
+                environments = self.environment_ids.filtered(lambda e: e.environment_id == environment_id)
+            else:
+                environments = self.environment_ids
 
-                    network_count = 0
-                    updated_count = 0
-                    created_count = 0
+            network_count = 0
+            updated_count = 0
+            created_count = 0
 
-                    # Sync networks for each environment
-                    for env in environments:
-                        endpoint_id = env.environment_id
+            # Sync networks for each environment
+            for env in environments:
+                endpoint_id = env.environment_id
 
-                        # Get all networks for this endpoint
-                        response = self._make_api_request(f'/api/endpoints/{endpoint_id}/docker/networks', 'GET')
+                # Get all networks for this endpoint
+                response = self._make_api_request(f'/api/endpoints/{endpoint_id}/docker/networks', 'GET')
 
-                        if response.status_code != 200:
-                            _logger.warning(f"Failed to get networks for environment {env.name}: {response.text}")
-                            continue
+                if response.status_code != 200:
+                    _logger.warning(f"Failed to get networks for environment {env.name}: {response.text}")
+                    continue
 
-                        networks = response.json()
+                networks = response.json()
 
-                        for network in networks:
-                            network_id = network.get('Id')
+                for network in networks:
+                    network_id = network.get('Id')
 
-                            # Check if this network already exists in Odoo
-                            existing_network = self.env['j_portainer.network'].search([
-                                ('server_id', '=', self.id),
-                                ('environment_id', '=', env.id),
-                                ('network_id', '=', network_id)
-                            ], limit=1)
+                    # Check if this network already exists in Odoo
+                    existing_network = self.env['j_portainer.network'].search([
+                        ('server_id', '=', self.id),
+                        ('environment_id', '=', env.id),
+                        ('network_id', '=', network_id)
+                    ], limit=1)
 
-                            # Get detailed info for this network
-                            details_response = self._make_api_request(
-                                f'/api/endpoints/{endpoint_id}/docker/networks/{network_id}', 'GET')
+                    # Get detailed info for this network
+                    details_response = self._make_api_request(
+                        f'/api/endpoints/{endpoint_id}/docker/networks/{network_id}', 'GET')
 
-                            details = details_response.json() if details_response.status_code == 200 else {}
+                    details = details_response.json() if details_response.status_code == 200 else {}
 
-                            # Handle potential None values in nested dictionaries
-                            ipam_data = network.get('IPAM') or {}
-                            labels_data = network.get('Labels') or {}
-                            containers_data = network.get('Containers') or {}
-                            portainer_data = details.get('Portainer') or {}
-                            resource_control = portainer_data.get('ResourceControl') or {}
-                            options_data = details.get('Options') or {}
+                    # Handle potential None values in nested dictionaries
+                    ipam_data = network.get('IPAM') or {}
+                    labels_data = network.get('Labels') or {}
+                    containers_data = network.get('Containers') or {}
+                    portainer_data = details.get('Portainer') or {}
+                    resource_control = portainer_data.get('ResourceControl') or {}
+                    options_data = details.get('Options') or {}
 
-                            # Prepare network data
-                            network_data = {
-                                'server_id': self.id,
-                                'environment_id': env.id,
-                                'network_id': network_id,
-                                'name': network.get('Name', ''),
-                                'driver': network.get('Driver', 'bridge'),  # Use selection field with default value
-                                'scope': network.get('Scope', 'local'),
-                                'ipam': json.dumps(ipam_data),
-                                'labels': json.dumps(labels_data),
-                                'containers': json.dumps(containers_data),
-                                'details': json.dumps(details, indent=2) if details else '',
+                    # Prepare network data
+                    network_data = {
+                        'server_id': self.id,
+                        'environment_id': env.id,
+                        'network_id': network_id,
+                        'name': network.get('Name', ''),
+                        'driver': network.get('Driver', 'bridge'),  # Use selection field with default value
+                        'scope': network.get('Scope', 'local'),
+                        'ipam': json.dumps(ipam_data),
+                        'labels': json.dumps(labels_data),
+                        'containers': json.dumps(containers_data),
+                        'details': json.dumps(details, indent=2) if details else '',
 
-                                # Get config options from details
-                                'options': json.dumps(options_data),
-                                # Additional boolean attributes from Portainer metadata
-                                'public': resource_control.get('Public', True),
-                                'administrators_only': resource_control.get('AdministratorsOnly', False),
-                                'system': resource_control.get('System', False),
+                        # Get config options from details
+                        'options': json.dumps(options_data),
+                        # Additional boolean attributes from Portainer metadata
+                        'public': resource_control.get('Public', True),
+                        'administrators_only': resource_control.get('AdministratorsOnly', False),
+                        'system': resource_control.get('System', False),
 
-                                # Boolean attributes updated from details
-                                'is_ipv6': details.get('EnableIPv6', False),
-                                'internal': details.get('Internal', False),
-                                'attachable': details.get('Attachable', False),
-                                'isolated_network': details.get('Internal', False),  # Internal networks are isolated
-                            }
-
-                            # Create or update the main network record
-                            if existing_network:
-                                # Update existing network record
-                                existing_network.write(network_data)
-                                network_record = existing_network
-                                updated_count += 1
-                            else:
-                                # Create new network record
-                                network_record = self.env['j_portainer.network'].create(network_data)
-                                created_count += 1
-
-                            # Process IPv4 and IPv6 configuration from IPAM
-                            ipam_data = network.get('IPAM', {}) or {}
-                            ipam_config = ipam_data.get('Config', []) or []
-
-                            # Process IPv4 and IPv6 configuration fields
-                            for config in ipam_config:
-                                subnet = config.get('Subnet', '')
-                                gateway = config.get('Gateway', '')
-                                ip_range = config.get('IPRange', '')
-
-                                # Determine if this is IPv4 or IPv6 config
-                                if subnet and ':' in subnet:  # IPv6 contains colons
-                                    network_record.write({
-                                        'ipv6_subnet': subnet,
-                                        'ipv6_gateway': gateway,
-                                        'ipv6_range': ip_range,
-                                    })
-
-                                    # Process excluded IPs if present
-                                    excluded_ips = config.get('ExcludedIPs', []) or []
-                                    if excluded_ips:
-                                        # Remove existing excluded IPs
-                                        existing_excluded = self.env['j_portainer.network.ipv6.excluded'].search([
-                                            ('network_id', '=', network_record.id)
-                                        ])
-                                        if existing_excluded:
-                                            existing_excluded.unlink()
-
-                                        # Create new excluded IPs
-                                        for ip in excluded_ips:
-                                            self.env['j_portainer.network.ipv6.excluded'].create({
-                                                'network_id': network_record.id,
-                                                'ip_address': ip
-                                            })
-                                else:  # IPv4
-                                    network_record.write({
-                                        'ipv4_subnet': subnet,
-                                        'ipv4_gateway': gateway,
-                                        'ipv4_range': ip_range,
-                                    })
-
-                                    # Process excluded IPs if present
-                                    excluded_ips = config.get('ExcludedIPs', []) or []
-                                    if excluded_ips:
-                                        # Remove existing excluded IPs
-                                        existing_excluded = self.env['j_portainer.network.ipv4.excluded'].search([
-                                            ('network_id', '=', network_record.id)
-                                        ])
-                                        if existing_excluded:
-                                            existing_excluded.unlink()
-
-                                        # Create new excluded IPs
-                                        for ip in excluded_ips:
-                                            self.env['j_portainer.network.ipv4.excluded'].create({
-                                                'network_id': network_record.id,
-                                                'ip_address': ip
-                                            })
-
-                            # Process driver options
-                            options_data = details.get('Options', {}) or {}
-                            if options_data:
-                                # Remove existing driver options
-                                existing_options = self.env['j_portainer.network.driver.option'].search([
-                                    ('network_id', '=', network_record.id)
-                                ])
-                                if existing_options:
-                                    existing_options.unlink()
-
-                                # Create new driver options
-                                for option_name, option_value in options_data.items():
-                                    self.env['j_portainer.network.driver.option'].create({
-                                        'network_id': network_record.id,
-                                        'name': option_name,
-                                        'value': str(option_value)  # Convert any non-string values to string
-                                    })
-
-                            # Process network labels
-                            labels_data = network.get('Labels', {}) or {}
-                            if labels_data:
-                                # Remove existing network labels
-                                existing_labels = self.env['j_portainer.network.label'].search([
-                                    ('network_id', '=', network_record.id)
-                                ])
-                                if existing_labels:
-                                    existing_labels.unlink()
-
-                                # Create new network labels
-                                for label_name, label_value in labels_data.items():
-                                    self.env['j_portainer.network.label'].create({
-                                        'network_id': network_record.id,
-                                        'name': label_name,
-                                        'value': str(label_value)  # Convert any non-string values to string
-                                    })
-
-                            synced_network_ids.append((env.id, network_id))
-                            network_count += 1
-
-                    # Clean up networks that no longer exist in Portainer
-                    # Get all networks for this server
-                    all_networks = self.env['j_portainer.network'].search([
-                        ('server_id', '=', self.id)
-                    ])
-
-                    # Filter networks that should be removed (not found in Portainer)
-                    networks_to_remove = all_networks.filtered(
-                        lambda n: (n.environment_id.id, n.network_id) not in synced_network_ids
-                    )
-
-                    # Remove obsolete networks
-                    if networks_to_remove:
-                        removed_count = len(networks_to_remove)
-                        _logger.info(f"Removing {removed_count} obsolete networks from Odoo (already removed from Portainer)")
-                        networks_to_remove.unlink()
-                    else:
-                        removed_count = 0
-
-                    # Log the statistics
-                    _logger.info(
-                        f"Network sync complete: {network_count} total networks, {created_count} created, {updated_count} updated, {removed_count} removed")
-
-                    # Update network-specific last_sync
-                    now = fields.Datetime.now()
-                    networks = self.env['j_portainer.network'].search([
-                        ('server_id', '=', self.id)
-                    ])
-                    if networks:
-                        networks.write({'last_sync': now})
-
-                    return {
-                        'type': 'ir.actions.client',
-                        'tag': 'display_notification',
-                        'params': {
-                            'title': _('Networks Synchronized'),
-                            'message': _('%d networks found, %d created, %d updated, %d removed') % 
-                                (network_count, created_count, updated_count, removed_count),
-                            'sticky': False,
-                            'type': 'success',
-                        }
+                        # Boolean attributes updated from details
+                        'is_ipv6': details.get('EnableIPv6', False),
+                        'internal': details.get('Internal', False),
+                        'attachable': details.get('Attachable', False),
+                        'isolated_network': details.get('Internal', False),  # Internal networks are isolated
                     }
 
-                except Exception as e:
-                    _logger.error(f"Error syncing networks: {str(e)}")
-                    raise UserError(_("Error syncing networks: %s") % str(e))
+                    # Create or update the main network record
+                    if existing_network:
+                        # Update existing network record
+                        existing_network.write(network_data)
+                        network_record = existing_network
+                        updated_count += 1
+                    else:
+                        # Create new network record
+                        network_record = self.env['j_portainer.network'].create(network_data)
+                        created_count += 1
+
+                    # Process IPv4 and IPv6 configuration from IPAM
+                    ipam_data = network.get('IPAM', {}) or {}
+                    ipam_config = ipam_data.get('Config', []) or []
+
+                    # Process IPv4 and IPv6 configuration fields
+                    for config in ipam_config:
+                        subnet = config.get('Subnet', '')
+                        gateway = config.get('Gateway', '')
+                        ip_range = config.get('IPRange', '')
+
+                        # Determine if this is IPv4 or IPv6 config
+                        if subnet and ':' in subnet:  # IPv6 contains colons
+                            network_record.write({
+                                'ipv6_subnet': subnet,
+                                'ipv6_gateway': gateway,
+                                'ipv6_range': ip_range,
+                            })
+
+                            # Process excluded IPs if present
+                            excluded_ips = config.get('ExcludedIPs', []) or []
+                            if excluded_ips:
+                                # Remove existing excluded IPs
+                                existing_excluded = self.env['j_portainer.network.ipv6.excluded'].search([
+                                    ('network_id', '=', network_record.id)
+                                ])
+                                if existing_excluded:
+                                    existing_excluded.unlink()
+
+                                # Create new excluded IPs
+                                for ip in excluded_ips:
+                                    self.env['j_portainer.network.ipv6.excluded'].create({
+                                        'network_id': network_record.id,
+                                        'ip_address': ip
+                                    })
+                        else:  # IPv4
+                            network_record.write({
+                                'ipv4_subnet': subnet,
+                                'ipv4_gateway': gateway,
+                                'ipv4_range': ip_range,
+                            })
+
+                            # Process excluded IPs if present
+                            excluded_ips = config.get('ExcludedIPs', []) or []
+                            if excluded_ips:
+                                # Remove existing excluded IPs
+                                existing_excluded = self.env['j_portainer.network.ipv4.excluded'].search([
+                                    ('network_id', '=', network_record.id)
+                                ])
+                                if existing_excluded:
+                                    existing_excluded.unlink()
+
+                                # Create new excluded IPs
+                                for ip in excluded_ips:
+                                    self.env['j_portainer.network.ipv4.excluded'].create({
+                                        'network_id': network_record.id,
+                                        'ip_address': ip
+                                    })
+
+                    # Process driver options
+                    options_data = details.get('Options', {}) or {}
+                    if options_data:
+                        # Remove existing driver options
+                        existing_options = self.env['j_portainer.network.driver.option'].search([
+                            ('network_id', '=', network_record.id)
+                        ])
+                        if existing_options:
+                            existing_options.unlink()
+
+                        # Create new driver options
+                        for option_name, option_value in options_data.items():
+                            self.env['j_portainer.network.driver.option'].create({
+                                'network_id': network_record.id,
+                                'name': option_name,
+                                'value': str(option_value)  # Convert any non-string values to string
+                            })
+
+                    # Process network labels
+                    labels_data = network.get('Labels', {}) or {}
+                    if labels_data:
+                        # Remove existing network labels
+                        existing_labels = self.env['j_portainer.network.label'].search([
+                            ('network_id', '=', network_record.id)
+                        ])
+                        if existing_labels:
+                            existing_labels.unlink()
+
+                        # Create new network labels
+                        for label_name, label_value in labels_data.items():
+                            self.env['j_portainer.network.label'].create({
+                                'network_id': network_record.id,
+                                'name': label_name,
+                                'value': str(label_value)  # Convert any non-string values to string
+                            })
+
+                    synced_network_ids.append((env.id, network_id))
+                    network_count += 1
+
+            # Clean up networks that no longer exist in Portainer
+            # Get networks for this server (filtered by environment if specified)
+            if environment_id:
+                all_networks = self.env['j_portainer.network'].search([
+                    ('server_id', '=', self.id),
+                    ('environment_id.environment_id', '=', environment_id)
+                ])
+            else:
+                all_networks = self.env['j_portainer.network'].search([
+                    ('server_id', '=', self.id)
+                ])
+
+            # Filter networks that should be removed (not found in Portainer)
+            networks_to_remove = all_networks.filtered(
+                lambda n: (n.environment_id.id, n.network_id) not in synced_network_ids
+            )
+
+            # Remove obsolete networks
+            if networks_to_remove:
+                removed_count = len(networks_to_remove)
+                _logger.info(f"Removing {removed_count} obsolete networks from Odoo (already removed from Portainer)")
+                networks_to_remove.unlink()
+            else:
+                removed_count = 0
+
+            # Log the statistics
+            _logger.info(
+                f"Network sync complete: {network_count} total networks, {created_count} created, {updated_count} updated, {removed_count} removed")
+
+            # Update network-specific last_sync
+            now = fields.Datetime.now()
+            networks = self.env['j_portainer.network'].search([
+                ('server_id', '=', self.id)
+            ])
+            if networks:
+                networks.write({'last_sync': now})
+
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Networks Synchronized'),
+                    'message': _('%d networks found, %d created, %d updated, %d removed') %
+                               (network_count, created_count, updated_count, removed_count),
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+
+        except Exception as e:
+            _logger.error(f"Error syncing networks: {str(e)}")
+            raise UserError(_("Error syncing networks: %s") % str(e))
 
     def _detect_environment_type(self, environment_id):
         """Detect if environment is Docker standalone or Docker Swarm"""
         try:
             # Get Docker info to check Swarm status
             response = self._make_api_request(f'/api/endpoints/{environment_id}/docker/info', 'GET')
-            
+
             if response.status_code == 200:
                 docker_info = response.json()
-                
+
                 # Check Swarm status
                 swarm_info = docker_info.get('Swarm', {})
                 node_id = swarm_info.get('NodeID', '')
-                
+
                 # If NodeID exists and is not empty, it's a Swarm environment
                 if node_id and node_id.strip():
                     _logger.info(f"Environment {environment_id} detected as Docker Swarm")
@@ -1789,7 +1819,7 @@ class PortainerServer(models.Model):
             else:
                 _logger.warning(f"Failed to detect environment type for {environment_id}, defaulting to Docker")
                 return 'docker'
-                
+
         except Exception as e:
             _logger.error(f"Error detecting environment type for {environment_id}: {str(e)}")
             return 'docker'  # Default to Docker on error
@@ -1844,7 +1874,7 @@ class PortainerServer(models.Model):
 
                 # Filter templates based on environment compatibility
                 template_type = template.get('type', 1)
-                
+
                 # Check if any environment can use this template
                 template_compatible = False
                 for env_id, env_type in environment_types.items():
@@ -1856,9 +1886,10 @@ class PortainerServer(models.Model):
                         # Docker environments support container (1) and compose stack (3) templates, but not Swarm stacks (2)
                         template_compatible = True
                         break
-                
+
                 if not template_compatible:
-                    _logger.info(f"Skipping template '{template.get('title', 'Unknown')}' (type {template_type}) - not compatible with current environments")
+                    _logger.info(
+                        f"Skipping template '{template.get('title', 'Unknown')}' (type {template_type}) - not compatible with current environments")
                     continue
 
                 template_id = template.get('id')
@@ -1901,7 +1932,8 @@ class PortainerServer(models.Model):
                 else:
                     # Create new template - skip Portainer creation since we're just syncing
                     template_data['skip_portainer_create'] = True
-                    self.env['j_portainer.template'].with_context(from_sync=True, skip_portainer_create=True).create(template_data)
+                    self.env['j_portainer.template'].with_context(from_sync=True, skip_portainer_create=True).create(
+                        template_data)
                     created_count += 1
 
                 if isinstance(template_id, (int, str)) and str(template_id).isdigit():
@@ -2192,7 +2224,9 @@ class PortainerServer(models.Model):
                             continue
 
                     try:
-                        self.env['j_portainer.customtemplate'].with_context(from_sync=True, skip_portainer_create=True).create(template_data)
+                        self.env['j_portainer.customtemplate'].with_context(from_sync=True,
+                                                                            skip_portainer_create=True).create(
+                            template_data)
                         created_count += 1
                     except Exception as e:
                         _logger.error(f"Error creating custom template: {str(e)}")
@@ -2332,7 +2366,7 @@ class PortainerServer(models.Model):
         except Exception as e:
             _logger.error(f"Error pushing templates to Portainer: {str(e)}")
             raise UserError(_("Error pushing templates to Portainer: %s") % str(e))
-    
+
     def _fetch_missing_template_file_content(self):
         """Private implementation to fetch missing file content for templates that have a template_id but no file content"""
         self.ensure_one()
@@ -2446,7 +2480,7 @@ class PortainerServer(models.Model):
 
     def sync_stacks(self, environment_id=None):
         """Sync stacks from Portainer
-        
+
         Args:
             environment_id (int, optional): Environment ID to sync stacks for.
                 If not provided, syncs stacks for all environments.
@@ -2528,16 +2562,22 @@ class PortainerServer(models.Model):
                     stack_count += 1
 
             # Clean up stacks that no longer exist in Portainer
-            # Get all stacks for this server
-            all_stacks = self.env['j_portainer.stack'].search([
-                ('server_id', '=', self.id)
-            ])
-            
+            # Get stacks for this server (filtered by environment if specified)
+            if environment_id:
+                all_stacks = self.env['j_portainer.stack'].search([
+                    ('server_id', '=', self.id),
+                    ('environment_id.environment_id', '=', environment_id)
+                ])
+            else:
+                all_stacks = self.env['j_portainer.stack'].search([
+                    ('server_id', '=', self.id)
+                ])
+
             # Filter stacks that should be removed (not found in Portainer)
             stacks_to_remove = all_stacks.filtered(
                 lambda s: (s.environment_id.id, s.stack_id) not in synced_stack_ids
             )
-            
+
             # Remove obsolete stacks
             if stacks_to_remove:
                 removed_count = len(stacks_to_remove)
@@ -2563,8 +2603,8 @@ class PortainerServer(models.Model):
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Stacks Synchronized'),
-                    'message': _('%d stacks found, %d created, %d updated, %d removed') % 
-                        (stack_count, created_count, updated_count, removed_count),
+                    'message': _('%d stacks found, %d created, %d updated, %d removed') %
+                               (stack_count, created_count, updated_count, removed_count),
                     'sticky': False,
                     'type': 'success',
                 }
@@ -2626,12 +2666,12 @@ class PortainerServer(models.Model):
     def _create_default_backup_schedule(self):
         """Create default backup schedule for new server"""
         self.ensure_one()
-        
+
         # Check if backup schedule already exists
         existing_schedule = self.env['j_portainer.backup.schedule'].search([
             ('server_id', '=', self.id)
         ], limit=1)
-        
+
         if not existing_schedule:
             # Create default backup schedule
             self.env['j_portainer.backup.schedule'].create({
@@ -2646,18 +2686,18 @@ class PortainerServer(models.Model):
     def _execute_scheduled_backups(self):
         """Cron method to execute scheduled backups for all servers"""
         _logger.info("Starting scheduled backup execution check")
-        
+
         try:
             # Get all active backup schedules
             schedules = self.env['j_portainer.backup.schedule'].search([
                 ('active', '=', True)
             ])
-            
+
             executed_count = 0
             total_schedules = len(schedules)
-            
+
             _logger.info(f"Found {total_schedules} active backup schedules to check")
-            
+
             for schedule in schedules:
                 try:
                     if schedule.is_backup_due():
@@ -2672,9 +2712,10 @@ class PortainerServer(models.Model):
                 except Exception as e:
                     _logger.error(f"Error executing scheduled backup for server {schedule.server_id.name}: {str(e)}")
                     continue
-            
-            _logger.info(f"Scheduled backup execution complete: {executed_count} backups executed out of {total_schedules} schedules checked")
-            
+
+            _logger.info(
+                f"Scheduled backup execution complete: {executed_count} backups executed out of {total_schedules} schedules checked")
+
             # Optional: Clean up old backup files for servers with successful backups
             for schedule in schedules:
                 try:
@@ -2684,18 +2725,18 @@ class PortainerServer(models.Model):
                     )
                 except Exception as e:
                     _logger.warning(f"Error during backup cleanup for server {schedule.server_id.name}: {str(e)}")
-                    
+
         except Exception as e:
             _logger.error(f"Error in scheduled backup execution: {str(e)}")
-            
+
     def get_backup_schedule(self):
         """Get backup schedule for this server (creates one if it doesn't exist)"""
         self.ensure_one()
-        
+
         schedule = self.env['j_portainer.backup.schedule'].search([
             ('server_id', '=', self.id)
         ], limit=1)
-        
+
         if not schedule:
             # Create default backup schedule if none exists
             schedule = self.env['j_portainer.backup.schedule'].create({
@@ -2704,13 +2745,13 @@ class PortainerServer(models.Model):
                 'schedule_days': 1,
                 'active': True,
             })
-            
+
         return schedule
-    
+
     def action_execute_scheduled_backup_now(self):
         """Execute scheduled backup manually from server form"""
         self.ensure_one()
-        
+
         schedule = self.get_backup_schedule()
         if not schedule:
             return {
@@ -2723,5 +2764,5 @@ class PortainerServer(models.Model):
                     'type': 'warning',
                 }
             }
-        
+
         return schedule.action_execute_backup_now()
