@@ -1019,16 +1019,10 @@ class PortainerServer(models.Model):
                     container_count += 1
 
             # Clean up containers that no longer exist in Portainer
-            # Get containers for this server (filtered by environment if specified)
-            if environment_id:
-                all_containers = self.env['j_portainer.container'].search([
-                    ('server_id', '=', self.id),
-                    ('environment_id.environment_id', '=', environment_id)
-                ])
-            else:
-                all_containers = self.env['j_portainer.container'].search([
-                    ('server_id', '=', self.id)
-                ])
+            # Get all containers for this server
+            all_containers = self.env['j_portainer.container'].search([
+                ('server_id', '=', self.id)
+            ])
             
             # Filter containers that should be removed (not found in Portainer)
             containers_to_remove = all_containers.filtered(
@@ -1289,16 +1283,10 @@ class PortainerServer(models.Model):
                         synced_image_ids.append((image_id, '<none>', '<none>'))
 
             # Clean up images that no longer exist in Portainer
-            # Get images for this server (filtered by environment if specified)
-            if environment_id:
-                all_images = self.env['j_portainer.image'].search([
-                    ('server_id', '=', self.id),
-                    ('environment_id.environment_id', '=', environment_id)
-                ])
-            else:
-                all_images = self.env['j_portainer.image'].search([
-                    ('server_id', '=', self.id)
-                ])
+            # Get all images for this server
+            all_images = self.env['j_portainer.image'].search([
+                ('server_id', '=', self.id)
+            ])
             
             # Collect all synced image IDs (without repository/tag)
             synced_ids = set()
@@ -1490,16 +1478,10 @@ class PortainerServer(models.Model):
                     volume_count += 1
 
             # Clean up volumes that no longer exist in Portainer
-            # Get volumes for this server (filtered by environment if specified)
-            if environment_id:
-                all_volumes = self.env['j_portainer.volume'].search([
-                    ('server_id', '=', self.id),
-                    ('environment_id.environment_id', '=', environment_id)
-                ])
-            else:
-                all_volumes = self.env['j_portainer.volume'].search([
-                    ('server_id', '=', self.id)
-                ])
+            # Get all volumes for this server
+            all_volumes = self.env['j_portainer.volume'].search([
+                ('server_id', '=', self.id)
+            ])
             
             # Filter volumes that should be removed (not found in Portainer)
             volumes_to_remove = all_volumes.filtered(
@@ -1738,16 +1720,10 @@ class PortainerServer(models.Model):
                             network_count += 1
 
                     # Clean up networks that no longer exist in Portainer
-                    # Get networks for this server (filtered by environment if specified)
-                    if environment_id:
-                        all_networks = self.env['j_portainer.network'].search([
-                            ('server_id', '=', self.id),
-                            ('environment_id.environment_id', '=', environment_id)
-                        ])
-                    else:
-                        all_networks = self.env['j_portainer.network'].search([
-                            ('server_id', '=', self.id)
-                        ])
+                    # Get all networks for this server
+                    all_networks = self.env['j_portainer.network'].search([
+                        ('server_id', '=', self.id)
+                    ])
 
                     # Filter networks that should be removed (not found in Portainer)
                     networks_to_remove = all_networks.filtered(
@@ -2552,16 +2528,10 @@ class PortainerServer(models.Model):
                     stack_count += 1
 
             # Clean up stacks that no longer exist in Portainer
-            # Get stacks for this server (filtered by environment if specified)
-            if environment_id:
-                all_stacks = self.env['j_portainer.stack'].search([
-                    ('server_id', '=', self.id),
-                    ('environment_id.environment_id', '=', environment_id)
-                ])
-            else:
-                all_stacks = self.env['j_portainer.stack'].search([
-                    ('server_id', '=', self.id)
-                ])
+            # Get all stacks for this server
+            all_stacks = self.env['j_portainer.stack'].search([
+                ('server_id', '=', self.id)
+            ])
             
             # Filter stacks that should be removed (not found in Portainer)
             stacks_to_remove = all_stacks.filtered(
