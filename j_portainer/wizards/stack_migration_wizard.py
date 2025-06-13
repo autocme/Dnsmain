@@ -188,7 +188,3 @@ class StackMigrationWizard(models.TransientModel):
             
         except Exception as e:
             raise UserError(_("Stack migration failed: %s") % str(e))
-
-    def action_cancel(self):
-        """Cancel wizard"""
-        return {'type': 'ir.actions.act_window_close'}

@@ -46,7 +46,7 @@
                 <footer>
                     <button name="action_migrate_stack" string="Execute Migration" type="object" 
                             class="btn-primary" confirm="Are you sure you want to proceed with this migration?"/>
-                    <button name="action_cancel" string="Cancel" type="object" class="btn-secondary"/>
+                    <button special="cancel" string="Cancel" type="object" class="btn-secondary"/>
                 </footer>
             </form>
         </field>
