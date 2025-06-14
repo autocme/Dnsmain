@@ -256,25 +256,6 @@ class SaasClient(models.Model):
     # ACTION METHODS
     # ========================================================================
     
-    def action_view_subscription(self):
-        """
-        Open the associated subscription record in a form view.
-        
-        Returns:
-            dict: Action dictionary to open the subscription form
-        """
-        self.ensure_one()
-        if not self.sc_subscription_id:
-            raise UserError(_('No subscription is associated with this SaaS client.'))
-        
-        return {
-            'name': _('Subscription Details'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'sale.subscription',
-            'res_id': self.sc_subscription_id.id,
-            'view_mode': 'form',
-            'target': 'current',
-        }
     
     def action_view_stack(self):
         """
