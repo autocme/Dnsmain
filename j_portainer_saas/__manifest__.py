@@ -42,6 +42,7 @@ Dependencies:
         'subscription_oca',
     ],
     'data': [
+        'data/sequences.xml',
         'security/ir.model.access.csv',
         'views/saas_package_views.xml',
         'views/saas_clients_views.xml',
