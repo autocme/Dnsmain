@@ -175,7 +175,7 @@
                 
                 <separator/>
                 <filter name="filter_recent" string="Created This Month" 
-                        domain="[('sc_created_date', '&gt;=', (context_today() - relativedelta(months=1)).strftime('%Y-%m-01'))]"/>
+                        domain="[('sc_created_date', '&gt;=', (context_today().replace(day=1)))]"/>
                 
                 <!-- Group by options -->
                 <group expand="0" string="Group By">
