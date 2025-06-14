@@ -45,16 +45,12 @@
                 
                 <header>
                     <!-- Action buttons in header -->
-                    <button name="action_view_subscription" 
-                            type="object" 
-                            string="View Subscription" 
-                            class="btn-primary"
-                            invisible="not sc_subscription_id"/>
-                    <button name="action_view_stack" 
+                    
+                    <!-- <button name="action_view_stack" 
                             type="object" 
                             string="View Stack" 
                             class="btn-secondary"
-                            invisible="not sc_stack_id"/>
+                            invisible="not sc_stack_id"/> -->
                     
                 </header>
                 
@@ -71,17 +67,17 @@
                     <group>
                         <group name="customer_info" string="Customer Information">
                             <field name="sc_partner_id" 
-                                   options="{'no_create': True, 'no_open': True}"
+                                   options="{'no_create': True}"
                                    placeholder="Select the customer partner..."/>
 
                         </group>
                         
                         <group name="service_info" string="Service Information">
                             <field name="sc_package_id" 
-                                   options="{'no_create': True, 'no_open': True}"
+                                   options="{'no_create': True}"
                                    placeholder="Select the SaaS package..."/>
                             <field name="sc_template_id" 
-                                   options="{'no_create': True, 'no_open': True}"
+                                   options="{'no_create': True}"
                                    placeholder="Select subscription template..."/>
 
                         </group>
@@ -90,13 +86,13 @@
                     <group>
                         <group name="subscription_info" string="Subscription Details">
                             <field name="sc_subscription_id" 
-                                   options="{'no_create': True, 'no_open': True}"
+                                   options="{'no_create': True}"
                                    placeholder="Select active subscription..."/>
                         </group>
                         
                         <group name="deployment_info" string="Deployment Information">
                             <field name="sc_stack_id" 
-                                   options="{'no_create': True, 'no_open': True}"
+                                   options="{'no_create': True}"
                                    placeholder="Select Portainer stack (optional)..."/>
 
                             <field name="sc_stack_status" readonly="1" 
