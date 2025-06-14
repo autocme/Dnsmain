@@ -30,6 +30,7 @@ class SaasPackage(models.Model):
         string='Package Sequence',
         readonly=True,
         copy=False,
+        tracking=True,
         help='Auto-generated sequence code for package ordering (e.g., PK00001)'
     )
     
@@ -101,6 +102,7 @@ class SaasPackage(models.Model):
         string='Currency',
         default=lambda self: self.env.company.currency_id,
         required=True,
+        tracking=True,
         help='Currency for package pricing'
     )
     
@@ -126,6 +128,7 @@ class SaasPackage(models.Model):
     pkg_description = fields.Text(
         string='Description',
         translate=True,
+        tracking=True,
         help='Detailed description of package features and limitations'
     )
     
@@ -133,6 +136,7 @@ class SaasPackage(models.Model):
         string='Created Date',
         default=fields.Datetime.now,
         readonly=True,
+        tracking=True,
         help='Date and time when this package was created'
     )
     
@@ -140,6 +144,7 @@ class SaasPackage(models.Model):
         string='Last Updated',
         auto_now=True,
         readonly=True,
+        tracking=True,
         help='Date and time when this record was last modified'
     )
     

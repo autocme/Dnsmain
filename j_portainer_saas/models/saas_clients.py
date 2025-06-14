@@ -37,6 +37,7 @@ class SaasClient(models.Model):
         comodel_name='sale.subscription.template',
         string='Subscription Template',
         required=False,
+        tracking=True,
         help='The subscription template that defines the SaaS service offering, '
              'including pricing, features, and service specifications'
     )
@@ -45,6 +46,7 @@ class SaasClient(models.Model):
         comodel_name='sale.subscription',
         string='Subscription',
         required=True,
+        tracking=True,
         help='The active subscription record that manages billing, lifecycle, '
              'and service status for this SaaS client'
     )
@@ -53,6 +55,7 @@ class SaasClient(models.Model):
         comodel_name='j_portainer.stack',
         string='Portainer Stack',
         required=False,
+        tracking=True,
         help='The Portainer stack that deploys and manages the containerized '
              'services for this SaaS client. Can be empty if services are not yet deployed.'
     )
@@ -61,6 +64,7 @@ class SaasClient(models.Model):
         comodel_name='res.partner',
         string='Client',
         required=True,
+        tracking=True,
         help='The partner (customer) record associated with this SaaS client. '
              'Contains contact information, billing details, and relationship data.'
     )
@@ -93,12 +97,14 @@ class SaasClient(models.Model):
     sc_active = fields.Boolean(
         string='Active',
         default=True,
+        tracking=True,
         help='Indicates if this SaaS client record is active. '
              'Inactive records are hidden from most views but preserved for history.'
     )
     
     sc_notes = fields.Text(
         string='Internal Notes',
+        tracking=True,
         help='Internal notes and comments about this SaaS client. '
              'Not visible to the customer.'
     )
@@ -107,6 +113,7 @@ class SaasClient(models.Model):
         string='Created Date',
         default=fields.Datetime.now,
         readonly=True,
+        tracking=True,
         help='Date and time when this SaaS client record was created'
     )
     
@@ -114,6 +121,7 @@ class SaasClient(models.Model):
         string='Last Updated',
         auto_now=True,
         readonly=True,
+        tracking=True,
         help='Date and time when this record was last modified'
     )
     
