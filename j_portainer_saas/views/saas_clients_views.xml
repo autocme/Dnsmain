@@ -6,8 +6,8 @@
     <!-- ========================================================================== -->
 
     <record id="view_saas_client_tree" model="ir.ui.view">
-        <field name="name">j_portainer_saas.saas_client.tree</field>
-        <field name="model">j_portainer_saas.saas_client</field>
+        <field name="name">saas.client.tree</field>
+        <field name="model">saas.client</field>
         <field name="arch" type="xml">
             <tree string="SaaS Clients"
                   decoration-muted="not sc_active"
@@ -38,8 +38,8 @@
     <!-- ========================================================================== -->
 
     <record id="view_saas_client_form" model="ir.ui.view">
-        <field name="name">j_portainer_saas.saas_client.form</field>
-        <field name="model">j_portainer_saas.saas_client</field>
+        <field name="name">saas.client.form</field>
+        <field name="model">saas.client</field>
         <field name="arch" type="xml">
             <form string="SaaS Client">
 
@@ -138,8 +138,8 @@
     <!-- ========================================================================== -->
 
     <record id="view_saas_client_kanban" model="ir.ui.view">
-        <field name="name">j_portainer_saas.saas_client.kanban</field>
-        <field name="model">j_portainer_saas.saas_client</field>
+        <field name="name">saas.client.kanban</field>
+        <field name="model">saas.client</field>
         <field name="arch" type="xml">
             <kanban string="SaaS Clients"
                     class="o_kanban_small_column">
@@ -205,7 +205,7 @@
 
     <record id="action_saas_client" model="ir.actions.act_window">
         <field name="name">Clients</field>
-        <field name="res_model">j_portainer_saas.saas_client</field>
+        <field name="res_model">saas.client</field>
         <field name="view_mode">tree,kanban,form</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">

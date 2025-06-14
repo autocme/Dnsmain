@@ -16,7 +16,7 @@ class SaasPackage(models.Model):
     Each package specifies user limits, company limits, database constraints,
     and billing information for SaaS client subscriptions.
     """
-    _name = 'j_portainer_saas.saas_package'
+    _name = 'saas.package'
     _description = 'SaaS Package'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'pkg_sequence, pkg_name'
@@ -212,7 +212,7 @@ class SaasPackage(models.Model):
     def _compute_saas_client_count(self):
         """Compute the number of SaaS clients using this package."""
         for record in self:
-            record.saas_client_count = self.env['j_portainer_saas.saas_client'].search_count([
+            record.saas_client_count = self.env['saas.client'].search_count([
                 ('sc_package_id', '=', record.id)
             ])
     
@@ -257,7 +257,7 @@ class SaasPackage(models.Model):
     def create(self, vals):
         """Override create to generate sequence number."""
         if not vals.get('pkg_sequence'):
-            vals['pkg_sequence'] = self.env['ir.sequence'].next_by_code('j_portainer_saas.saas_package')
+            vals['pkg_sequence'] = self.env['ir.sequence'].next_by_code('saas.package')
         return super().create(vals)
     
     def action_view_saas_clients(self):
