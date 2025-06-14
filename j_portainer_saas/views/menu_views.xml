@@ -21,7 +21,7 @@
     <menuitem id="menu_j_portainer_saas_packages"
               name="SaaS Packages"
               parent="menu_j_portainer_saas_management"
-              action="action_package"
+              action="action_saas_package"
               sequence="5"/>
 
     <!-- SaaS Clients Menu Item -->

@@ -2,4 +2,4 @@
 # -*- coding: utf-8 -*-
 
 from . import saas_clients
-from . import package
+from . import saas_package
