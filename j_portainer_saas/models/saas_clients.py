@@ -21,7 +21,7 @@ class SaasClient(models.Model):
     The model serves as a central hub connecting subscription management
     with containerized service deployment through Portainer integration.
     """
-    _name = 'j_portainer_saas.saas_clients'
+    _name = 'j_portainer_saas.saas_client'
     _description = 'SaaS Clients'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'sc_partner_id, sc_subscription_id'
