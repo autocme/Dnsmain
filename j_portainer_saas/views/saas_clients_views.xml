@@ -105,10 +105,7 @@
                                    options="{'no_create': True, 'no_open': True}"
                                    placeholder="Select active subscription..."/>
                             <field name="sc_subscription_state" readonly="1" 
-                                   widget="badge"
-                                   decoration-success="sc_subscription_state == 'open'"
-                                   decoration-warning="sc_subscription_state == 'pending'"
-                                   decoration-danger="sc_subscription_state in ('close', 'cancel')"/>
+                                   widget="badge"/>
                         </group>
                         
                         <group name="deployment_info" string="Deployment Information">
