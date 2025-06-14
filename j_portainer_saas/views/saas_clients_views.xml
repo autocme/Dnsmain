@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ========================================================================== -->
+    <!-- SAAS CLIENTS TREE VIEW -->
+    <!-- ========================================================================== -->
+    
+    <record id="view_saas_clients_tree" model="ir.ui.view">
+        <field name="name">j_portainer_saas.saas_clients.tree</field>
+        <field name="model">j_portainer_saas.saas_clients</field>
+        <field name="arch" type="xml">
+            <tree string="SaaS Clients" 
+                  decoration-muted="not sc_active"
+                  decoration-success="sc_subscription_state == 'open'"
+                  decoration-warning="sc_subscription_state == 'pending'"
+                  decoration-danger="sc_subscription_state in ('close', 'cancel')">
+                
+                <field name="sc_active" invisible="1"/>
+                <field name="sc_subscription_state" invisible="1"/>
+                
+                <field name="sc_partner_name" string="Customer"/>
+                <field name="sc_template_name" string="Service Template"/>
+                <field name="sc_subscription_state" string="Subscription Status" 
+                       widget="badge" 
+                       decoration-success="sc_subscription_state == 'open'"
+                       decoration-warning="sc_subscription_state == 'pending'"
+                       decoration-danger="sc_subscription_state in ('close', 'cancel')"/>
+                <field name="sc_stack_name" string="Stack" optional="show"/>
+                <field name="sc_stack_status" string="Stack Status" 
+                       widget="badge" 
+                       decoration-success="sc_stack_status == '1'"
+                       decoration-danger="sc_stack_status == '2'"
+                       decoration-muted="sc_stack_status == '0'"
+                       optional="hide"/>
+                <field name="sc_created_date" string="Created" optional="hide"/>
+                <field name="sc_last_updated" string="Last Updated" optional="hide"/>
+                
+            </tree>
+        </field>
+    </record>
+
+    <!-- ========================================================================== -->
+    <!-- SAAS CLIENTS FORM VIEW -->
+    <!-- ========================================================================== -->
+    
+    <record id="view_saas_clients_form" model="ir.ui.view">
+        <field name="name">j_portainer_saas.saas_clients.form</field>
+        <field name="model">j_portainer_saas.saas_clients</field>
+        <field name="arch" type="xml">
+            <form string="SaaS Client">
+                
+                <header>
+                    <!-- Action buttons in header -->
+                    <button name="action_view_subscription" 
+                            type="object" 
+                            string="View Subscription" 
+                            class="btn-primary"
+                            invisible="not sc_subscription_id"/>
+                    <button name="action_view_stack" 
+                            type="object" 
+                            string="View Stack" 
+                            class="btn-secondary"
+                            invisible="not sc_stack_id"/>
+                    <button name="action_view_partner" 
+                            type="object" 
+                            string="View Customer" 
+                            class="btn-secondary"
+                            invisible="not sc_partner_id"/>
+                </header>
+                
+                <sheet>
+                    
+                    <!-- Status bar with active toggle -->
+                    <div class="oe_button_box" name="button_box">
+                        <button name="toggle" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-archive">
+                            <field name="sc_active" widget="boolean_button" 
+                                   options='{"terminology": "archive"}'/>
+                        </button>
+                    </div>
+                    
+                    <div class="oe_title">
+                        <h1>
+                            <field name="sc_display_name" readonly="1"/>
+                        </h1>
+                    </div>
+                    
+                    <group>
+                        <group name="customer_info" string="Customer Information">
+                            <field name="sc_partner_id" 
+                                   options="{'no_create': True, 'no_open': True}"
+                                   placeholder="Select the customer partner..."/>
+                            <field name="sc_partner_name" readonly="1"/>
+                        </group>
+                        
+                        <group name="service_info" string="Service Information">
+                            <field name="sc_template_id" 
+                                   options="{'no_create': True, 'no_open': True}"
+                                   placeholder="Select subscription template..."/>
+                            <field name="sc_template_name" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <group name="subscription_info" string="Subscription Details">
+                            <field name="sc_subscription_id" 
+                                   options="{'no_create': True, 'no_open': True}"
+                                   placeholder="Select active subscription..."/>
+                            <field name="sc_subscription_state" readonly="1" 
+                                   widget="badge"
+                                   decoration-success="sc_subscription_state == 'open'"
+                                   decoration-warning="sc_subscription_state == 'pending'"
+                                   decoration-danger="sc_subscription_state in ('close', 'cancel')"/>
+                        </group>
+                        
+                        <group name="deployment_info" string="Deployment Information">
+                            <field name="sc_stack_id" 
+                                   options="{'no_create': True, 'no_open': True}"
+                                   placeholder="Select Portainer stack (optional)..."/>
+                            <field name="sc_stack_name" readonly="1"/>
+                            <field name="sc_stack_status" readonly="1" 
+                                   widget="badge"
+                                   decoration-success="sc_stack_status == '1'"
+                                   decoration-danger="sc_stack_status == '2'"
+                                   decoration-muted="sc_stack_status == '0'"/>
+                        </group>
+                    </group>
+                    
+                    <group name="additional_info" string="Additional Information">
+                        <field name="sc_notes" 
+                               placeholder="Internal notes about this SaaS client..."
+                               nolabel="1"/>
+                    </group>
+                    
+                    <group>
+                        <group name="tracking_info" string="Tracking Information">
+                            <field name="sc_created_date" readonly="1"/>
+                            <field name="sc_last_updated" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                </sheet>
+                
+                <!-- Chatter for message tracking -->
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+                
+            </form>
+        </field>
+    </record>
+
+    <!-- ========================================================================== -->
+    <!-- SAAS CLIENTS SEARCH VIEW -->
+    <!-- ========================================================================== -->
+    
+    <record id="view_saas_clients_search" model="ir.ui.view">
+        <field name="name">j_portainer_saas.saas_clients.search</field>
+        <field name="model">j_portainer_saas.saas_clients</field>
+        <field name="arch" type="xml">
+            <search string="Search SaaS Clients">
+                
+                <!-- Search fields -->
+                <field name="sc_partner_name" string="Customer" 
+                       filter_domain="[('sc_partner_name', 'ilike', self)]"/>
+                <field name="sc_template_name" string="Template" 
+                       filter_domain="[('sc_template_name', 'ilike', self)]"/>
+                <field name="sc_stack_name" string="Stack" 
+                       filter_domain="[('sc_stack_name', 'ilike', self)]"/>
+                <field name="sc_notes" string="Notes" 
+                       filter_domain="[('sc_notes', 'ilike', self)]"/>
+                
+                <!-- Predefined filters -->
+                <separator/>
+                <filter name="filter_active" string="Active Clients" 
+                        domain="[('sc_active', '=', True)]" default="1"/>
+                <filter name="filter_inactive" string="Inactive Clients" 
+                        domain="[('sc_active', '=', False)]"/>
+                
+                <separator/>
+                <filter name="filter_open_subscriptions" string="Active Subscriptions" 
+                        domain="[('sc_subscription_state', '=', 'open')]"/>
+                <filter name="filter_pending_subscriptions" string="Pending Subscriptions" 
+                        domain="[('sc_subscription_state', '=', 'pending')]"/>
+                <filter name="filter_closed_subscriptions" string="Closed Subscriptions" 
+                        domain="[('sc_subscription_state', 'in', ['close', 'cancel'])]"/>
+                
+                <separator/>
+                <filter name="filter_with_stack" string="With Stack" 
+                        domain="[('sc_stack_id', '!=', False)]"/>
+                <filter name="filter_without_stack" string="Without Stack" 
+                        domain="[('sc_stack_id', '=', False)]"/>
+                
+                <separator/>
+                <filter name="filter_recent" string="Created This Month" 
+                        domain="[('sc_created_date', '&gt;=', (context_today() - relativedelta(months=1)).strftime('%Y-%m-01'))]"/>
+                
+                <!-- Group by options -->
+                <group expand="0" string="Group By">
+                    <filter name="group_by_partner" string="Customer" 
+                            context="{'group_by': 'sc_partner_id'}"/>
+                    <filter name="group_by_template" string="Template" 
+                            context="{'group_by': 'sc_template_id'}"/>
+                    <filter name="group_by_subscription_state" string="Subscription State" 
+                            context="{'group_by': 'sc_subscription_state'}"/>
+                    <filter name="group_by_stack_status" string="Stack Status" 
+                            context="{'group_by': 'sc_stack_status'}"/>
+                    <separator/>
+                    <filter name="group_by_created_date" string="Created Date" 
+                            context="{'group_by': 'sc_created_date:month'}"/>
+                </group>
+                
+            </search>
+        </field>
+    </record>
+
+    <!-- ========================================================================== -->
+    <!-- SAAS CLIENTS KANBAN VIEW -->
+    <!-- ========================================================================== -->
+    
+    <record id="view_saas_clients_kanban" model="ir.ui.view">
+        <field name="name">j_portainer_saas.saas_clients.kanban</field>
+        <field name="model">j_portainer_saas.saas_clients</field>
+        <field name="arch" type="xml">
+            <kanban string="SaaS Clients" 
+                    default_group_by="sc_subscription_state"
+                    class="o_kanban_small_column">
+                
+                <field name="sc_partner_name"/>
+                <field name="sc_template_name"/>
+                <field name="sc_subscription_state"/>
+                <field name="sc_stack_name"/>
+                <field name="sc_stack_status"/>
+                <field name="sc_active"/>
+                
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_card oe_kanban_global_click 
+                                          #{record.sc_active.raw_value ? '' : 'o_kanban_record_archived'}">
+                            
+                            <div class="oe_kanban_content">
+                                <div class="o_kanban_record_top">
+                                    <div class="o_kanban_record_headings">
+                                        <strong class="o_kanban_record_title">
+                                            <field name="sc_partner_name"/>
+                                        </strong>
+                                    </div>
+                                    <div class="o_kanban_record_subtitle">
+                                        <field name="sc_template_name"/>
+                                    </div>
+                                </div>
+                                
+                                <div class="o_kanban_record_body">
+                                    <t t-if="record.sc_stack_name.raw_value">
+                                        <div>
+                                            <i class="fa fa-cubes" title="Stack"/> 
+                                            <field name="sc_stack_name"/>
+                                        </div>
+                                    </t>
+                                </div>
+                                
+                                <div class="o_kanban_record_bottom">
+                                    <div class="oe_kanban_bottom_left">
+                                        <t t-if="record.sc_stack_status.raw_value">
+                                            <span t-attf-class="badge 
+                                                  #{record.sc_stack_status.raw_value === '1' ? 'badge-success' : 
+                                                    record.sc_stack_status.raw_value === '2' ? 'badge-danger' : 'badge-secondary'}">
+                                                <t t-if="record.sc_stack_status.raw_value === '1'">Active</t>
+                                                <t t-elif="record.sc_stack_status.raw_value === '2'">Inactive</t>
+                                                <t t-else="">Unknown</t>
+                                            </span>
+                                        </t>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </t>
+                </templates>
+                
+            </kanban>
+        </field>
+    </record>
+
+    <!-- ========================================================================== -->
+    <!-- SAAS CLIENTS ACTION -->
+    <!-- ========================================================================== -->
+    
+    <record id="action_saas_clients" model="ir.actions.act_window">
+        <field name="name">SaaS Clients</field>
+        <field name="res_model">j_portainer_saas.saas_clients</field>
+        <field name="view_mode">tree,kanban,form</field>
+        <field name="search_view_id" ref="view_saas_clients_search"/>
+        <field name="context">{'search_default_filter_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first SaaS client!
+            </p>
+            <p>
+                SaaS clients connect your customers with their subscriptions and deployed services.
+                <br/>
+                Link subscription templates, active subscriptions, and Portainer stacks to manage
+                your SaaS offerings efficiently.
+            </p>
+        </field>
+    </record>
+
+</odoo>
