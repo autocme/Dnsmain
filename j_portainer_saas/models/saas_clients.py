@@ -287,22 +287,3 @@ class SaasClient(models.Model):
             'target': 'current',
         }
     
-    def action_view_partner(self):
-        """
-        Open the associated partner record in a form view.
-        
-        Returns:
-            dict: Action dictionary to open the partner form
-        """
-        self.ensure_one()
-        if not self.sc_partner_id:
-            raise UserError(_('No partner is associated with this SaaS client.'))
-        
-        return {
-            'name': _('Customer Details'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'res.partner',
-            'res_id': self.sc_partner_id.id,
-            'view_mode': 'form',
-            'target': 'current',
-        }
