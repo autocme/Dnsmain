@@ -29,7 +29,7 @@ class SaasPackage(models.Model):
     pkg_sequence = fields.Char(
         string='Package Sequence',
         readonly=True,
-        default=lambda self: self._get_next_sequence(),
+        copy=False,
         help='Auto-generated sequence code for package ordering (e.g., PK00001)'
     )
     
@@ -215,19 +215,7 @@ class SaasPackage(models.Model):
     # BUSINESS METHODS
     # ========================================================================
     
-    def _get_next_sequence(self):
-        """Generate next sequence code for package ordering."""
-        last_package = self.search([], order='pkg_sequence desc', limit=1)
-        if last_package and last_package.pkg_sequence:
-            # Extract numeric part from sequence like "PK00001"
-            try:
-                last_number = int(last_package.pkg_sequence[2:])
-                next_number = last_number + 1
-            except (ValueError, IndexError):
-                next_number = 1
-        else:
-            next_number = 1
-        return f"PK{next_number:05d}"
+
     
     def name_get(self):
         """Return package name with pricing information."""
@@ -241,9 +229,9 @@ class SaasPackage(models.Model):
     
     @api.model
     def create(self, vals):
-        """Override create to ensure sequence is set properly."""
-        if 'pkg_sequence' not in vals or not vals['pkg_sequence']:
-            vals['pkg_sequence'] = self._get_next_sequence()
+        """Override create to generate sequence number."""
+        if not vals.get('pkg_sequence'):
+            vals['pkg_sequence'] = self.env['ir.sequence'].next_by_code('j_portainer_saas.saas_package')
         return super().create(vals)
     
     def action_view_saas_clients(self):
