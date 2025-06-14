@@ -58,11 +58,11 @@
                     
                     <!-- Status bar with active toggle -->
                     
-                    <div class="oe_title">
+                    <!-- <div class="oe_title">
                         <h1>
                             <field name="sc_partner_id" readonly="1"/>
                         </h1>
-                    </div>
+                    </div> -->
                     
                     <group>
                         <group name="customer_info" string="Customer Information">
