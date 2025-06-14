@@ -82,11 +82,12 @@
                             <field name="sc_subscription_id"
                                    options="{'no_create': True}"
                                    placeholder="Select active subscription..."/>
+                            
+                        </group>
+                        <group>
                             <field name="sc_portainer_template_id"
                                    options="{'no_create': True}"
                                    placeholder="Select Portainer template..."/>
-                        </group>
-                        <group>
                             <field name="sc_stack_id"
                                    options="{'no_create': True}"
                                    placeholder="Select Portainer stack (optional)..."/>

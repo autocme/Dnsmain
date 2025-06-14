@@ -22,6 +22,7 @@ class PortainerCustomTemplate(models.Model):
         'ports',
         'environment_variables'
     ]
+    _rec_name='title'
     
     is_custom = fields.Boolean('Custom Template', default=True, help="Used to identify custom templates")
     
