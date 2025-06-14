@@ -54,11 +54,7 @@
                             string="View Stack" 
                             class="btn-secondary"
                             invisible="not sc_stack_id"/>
-                    <button name="action_view_partner" 
-                            type="object" 
-                            string="View Customer" 
-                            class="btn-secondary"
-                            invisible="not sc_partner_id"/>
+                    
                 </header>
                 
                 <sheet>
