@@ -8,7 +8,7 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
-class Package(models.Model):
+class SaasPackage(models.Model):
     """
     Package Management Model
     
@@ -16,7 +16,7 @@ class Package(models.Model):
     Each package specifies user limits, company limits, database constraints,
     and billing information for SaaS client subscriptions.
     """
-    _name = 'j_portainer_saas.package'
+    _name = 'j_portainer_saas.saas_package'
     _description = 'SaaS Package'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'pkg_sequence, pkg_name'
