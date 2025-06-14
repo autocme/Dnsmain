@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    
+
     <!-- ========================================================================== -->
     <!--                           PACKAGE TREE VIEW                               -->
     <!-- ========================================================================== -->
-    
+
     <record id="view_saas_package_tree" model="ir.ui.view">
         <field name="name">j_portainer_saas.saas_package.tree</field>
         <field name="model">j_portainer_saas.saas_package</field>
@@ -22,11 +22,11 @@
             </tree>
         </field>
     </record>
-    
+
     <!-- ========================================================================== -->
     <!--                           PACKAGE FORM VIEW                               -->
     <!-- ========================================================================== -->
-    
+
     <record id="view_saas_package_form" model="ir.ui.view">
         <field name="name">j_portainer_saas.saas_package.form</field>
         <field name="model">j_portainer_saas.saas_package</field>
@@ -37,9 +37,9 @@
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button name="action_view_saas_clients" 
-                                type="object" 
-                                class="oe_stat_button" 
+                        <button name="action_view_saas_clients"
+                                type="object"
+                                class="oe_stat_button"
                                 icon="fa-users">
                             <field name="saas_client_count" widget="statinfo" string="SaaS Clients"/>
                         </button>
@@ -50,40 +50,52 @@
                             <field name="pkg_name" placeholder="Package Name"/>
                         </h1>
                     </div>
-                    
+
                     <group>
                         <group name="package_info" string="Package Information">
                             <field name="pkg_sequence"/>
-                            <field name="pkg_description"/>
                             <field name="pkg_subscription_template_id"/>
                         </group>
-                        
+
                         <group name="pricing" string="Pricing">
                             <field name="pkg_price" widget="monetary"/>
                             <field name="currency_id"/>
                         </group>
                     </group>
-                    
+
                     <group>
                         <group name="limits" string="Resource Limits">
                             <field name="pkg_user_limit"/>
                             <field name="pkg_company_limit"/>
                             <field name="pkg_database_limit_size"/>
                         </group>
-                        
+
                         <group name="lifecycle" string="Lifecycle Management">
                             <field name="pkg_warning_delay"/>
                             <field name="pkg_freezing_db_due_balance_days"/>
                             <field name="pkg_drop_after_days_frozen"/>
                         </group>
                     </group>
-                    
-                    <group>
-                        <group name="timestamps" string="Tracking">
-                            <field name="pkg_created_date"/>
-                            <field name="pkg_last_updated"/>
-                        </group>
-                    </group>
+
+                    <notebook>
+                        <page name="pkg_description" string="Package Description">
+                            <field name="pkg_description" placeholder="Detailed description about this SaaS Package..."/>
+                        </page>
+
+                        <page name="timestamps" string="Other Info">
+                            <group>
+                                <group>
+                                    <field name="create_uid"/>
+                                    <field name="create_date"/>
+                                </group>
+                                <group>
+                                    <field name="write_uid"/>
+                                    <field name="write_date"/>
+                                </group>
+                            </group>
+                        </page>
+
+                    </notebook>
                 </sheet>
                 <div class="oe_chatter">
                     <field name="message_follower_ids"/>
@@ -93,11 +105,11 @@
             </form>
         </field>
     </record>
-    
+
     <!-- ========================================================================== -->
     <!--                           PACKAGE KANBAN VIEW                             -->
     <!-- ========================================================================== -->
-    
+
     <record id="view_saas_package_kanban" model="ir.ui.view">
         <field name="name">j_portainer_saas.saas_package.kanban</field>
         <field name="model">j_portainer_saas.saas_package</field>
@@ -143,23 +155,30 @@
                                         </button>
                                     </div>
                                     <div class="col-6 text-right">
-                                        <span t-if="!record.pkg_active.raw_value" class="badge badge-secondary">Inactive</span>
-                                        <span t-if="record.pkg_active.raw_value" class="badge badge-success">Active</span>
+                                        <span t-if="!record.pkg_active.raw_value" class="badge badge-secondary">
+                                            Inactive
+                                        </span>
+                                        <span t-if="record.pkg_active.raw_value" class="badge badge-success">Active
+                                        </span>
                                     </div>
                                 </div>
                                 <hr/>
                                 <div class="row">
                                     <div class="col-4">
-                                        <strong>Users:</strong><br/>
+                                        <strong>Users:</strong>
+                                        <br/>
                                         <field name="pkg_user_limit"/>
                                     </div>
                                     <div class="col-4">
-                                        <strong>Companies:</strong><br/>
+                                        <strong>Companies:</strong>
+                                        <br/>
                                         <field name="pkg_company_limit"/>
                                     </div>
                                     <div class="col-4">
-                                        <strong>DB Size:</strong><br/>
-                                        <field name="pkg_database_limit_size"/> GB
+                                        <strong>DB Size:</strong>
+                                        <br/>
+                                        <field name="pkg_database_limit_size"/>
+                                        GB
                                     </div>
                                 </div>
                             </div>
@@ -169,11 +188,11 @@
             </kanban>
         </field>
     </record>
-    
+
     <!-- ========================================================================== -->
     <!--                           PACKAGE SEARCH VIEW                             -->
     <!-- ========================================================================== -->
-    
+
     <record id="view_saas_package_search" model="ir.ui.view">
         <field name="name">j_portainer_saas.saas_package.search</field>
         <field name="model">j_portainer_saas.saas_package</field>
@@ -182,30 +201,32 @@
                 <field name="pkg_name" string="Package Name"/>
                 <field name="pkg_subscription_template_id" string="Subscription Template"/>
                 <field name="pkg_price" string="Price"/>
-                
+
                 <filter string="Active Packages" name="active" domain="[('pkg_active', '=', True)]"/>
                 <filter string="Inactive Packages" name="inactive" domain="[('pkg_active', '=', False)]"/>
-                
+
                 <separator/>
                 <filter string="Basic Packages" name="basic" domain="[('pkg_user_limit', '&lt;=', 5)]"/>
-                <filter string="Standard Packages" name="standard" domain="[('pkg_user_limit', '&gt;', 5), ('pkg_user_limit', '&lt;=', 20)]"/>
+                <filter string="Standard Packages" name="standard"
+                        domain="[('pkg_user_limit', '&gt;', 5), ('pkg_user_limit', '&lt;=', 20)]"/>
                 <filter string="Premium Packages" name="premium" domain="[('pkg_user_limit', '&gt;', 20)]"/>
-                
+
                 <group expand="0" string="Group By">
                     <filter string="Active Status" name="group_active" context="{'group_by': 'pkg_active'}"/>
-                    <filter string="Subscription Template" name="group_template" context="{'group_by': 'pkg_subscription_template_id'}"/>
+                    <filter string="Subscription Template" name="group_template"
+                            context="{'group_by': 'pkg_subscription_template_id'}"/>
                     <filter string="User Limit" name="group_user_limit" context="{'group_by': 'pkg_user_limit'}"/>
                 </group>
             </search>
         </field>
     </record>
-    
+
     <!-- ========================================================================== -->
     <!--                           PACKAGE ACTION                                  -->
     <!-- ========================================================================== -->
-    
+
     <record id="action_saas_package" model="ir.actions.act_window">
-        <field name="name">SaaS Packages</field>
+        <field name="name">Packages</field>
         <field name="res_model">j_portainer_saas.saas_package</field>
         <field name="view_mode">tree,kanban,form</field>
         <field name="help" type="html">
