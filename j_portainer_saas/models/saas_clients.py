@@ -8,7 +8,7 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
-class SaasClients(models.Model):
+class SaasClient(models.Model):
     """
     SaaS Clients Management Model
     
