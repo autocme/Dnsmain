@@ -508,6 +508,7 @@ class PortainerStack(models.Model):
             if response.status_code in [200, 201, 204]:
                 # Refresh stacks and containers
                 server.sync_stacks(environment_id)
+                server.sync_volumes(environment_id)
                 server.sync_containers(environment_id)
                 return True
             else:
