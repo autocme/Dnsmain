@@ -69,13 +69,7 @@ class SaasClients(models.Model):
     # RELATED FIELDS FOR EASY ACCESS
     # ========================================================================
     
-    sc_partner_name = fields.Char(
-        string='Customer Name',
-        related='sc_partner_id.name',
-        readonly=True,
-        store=True,
-        help='Customer name from the related partner record'
-    )
+
     
 
     
