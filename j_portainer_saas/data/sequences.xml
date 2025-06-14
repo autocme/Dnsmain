@@ -7,7 +7,7 @@
     
     <record id="seq_saas_package" model="ir.sequence">
         <field name="name">SaaS Package Sequence</field>
-        <field name="code">j_portainer_saas.saas_package</field>
+        <field name="code">saas.package</field>
         <field name="prefix">PK</field>
         <field name="padding">5</field>
         <field name="number_next">1</field>

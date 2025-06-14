@@ -227,7 +227,7 @@
 
     <record id="action_saas_package" model="ir.actions.act_window">
         <field name="name">Packages</field>
-        <field name="res_model">j_portainer_saas.saas_package</field>
+        <field name="res_model">saas.package</field>
         <field name="view_mode">tree,kanban,form</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">

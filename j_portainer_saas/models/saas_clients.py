@@ -21,7 +21,7 @@ class SaasClient(models.Model):
     The model serves as a central hub connecting subscription management
     with containerized service deployment through Portainer integration.
     """
-    _name = 'j_portainer_saas.saas_client'
+    _name = 'saas.client'
     _description = 'SaaS Clients'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'sc_partner_id, sc_subscription_id'
@@ -70,12 +70,21 @@ class SaasClient(models.Model):
     )
     
     sc_package_id = fields.Many2one(
-        comodel_name='j_portainer_saas.saas_package',
+        comodel_name='saas.package',
         string='Package',
         required=True,
         tracking=True,
         help='The SaaS package that defines resource limits, pricing, and features '
              'for this client subscription.'
+    )
+    
+    sc_portainer_template_id = fields.Many2one(
+        comodel_name='j_portainer.customtemplate',
+        string='Portainer Template',
+        required=False,
+        tracking=True,
+        help='The Portainer custom template used for deploying containerized services '
+             'for this SaaS client.'
     )
     
     # ========================================================================
