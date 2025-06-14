@@ -15,12 +15,9 @@
                   decoration-danger="not sc_subscription_id">
                 
                 <field name="sc_active" invisible="1"/>
-                <field name="sc_subscription_state" invisible="1"/>
                 
                 <field name="sc_partner_name" string="Customer"/>
                 <field name="sc_template_name" string="Service Template"/>
-                <field name="sc_subscription_state" string="Subscription Status" 
-                       widget="badge"/>
                 <field name="sc_stack_name" string="Stack" optional="show"/>
                 <field name="sc_stack_status" string="Stack Status" 
                        widget="badge" 
@@ -104,8 +101,6 @@
                             <field name="sc_subscription_id" 
                                    options="{'no_create': True, 'no_open': True}"
                                    placeholder="Select active subscription..."/>
-                            <field name="sc_subscription_state" readonly="1" 
-                                   widget="badge"/>
                         </group>
                         
                         <group name="deployment_info" string="Deployment Information">
@@ -196,8 +191,6 @@
                             context="{'group_by': 'sc_partner_id'}"/>
                     <filter name="group_by_template" string="Template" 
                             context="{'group_by': 'sc_template_id'}"/>
-                    <filter name="group_by_subscription_state" string="Subscription State" 
-                            context="{'group_by': 'sc_subscription_state'}"/>
                     <filter name="group_by_stack_status" string="Stack Status" 
                             context="{'group_by': 'sc_stack_status'}"/>
                     <separator/>
@@ -218,12 +211,11 @@
         <field name="model">j_portainer_saas.saas_clients</field>
         <field name="arch" type="xml">
             <kanban string="SaaS Clients" 
-                    default_group_by="sc_subscription_state"
+                    default_group_by="sc_template_id"
                     class="o_kanban_small_column">
                 
                 <field name="sc_partner_name"/>
                 <field name="sc_template_name"/>
-                <field name="sc_subscription_state"/>
                 <field name="sc_stack_name"/>
                 <field name="sc_stack_status"/>
                 <field name="sc_active"/>
