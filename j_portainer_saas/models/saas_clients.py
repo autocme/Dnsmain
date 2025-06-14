@@ -38,7 +38,7 @@ class SaasClients(models.Model):
     )
     
     sc_template_id = fields.Many2one(
-        comodel_name='subscription.template',
+        comodel_name='sale.subscription.template',
         string='Subscription Template',
         required=True,
         help='The subscription template that defines the SaaS service offering, '
@@ -46,7 +46,7 @@ class SaasClients(models.Model):
     )
     
     sc_subscription_id = fields.Many2one(
-        comodel_name='subscription.subscription',
+        comodel_name='sale.subscription',
         string='Active Subscription',
         required=True,
         help='The active subscription record that manages billing, lifecycle, '
