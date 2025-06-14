@@ -169,14 +169,21 @@ class SaasClients(models.Model):
         information to provide clear identification in lists and references.
         """
         for record in self:
-            partner_name = record.sc_partner_id.name or _('Unknown Partner')
-            template_name = record.sc_template_id.name or _('Unknown Template')
-            
-            if record.sc_subscription_id:
-                subscription_ref = record.sc_subscription_id.name or f"Sub #{record.sc_subscription_id.id}"
-                record.sc_display_name = f"{partner_name} - {template_name} ({subscription_ref})"
-            else:
-                record.sc_display_name = f"{partner_name} - {template_name}"
+            try:
+                partner_name = record.sc_partner_id.name if record.sc_partner_id else _('Unknown Partner')
+                template_name = record.sc_template_id.name if record.sc_template_id else _('Unknown Template')
+                
+                if record.sc_subscription_id and record.sc_subscription_id.name:
+                    subscription_ref = record.sc_subscription_id.name
+                    record.sc_display_name = f"{partner_name} - {template_name} ({subscription_ref})"
+                elif record.sc_subscription_id:
+                    # Handle case where subscription exists but has no name yet
+                    record.sc_display_name = f"{partner_name} - {template_name} (New Subscription)"
+                else:
+                    record.sc_display_name = f"{partner_name} - {template_name}"
+            except Exception:
+                # Fallback for any compute errors during record creation
+                record.sc_display_name = _('New SaaS Client')
     
 
     
