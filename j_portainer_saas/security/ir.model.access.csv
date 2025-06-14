@@ -1,5 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_saas_client_user,j_portainer_saas.saas_client.user,model_j_portainer_saas_saas_client,base.group_user,1,1,1,1
-access_saas_client_manager,j_portainer_saas.saas_client.manager,model_j_portainer_saas_saas_client,base.group_system,1,1,1,1
+access_saas_client_user,saas_client.user,model_j_portainer_saas_saas_client,base.group_user,1,1,1,1
+access_saas_client_manager,saas_client.manager,model_j_portainer_saas_saas_client,base.group_system,1,1,1,1
 access_saas_package_user,j_portainer_saas.saas_package.user,model_j_portainer_saas_saas_package,base.group_user,1,0,0,0
 access_saas_package_manager,j_portainer_saas.saas_package.manager,model_j_portainer_saas_saas_package,base.group_system,1,1,1,1

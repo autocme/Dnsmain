@@ -37,7 +37,7 @@ class SaasClient(models.Model):
         comodel_name='sale.subscription.template',
         string='Subscription Template',
         required=False,
-        tracking=True,
+        tracking=True, related='sc_package_id.pkg_subscription_template_id',
         help='The subscription template that defines the SaaS service offering, '
              'including pricing, features, and service specifications'
     )
