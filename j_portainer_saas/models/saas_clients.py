@@ -36,7 +36,7 @@ class SaasClients(models.Model):
     sc_template_id = fields.Many2one(
         comodel_name='sale.subscription.template',
         string='Subscription Template',
-        required=True,
+        required=False,
         help='The subscription template that defines the SaaS service offering, '
              'including pricing, features, and service specifications'
     )
