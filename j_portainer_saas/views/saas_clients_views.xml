@@ -5,9 +5,9 @@
     <!-- SAAS CLIENTS TREE VIEW -->
     <!-- ========================================================================== -->
     
-    <record id="view_saas_clients_tree" model="ir.ui.view">
-        <field name="name">j_portainer_saas.saas_clients.tree</field>
-        <field name="model">j_portainer_saas.saas_clients</field>
+    <record id="view_saas_client_tree" model="ir.ui.view">
+        <field name="name">j_portainer_saas.saas_client.tree</field>
+        <field name="model">j_portainer_saas.saas_client</field>
         <field name="arch" type="xml">
             <tree string="SaaS Clients" 
                 decoration-muted="not sc_active"
@@ -36,9 +36,9 @@
     <!-- SAAS CLIENTS FORM VIEW -->
     <!-- ========================================================================== -->
     
-    <record id="view_saas_clients_form" model="ir.ui.view">
-        <field name="name">j_portainer_saas.saas_clients.form</field>
-        <field name="model">j_portainer_saas.saas_clients</field>
+    <record id="view_saas_client_form" model="ir.ui.view">
+        <field name="name">j_portainer_saas.saas_client.form</field>
+        <field name="model">j_portainer_saas.saas_client</field>
         <field name="arch" type="xml">
             <form string="SaaS Client">
                 
@@ -143,9 +143,9 @@
     <!-- SAAS CLIENTS KANBAN VIEW -->
     <!-- ========================================================================== -->
     
-    <record id="view_saas_clients_kanban" model="ir.ui.view">
-        <field name="name">j_portainer_saas.saas_clients.kanban</field>
-        <field name="model">j_portainer_saas.saas_clients</field>
+    <record id="view_saas_client_kanban" model="ir.ui.view">
+        <field name="name">j_portainer_saas.saas_client.kanban</field>
+        <field name="model">j_portainer_saas.saas_client</field>
         <field name="arch" type="xml">
             <kanban string="SaaS Clients" 
                     default_group_by="sc_template_id"
@@ -210,9 +210,9 @@
     <!-- SAAS CLIENTS ACTION -->
     <!-- ========================================================================== -->
     
-    <record id="action_saas_clients" model="ir.actions.act_window">
+    <record id="action_saas_client" model="ir.actions.act_window">
         <field name="name">SaaS Clients</field>
-        <field name="res_model">j_portainer_saas.saas_clients</field>
+        <field name="res_model">j_portainer_saas.saas_client</field>
         <field name="view_mode">tree,kanban,form</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
