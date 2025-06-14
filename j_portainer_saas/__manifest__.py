@@ -12,6 +12,7 @@ J Portainer SaaS Integration
 
 This module extends J Portainer with SaaS functionality, providing:
 
+* SaaS package management with resource limits and pricing
 * SaaS client management with subscription integration
 * Template and stack management for SaaS offerings
 * Partner relationship management for SaaS services
@@ -19,7 +20,10 @@ This module extends J Portainer with SaaS functionality, providing:
 
 Features:
 ---------
-* Manage SaaS clients with subscription templates
+* Define SaaS packages with user limits, company limits, and database constraints
+* Configure pricing and subscription templates for each package
+* Manage lifecycle policies including warning delays and database freezing
+* Manage SaaS clients with subscription templates and package assignments
 * Link Portainer stacks to customer subscriptions
 * Track partner relationships for SaaS services
 * Seamless integration with existing J Portainer infrastructure

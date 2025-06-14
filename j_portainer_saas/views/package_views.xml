@@ -5,9 +5,9 @@
     <!--                           PACKAGE TREE VIEW                               -->
     <!-- ========================================================================== -->
     
-    <record id="view_package_tree" model="ir.ui.view">
-        <field name="name">j_portainer_saas.package.tree</field>
-        <field name="model">j_portainer_saas.package</field>
+    <record id="view_saas_package_tree" model="ir.ui.view">
+        <field name="name">j_portainer_saas.saas_package.tree</field>
+        <field name="model">j_portainer_saas.saas_package</field>
         <field name="arch" type="xml">
             <tree string="SaaS Packages" default_order="pkg_sequence">
                 <field name="pkg_sequence"/>

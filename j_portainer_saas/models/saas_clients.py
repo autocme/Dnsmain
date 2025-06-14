@@ -66,7 +66,7 @@ class SaasClient(models.Model):
     )
     
     sc_package_id = fields.Many2one(
-        comodel_name='j_portainer_saas.package',
+        comodel_name='j_portainer_saas.saas_package',
         string='Package',
         required=True,
         tracking=True,
