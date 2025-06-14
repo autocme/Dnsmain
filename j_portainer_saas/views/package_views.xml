@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <!-- ========================================================================== -->
+    <!--                           PACKAGE TREE VIEW                               -->
+    <!-- ========================================================================== -->
+    
+    <record id="view_package_tree" model="ir.ui.view">
+        <field name="name">j_portainer_saas.package.tree</field>
+        <field name="model">j_portainer_saas.package</field>
+        <field name="arch" type="xml">
+            <tree string="SaaS Packages" default_order="pkg_sequence">
+                <field name="pkg_sequence"/>
+                <field name="pkg_name"/>
+                <field name="pkg_user_limit"/>
+                <field name="pkg_company_limit"/>
+                <field name="pkg_database_limit_size"/>
+                <field name="pkg_price" widget="monetary"/>
+                <field name="currency_id" invisible="1"/>
+                <field name="pkg_subscription_template_id"/>
+                <field name="pkg_active"/>
+            </tree>
+        </field>
+    </record>
+    
+    <!-- ========================================================================== -->
+    <!--                           PACKAGE FORM VIEW                               -->
+    <!-- ========================================================================== -->
+    
+    <record id="view_package_form" model="ir.ui.view">
+        <field name="name">j_portainer_saas.package.form</field>
+        <field name="model">j_portainer_saas.package</field>
+        <field name="arch" type="xml">
+            <form string="SaaS Package">
+                <header>
+                    <button name="action_view_saas_clients" 
+                            type="object" 
+                            string="View SaaS Clients" 
+                            class="oe_highlight"/>
+                    <field name="pkg_active" widget="boolean_toggle"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="pkg_name" class="oe_edit_only"/>
+                        <h1>
+                            <field name="pkg_name" placeholder="Package Name"/>
+                        </h1>
+                    </div>
+                    
+                    <group>
+                        <group name="package_info" string="Package Information">
+                            <field name="pkg_sequence"/>
+                            <field name="pkg_description"/>
+                            <field name="pkg_subscription_template_id"/>
+                        </group>
+                        
+                        <group name="pricing" string="Pricing">
+                            <field name="pkg_price" widget="monetary"/>
+                            <field name="currency_id"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <group name="limits" string="Resource Limits">
+                            <field name="pkg_user_limit"/>
+                            <field name="pkg_company_limit"/>
+                            <field name="pkg_database_limit_size"/>
+                        </group>
+                        
+                        <group name="lifecycle" string="Lifecycle Management">
+                            <field name="pkg_warning_delay"/>
+                            <field name="pkg_freezing_db_due_balance_days"/>
+                            <field name="pkg_drop_after_days_frozen"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <group name="timestamps" string="Tracking">
+                            <field name="pkg_created_date"/>
+                            <field name="pkg_last_updated"/>
+                        </group>
+                    </group>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+    
+    <!-- ========================================================================== -->
+    <!--                           PACKAGE KANBAN VIEW                             -->
+    <!-- ========================================================================== -->
+    
+    <record id="view_package_kanban" model="ir.ui.view">
+        <field name="name">j_portainer_saas.package.kanban</field>
+        <field name="model">j_portainer_saas.package</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile">
+                <field name="pkg_name"/>
+                <field name="pkg_price"/>
+                <field name="currency_id"/>
+                <field name="pkg_user_limit"/>
+                <field name="pkg_company_limit"/>
+                <field name="pkg_database_limit_size"/>
+                <field name="pkg_active"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_card oe_kanban_global_click">
+                            <div class="o_kanban_card_header">
+                                <div class="o_kanban_card_header_title">
+                                    <div class="o_primary">
+                                        <field name="pkg_name"/>
+                                    </div>
+                                    <div class="o_secondary">
+                                        <span t-if="record.pkg_price.value">
+                                            <field name="currency_id" invisible="1"/>
+                                            <field name="pkg_price" widget="monetary"/>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_manage_button_section">
+                                    <a class="o_kanban_manage_toggle_button" href="#" data-bs-toggle="dropdown">
+                                        <i class="fa fa-ellipsis-v" role="img" aria-label="Manage" title="Manage"/>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="o_kanban_card_content">
+                                <div class="o_kanban_card_manage_pane dropdown-menu" role="menu">
+                                    <a role="menuitem" type="edit" class="dropdown-item">Edit</a>
+                                    <a role="menuitem" type="delete" class="dropdown-item">Delete</a>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <button class="btn btn-primary" name="action_view_saas_clients" type="object">
+                                            View Clients
+                                        </button>
+                                    </div>
+                                    <div class="col-6 text-right">
+                                        <span t-if="!record.pkg_active.raw_value" class="badge badge-secondary">Inactive</span>
+                                        <span t-if="record.pkg_active.raw_value" class="badge badge-success">Active</span>
+                                    </div>
+                                </div>
+                                <hr/>
+                                <div class="row">
+                                    <div class="col-4">
+                                        <strong>Users:</strong><br/>
+                                        <field name="pkg_user_limit"/>
+                                    </div>
+                                    <div class="col-4">
+                                        <strong>Companies:</strong><br/>
+                                        <field name="pkg_company_limit"/>
+                                    </div>
+                                    <div class="col-4">
+                                        <strong>DB Size:</strong><br/>
+                                        <field name="pkg_database_limit_size"/> GB
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+    
+    <!-- ========================================================================== -->
+    <!--                           PACKAGE SEARCH VIEW                             -->
+    <!-- ========================================================================== -->
+    
+    <record id="view_package_search" model="ir.ui.view">
+        <field name="name">j_portainer_saas.package.search</field>
+        <field name="model">j_portainer_saas.package</field>
+        <field name="arch" type="xml">
+            <search string="Search Packages">
+                <field name="pkg_name" string="Package Name"/>
+                <field name="pkg_subscription_template_id" string="Subscription Template"/>
+                <field name="pkg_price" string="Price"/>
+                
+                <filter string="Active Packages" name="active" domain="[('pkg_active', '=', True)]"/>
+                <filter string="Inactive Packages" name="inactive" domain="[('pkg_active', '=', False)]"/>
+                
+                <separator/>
+                <filter string="Basic Packages" name="basic" domain="[('pkg_user_limit', '&lt;=', 5)]"/>
+                <filter string="Standard Packages" name="standard" domain="[('pkg_user_limit', '&gt;', 5), ('pkg_user_limit', '&lt;=', 20)]"/>
+                <filter string="Premium Packages" name="premium" domain="[('pkg_user_limit', '&gt;', 20)]"/>
+                
+                <group expand="0" string="Group By">
+                    <filter string="Active Status" name="group_active" context="{'group_by': 'pkg_active'}"/>
+                    <filter string="Subscription Template" name="group_template" context="{'group_by': 'pkg_subscription_template_id'}"/>
+                    <filter string="User Limit" name="group_user_limit" context="{'group_by': 'pkg_user_limit'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    
+    <!-- ========================================================================== -->
+    <!--                           PACKAGE ACTION                                  -->
+    <!-- ========================================================================== -->
+    
+    <record id="action_package" model="ir.actions.act_window">
+        <field name="name">SaaS Packages</field>
+        <field name="res_model">j_portainer_saas.package</field>
+        <field name="view_mode">tree,kanban,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first SaaS package!
+            </p>
+            <p>
+                Define service packages with resource limits, pricing, and subscription templates
+                to manage your SaaS offerings effectively.
+            </p>
+        </field>
+    </record>
+
+</odoo>
