@@ -149,6 +149,16 @@ class SaasPackage(models.Model):
     )
     
     # ========================================================================
+    # COMPUTED FIELDS
+    # ========================================================================
+    
+    saas_client_count = fields.Integer(
+        string='SaaS Clients Count',
+        compute='_compute_saas_client_count',
+        help='Number of SaaS clients using this package'
+    )
+    
+    # ========================================================================
     # CONSTRAINTS
     # ========================================================================
     
@@ -194,6 +204,17 @@ class SaasPackage(models.Model):
             'Freezing days must be greater than zero.'
         ),
     ]
+    
+    # ========================================================================
+    # COMPUTED METHODS
+    # ========================================================================
+    
+    def _compute_saas_client_count(self):
+        """Compute the number of SaaS clients using this package."""
+        for record in self:
+            record.saas_client_count = self.env['j_portainer_saas.saas_client'].search_count([
+                ('sc_package_id', '=', record.id)
+            ])
     
     # ========================================================================
     # VALIDATION METHODS
