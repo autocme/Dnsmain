@@ -138,61 +138,7 @@
     <!-- SAAS CLIENTS SEARCH VIEW -->
     <!-- ========================================================================== -->
     
-    <record id="view_saas_clients_search" model="ir.ui.view">
-        <field name="name">j_portainer_saas.saas_clients.search</field>
-        <field name="model">j_portainer_saas.saas_clients</field>
-        <field name="arch" type="xml">
-            <search string="Search SaaS Clients">
-                
-                <!-- Search fields -->
-                <field name="sc_partner_name" string="Customer" 
-                       filter_domain="[('sc_partner_name', 'ilike', self)]"/>
-                <field name="sc_template_name" string="Template" 
-                       filter_domain="[('sc_template_name', 'ilike', self)]"/>
-                <field name="sc_stack_name" string="Stack" 
-                       filter_domain="[('sc_stack_name', 'ilike', self)]"/>
-                <field name="sc_notes" string="Notes" 
-                       filter_domain="[('sc_notes', 'ilike', self)]"/>
-                
-                <!-- Predefined filters -->
-                <separator/>
-                <filter name="filter_active" string="Active Clients" 
-                        domain="[('sc_active', '=', True)]" default="1"/>
-                <filter name="filter_inactive" string="Inactive Clients" 
-                        domain="[('sc_active', '=', False)]"/>
-                
-                <separator/>
-                <filter name="filter_has_subscription" string="Has Subscription" 
-                        domain="[('sc_subscription_id', '!=', False)]"/>
-                <filter name="filter_no_subscription" string="No Subscription" 
-                        domain="[('sc_subscription_id', '=', False)]"/>
-                
-                <separator/>
-                <filter name="filter_with_stack" string="With Stack" 
-                        domain="[('sc_stack_id', '!=', False)]"/>
-                <filter name="filter_without_stack" string="Without Stack" 
-                        domain="[('sc_stack_id', '=', False)]"/>
-                
-                <separator/>
-                <filter name="filter_recent" string="Created This Month" 
-                        domain="[('sc_created_date', '&gt;=', (context_today().replace(day=1)))]"/>
-                
-                <!-- Group by options -->
-                <group expand="0" string="Group By">
-                    <filter name="group_by_partner" string="Customer" 
-                            context="{'group_by': 'sc_partner_id'}"/>
-                    <filter name="group_by_template" string="Template" 
-                            context="{'group_by': 'sc_template_id'}"/>
-                    <filter name="group_by_stack_status" string="Stack Status" 
-                            context="{'group_by': 'sc_stack_status'}"/>
-                    <separator/>
-                    <filter name="group_by_created_date" string="Created Date" 
-                            context="{'group_by': 'sc_created_date:month'}"/>
-                </group>
-                
-            </search>
-        </field>
-    </record>
+    
 
     <!-- ========================================================================== -->
     <!-- SAAS CLIENTS KANBAN VIEW -->
@@ -269,8 +215,6 @@
         <field name="name">SaaS Clients</field>
         <field name="res_model">j_portainer_saas.saas_clients</field>
         <field name="view_mode">tree,kanban,form</field>
-        <field name="search_view_id" ref="view_saas_clients_search"/>
-        <field name="context">{'search_default_filter_active': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Create your first SaaS client!
