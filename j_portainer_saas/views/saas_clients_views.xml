@@ -15,7 +15,8 @@
                   decoration-danger="not sc_subscription_id">
                 
                 <field name="sc_active" invisible="1"/>
-                
+                <field name="sc_subscription_id" invisible="1"/>
+
                 <field name="sc_partner_name" string="Customer"/>
                 <field name="sc_template_name" string="Service Template"/>
                 <field name="sc_stack_name" string="Stack" optional="show"/>
@@ -64,7 +65,7 @@
                 <sheet>
                     
                     <!-- Status bar with active toggle -->
-                    <div class="oe_button_box" name="button_box">
+                    <!-- <div class="oe_button_box" name="button_box">
                         <button name="toggle" 
                                 type="object" 
                                 class="oe_stat_button" 
@@ -72,7 +73,7 @@
                             <field name="sc_active" widget="boolean_button" 
                                    options='{"terminology": "archive"}'/>
                         </button>
-                    </div>
+                    </div> -->
                     
                     <div class="oe_title">
                         <h1>
