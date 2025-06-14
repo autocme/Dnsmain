@@ -81,12 +81,12 @@ class SaasClients(models.Model):
         help='Customer name from the related partner record'
     )
     
-    sc_subscription_state = fields.Selection(
+    sc_subscription_state = fields.Char(
         string='Subscription State',
-        related='sc_subscription_id.state',
+        related='sc_subscription_id.stage_id.name',
         readonly=True,
         store=True,
-        help='Current state of the subscription (draft, open, pending, close, cancel)'
+        help='Current state of the subscription based on stage'
     )
     
     sc_template_name = fields.Char(
@@ -243,8 +243,7 @@ class SaasClients(models.Model):
             return {
                 'domain': {
                     'sc_subscription_id': [
-                        ('template_id', '=', self.sc_template_id.id),
-                        ('state', 'in', ['draft', 'open', 'pending'])
+                        ('template_id', '=', self.sc_template_id.id)
                     ]
                 }
             }
@@ -269,7 +268,8 @@ class SaasClients(models.Model):
             
             # If template is also selected, add template filter
             if self.sc_template_id:
-                domain.append(('template_id', '=', self.sc_template_id.id))
+                template_filter = ('template_id', '=', self.sc_template_id.id)
+                domain = domain + [template_filter]
             
             return {
                 'domain': {

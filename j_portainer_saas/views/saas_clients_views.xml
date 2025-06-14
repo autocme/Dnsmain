@@ -11,9 +11,8 @@
         <field name="arch" type="xml">
             <tree string="SaaS Clients" 
                   decoration-muted="not sc_active"
-                  decoration-success="sc_subscription_state == 'open'"
-                  decoration-warning="sc_subscription_state == 'pending'"
-                  decoration-danger="sc_subscription_state in ('close', 'cancel')">
+                  decoration-success="sc_subscription_id"
+                  decoration-danger="not sc_subscription_id">
                 
                 <field name="sc_active" invisible="1"/>
                 <field name="sc_subscription_state" invisible="1"/>
@@ -21,10 +20,7 @@
                 <field name="sc_partner_name" string="Customer"/>
                 <field name="sc_template_name" string="Service Template"/>
                 <field name="sc_subscription_state" string="Subscription Status" 
-                       widget="badge" 
-                       decoration-success="sc_subscription_state == 'open'"
-                       decoration-warning="sc_subscription_state == 'pending'"
-                       decoration-danger="sc_subscription_state in ('close', 'cancel')"/>
+                       widget="badge"/>
                 <field name="sc_stack_name" string="Stack" optional="show"/>
                 <field name="sc_stack_status" string="Stack Status" 
                        widget="badge" 
@@ -182,12 +178,10 @@
                         domain="[('sc_active', '=', False)]"/>
                 
                 <separator/>
-                <filter name="filter_open_subscriptions" string="Active Subscriptions" 
-                        domain="[('sc_subscription_state', '=', 'open')]"/>
-                <filter name="filter_pending_subscriptions" string="Pending Subscriptions" 
-                        domain="[('sc_subscription_state', '=', 'pending')]"/>
-                <filter name="filter_closed_subscriptions" string="Closed Subscriptions" 
-                        domain="[('sc_subscription_state', 'in', ['close', 'cancel'])]"/>
+                <filter name="filter_has_subscription" string="Has Subscription" 
+                        domain="[('sc_subscription_id', '!=', False)]"/>
+                <filter name="filter_no_subscription" string="No Subscription" 
+                        domain="[('sc_subscription_id', '=', False)]"/>
                 
                 <separator/>
                 <filter name="filter_with_stack" string="With Stack" 
