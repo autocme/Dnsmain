@@ -11,24 +11,26 @@
               web_icon="j_portainer_saas,static/description/icon.png"
               sequence="80"/>
 
-    <!-- SaaS Management Submenu -->
-    <menuitem id="menu_j_portainer_saas_management"
-              name="SaaS Management"
+    <!-- SaaS Clients Menu Item -->
+    <menuitem id="menu_j_portainer_saas_clients"
+              name="Clients"
               parent="menu_j_portainer_saas_root"
+              action="action_saas_client"
               sequence="10"/>
+
+    <!-- SaaS Configuration Submenu -->
+    <menuitem id="menu_j_portainer_saas_configuration"
+              name="Configuration"
+              parent="menu_j_portainer_saas_root"
+              sequence="20"/>
 
     <!-- SaaS Packages Menu Item -->
     <menuitem id="menu_j_portainer_saas_packages"
-              name="SaaS Packages"
-              parent="menu_j_portainer_saas_management"
+              name="Packages"
+              parent="menu_j_portainer_saas_configuration"
               action="action_saas_package"
               sequence="5"/>
 
-    <!-- SaaS Clients Menu Item -->
-    <menuitem id="menu_j_portainer_saas_clients"
-              name="SaaS Clients"
-              parent="menu_j_portainer_saas_management"
-              action="action_saas_client"
-              sequence="10"/>
+
 
 </odoo>
