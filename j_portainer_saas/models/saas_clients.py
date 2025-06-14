@@ -25,18 +25,13 @@ class SaasClients(models.Model):
     _description = 'SaaS Clients'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'sc_partner_id, sc_subscription_id'
-    _rec_name = 'sc_display_name'
+    _rec_name = 'sc_partner_id'
     
     # ========================================================================
     # FIELDS
     # ========================================================================
     
-    sc_display_name = fields.Char(
-        string='Display Name',
-        compute='_compute_display_name',
-        store=True,
-        help='Computed display name combining partner and subscription information'
-    )
+
     
     sc_template_id = fields.Many2one(
         comodel_name='sale.subscription.template',
@@ -155,37 +150,6 @@ class SaasClients(models.Model):
             'Each Portainer stack can only be associated with one SaaS client.'
         ),
     ]
-    
-    # ========================================================================
-    # COMPUTED FIELDS
-    # ========================================================================
-    
-    @api.depends('sc_partner_id.name', 'sc_subscription_id.name', 'sc_template_id.name')
-    def _compute_display_name(self):
-        """
-        Compute a meaningful display name for the SaaS client record.
-        
-        The display name combines partner name, template name, and subscription
-        information to provide clear identification in lists and references.
-        """
-        for record in self:
-            try:
-                partner_name = record.sc_partner_id.name if record.sc_partner_id else _('Unknown Partner')
-                template_name = record.sc_template_id.name if record.sc_template_id else _('Unknown Template')
-                
-                if record.sc_subscription_id and record.sc_subscription_id.name:
-                    subscription_ref = record.sc_subscription_id.name
-                    record.sc_display_name = f"{partner_name} - {template_name} ({subscription_ref})"
-                elif record.sc_subscription_id:
-                    # Handle case where subscription exists but has no name yet
-                    record.sc_display_name = f"{partner_name} - {template_name} (New Subscription)"
-                else:
-                    record.sc_display_name = f"{partner_name} - {template_name}"
-            except Exception:
-                # Fallback for any compute errors during record creation
-                record.sc_display_name = _('New SaaS Client')
-    
-
     
     # ========================================================================
     # VALIDATION METHODS
