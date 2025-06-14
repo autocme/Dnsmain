@@ -26,11 +26,11 @@ class SaasPackage(models.Model):
     # FIELDS
     # ========================================================================
     
-    pkg_sequence = fields.Integer(
+    pkg_sequence = fields.Char(
         string='Package Sequence',
         readonly=True,
         default=lambda self: self._get_next_sequence(),
-        help='Auto-generated sequence number for package ordering'
+        help='Auto-generated sequence code for package ordering (e.g., PK00001)'
     )
     
     pkg_name = fields.Char(
@@ -149,6 +149,11 @@ class SaasPackage(models.Model):
     
     _sql_constraints = [
         (
+            'unique_package_sequence',
+            'UNIQUE(pkg_sequence)',
+            'Package sequence must be unique.'
+        ),
+        (
             'unique_package_name',
             'UNIQUE(pkg_name)',
             'Package name must be unique.'
@@ -211,11 +216,18 @@ class SaasPackage(models.Model):
     # ========================================================================
     
     def _get_next_sequence(self):
-        """Generate next sequence number for package ordering."""
+        """Generate next sequence code for package ordering."""
         last_package = self.search([], order='pkg_sequence desc', limit=1)
-        if last_package:
-            return last_package.pkg_sequence + 10
-        return 10
+        if last_package and last_package.pkg_sequence:
+            # Extract numeric part from sequence like "PK00001"
+            try:
+                last_number = int(last_package.pkg_sequence[2:])
+                next_number = last_number + 1
+            except (ValueError, IndexError):
+                next_number = 1
+        else:
+            next_number = 1
+        return f"PK{next_number:05d}"
     
     def name_get(self):
         """Return package name with pricing information."""
