@@ -6,8 +6,8 @@
     <!-- ========================================================================== -->
 
     <record id="view_saas_package_tree" model="ir.ui.view">
-        <field name="name">j_portainer_saas.saas_package.tree</field>
-        <field name="model">j_portainer_saas.saas_package</field>
+        <field name="name">saas.package.tree</field>
+        <field name="model">saas.package</field>
         <field name="arch" type="xml">
             <tree string="SaaS Packages" default_order="pkg_sequence">
                 <field name="pkg_sequence"/>
@@ -28,8 +28,8 @@
     <!-- ========================================================================== -->
 
     <record id="view_saas_package_form" model="ir.ui.view">
-        <field name="name">j_portainer_saas.saas_package.form</field>
-        <field name="model">j_portainer_saas.saas_package</field>
+        <field name="name">saas.package.form</field>
+        <field name="model">saas.package</field>
         <field name="arch" type="xml">
             <form string="SaaS Package">
                 <header>
@@ -111,8 +111,8 @@
     <!-- ========================================================================== -->
 
     <record id="view_saas_package_kanban" model="ir.ui.view">
-        <field name="name">j_portainer_saas.saas_package.kanban</field>
-        <field name="model">j_portainer_saas.saas_package</field>
+        <field name="name">saas.package.kanban</field>
+        <field name="model">saas.package</field>
         <field name="arch" type="xml">
             <kanban class="o_kanban_mobile">
                 <field name="pkg_name"/>
@@ -194,8 +194,8 @@
     <!-- ========================================================================== -->
 
     <record id="view_saas_package_search" model="ir.ui.view">
-        <field name="name">j_portainer_saas.saas_package.search</field>
-        <field name="model">j_portainer_saas.saas_package</field>
+        <field name="name">saas.package.search</field>
+        <field name="model">saas.package</field>
         <field name="arch" type="xml">
             <search string="Search Packages">
                 <field name="pkg_name" string="Package Name"/>
