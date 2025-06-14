@@ -33,6 +33,7 @@ Dependencies:
     'website': 'https://www.yourcompany.com',
     'depends': [
         'base',
+        'mail',
         'j_portainer',
         'subscription_oca',
     ],

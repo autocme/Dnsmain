@@ -23,6 +23,7 @@ class SaasClients(models.Model):
     """
     _name = 'j_portainer_saas.saas_clients'
     _description = 'SaaS Clients'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'sc_partner_id, sc_subscription_id'
     _rec_name = 'sc_display_name'
     
