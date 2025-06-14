@@ -43,7 +43,7 @@ class SaasClients(models.Model):
     
     sc_subscription_id = fields.Many2one(
         comodel_name='sale.subscription',
-        string='Active Subscription',
+        string='Subscription',
         required=True,
         help='The active subscription record that manages billing, lifecycle, '
              'and service status for this SaaS client'
@@ -59,7 +59,7 @@ class SaasClients(models.Model):
     
     sc_partner_id = fields.Many2one(
         comodel_name='res.partner',
-        string='Customer Partner',
+        string='Client',
         required=True,
         help='The partner (customer) record associated with this SaaS client. '
              'Contains contact information, billing details, and relationship data.'
@@ -68,13 +68,7 @@ class SaasClients(models.Model):
     # ========================================================================
     # RELATED FIELDS FOR EASY ACCESS
     # ========================================================================
-    
-
-    
-
-    
-
-    
+ 
     sc_stack_status = fields.Selection(
         string='Stack Status',
         related='sc_stack_id.status',
@@ -267,7 +261,7 @@ class SaasClients(models.Model):
         return {
             'name': _('Subscription Details'),
             'type': 'ir.actions.act_window',
-            'res_model': 'subscription.subscription',
+            'res_model': 'sale.subscription',
             'res_id': self.sc_subscription_id.id,
             'view_mode': 'form',
             'target': 'current',
