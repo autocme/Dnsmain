@@ -9,12 +9,16 @@
         <field name="name">j_portainer_saas.saas_clients.tree</field>
         <field name="model">j_portainer_saas.saas_clients</field>
         <field name="arch" type="xml">
-            <tree string="SaaS Clients">
+            <tree string="SaaS Clients" 
+                decoration-muted="not sc_active"
+                decoration-success="sc_subscription_id"
+                decoration-danger="not sc_subscription_id">
                 
                 <field name="sc_partner_id" string="Client"/>
                 <field name="sc_subscription_id"/>
                 <field name="sc_template_id" string="Service Template"/>
                 <field name="sc_stack_id" string="Stack" optional="show"/>
+                <field name="sc_active" optional="hide"/>
                 <field name="sc_stack_status" string="Stack Status" 
                        widget="badge" 
                        decoration-success="sc_stack_status == '1'"
