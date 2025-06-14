@@ -255,10 +255,83 @@ class SaasPackage(models.Model):
     
     @api.model
     def create(self, vals):
-        """Override create to generate sequence number."""
+        """Override create to generate sequence number and auto-create subscription template."""
         if not vals.get('pkg_sequence'):
             vals['pkg_sequence'] = self.env['ir.sequence'].next_by_code('saas.package')
-        return super().create(vals)
+        
+        # Create the package first
+        package = super().create(vals)
+        
+        # Auto-create subscription template and product
+        package._create_subscription_template_and_product()
+        
+        return package
+    
+    def _create_subscription_template_and_product(self):
+        """Create subscription template and product automatically when package is created."""
+        if not self.pkg_name:
+            return
+        
+        # Create the product first
+        product_vals = {
+            'name': self.pkg_name,
+            'type': 'service',
+            'recurring_invoice': True,
+            'list_price': self.pkg_price or 0.0,
+            'sale_ok': True,
+            'purchase_ok': False,
+            'categ_id': self.env.ref('product.product_category_all').id,
+        }
+        
+        try:
+            product = self.env['product.product'].create(product_vals)
+        except Exception as e:
+            _logger.warning(f"Failed to create product for package {self.pkg_name}: {str(e)}")
+            return
+        
+        # Create the subscription template
+        template_vals = {
+            'name': self.pkg_name,
+            'product_id': product.id,
+            'recurring_rule_type': 'monthly',
+            'recurring_interval': 1,
+            'user_closable': True,
+        }
+        
+        try:
+            template = self.env['sale.subscription.template'].create(template_vals)
+            # Link the template back to the package
+            self.write({'pkg_subscription_template_id': template.id})
+            _logger.info(f"Created subscription template '{template.name}' and product '{product.name}' for package '{self.pkg_name}'")
+        except Exception as e:
+            _logger.warning(f"Failed to create subscription template for package {self.pkg_name}: {str(e)}")
+            # Clean up the product if template creation failed
+            try:
+                product.unlink()
+            except:
+                pass
+    
+    def write(self, vals):
+        """Override write to sync changes to subscription template and product."""
+        result = super().write(vals)
+        
+        # Sync name changes
+        if 'pkg_name' in vals and self.pkg_subscription_template_id:
+            try:
+                self.pkg_subscription_template_id.write({'name': vals['pkg_name']})
+                if self.pkg_subscription_template_id.product_id:
+                    self.pkg_subscription_template_id.product_id.write({'name': vals['pkg_name']})
+            except Exception as e:
+                _logger.warning(f"Failed to sync name changes for package {self.id}: {str(e)}")
+        
+        # Sync price changes
+        if 'pkg_price' in vals and self.pkg_subscription_template_id and self.pkg_subscription_template_id.product_id:
+            try:
+                self.pkg_subscription_template_id.product_id.write({'list_price': vals['pkg_price'] or 0.0})
+            except Exception as e:
+                _logger.warning(f"Failed to sync price changes for package {self.id}: {str(e)}")
+        
+        return result
     
     def action_view_saas_clients(self):
         """Open SaaS clients using this package."""
