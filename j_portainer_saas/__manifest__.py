@@ -39,6 +39,7 @@ Dependencies:
     ],
     'data': [
         'security/ir.model.access.csv',
+        'views/package_views.xml',
         'views/saas_clients_views.xml',
         'views/menu_views.xml',
     ],

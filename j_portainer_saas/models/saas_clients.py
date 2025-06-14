@@ -65,6 +65,15 @@ class SaasClient(models.Model):
              'Contains contact information, billing details, and relationship data.'
     )
     
+    sc_package_id = fields.Many2one(
+        comodel_name='j_portainer_saas.package',
+        string='Package',
+        required=True,
+        tracking=True,
+        help='The SaaS package that defines resource limits, pricing, and features '
+             'for this client subscription.'
+    )
+    
     # ========================================================================
     # RELATED FIELDS FOR EASY ACCESS
     # ========================================================================

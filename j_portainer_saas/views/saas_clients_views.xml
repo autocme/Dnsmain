@@ -15,6 +15,7 @@
                 decoration-danger="not sc_subscription_id">
                 
                 <field name="sc_partner_id" string="Client"/>
+                <field name="sc_package_id"/>
                 <field name="sc_subscription_id"/>
                 <field name="sc_template_id" string="Service Template"/>
                 <field name="sc_stack_id" string="Stack" optional="show"/>
@@ -76,6 +77,9 @@
                         </group>
                         
                         <group name="service_info" string="Service Information">
+                            <field name="sc_package_id" 
+                                   options="{'no_create': True, 'no_open': True}"
+                                   placeholder="Select the SaaS package..."/>
                             <field name="sc_template_id" 
                                    options="{'no_create': True, 'no_open': True}"
                                    placeholder="Select subscription template..."/>
