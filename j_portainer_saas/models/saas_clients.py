@@ -73,21 +73,7 @@ class SaasClients(models.Model):
     
 
     
-    sc_template_name = fields.Char(
-        string='Template Name',
-        related='sc_template_id.name',
-        readonly=True,
-        store=True,
-        help='Name of the subscription template'
-    )
-    
-    sc_stack_name = fields.Char(
-        string='Stack Name',
-        related='sc_stack_id.name',
-        readonly=True,
-        store=True,
-        help='Name of the associated Portainer stack'
-    )
+
     
     sc_stack_status = fields.Selection(
         string='Stack Status',
