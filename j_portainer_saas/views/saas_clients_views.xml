@@ -18,8 +18,8 @@
                 <field name="sc_subscription_id" invisible="1"/>
 
                 <field name="sc_partner_id" string="Customer"/>
-                <field name="sc_template_name" string="Service Template"/>
-                <field name="sc_stack_name" string="Stack" optional="show"/>
+                <field name="sc_template_id" string="Service Template"/>
+                <field name="sc_stack_id" string="Stack" optional="show"/>
                 <field name="sc_stack_status" string="Stack Status" 
                        widget="badge" 
                        decoration-success="sc_stack_status == '1'"
@@ -84,7 +84,7 @@
                             <field name="sc_template_id" 
                                    options="{'no_create': True, 'no_open': True}"
                                    placeholder="Select subscription template..."/>
-                            <field name="sc_template_name" readonly="1"/>
+
                         </group>
                     </group>
                     
@@ -99,7 +99,7 @@
                             <field name="sc_stack_id" 
                                    options="{'no_create': True, 'no_open': True}"
                                    placeholder="Select Portainer stack (optional)..."/>
-                            <field name="sc_stack_name" readonly="1"/>
+
                             <field name="sc_stack_status" readonly="1" 
                                    widget="badge"
                                    decoration-success="sc_stack_status == '1'"
@@ -153,8 +153,8 @@
                     class="o_kanban_small_column">
                 
                 <field name="sc_partner_id"/>
-                <field name="sc_template_name"/>
-                <field name="sc_stack_name"/>
+                <field name="sc_template_id"/>
+                <field name="sc_stack_id"/>
                 <field name="sc_stack_status"/>
                 <field name="sc_active"/>
                 
@@ -171,15 +171,15 @@
                                         </strong>
                                     </div>
                                     <div class="o_kanban_record_subtitle">
-                                        <field name="sc_template_name"/>
+                                        <field name="sc_template_id"/>
                                     </div>
                                 </div>
                                 
                                 <div class="o_kanban_record_body">
-                                    <t t-if="record.sc_stack_name.raw_value">
+                                    <t t-if="record.sc_stack_id.raw_value">
                                         <div>
                                             <i class="fa fa-cubes" title="Stack"/> 
-                                            <field name="sc_stack_name"/>
+                                            <field name="sc_stack_id"/>
                                         </div>
                                     </t>
                                 </div>
