@@ -81,13 +81,7 @@ class SaasClients(models.Model):
         help='Customer name from the related partner record'
     )
     
-    sc_subscription_state = fields.Char(
-        string='Subscription State',
-        compute='_compute_subscription_state',
-        readonly=True,
-        store=True,
-        help='State of the subscription'
-    )
+
     
     sc_template_name = fields.Char(
         string='Template Name',
@@ -183,33 +177,7 @@ class SaasClients(models.Model):
             else:
                 record.sc_display_name = f"{partner_name} - {template_name}"
     
-    @api.depends('sc_subscription_id')
-    def _compute_subscription_state(self):
-        """
-        Compute subscription state based on available subscription fields.
-        
-        This method safely extracts state information from the subscription
-        without relying on specific field names that may not exist.
-        """
-        for record in self:
-            if record.sc_subscription_id:
-                subscription = record.sc_subscription_id
-                # Try to get state from common field names
-                state = 'Active'
-                
-                # Check if subscription has common state-like fields
-                if hasattr(subscription, 'state'):
-                    state = str(subscription.state).title()
-                elif hasattr(subscription, 'stage_id') and subscription.stage_id:
-                    state = subscription.stage_id.name
-                elif hasattr(subscription, 'status'):
-                    state = str(subscription.status).title()
-                elif subscription.name:
-                    state = 'Active'
-                
-                record.sc_subscription_state = state
-            else:
-                record.sc_subscription_state = _('No Subscription')
+
     
     # ========================================================================
     # VALIDATION METHODS
