@@ -1,7 +1,0 @@
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_batch_payment_user,batch.payment.user,model_batch_payment,account.group_account_user,1,1,1,0
-access_batch_payment_manager,batch.payment.manager,model_batch_payment,account.group_account_manager,1,1,1,1
-access_batch_payment_wizard_user,batch.payment.wizard.user,model_batch_payment_wizard,account.group_account_user,1,1,1,1
-access_batch_payment_wizard_manager,batch.payment.wizard.manager,model_batch_payment_wizard,account.group_account_manager,1,1,1,1
-access_batch_payment_link_wizard_user,batch.payment.link.wizard.user,model_batch_payment_link_wizard,account.group_account_user,1,1,1,1
-access_batch_payment_link_wizard_manager,batch.payment.link.wizard.manager,model_batch_payment_link_wizard,account.group_account_manager,1,1,1,1
