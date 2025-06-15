@@ -241,8 +241,6 @@ class SaasPackage(models.Model):
     # BUSINESS METHODS
     # ========================================================================
     
-
-    
     def name_get(self):
         """Return package name with pricing information."""
         result = []
@@ -281,9 +279,7 @@ class SaasPackage(models.Model):
         _logger.info(f"Created subscription template {template.name} for SaaS package {package.pkg_name}")
         
         return package
-    
 
-    
     def write(self, vals):
         """Override write to sync changes to subscription template and product."""
         result = super().write(vals)
@@ -326,90 +322,3 @@ class SaasPackage(models.Model):
         action['domain'] = [('sc_package_id', '=', self.id)]
         action['context'] = {'default_sc_package_id': self.id}
         return action
-
-    def create_subscription_template(self):
-        """
-        Create a subscription template for this SaaS package.
-        This method ensures all template creation is handled through the SaaS module.
-        """
-        self.ensure_one()
-        
-        if self.pkg_subscription_template_id:
-            _logger.warning(f"Package {self.pkg_name} already has a subscription template")
-            return self.pkg_subscription_template_id
-        
-        template_vals = {
-            'name': self.pkg_name,
-            'description': self.pkg_description or f'Subscription template for {self.pkg_name}',
-            'recurring_interval': 1,
-            'recurring_rule_type': 'months',
-            'recurring_rule_boundary': 'unlimited',
-            'invoicing_mode': 'draft',
-            'code': self.pkg_sequence,
-        }
-        
-        # Create template with SaaS context to trigger proper inheritance
-        template = self.env['sale.subscription.template'].with_context(
-            from_saas_package=True,
-            saas_package_id=self.id,
-            saas_package_name=self.pkg_name,
-            saas_package_price=self.pkg_price or 0.0
-        ).create(template_vals)
-        
-        # Update package with template reference
-        self.write({'pkg_subscription_template_id': template.id})
-        
-        _logger.info(f"Created subscription template {template.name} for SaaS package {self.pkg_name}")
-        return template
-
-    def sync_to_subscription_template(self):
-        """
-        Synchronize package changes to the associated subscription template.
-        This ensures all modifications flow through the SaaS module.
-        """
-        self.ensure_one()
-        
-        if not self.pkg_subscription_template_id:
-            _logger.warning(f"Package {self.pkg_name} has no subscription template to sync")
-            return
-        
-        template_vals = {}
-        
-        # Sync name if different
-        if self.pkg_subscription_template_id.name != self.pkg_name:
-            template_vals['name'] = self.pkg_name
-        
-        # Sync description if different
-        template_description = self.pkg_description or f'Subscription template for {self.pkg_name}'
-        if self.pkg_subscription_template_id.description != template_description:
-            template_vals['description'] = template_description
-        
-        # Sync code if different
-        if self.pkg_subscription_template_id.code != self.pkg_sequence:
-            template_vals['code'] = self.pkg_sequence
-        
-        if template_vals:
-            self.pkg_subscription_template_id.write(template_vals)
-            _logger.info(f"Synchronized package {self.pkg_name} changes to subscription template")
-        
-        # Also sync product prices
-        for product in self.pkg_subscription_template_id.product_ids:
-            if product.list_price != (self.pkg_price or 0.0):
-                product.write({'list_price': self.pkg_price or 0.0})
-                _logger.info(f"Updated product {product.name} price to {self.pkg_price}")
-
-    def action_view_subscription_template(self):
-        """Open the associated subscription template."""
-        self.ensure_one()
-        
-        if not self.pkg_subscription_template_id:
-            raise UserError(_('No subscription template associated with this package.'))
-        
-        return {
-            'name': _('Subscription Template'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'sale.subscription.template',
-            'res_id': self.pkg_subscription_template_id.id,
-            'view_mode': 'form',
-            'target': 'current',
-        }
