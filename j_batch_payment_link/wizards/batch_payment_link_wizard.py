@@ -76,17 +76,24 @@ class BatchPaymentLinkWizard(models.TransientModel):
         token_data = f"batch-{self.partner_id.id}-{self.total_amount}-{datetime.now().isoformat()}"
         access_token = hashlib.sha256(token_data.encode()).hexdigest()
         
-        # Get base URL
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        # Create a temporary payment.link.wizard record with our batch amount
+        payment_wizard = self.env['payment.link.wizard'].create({
+            'amount': self.total_amount,
+            'currency_id': self.currency_id.id,
+            'partner_id': self.partner_id.id,
+            'description': f'Batch payment for {len(self.invoice_ids)} invoices',
+        })
         
-        # Generate payment link using Odoo's payment format
-        # Use the first invoice as reference but with total amount
-        first_invoice = self.invoice_ids[0] if self.invoice_ids else False
-        if not first_invoice:
-            raise UserError(_('No invoices found for batch payment.'))
+        # Generate the actual payment link through the standard wizard
+        link_result = payment_wizard.action_generate_payment_link()
         
-        # Create payment link
-        self.payment_link = f"{base_url}/payment/pay?amount={self.total_amount}&access_token={access_token}&invoice_id={first_invoice.id}&batch_mode=1"
+        # Extract the payment link from the result
+        if link_result and 'url' in link_result:
+            self.payment_link = link_result['url']
+        else:
+            # Fallback: construct link manually if needed
+            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+            self.payment_link = f"{base_url}/payment/pay?access_token={payment_wizard.access_token}"
         
         return {
             'type': 'ir.actions.act_window',

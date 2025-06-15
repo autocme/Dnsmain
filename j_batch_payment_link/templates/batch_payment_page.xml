@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="batch_payment_page" name="Batch Payment Page">
+        <t t-call="website.layout">
+            <div id="wrap">
+                <div class="container">
+                    <div class="row mt-4">
+                        <div class="col-lg-8 offset-lg-2">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Batch Payment</h3>
+                                    <p class="text-muted">Pay multiple invoices with a single payment</p>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h5>Customer Information</h5>
+                                            <p><strong>Name:</strong> <t t-esc="partner.name"/></p>
+                                            <p><strong>Email:</strong> <t t-esc="partner.email"/></p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h5>Payment Summary</h5>
+                                            <p><strong>Total Amount:</strong> 
+                                                <span class="h4 text-primary">
+                                                    <t t-esc="total_amount" t-options="{'widget': 'monetary', 'display_currency': currency}"/>
+                                                </span>
+                                            </p>
+                                            <p><strong>Number of Invoices:</strong> <t t-esc="len(invoices)"/></p>
+                                        </div>
+                                    </div>
+                                    
+                                    <hr/>
+                                    
+                                    <h5>Invoice Details</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Invoice</th>
+                                                    <th>Date</th>
+                                                    <th>Amount Due</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr t-foreach="invoices" t-as="invoice">
+                                                    <td><t t-esc="invoice.name"/></td>
+                                                    <td><t t-esc="invoice.invoice_date"/></td>
+                                                    <td><t t-esc="invoice.amount_residual" t-options="{'widget': 'monetary', 'display_currency': currency}"/></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <hr/>
+                                    
+                                    <div class="text-center">
+                                        <form t-attf-action="/batch_payment/#{access_token}/process" method="post">
+                                            <button type="submit" class="btn btn-primary btn-lg">
+                                                <i class="fa fa-credit-card"/> Proceed to Payment
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+    
+    <template id="batch_payment_error" name="Batch Payment Error">
+        <t t-call="website.layout">
+            <div id="wrap">
+                <div class="container">
+                    <div class="row mt-4">
+                        <div class="col-lg-6 offset-lg-3">
+                            <div class="alert alert-danger text-center">
+                                <h4>Payment Error</h4>
+                                <p><t t-esc="error_message"/></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>
