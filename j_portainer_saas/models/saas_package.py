@@ -254,15 +254,11 @@ class SaasPackage(models.Model):
     # BUSINESS METHODS
     # ========================================================================
     
-    @api.onchange('docker_compose_template')
-    def _onchange_docker_compose_template(self):
-        """Extract variables from Docker Compose template when content changes."""
-        if self.docker_compose_template:
-            self._extract_template_variables()
-    
     def _extract_template_variables(self):
         """Extract @VARIABLE_NAME patterns from Docker Compose template."""
         if not self.docker_compose_template:
+            # Clear all variables if template is empty
+            self.template_variable_ids.unlink()
             return
         
         # Find all @VARIABLE_NAME patterns
@@ -282,15 +278,13 @@ class SaasPackage(models.Model):
         
         # Add new variables
         variables_to_add = variables - existing_variables
-        new_variables = []
         for var_name in variables_to_add:
-            new_variables.append((0, 0, {
-                'variable_name': var_name,
-                'field_domain': '',
-            }))
-        
-        if new_variables:
-            self.template_variable_ids = new_variables
+            if var_name:  # Ensure variable name is not empty
+                self.env['saas.template.variable'].create({
+                    'variable_name': var_name,
+                    'field_domain': '',
+                    'package_id': self.id,
+                })
 
     def name_get(self):
         """Return package name with pricing information."""
@@ -310,6 +304,10 @@ class SaasPackage(models.Model):
         
         package = super().create(vals)
         
+        # Extract template variables if docker_compose_template is provided
+        if vals.get('docker_compose_template'):
+            package._extract_template_variables()
+        
         # Link SaaS products to this package if template has products
         if package.pkg_subscription_template_id and package.pkg_subscription_template_id.product_ids:
             template = package.pkg_subscription_template_id
@@ -324,6 +322,10 @@ class SaasPackage(models.Model):
     def write(self, vals):
         """Override write to sync changes to subscription template and product."""
         result = super().write(vals)
+        
+        # Extract template variables if docker_compose_template changed
+        if 'docker_compose_template' in vals:
+            self._extract_template_variables()
         
         # Sync name changes
         if 'pkg_name' in vals and self.pkg_subscription_template_id:
