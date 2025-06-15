@@ -52,12 +52,16 @@ class AccountMove(models.Model):
         # Calculate total amount of all selected invoices
         total_amount = sum(customer_invoices.mapped('amount_residual'))
         
-        # Create payment.link.wizard directly with batch amount
+        # Create payment.link.wizard for batch payment
         payment_wizard = self.env['payment.link.wizard'].create({
             'amount': total_amount,
             'currency_id': customer_invoices[0].currency_id.id,
             'partner_id': customer_invoices[0].partner_id.id,
-            'description': _('Batch payment for %s invoices') % len(customer_invoices),
+            'description': _('Batch payment for invoices: %s') % ', '.join(customer_invoices.mapped('name')),
+            'batch_invoice_ids': [(6, 0, customer_invoices.ids)],
+            'is_batch_payment': True,
+            'res_model': 'account.move',
+            'res_id': customer_invoices[0].id,
         })
         
         # Return action to open the payment wizard
