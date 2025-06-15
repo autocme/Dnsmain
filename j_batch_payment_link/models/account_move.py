@@ -127,7 +127,8 @@ class AccountMove(models.Model):
                 'default_currency_id': customer_invoices[0].currency_id.id,
                 'default_partner_id': customer_invoices[0].partner_id.id,
                 'default_description': _('Batch payment for %s invoices') % len(customer_invoices),
-                'active_ids': customer_invoices.ids,
-                'active_model': 'account.move',
+                # Don't pass active_ids to prevent wizard from overriding amount
+                'batch_invoice_ids': customer_invoices.ids,
+                'batch_payment_mode': True,
             }
         }
