@@ -260,6 +260,7 @@ class BatchPayment(models.Model):
         payment.action_post()
         
         # Link payment to batch
+        payment.batch_payment_id = self.id
         self.payment_id = payment.id
         self.payment_date = fields.Datetime.now()
         self.state = 'paid'
