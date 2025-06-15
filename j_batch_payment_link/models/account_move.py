@@ -69,6 +69,7 @@ class AccountMove(models.Model):
                 'default_batch_invoice_ids': [(6, 0, customer_invoices.ids)],
                 'active_model': 'account.move',
                 'active_ids': customer_invoices.ids,
+                'active_id': customer_invoices[0].id,
             }
         }
     
