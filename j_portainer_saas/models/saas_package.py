@@ -240,7 +240,7 @@ class SaasPackage(models.Model):
     # ========================================================================
     # BUSINESS METHODS
     # ========================================================================
-    
+
     def name_get(self):
         """Return package name with pricing information."""
         result = []
