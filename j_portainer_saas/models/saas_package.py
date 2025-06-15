@@ -261,13 +261,12 @@ class SaasPackage(models.Model):
         
         package = super().create(vals)
         
-        # Link SaaS products to this package if template was created with SaaS context
-        if package.pkg_subscription_template_id:
+        # Link SaaS products to this package if template has products
+        if package.pkg_subscription_template_id and package.pkg_subscription_template_id.product_ids:
             template = package.pkg_subscription_template_id
-            if hasattr(template, '_saas_product_id'):
-                # Update the product to link back to this package
-                product = self.env['product.template'].browse(template._saas_product_id)
-                if product.exists():
+            # Update SaaS products to link back to this package
+            for product in template.product_ids:
+                if product.is_saas_product and not product.saas_package_id:
                     product.write({'saas_package_id': package.id})
                     _logger.info(f"Linked SaaS product {product.name} to package {package.pkg_name}")
 

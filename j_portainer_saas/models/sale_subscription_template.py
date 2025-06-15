@@ -76,9 +76,6 @@ class SaleSubscriptionTemplate(models.Model):
                 
                 product = self.env['product.template'].create(product_values)
                 _logger.info(f"Created SaaS product {product.name} for template {template.name}")
-                
-                # Store product ID in template context for later package linking
-                template._saas_product_id = product.id
         
         return template
 
