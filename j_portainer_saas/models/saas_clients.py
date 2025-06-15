@@ -297,7 +297,6 @@ class SaasClient(models.Model):
                     'name': f"{partner.name} - {package.pkg_name}",
                     'description': f'SaaS subscription for {partner.name} using {package.pkg_name} package',
                     'pricelist_id': partner.property_product_pricelist.id,
-                    'state': 'draft',
                 }
                 
                 # Create the subscription
@@ -307,14 +306,14 @@ class SaasClient(models.Model):
                 for product in template.product_ids:
                     if product.is_saas_product:
                         line_vals = {
-                            'subscription_id': subscription.id,
+                            'sale_subscription_id': subscription.id,
                             'product_id': product.id,
                             'name': product.name,
                             'price_unit': product.list_price,
-                            'quantity': 1,
+                            'product_uom_qty': 1,
                         }
-                        self.env['sale.subscription.line'].create(line_vals)
-                
+                        subscription_lines = self.env['sale.subscription.line'].create(line_vals)
+                        print('subscription_lines', subscription_lines)
                 # Set the subscription ID in vals
                 vals['sc_subscription_id'] = subscription.id
                 
