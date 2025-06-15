@@ -5,7 +5,7 @@ class ResPartner(models.Model):
     _inherit = 'res.partner'
 
     sequence = fields.Char(
-        string='Contact Sequence',
+        string='Sequence',
         default=lambda self: self.env['ir.sequence'].next_by_code('res.partner.sequence') or 'New',
         copy=False,
         readonly=True,
