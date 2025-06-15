@@ -4,6 +4,7 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 import logging
+import re
 
 _logger = logging.getLogger(__name__)
 
@@ -112,6 +113,18 @@ class SaasPackage(models.Model):
         required=True,
         tracking=True,
         help='Associated subscription template for billing and lifecycle management'
+    )
+    
+    docker_compose_template = fields.Text(
+        string='Docker Compose Template',
+        help='Docker Compose content with variables marked as @VARIABLE_NAME'
+    )
+    
+    template_variable_ids = fields.One2many(
+        comodel_name='saas.template.variable',
+        inverse_name='package_id',
+        string='Template Variables',
+        help='Auto-extracted variables from Docker Compose template'
     )
     
     # ========================================================================
@@ -241,8 +254,44 @@ class SaasPackage(models.Model):
     # BUSINESS METHODS
     # ========================================================================
     
-
+    @api.onchange('docker_compose_template')
+    def _onchange_docker_compose_template(self):
+        """Extract variables from Docker Compose template when content changes."""
+        if self.docker_compose_template:
+            self._extract_template_variables()
     
+    def _extract_template_variables(self):
+        """Extract @VARIABLE_NAME patterns from Docker Compose template."""
+        if not self.docker_compose_template:
+            return
+        
+        # Find all @VARIABLE_NAME patterns
+        variable_pattern = r'@(\w+)'
+        variables = set(re.findall(variable_pattern, self.docker_compose_template))
+        
+        # Get existing variables
+        existing_variables = {var.variable_name for var in self.template_variable_ids}
+        
+        # Remove variables no longer in template
+        variables_to_remove = existing_variables - variables
+        if variables_to_remove:
+            variables_to_delete = self.template_variable_ids.filtered(
+                lambda v: v.variable_name in variables_to_remove
+            )
+            variables_to_delete.unlink()
+        
+        # Add new variables
+        variables_to_add = variables - existing_variables
+        new_variables = []
+        for var_name in variables_to_add:
+            new_variables.append((0, 0, {
+                'variable_name': var_name,
+                'field_domain': '',
+            }))
+        
+        if new_variables:
+            self.template_variable_ids = new_variables
+
     def name_get(self):
         """Return package name with pricing information."""
         result = []

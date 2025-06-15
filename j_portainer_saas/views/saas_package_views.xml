@@ -87,6 +87,19 @@
                             <field name="pkg_description" placeholder="Detailed description about this SaaS Package..."/>
                         </page>
 
+                        <page name="deployment_template" string="Deployment Template">
+                            <field name="docker_compose_template" placeholder="Enter Docker Compose content with variables marked as @VARIABLE_NAME..."/>
+                        </page>
+
+                        <page name="template_variables" string="Variables">
+                            <field name="template_variable_ids">
+                                <tree editable="bottom">
+                                    <field name="variable_name" readonly="1"/>
+                                    <field name="field_domain" placeholder="e.g., sc_client_name, sc_client_subdomain"/>
+                                </tree>
+                            </field>
+                        </page>
+
                         <page name="timestamps" string="Other Info">
                             <group>
                                 <group>
