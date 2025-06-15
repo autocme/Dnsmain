@@ -53,6 +53,13 @@ class AccountMove(models.Model):
         # Calculate total amount of all selected invoices
         total_amount = sum(customer_invoices.mapped('amount_residual'))
         
+        # Create description with invoice IDs for payment reconciliation
+        invoice_refs = ', '.join(customer_invoices.mapped('name'))
+        description = _('Batch payment for invoices: %s [BATCH_IDS:%s]') % (
+            invoice_refs, 
+            ','.join(str(inv.id) for inv in customer_invoices)
+        )
+        
         # Create payment wizard with batch context
         return {
             'name': _('Generate Payment Link'),
@@ -64,12 +71,13 @@ class AccountMove(models.Model):
                 'default_amount': total_amount,
                 'default_currency_id': customer_invoices[0].currency_id.id,
                 'default_partner_id': customer_invoices[0].partner_id.id,
-                'default_description': _('Batch payment for %s invoices') % len(customer_invoices),
+                'default_description': description,
                 'default_is_batch_payment': True,
-                'default_batch_invoice_ids': [(6, 0, customer_invoices.ids)],
-                'active_model': 'account.move',
-                'active_ids': customer_invoices.ids,
-                'active_id': customer_invoices[0].id,
+                'batch_invoice_ids': customer_invoices.ids,
+                # Don't pass active_ids to prevent single invoice processing
+                'active_model': False,
+                'active_ids': [],
+                'active_id': False,
             }
         }
     
