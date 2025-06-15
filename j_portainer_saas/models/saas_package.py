@@ -254,6 +254,45 @@ class SaasPackage(models.Model):
     # BUSINESS METHODS
     # ========================================================================
     
+    @api.onchange('docker_compose_template')
+    def _onchange_docker_compose_template(self):
+        """Extract variables from Docker Compose template when content changes."""
+        if not self.docker_compose_template:
+            # Clear all variables if template is empty
+            self.template_variable_ids = [(5, 0, 0)]
+            return
+        
+        # Find all @VARIABLE_NAME patterns
+        variable_pattern = r'@(\w+)'
+        variables = set(re.findall(variable_pattern, self.docker_compose_template))
+        
+        # Get existing variables from current form state
+        existing_variables = {}
+        for var in self.template_variable_ids:
+            if hasattr(var, 'variable_name') and var.variable_name:
+                existing_variables[var.variable_name] = var
+        
+        # Build new variable list
+        new_variable_commands = []
+        
+        # Keep existing variables that are still in template
+        for var_name in variables:
+            if var_name in existing_variables:
+                # Keep existing variable with its field_domain
+                existing_var = existing_variables[var_name]
+                new_variable_commands.append((1, existing_var.id if hasattr(existing_var, 'id') else 0, {
+                    'variable_name': var_name,
+                }))
+            else:
+                # Add new variable
+                new_variable_commands.append((0, 0, {
+                    'variable_name': var_name,
+                    'field_domain': '',
+                }))
+        
+        # Update the One2many field
+        self.template_variable_ids = new_variable_commands
+    
     def _extract_template_variables(self):
         """Extract @VARIABLE_NAME patterns from Docker Compose template."""
         if not self.docker_compose_template:
