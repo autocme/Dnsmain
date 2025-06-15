@@ -16,7 +16,7 @@
     """,
     'author': 'Your Company',
     'website': 'https://www.yourcompany.com',
-    'depends': ['account'],
+    'depends': ['account', 'payment'],
     'data': [
         'data/server_actions.xml',
     ],
