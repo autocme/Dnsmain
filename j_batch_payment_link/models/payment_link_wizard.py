@@ -13,38 +13,39 @@ class PaymentLinkWizard(models.TransientModel):
     )
     is_batch_payment = fields.Boolean('Is Batch Payment', default=False)
     
-    def _get_payment_values(self):
-        """Override to handle batch payment values"""
-        values = super()._get_payment_values()
+    @api.model
+    def default_get(self, fields_list):
+        """Override to handle batch payment context"""
+        res = super().default_get(fields_list)
         
-        if self.batch_invoice_ids:
-            # For batch payments, we need to ensure proper invoice linking
+        # Check if we're in batch payment context
+        if self.env.context.get('active_model') == 'account.move' and len(self.env.context.get('active_ids', [])) > 1:
+            res['is_batch_payment'] = True
+            res['batch_invoice_ids'] = [(6, 0, self.env.context.get('active_ids', []))]
+            
+        return res
+    
+    def _get_additional_create_values(self):
+        """Override to set proper values for batch payments"""
+        values = super()._get_additional_create_values()
+        
+        if self.is_batch_payment and self.batch_invoice_ids:
+            # Link to the first invoice for compatibility
             values.update({
-                'invoice_ids': [(6, 0, self.batch_invoice_ids.ids)],
-                'communication': self.description or ', '.join(self.batch_invoice_ids.mapped('name')),
+                'res_model': 'account.move',
+                'res_id': self.batch_invoice_ids[0].id,
             })
             
         return values
     
-    @api.model
-    def _process_payment_allocation(self, payment, invoice_ids):
-        """Allocate payment across multiple invoices"""
-        if not invoice_ids:
-            return
+    def action_generate_link(self):
+        """Override to handle batch payment link generation"""
+        if self.is_batch_payment and self.batch_invoice_ids:
+            # Store batch invoice info in description for payment reconciliation
+            invoice_names = ', '.join(self.batch_invoice_ids.mapped('name'))
+            invoice_ids_str = ','.join(str(inv_id) for inv_id in self.batch_invoice_ids.ids)
             
-        invoices = self.env['account.move'].browse(invoice_ids)
-        total_payment = payment.amount
-        
-        for invoice in invoices:
-            if total_payment <= 0:
-                break
-                
-            # Calculate allocation for this invoice
-            allocation = min(invoice.amount_residual, total_payment)
+            # Update description to include batch info
+            self.description = f"Batch payment for invoices: {invoice_names} [BATCH_IDS:{invoice_ids_str}]"
             
-            if allocation > 0:
-                # Create payment allocation record
-                payment.write({
-                    'reconciled_invoice_ids': [(4, invoice.id)]
-                })
-                total_payment -= allocation
+        return super().action_generate_link()

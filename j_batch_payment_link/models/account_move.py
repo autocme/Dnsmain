@@ -1,3 +1,4 @@
+
 from odoo import models, _
 
 
@@ -52,24 +53,43 @@ class AccountMove(models.Model):
         # Calculate total amount of all selected invoices
         total_amount = sum(customer_invoices.mapped('amount_residual'))
         
-        # Create payment.link.wizard for batch payment
-        payment_wizard = self.env['payment.link.wizard'].create({
-            'amount': total_amount,
-            'currency_id': customer_invoices[0].currency_id.id,
-            'partner_id': customer_invoices[0].partner_id.id,
-            'description': _('Batch payment for invoices: %s') % ', '.join(customer_invoices.mapped('name')),
-            'batch_invoice_ids': [(6, 0, customer_invoices.ids)],
-            'is_batch_payment': True,
-            'res_model': 'account.move',
-            'res_id': customer_invoices[0].id,
-        })
-        
-        # Return action to open the payment wizard
+        # Create payment wizard with batch context
         return {
             'name': _('Generate Payment Link'),
             'type': 'ir.actions.act_window',
             'res_model': 'payment.link.wizard',
-            'res_id': payment_wizard.id,
             'view_mode': 'form',
             'target': 'new',
+            'context': {
+                'default_amount': total_amount,
+                'default_currency_id': customer_invoices[0].currency_id.id,
+                'default_partner_id': customer_invoices[0].partner_id.id,
+                'default_description': _('Batch payment for %s invoices') % len(customer_invoices),
+                'default_is_batch_payment': True,
+                'default_batch_invoice_ids': [(6, 0, customer_invoices.ids)],
+                'active_model': 'account.move',
+                'active_ids': customer_invoices.ids,
+            }
         }
+    
+    def _register_payment_batch(self, payment_vals, batch_invoice_description):
+        """Helper method to register payment across multiple invoices"""
+        if '[BATCH_IDS:' in batch_invoice_description:
+            # Extract invoice IDs from description
+            start_marker = '[BATCH_IDS:'
+            end_marker = ']'
+            start_idx = batch_invoice_description.find(start_marker) + len(start_marker)
+            end_idx = batch_invoice_description.find(end_marker, start_idx)
+            
+            if start_idx > len(start_marker) - 1 and end_idx > start_idx:
+                invoice_ids_str = batch_invoice_description[start_idx:end_idx]
+                try:
+                    invoice_ids = [int(x.strip()) for x in invoice_ids_str.split(',') if x.strip()]
+                    invoices = self.env['account.move'].browse(invoice_ids)
+                    
+                    # Return the invoice IDs for payment reconciliation
+                    return invoices.ids
+                except (ValueError, TypeError):
+                    pass
+        
+        return []
