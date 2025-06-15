@@ -95,7 +95,7 @@
                             <field name="template_variable_ids">
                                 <tree editable="bottom">
                                     <field name="variable_name" readonly="1"/>
-                                    <field name="field_domain" placeholder="e.g., [(&quot;sc_partner_id&quot;, &quot;!=&quot;, False)] or sc_client_name"/>
+                                    <field name="field_domain" widget="domain" options="{'model': 'saas.client'}" placeholder="e.g., [(&quot;sc_partner_id&quot;, &quot;!=&quot;, False)] or sc_client_name"/>
                                     <field name="field_name" readonly="1"/>
                                 </tree>
                             </field>
