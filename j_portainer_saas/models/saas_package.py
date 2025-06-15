@@ -262,24 +262,23 @@ class SaasPackage(models.Model):
         # Create the package first
         package = super().create(vals)
         
-        # Auto-create subscription template if not provided
-        if not vals.get('pkg_subscription_template_id'):
-            template_vals = {
-                'name': package.pkg_name,
-            }
-            
-            # Create template with SaaS context
-            template = self.env['sale.subscription.template'].with_context(
-                from_saas_package=True,
-                saas_package_id=package.id,
-                saas_package_name=package.pkg_name,
-                saas_package_price=package.pkg_price or 0.0
-            ).create(template_vals)
-            
-            # Update package with template reference
-            package.write({'pkg_subscription_template_id': template.id})
-            
-            _logger.info(f"Created subscription template {template.name} for SaaS package {package.pkg_name}")
+        # Auto-create subscription template
+        template_vals = {
+            'name': package.pkg_name,
+        }
+        
+        # Create template with SaaS context
+        template = self.env['sale.subscription.template'].with_context(
+            from_saas_package=True,
+            saas_package_id=package.id,
+            saas_package_name=package.pkg_name,
+            saas_package_price=package.pkg_price or 0.0
+        ).create(template_vals)
+        
+        # Update package with template reference
+        package.write({'pkg_subscription_template_id': template.id})
+        
+        _logger.info(f"Created subscription template {template.name} for SaaS package {package.pkg_name}")
         
         return package
     
