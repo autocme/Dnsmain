@@ -34,6 +34,7 @@
         'views/account_move_views.xml',
         'views/account_payment_views.xml',
         'wizards/batch_payment_wizard_views.xml',
+        'views/batch_payment_link_wizard_views.xml',
     ],
     'installable': True,
     'auto_install': False,
