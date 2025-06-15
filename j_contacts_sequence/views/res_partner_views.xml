@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Extend Partner Form View -->
+        <record id="view_partner_form_sequence" model="ir.ui.view">
+            <field name="name">res.partner.form.sequence</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='name']" position="before">
+                    <field name="sequence"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Extend Partner Tree View -->
+        <record id="view_partner_tree_sequence" model="ir.ui.view">
+            <field name="name">res.partner.tree.sequence</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='name']" position="before">
+                    <field name="sequence"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>
