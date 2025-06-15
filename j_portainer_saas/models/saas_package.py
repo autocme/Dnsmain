@@ -260,6 +260,16 @@ class SaasPackage(models.Model):
             vals['pkg_sequence'] = self.env['ir.sequence'].next_by_code('saas.package')
         
         package = super().create(vals)
+        
+        # Link SaaS products to this package if template was created with SaaS context
+        if package.pkg_subscription_template_id:
+            template = package.pkg_subscription_template_id
+            if hasattr(template, '_saas_product_id'):
+                # Update the product to link back to this package
+                product = self.env['product.template'].browse(template._saas_product_id)
+                if product.exists():
+                    product.write({'saas_package_id': package.id})
+                    _logger.info(f"Linked SaaS product {product.name} to package {package.pkg_name}")
 
         return package
 
