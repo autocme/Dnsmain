@@ -19,8 +19,25 @@
             <field name="model">res.partner</field>
             <field name="inherit_id" ref="base.view_partner_tree"/>
             <field name="arch" type="xml">
-                <xpath expr="//field[@name='name']" position="before">
+                <xpath expr="//field[@name='complete_name']" position="before">
                     <field name="sequence"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Extend Partner Kanban View -->
+        <record id="view_partner_kanban_sequence" model="ir.ui.view">
+            <field name="name">res.partner.kanban.sequence</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.res_partner_kanban_view"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='name']" position="after">
+                    <field name="sequence"/>
+                </xpath>
+                <xpath expr="//strong[@class='o_kanban_record_title']" position="before">
+                    <div class="o_kanban_record_subtitle">
+                        <field name="sequence"/>
+                    </div>
                 </xpath>
             </field>
         </record>
