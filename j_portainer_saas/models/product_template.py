@@ -77,7 +77,7 @@ class ProductTemplate(models.Model):
                         try:
                             # Only update if name differs to avoid infinite loops
                             if record.saas_package_id.pkg_name != vals['name']:
-                                record.saas_package_id.with_context(skip_template_sync=True).write({
+                                record.saas_package_id.with_context(skip_product_sync=True).write({
                                     'pkg_name': vals['name']
                                 })
                                 _logger.info(f"Synced name change from product {record.name} to SaaS package {record.saas_package_id.pkg_name}")
