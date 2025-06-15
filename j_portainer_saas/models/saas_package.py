@@ -255,61 +255,13 @@ class SaasPackage(models.Model):
     
     @api.model
     def create(self, vals):
-        """Override create to generate sequence number and auto-create subscription template."""
+        """Override create to generate sequence number."""
         if not vals.get('pkg_sequence'):
             vals['pkg_sequence'] = self.env['ir.sequence'].next_by_code('saas.package')
         
-        # Create the package first
-        package = super().create(vals)
-        
-        # Auto-create subscription template and product
-        package._create_subscription_template_and_product()
-        
-        return package
+        return super().create(vals)
     
-    def _create_subscription_template_and_product(self):
-        """Create subscription template and product automatically when package is created."""
-        if not self.pkg_name:
-            return
-        
-        # Create the subscription template first
-        template_vals = {
-            'name': self.pkg_name,
-            'recurring_rule_type': 'monthly',
-            'recurring_interval': 1,
-            'user_closable': True,
-        }
-        
-        try:
-            template = self.env['sale.subscription.template'].create(template_vals)
-        except Exception as e:
-            _logger.warning(f"Failed to create subscription template for package {self.pkg_name}: {str(e)}")
-            return
-        
-        # Create the product and link it to the template via inverse relationship
-        product_vals = {
-            'name': self.pkg_name,
-            'type': 'service',
-            'subscribable': True,
-            'list_price': self.pkg_price or 0.0,
-            'sale_ok': True,
-            'purchase_ok': False,
-            'subscription_template_id': template.id,
-            'categ_id': self.env.ref('product.product_category_all').id,
-        }
-        
-        try:
-            product = self.env['product.template'].create(product_vals)
-            # Link the template back to the package
-            self.write({'pkg_subscription_template_id': template.id})
-            _logger.info(f"Created subscription template '{template.name}' and product '{product.name}' for package '{self.pkg_name}'")
-        except Exception as e:
-            _logger.warning(f"Failed to create product for package {self.pkg_name}: {str(e)}")
-            # Clean up the template if product creation failed
-            try:
-                template.unlink()
-            except:
-                pass
+
     
     def write(self, vals):
         """Override write to sync changes to subscription template and product."""
