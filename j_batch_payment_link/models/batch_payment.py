@@ -207,13 +207,18 @@ class BatchPayment(models.Model):
         if self.state != 'draft':
             raise UserError(_('Payment link can only be generated for draft batch payments.'))
         
-        # Generate unique token
+        # Generate unique access token
         token_data = f"{self.id}-{self.partner_id.id}-{datetime.now().isoformat()}"
         self.payment_token = hashlib.sha256(token_data.encode()).hexdigest()
         
-        # Generate payment link (you can customize this URL)
+        # Get the first invoice for the payment link (as reference)
+        first_invoice = self.invoice_ids[0] if self.invoice_ids else False
+        if not first_invoice:
+            raise UserError(_('No invoices found for batch payment.'))
+        
+        # Generate payment link using Odoo's payment format
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        self.payment_link = f"{base_url}/batch_payment/{self.payment_token}"
+        self.payment_link = f"{base_url}/payment/pay?amount={self.total_amount}&access_token={self.payment_token}&invoice_id={first_invoice.id}"
         
         self.state = 'link_generated'
         
