@@ -112,15 +112,21 @@ class AccountMove(models.Model):
                 'Found multiple currencies: %s'
             ) % ', '.join(currencies.mapped('name')))
 
-        # Open wizard to create batch payment
+        # Calculate total amount of all selected invoices
+        total_amount = sum(customer_invoices.mapped('amount_residual'))
+        
+        # Open existing payment.link.wizard with total amount
         return {
-            'name': _('Create Batch Payment'),
+            'name': _('Generate Payment Link'),
             'type': 'ir.actions.act_window',
-            'res_model': 'batch.payment.wizard',
+            'res_model': 'payment.link.wizard',
             'view_mode': 'form',
             'target': 'new',
             'context': {
-                'default_invoice_ids': [(6, 0, customer_invoices.ids)],
+                'default_amount': total_amount,
+                'default_currency_id': customer_invoices[0].currency_id.id,
+                'default_partner_id': customer_invoices[0].partner_id.id,
+                'default_description': _('Batch payment for %s invoices') % len(customer_invoices),
                 'active_ids': customer_invoices.ids,
                 'active_model': 'account.move',
             }
