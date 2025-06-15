@@ -270,6 +270,107 @@ class SaasClient(models.Model):
                 self.sc_template_id = self.sc_subscription_id.template_id
     
     # ========================================================================
+    # BUSINESS METHODS
+    # ========================================================================
+    
+    @api.model
+    def create(self, vals):
+        """Override create to automatically create subscription for new SaaS clients."""
+        # Check if subscription is provided to use as base
+        base_subscription_id = vals.get('sc_subscription_id')
+        
+        # Extract required fields for subscription creation
+        partner_id = vals.get('sc_partner_id')
+        package_id = vals.get('sc_package_id')
+        
+        if not base_subscription_id and partner_id and package_id:
+            # Get the package and its template
+            package = self.env['saas.package'].browse(package_id)
+            if package.exists() and package.pkg_subscription_template_id:
+                template = package.pkg_subscription_template_id
+                partner = self.env['res.partner'].browse(partner_id)
+                
+                # Create subscription values
+                subscription_vals = {
+                    'partner_id': partner_id,
+                    'template_id': template.id,
+                    'name': f"{partner.name} - {package.pkg_name}",
+                    'description': f'SaaS subscription for {partner.name} using {package.pkg_name} package',
+                    'state': 'draft',
+                }
+                
+                # Create the subscription
+                subscription = self.env['sale.subscription'].create(subscription_vals)
+                
+                # Add subscription lines from template products
+                for product in template.product_ids:
+                    if product.is_saas_product:
+                        line_vals = {
+                            'subscription_id': subscription.id,
+                            'product_id': product.id,
+                            'name': product.name,
+                            'price_unit': product.list_price,
+                            'quantity': 1,
+                        }
+                        self.env['sale.subscription.line'].create(line_vals)
+                
+                # Set the subscription ID in vals
+                vals['sc_subscription_id'] = subscription.id
+                
+                _logger.info(f"Auto-created subscription {subscription.name} for SaaS client")
+        
+        # Create the SaaS client
+        client = super().create(vals)
+        
+        return client
+    
+    def create_subscription(self):
+        """
+        Create a subscription for this SaaS client using the package template.
+        This method can be called manually if subscription wasn't auto-created.
+        """
+        self.ensure_one()
+        
+        if self.sc_subscription_id:
+            _logger.warning(f"SaaS client {self.sc_partner_id.name} already has a subscription")
+            return self.sc_subscription_id
+        
+        if not self.sc_package_id or not self.sc_package_id.pkg_subscription_template_id:
+            raise UserError(_('Cannot create subscription: Package or template is missing.'))
+        
+        template = self.sc_package_id.pkg_subscription_template_id
+        
+        # Create subscription values
+        subscription_vals = {
+            'partner_id': self.sc_partner_id.id,
+            'template_id': template.id,
+            'name': f"{self.sc_partner_id.name} - {self.sc_package_id.pkg_name}",
+            'description': f'SaaS subscription for {self.sc_partner_id.name} using {self.sc_package_id.pkg_name} package',
+            'state': 'draft',
+        }
+        
+        # Create the subscription
+        subscription = self.env['sale.subscription'].create(subscription_vals)
+        
+        # Add subscription lines from template products
+        for product in template.product_ids:
+            if product.is_saas_product:
+                line_vals = {
+                    'subscription_id': subscription.id,
+                    'product_id': product.id,
+                    'name': product.name,
+                    'price_unit': product.list_price,
+                    'quantity': 1,
+                }
+                self.env['sale.subscription.line'].create(line_vals)
+        
+        # Update client with subscription
+        self.write({'sc_subscription_id': subscription.id})
+        
+        _logger.info(f"Created subscription {subscription.name} for SaaS client {self.sc_partner_id.name}")
+        return subscription
+    
+    # ========================================================================
     # ACTION METHODS
     # ========================================================================
     
