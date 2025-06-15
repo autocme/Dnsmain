@@ -4,6 +4,7 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 import logging
+import re
 
 _logger = logging.getLogger(__name__)
 
@@ -85,6 +86,30 @@ class SaasClient(models.Model):
         tracking=True,
         help='The Portainer custom template used for deploying containerized services '
              'for this SaaS client.'
+    )
+    
+    # ========================================================================
+    # DOCKER COMPOSE TEMPLATE FIELDS
+    # ========================================================================
+    
+    docker_compose_template = fields.Text(
+        string='Docker Compose Template',
+        readonly=True,
+        help='Docker Compose template inherited from package with variables'
+    )
+    
+    template_variable_ids = fields.One2many(
+        comodel_name='saas.template.variable',
+        inverse_name='client_id',
+        string='Template Variables',
+        readonly=True,
+        help='Variables inherited from package for template rendering'
+    )
+    
+    rendered_template = fields.Text(
+        string='Rendered Template',
+        compute='_compute_rendered_template',
+        help='Final Docker Compose template with variables replaced by actual values'
     )
     
     # ========================================================================
@@ -269,6 +294,84 @@ class SaasClient(models.Model):
             if not self.sc_template_id:
                 self.sc_template_id = self.sc_subscription_id.template_id
     
+    @api.onchange('sc_package_id')
+    def _onchange_package_id(self):
+        """Inherit template and variables from selected package."""
+        if self.sc_package_id:
+            self._inherit_package_template()
+    
+    def _inherit_package_template(self):
+        """Copy template and variables from package to client."""
+        if not self.sc_package_id:
+            return
+        
+        package = self.sc_package_id
+        
+        # Copy template content
+        self.docker_compose_template = package.docker_compose_template
+        
+        # Clear existing variables and copy from package
+        self.template_variable_ids = [(5, 0, 0)]  # Clear all
+        
+        # Copy variables from package
+        new_variables = []
+        for pkg_var in package.template_variable_ids:
+            new_variables.append((0, 0, {
+                'variable_name': pkg_var.variable_name,
+                'field_domain': pkg_var.field_domain,
+                'field_name': pkg_var.field_name,
+                'client_id': self.id if self.id else None,
+            }))
+        
+        if new_variables:
+            self.template_variable_ids = new_variables
+    
+    # ========================================================================
+    # COMPUTED METHODS
+    # ========================================================================
+    
+    @api.depends('docker_compose_template', 'template_variable_ids', 'template_variable_ids.field_name')
+    def _compute_rendered_template(self):
+        """Render template by replacing variables with actual field values."""
+        for record in self:
+            if not record.docker_compose_template:
+                record.rendered_template = ''
+                continue
+            
+            rendered_content = record.docker_compose_template
+            
+            # Replace each variable with actual field value
+            for variable in record.template_variable_ids:
+                if variable.variable_name and variable.field_name:
+                    # Get field value from client record
+                    field_value = record._get_field_value(variable.field_name)
+                    variable_placeholder = f'@{variable.variable_name}'
+                    rendered_content = rendered_content.replace(variable_placeholder, str(field_value))
+            
+            record.rendered_template = rendered_content
+    
+    def _get_field_value(self, field_path):
+        """Get field value from record using dot notation path."""
+        if not field_path:
+            return ''
+        
+        try:
+            # Split field path by dots (e.g., 'sc_partner_id.name')
+            field_parts = field_path.split('.')
+            current_record = self
+            
+            for field_part in field_parts:
+                if hasattr(current_record, field_part):
+                    current_record = getattr(current_record, field_part)
+                else:
+                    return ''
+            
+            # Return the final value as string
+            return current_record if current_record else ''
+            
+        except Exception:
+            return ''
+    
     # ========================================================================
     # BUSINESS METHODS
     # ========================================================================
@@ -323,6 +426,10 @@ class SaasClient(models.Model):
         
         # Create the SaaS client
         client = super().create(vals)
+        
+        # Inherit template from package if package is specified
+        if vals.get('sc_package_id'):
+            client._inherit_package_template()
         
         return client
 

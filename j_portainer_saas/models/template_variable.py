@@ -44,9 +44,15 @@ class TemplateVariable(models.Model):
     package_id = fields.Many2one(
         comodel_name='saas.package',
         string='Package',
-        required=True,
         ondelete='cascade',
         help='Associated SaaS package'
+    )
+    
+    client_id = fields.Many2one(
+        comodel_name='saas.client',
+        string='Client',
+        ondelete='cascade',
+        help='Associated SaaS client (for client-specific variable instances)'
     )
     
     # ========================================================================
@@ -58,6 +64,16 @@ class TemplateVariable(models.Model):
             'unique_variable_per_package',
             'UNIQUE(variable_name, package_id)',
             'Variable name must be unique per package.'
+        ),
+        (
+            'unique_variable_per_client',
+            'UNIQUE(variable_name, client_id)',
+            'Variable name must be unique per client.'
+        ),
+        (
+            'package_or_client_required',
+            'CHECK((package_id IS NOT NULL AND client_id IS NULL) OR (package_id IS NULL AND client_id IS NOT NULL))',
+            'Variable must belong to either a package or a client, but not both.'
         ),
     ]
     
