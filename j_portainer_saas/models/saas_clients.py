@@ -296,6 +296,7 @@ class SaasClient(models.Model):
                     'template_id': template.id,
                     'name': f"{partner.name} - {package.pkg_name}",
                     'description': f'SaaS subscription for {partner.name} using {package.pkg_name} package',
+                    'pricelist_id': partner.property_product_pricelist.id,
                     'state': 'draft',
                 }
                 
@@ -346,6 +347,7 @@ class SaasClient(models.Model):
             'template_id': template.id,
             'name': f"{self.sc_partner_id.name} - {self.sc_package_id.pkg_name}",
             'description': f'SaaS subscription for {self.sc_partner_id.name} using {self.sc_package_id.pkg_name} package',
+            'pricelist_id': self.sc_partner_id.property_product_pricelist.id,
             'state': 'draft',
         }
         
