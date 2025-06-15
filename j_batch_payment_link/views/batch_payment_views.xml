@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Batch Payment Tree View -->
+        <record id="view_batch_payment_tree" model="ir.ui.view">
+            <field name="name">batch.payment.tree</field>
+            <field name="model">batch.payment</field>
+            <field name="arch" type="xml">
+                <tree string="Batch Payments" create="false">
+                    <field name="name"/>
+                    <field name="partner_id"/>
+                    <field name="invoice_count"/>
+                    <field name="total_amount"/>
+                    <field name="currency_id"/>
+                    <field name="state" widget="badge" decoration-success="state == 'paid'" decoration-info="state == 'link_generated'" decoration-muted="state == 'cancelled'"/>
+                    <field name="payment_date"/>
+                    <field name="expiry_date"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Batch Payment Form View -->
+        <record id="view_batch_payment_form" model="ir.ui.view">
+            <field name="name">batch.payment.form</field>
+            <field name="model">batch.payment</field>
+            <field name="arch" type="xml">
+                <form string="Batch Payment">
+                    <header>
+                        <button name="generate_payment_link" string="Generate Payment Link" type="object" class="btn-primary" states="draft"/>
+                        <button name="process_payment" string="Process Payment" type="object" class="btn-success" states="link_generated" groups="account.group_account_manager"/>
+                        <button name="cancel_batch_payment" string="Cancel" type="object" class="btn-secondary" states="draft,link_generated"/>
+                        <button name="reset_to_draft" string="Reset to Draft" type="object" class="btn-warning" states="cancelled"/>
+                        <button name="action_send_payment_link" string="Send Payment Link" type="object" class="btn-info" states="link_generated"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,link_generated,paid"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_view_invoices" type="object" class="oe_stat_button" icon="fa-file-text-o">
+                                <field name="invoice_count" widget="statinfo" string="Invoices"/>
+                            </button>
+                            <button name="action_view_payment" type="object" class="oe_stat_button" icon="fa-money" attrs="{'invisible': [('payment_id', '=', False)]}">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_text">Payment</span>
+                                </div>
+                            </button>
+                        </div>
+                        
+                        <div class="oe_title">
+                            <h1>
+                                <field name="name" readonly="1"/>
+                            </h1>
+                        </div>
+                        
+                        <group>
+                            <group name="payment_info">
+                                <field name="partner_id" readonly="1"/>
+                                <field name="total_amount" readonly="1"/>
+                                <field name="currency_id" readonly="1"/>
+                                <field name="company_id" groups="base.group_multi_company"/>
+                            </group>
+                            <group name="dates">
+                                <field name="expiry_date"/>
+                                <field name="payment_date" readonly="1"/>
+                                <field name="payment_id" readonly="1" attrs="{'invisible': [('payment_id', '=', False)]}"/>
+                            </group>
+                        </group>
+                        
+                        <group name="payment_link_group" attrs="{'invisible': [('payment_link', '=', False)]}">
+                            <field name="payment_link" readonly="1" widget="url"/>
+                        </group>
+                        
+                        <notebook>
+                            <page string="Invoices" name="invoices">
+                                <field name="invoice_ids" readonly="1">
+                                    <tree string="Invoices" create="false" delete="false">
+                                        <field name="name"/>
+                                        <field name="partner_id"/>
+                                        <field name="invoice_date"/>
+                                        <field name="invoice_date_due"/>
+                                        <field name="amount_total"/>
+                                        <field name="amount_residual"/>
+                                        <field name="currency_id"/>
+                                        <field name="state" widget="badge"/>
+                                    </tree>
+                                </field>
+                            </page>
+                            <page string="Notes" name="notes">
+                                <field name="notes" placeholder="Additional notes..."/>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <div class="oe_chatter">
+                        <field name="message_follower_ids"/>
+                        <field name="activity_ids"/>
+                        <field name="message_ids"/>
+                    </div>
+                </form>
+            </field>
+        </record>
+
+        <!-- Batch Payment Search View -->
+        <record id="view_batch_payment_search" model="ir.ui.view">
+            <field name="name">batch.payment.search</field>
+            <field name="model">batch.payment</field>
+            <field name="arch" type="xml">
+                <search string="Search Batch Payments">
+                    <field name="name" string="Reference"/>
+                    <field name="partner_id" string="Customer"/>
+                    <field name="payment_link"/>
+                    <separator/>
+                    <filter name="draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+                    <filter name="link_generated" string="Link Generated" domain="[('state', '=', 'link_generated')]"/>
+                    <filter name="paid" string="Paid" domain="[('state', '=', 'paid')]"/>
+                    <filter name="cancelled" string="Cancelled" domain="[('state', '=', 'cancelled')]"/>
+                    <separator/>
+                    <filter name="expired" string="Expired" domain="[('expiry_date', '&lt;', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))]"/>
+                    <group expand="0" string="Group By">
+                        <filter name="group_partner" string="Customer" domain="[]" context="{'group_by': 'partner_id'}"/>
+                        <filter name="group_state" string="Status" domain="[]" context="{'group_by': 'state'}"/>
+                        <filter name="group_currency" string="Currency" domain="[]" context="{'group_by': 'currency_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Batch Payment Action -->
+        <record id="action_batch_payment" model="ir.actions.act_window">
+            <field name="name">Batch Payments</field>
+            <field name="res_model">batch.payment</field>
+            <field name="view_mode">tree,form</field>
+            <field name="search_view_id" ref="view_batch_payment_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No batch payments found!
+                </p>
+                <p>
+                    Batch payments allow you to collect payment for multiple invoices through a single payment link.
+                    To create a batch payment, select multiple invoices from the invoice list and use the "Batch Payment Generate Link" action.
+                </p>
+            </field>
+        </record>
+
+        <!-- Menu Item -->
+        <menuitem id="menu_batch_payment_root" name="Batch Payments" parent="account.menu_finance_receivables" sequence="15"/>
+        <menuitem id="menu_batch_payment" name="Batch Payments" parent="menu_batch_payment_root" action="action_batch_payment" sequence="10"/>
+    </data>
+</odoo>
