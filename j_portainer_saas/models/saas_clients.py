@@ -309,11 +309,11 @@ class SaasClient(models.Model):
                         product_variant = product_template.product_variant_id
                         if product_variant:
                             line_vals = {
-                                'subscription_id': subscription.id,
+                                'sale_subscription_id': subscription.id,
                                 'product_id': product_variant.id,
                                 'name': product_template.name,
                                 'price_unit': product_template.list_price,
-                                'quantity': 1,
+                                'product_uom_qty': 1,
                             }
                             self.env['sale.subscription.line'].create(line_vals)
                 # Set the subscription ID in vals
@@ -325,79 +325,8 @@ class SaasClient(models.Model):
         client = super().create(vals)
         
         return client
-    
-    def create_subscription(self):
-        """
-        Create a subscription for this SaaS client using the package template.
-        This method can be called manually if subscription wasn't auto-created.
-        """
-        self.ensure_one()
-        
-        if self.sc_subscription_id:
-            _logger.warning(f"SaaS client {self.sc_partner_id.name} already has a subscription")
-            return self.sc_subscription_id
-        
-        if not self.sc_package_id or not self.sc_package_id.pkg_subscription_template_id:
-            raise UserError(_('Cannot create subscription: Package or template is missing.'))
-        
-        template = self.sc_package_id.pkg_subscription_template_id
-        
-        # Create subscription values
-        subscription_vals = {
-            'partner_id': self.sc_partner_id.id,
-            'template_id': template.id,
-            'name': f"{self.sc_partner_id.name} - {self.sc_package_id.pkg_name}",
-            'description': f'SaaS subscription for {self.sc_partner_id.name} using {self.sc_package_id.pkg_name} package',
-            'pricelist_id': self.sc_partner_id.property_product_pricelist.id,
-            'state': 'draft',
-        }
-        
-        # Create the subscription
-        subscription = self.env['sale.subscription'].create(subscription_vals)
-        
-        # Add subscription lines from template products
-        for product_template in template.product_ids:
-            if product_template.is_saas_product:
-                # Get the product variant (product.product) from template
-                product_variant = product_template.product_variant_id
-                if product_variant:
-                    line_vals = {
-                        'subscription_id': subscription.id,
-                        'product_id': product_variant.id,
-                        'name': product_template.name,
-                        'price_unit': product_template.list_price,
-                        'quantity': 1,
-                    }
-                    self.env['sale.subscription.line'].create(line_vals)
-        
-        # Update client with subscription
-        self.write({'sc_subscription_id': subscription.id})
-        
-        _logger.info(f"Created subscription {subscription.name} for SaaS client {self.sc_partner_id.name}")
-        return subscription
-    
+
     # ========================================================================
     # ACTION METHODS
     # ========================================================================
-    
-    
-    def action_view_stack(self):
-        """
-        Open the associated Portainer stack record in a form view.
-        
-        Returns:
-            dict: Action dictionary to open the stack form
-        """
-        self.ensure_one()
-        if not self.sc_stack_id:
-            raise UserError(_('No Portainer stack is associated with this SaaS client.'))
-        
-        return {
-            'name': _('Portainer Stack Details'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'j_portainer.stack',
-            'res_id': self.sc_stack_id.id,
-            'view_mode': 'form',
-            'target': 'current',
-        }
     
