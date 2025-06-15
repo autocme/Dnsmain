@@ -266,11 +266,6 @@ class SaasPackage(models.Model):
         if not vals.get('pkg_subscription_template_id'):
             template_vals = {
                 'name': package.pkg_name,
-                'recurring_interval': 1,
-                'recurring_rule_type': 'months',
-                'recurring_rule_boundary': 'unlimited',
-                'invoicing_mode': 'draft',
-                'code': package.pkg_sequence,
             }
             
             # Create template with SaaS context
