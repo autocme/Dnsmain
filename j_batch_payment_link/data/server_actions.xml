@@ -9,6 +9,9 @@
             <field name="binding_view_types">list</field>
             <field name="state">code</field>
             <field name="code">
+# Import translation function
+from odoo import _
+
 # Validate selected invoices
 if not records:
     raise UserError(_('Please select at least one invoice.'))

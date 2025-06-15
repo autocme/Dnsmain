@@ -19,7 +19,7 @@
                 </xpath>
                 
                 <!-- Add batch payment info in payment details -->
-                <xpath expr="//group[@name='payment_partner_info']" position="after">
+                <xpath expr="//group[@name='group2']" position="after">
                     <group string="Batch Payment Info" invisible="not batch_payment_id">
                         <field name="batch_payment_id" readonly="1"/>
                     </group>
