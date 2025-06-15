@@ -1,24 +1,17 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Server Action for Batch Payment Generation -->
+        <!-- Server Action for Batch Payment Link Generation -->
         <record id="action_batch_payment_generate_link" model="ir.actions.server">
-            <field name="name">Batch Payment Generate Link</field>
+            <field name="name">Generate Batch Payment Link</field>
             <field name="model_id" ref="account.model_account_move"/>
+            <field name="state">code</field>
+            <field name="code">
+action = records.action_batch_payment_generate_link()
+            </field>
             <field name="binding_model_id" ref="account.model_account_move"/>
             <field name="binding_view_types">list</field>
-            <field name="state">code</field>
-            <field name="code">action = records.action_batch_payment_generate_link()</field>
-        </record>
-
-        <!-- Sequence for Batch Payment -->
-        <record id="seq_batch_payment" model="ir.sequence">
-            <field name="name">Batch Payment</field>
-            <field name="code">batch.payment</field>
-            <field name="prefix">BP</field>
-            <field name="padding">5</field>
-            <field name="number_next">1</field>
-            <field name="number_increment">1</field>
         </record>
     </data>
 </odoo>
