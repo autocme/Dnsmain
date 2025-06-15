@@ -4,25 +4,15 @@
     'category': 'Accounting',
     'summary': 'Generate single payment link for multiple invoices',
     'description': """
-        Batch Payment Link Module
-        =========================
+        Simple batch payment link generation for multiple invoices.
         
-        This module allows users to:
-        - Select multiple invoices from tree view
-        - Generate a single payment link for all selected invoices
-        - Validate that all invoices belong to the same customer
-        - Ensure all invoices are posted before generating payment link
-        - Process batch payment and mark all invoices as paid
-        - Track payment relationships with invoices via smart buttons
+        Features:
+        - Select multiple customer invoices
+        - Generate single payment link with total amount
+        - Validates same customer, posted status, and currency
+        - Uses standard Odoo payment system
         
-        Workflow:
-        1. User selects multiple invoices from tree view
-        2. Click "Batch Payment Generate Link" server action
-        3. System validates same customer and posted status
-        4. Payment link is generated with sum of all invoice amounts
-        5. Customer pays through the link
-        6. All selected invoices are automatically paid
-        7. Payment record shows linked invoices in smart button
+        Usage: Select invoices → "Batch Payment Generate Link" → Payment wizard opens with total amount
     """,
     'author': 'Your Company',
     'website': 'https://www.yourcompany.com',
