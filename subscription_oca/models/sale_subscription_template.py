@@ -101,36 +101,4 @@ class SaleSubscriptionTemplate(models.Model):
             "domain": [("id", "in", self.product_ids.ids)],
         }
 
-    @api.model
-    def create(self, vals):
-        """Override create to handle package-triggered template creation."""
-        template = super().create(vals)
-        
-        # Check if template created from package context
-        if self.env.context.get('from_package'):
-            package_id = self.env.context.get('package_id')
-            package_name = self.env.context.get('package_name')
-            package_price = self.env.context.get('package_price', 0.0)
-            
-            if package_id and package_name:
-                # Create product for this template
-                product_vals = {
-                    'name': package_name,
-                    'type': 'service',
-                    'subscribable': True,
-                    'list_price': package_price,
-                    'sale_ok': True,
-                    'purchase_ok': False,
-                    'subscription_template_id': template.id,
-                    'categ_id': self.env.ref('product.product_category_all').id,
-                }
-                
-                try:
-                    self.env['product.template'].create(product_vals)
-                    # Link template back to package
-                    package = self.env['saas.package'].browse(package_id)
-                    package.write({'pkg_subscription_template_id': template.id})
-                except Exception:
-                    pass
-        
-        return template
+
