@@ -106,6 +106,24 @@
                                    placeholder="Internal notes about this SaaS client..."/>
                         </page>
 
+                        <page name="deployment_template" string="Deployment Template">
+                            <field name="docker_compose_template" readonly="1" placeholder="Docker Compose template inherited from package..."/>
+                        </page>
+
+                        <page name="template_variables" string="Variables">
+                            <field name="template_variable_ids" readonly="1">
+                                <tree>
+                                    <field name="variable_name"/>
+                                    <field name="field_domain"/>
+                                    <field name="field_name"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                        <page name="rendered_template" string="Rendered Template">
+                            <field name="rendered_template" readonly="1" placeholder="Final Docker Compose template with variables replaced..."/>
+                        </page>
+
                         <page name="tracking_info" string="Other Info">
                             <group>
                                 <group>
