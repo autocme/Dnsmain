@@ -54,7 +54,12 @@
                     <group>
                         <group name="package_info" string="Package Information">
                             <field name="pkg_sequence"/>
-                            <field name="pkg_subscription_template_id"/>
+                            <field name="pkg_subscription_template_id" context="{
+                       'from_saas_package': True,
+                       'saas_package_id': active_id,
+                       'saas_package_price': pkg_price,
+                       'saas_package_name': pkg_name,
+                       }"/>
                         </group>
 
                         <group name="pricing" string="Pricing">
@@ -199,7 +204,7 @@
         <field name="arch" type="xml">
             <search string="Search Packages">
                 <field name="pkg_name" string="Package Name"/>
-                <field name="pkg_subscription_template_id" string="Subscription Template"/>
+                <field name="pkg_subscription_template_id" string="Subscription Template" />
                 <field name="pkg_price" string="Price"/>
 
                 <filter string="Active Packages" name="active" domain="[('pkg_active', '=', True)]"/>

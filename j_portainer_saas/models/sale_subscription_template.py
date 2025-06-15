@@ -45,43 +45,27 @@ class SaleSubscriptionTemplate(models.Model):
     @api.model
     def create(self, vals):
         """Override create to handle SaaS package-triggered template creation."""
-        template = super().create(vals)
-
+        # template = super().create(vals)
+        print('self.env.context', self.env.context)
         # Check if template created from SaaS package context
         if self.env.context.get('from_saas_package'):
             package_id = self.env.context.get('saas_package_id')
+            print('package_id', package_id)
             package_name = self.env.context.get('saas_package_name')
             package_price = self.env.context.get('saas_package_price', 0.0)
+            vals['name'] = package_name
+            product_values = {
+                'name': package_name,
+                'list_price': package_price,
+                'detailed_type': 'service',
+                'subscribable': True,
+                'subscription_template_id': self.id,
+            }
+            product = self.env['product.template'].create(product_values)
 
-            if package_id and package_name:
-                # Mark as SaaS template
-                template.write({'is_saas_template': True})
+            vals['product_ids'] = [(4, product.id)]
 
-                # Create product for this template
-                product_vals = {
-                    'name': package_name,
-                    'type': 'service',
-                    'subscribable': True,
-                    'list_price': package_price,
-                    'sale_ok': True,
-                    'purchase_ok': False,
-                    'subscription_template_id': template.id,
-                    'categ_id': self.env.ref('product.product_category_all').id,
-                }
-
-                try:
-                    product = self.env['product.template'].create(product_vals)
-                    _logger.info(f"Created product {product.name} for SaaS template {template.name}")
-
-                    # Link template back to package
-                    package = self.env['saas.package'].browse(package_id)
-                    package.write({'pkg_subscription_template_id': template.id})
-                    _logger.info(f"Linked template {template.name} to SaaS package {package.pkg_name}")
-
-                except Exception as e:
-                    _logger.error(f"Failed to create product or link template for SaaS package {package_id}: {str(e)}")
-
-        return template
+        return super().create(vals)
 
     def write(self, vals):
         """Override write to sync changes with SaaS packages."""
