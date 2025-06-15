@@ -76,17 +76,17 @@ class TemplateVariable(models.Model):
             self.field_name = ''
             return
         
-        # Pattern to match field names in domain expressions
-        # Examples: [("field_name", "!=", False)], ("field_name", "=", value)
-        field_pattern = r'["\']([a-zA-Z_][a-zA-Z0-9_]*)["\']'
+        # Pattern to match field names with dot notation in domain expressions
+        # Examples: [("field_name", "!=", False)], ("sc_partner_id.active", "=", True)
+        field_pattern = r'["\']([a-zA-Z_][a-zA-Z0-9_.]*)["\']'
         matches = re.findall(field_pattern, self.field_domain)
         
         if matches:
-            # Take the first field name found
+            # Take the first field name found (includes dot notation)
             self.field_name = matches[0]
         else:
-            # Try simpler pattern for direct field names
-            simple_pattern = r'^([a-zA-Z_][a-zA-Z0-9_]*)$'
+            # Try simpler pattern for direct field names with dot notation
+            simple_pattern = r'^([a-zA-Z_][a-zA-Z0-9_.]*)$'
             match = re.match(simple_pattern, self.field_domain.strip())
             if match:
                 self.field_name = match.group(1)
