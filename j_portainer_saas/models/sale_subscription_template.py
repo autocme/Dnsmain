@@ -46,17 +46,17 @@ class SaleSubscriptionTemplate(models.Model):
     def create(self, vals):
         """Override create to handle SaaS package-triggered template creation."""
         template = super().create(vals)
-        
+
         # Check if template created from SaaS package context
         if self.env.context.get('from_saas_package'):
             package_id = self.env.context.get('saas_package_id')
             package_name = self.env.context.get('saas_package_name')
             package_price = self.env.context.get('saas_package_price', 0.0)
-            
+
             if package_id and package_name:
                 # Mark as SaaS template
                 template.write({'is_saas_template': True})
-                
+
                 # Create product for this template
                 product_vals = {
                     'name': package_name,
@@ -68,19 +68,19 @@ class SaleSubscriptionTemplate(models.Model):
                     'subscription_template_id': template.id,
                     'categ_id': self.env.ref('product.product_category_all').id,
                 }
-                
+
                 try:
                     product = self.env['product.template'].create(product_vals)
                     _logger.info(f"Created product {product.name} for SaaS template {template.name}")
-                    
+
                     # Link template back to package
                     package = self.env['saas.package'].browse(package_id)
                     package.write({'pkg_subscription_template_id': template.id})
                     _logger.info(f"Linked template {template.name} to SaaS package {package.pkg_name}")
-                    
+
                 except Exception as e:
                     _logger.error(f"Failed to create product or link template for SaaS package {package_id}: {str(e)}")
-        
+
         return template
 
     def write(self, vals):
@@ -123,59 +123,3 @@ class SaleSubscriptionTemplate(models.Model):
                 _logger.info(f"Removed template reference from {len(record.saas_package_ids)} SaaS packages")
         
         return super().unlink()
-
-    def create_saas_product(self, package_name, package_price=0.0):
-        """
-        Create a product specifically for SaaS package integration.
-        
-        Args:
-            package_name (str): Name for the product
-            package_price (float): Price for the product
-            
-        Returns:
-            product.template: Created product record
-        """
-        self.ensure_one()
-        
-        product_vals = {
-            'name': package_name,
-            'type': 'service',
-            'subscribable': True,
-            'list_price': package_price,
-            'sale_ok': True,
-            'purchase_ok': False,
-            'subscription_template_id': self.id,
-            'categ_id': self.env.ref('product.product_category_all').id,
-            'description_sale': f'SaaS service based on {self.name} template',
-        }
-        
-        return self.env['product.template'].create(product_vals)
-
-    def sync_with_saas_packages(self):
-        """
-        Synchronize template changes with all linked SaaS packages.
-        This method can be called manually to ensure consistency.
-        """
-        for record in self:
-            if record.is_saas_template:
-                for package in record.saas_package_ids:
-                    # Sync template properties to package
-                    package_vals = {}
-                    
-                    if package.pkg_name != record.name:
-                        package_vals['pkg_name'] = record.name
-                    
-                    if package_vals:
-                        package.write(package_vals)
-                        
-                # Sync with products
-                for product in record.product_ids:
-                    product_vals = {}
-                    
-                    if product.name != record.name:
-                        product_vals['name'] = record.name
-                    
-                    if product_vals:
-                        product.write(product_vals)
-                        
-                _logger.info(f"Synchronized SaaS template {record.name} with {len(record.saas_package_ids)} packages")
