@@ -241,8 +241,6 @@ class SaasPackage(models.Model):
     # BUSINESS METHODS
     # ========================================================================
     
-
-    
     def name_get(self):
         """Return package name with pricing information."""
         result = []
@@ -259,52 +257,29 @@ class SaasPackage(models.Model):
         if not vals.get('pkg_sequence'):
             vals['pkg_sequence'] = self.env['ir.sequence'].next_by_code('saas.package')
         
-        # Check if template ID is provided to use as base
-        base_template_id = vals.get('pkg_subscription_template_id')
-        
-        # Prepare template values
-        if base_template_id:
-            # Use provided template as base
-            base_template = self.env['sale.subscription.template'].browse(base_template_id)
-            if base_template.exists():
-                # Copy all fields from base template
-                template_vals = base_template.copy_data()[0]
-                # Override name with package name (will be updated after package creation)
-                template_vals['name'] = vals.get('pkg_name', 'New Package')
-                _logger.info(f"Using template {base_template.name} as base for SaaS package")
-            else:
-                # Base template doesn't exist, use defaults
-                template_vals = {'name': vals.get('pkg_name', 'New Package')}
-                _logger.warning(f"Base template {base_template_id} not found, using defaults")
-        else:
-            # No base template provided, use defaults
-            template_vals = {'name': vals.get('pkg_name', 'New Package')}
-        
-        # Create template first
-        template = self.env['sale.subscription.template'].create(template_vals)
-        
-        # Set the template ID in vals for package creation
-        vals['pkg_subscription_template_id'] = template.id
-        
-        # Create the package
+        # Create the package first
         package = super().create(vals)
         
-        # Update template with SaaS context and package reference
-        template.with_context(
+        # Auto-create subscription template
+        template_vals = {
+            'name': package.pkg_name,
+        }
+        
+        # Create template with SaaS context
+        template = self.env['sale.subscription.template'].with_context(
             from_saas_package=True,
             saas_package_id=package.id,
             saas_package_name=package.pkg_name,
             saas_package_price=package.pkg_price or 0.0
-        ).write({
-            'name': package.pkg_name,
-            'is_saas_template': True
-        })
+        ).create(template_vals)
+        
+        # Update package with template reference
+        package.write({'pkg_subscription_template_id': template.id})
         
         _logger.info(f"Created subscription template {template.name} for SaaS package {package.pkg_name}")
         
         return package
 
-    
     def write(self, vals):
         """Override write to sync changes to subscription template and product."""
         result = super().write(vals)
@@ -347,4 +322,3 @@ class SaasPackage(models.Model):
         action['domain'] = [('sc_package_id', '=', self.id)]
         action['context'] = {'default_sc_package_id': self.id}
         return action
-    
