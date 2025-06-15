@@ -303,17 +303,19 @@ class SaasClient(models.Model):
                 subscription = self.env['sale.subscription'].create(subscription_vals)
                 
                 # Add subscription lines from template products
-                for product in template.product_ids:
-                    if product.is_saas_product:
-                        line_vals = {
-                            'sale_subscription_id': subscription.id,
-                            'product_id': product.id,
-                            'name': product.name,
-                            'price_unit': product.list_price,
-                            'product_uom_qty': 1,
-                        }
-                        subscription_lines = self.env['sale.subscription.line'].create(line_vals)
-                        print('subscription_lines', subscription_lines)
+                for product_template in template.product_ids:
+                    if product_template.is_saas_product:
+                        # Get the product variant (product.product) from template
+                        product_variant = product_template.product_variant_id
+                        if product_variant:
+                            line_vals = {
+                                'subscription_id': subscription.id,
+                                'product_id': product_variant.id,
+                                'name': product_template.name,
+                                'price_unit': product_template.list_price,
+                                'quantity': 1,
+                            }
+                            self.env['sale.subscription.line'].create(line_vals)
                 # Set the subscription ID in vals
                 vals['sc_subscription_id'] = subscription.id
                 
@@ -354,16 +356,19 @@ class SaasClient(models.Model):
         subscription = self.env['sale.subscription'].create(subscription_vals)
         
         # Add subscription lines from template products
-        for product in template.product_ids:
-            if product.is_saas_product:
-                line_vals = {
-                    'subscription_id': subscription.id,
-                    'product_id': product.id,
-                    'name': product.name,
-                    'price_unit': product.list_price,
-                    'quantity': 1,
-                }
-                self.env['sale.subscription.line'].create(line_vals)
+        for product_template in template.product_ids:
+            if product_template.is_saas_product:
+                # Get the product variant (product.product) from template
+                product_variant = product_template.product_variant_id
+                if product_variant:
+                    line_vals = {
+                        'subscription_id': subscription.id,
+                        'product_id': product_variant.id,
+                        'name': product_template.name,
+                        'price_unit': product_template.list_price,
+                        'quantity': 1,
+                    }
+                    self.env['sale.subscription.line'].create(line_vals)
         
         # Update client with subscription
         self.write({'sc_subscription_id': subscription.id})
