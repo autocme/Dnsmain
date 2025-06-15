@@ -8,19 +8,19 @@
             <field name="inherit_id" ref="account.view_account_payment_form"/>
             <field name="arch" type="xml">
                 <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
-                    <button name="action_view_batch_payment" type="object" class="oe_stat_button" icon="fa-link" attrs="{'invisible': [('batch_payment_id', '=', False)]}">
+                    <button name="action_view_batch_payment" type="object" class="oe_stat_button" icon="fa-link" invisible="not batch_payment_id">
                         <div class="o_field_widget o_stat_info">
                             <span class="o_stat_text">Batch Payment</span>
                         </div>
                     </button>
-                    <button name="action_view_batch_invoices" type="object" class="oe_stat_button" icon="fa-file-text-o" attrs="{'invisible': [('batch_invoice_count', '=', 0)]}">
+                    <button name="action_view_batch_invoices" type="object" class="oe_stat_button" icon="fa-file-text-o" invisible="batch_invoice_count == 0">
                         <field name="batch_invoice_count" widget="statinfo" string="Batch Invoices"/>
                     </button>
                 </xpath>
                 
                 <!-- Add batch payment info in payment details -->
                 <xpath expr="//group[@name='payment_partner_info']" position="after">
-                    <group string="Batch Payment Info" attrs="{'invisible': [('batch_payment_id', '=', False)]}">
+                    <group string="Batch Payment Info" invisible="not batch_payment_id">
                         <field name="batch_payment_id" readonly="1"/>
                     </group>
                 </xpath>

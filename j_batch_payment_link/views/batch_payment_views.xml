@@ -38,7 +38,7 @@
                             <button name="action_view_invoices" type="object" class="oe_stat_button" icon="fa-file-text-o">
                                 <field name="invoice_count" widget="statinfo" string="Invoices"/>
                             </button>
-                            <button name="action_view_payment" type="object" class="oe_stat_button" icon="fa-money" attrs="{'invisible': [('payment_id', '=', False)]}">
+                            <button name="action_view_payment" type="object" class="oe_stat_button" icon="fa-money" invisible="not payment_id">
                                 <div class="o_field_widget o_stat_info">
                                     <span class="o_stat_text">Payment</span>
                                 </div>
@@ -61,11 +61,11 @@
                             <group name="dates">
                                 <field name="expiry_date"/>
                                 <field name="payment_date" readonly="1"/>
-                                <field name="payment_id" readonly="1" attrs="{'invisible': [('payment_id', '=', False)]}"/>
+                                <field name="payment_id" readonly="1" invisible="not payment_id"/>
                             </group>
                         </group>
                         
-                        <group name="payment_link_group" attrs="{'invisible': [('payment_link', '=', False)]}">
+                        <group name="payment_link_group" invisible="not payment_link">
                             <field name="payment_link" readonly="1" widget="url"/>
                         </group>
                         

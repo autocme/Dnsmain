@@ -35,7 +35,7 @@ if non_posted:
     ) % ', '.join(non_posted.mapped('name')))
 
 # Check if all invoices have outstanding amounts
-paid_invoices = customer_invoices.filtered(lambda inv: inv.amount_residual <= 0)
+paid_invoices = customer_invoices.filtered(lambda inv: inv.amount_residual &lt;= 0)
 if paid_invoices:
     raise UserError(_(
         'All invoices must have outstanding amounts. '
