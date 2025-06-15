@@ -45,27 +45,39 @@ class SaleSubscriptionTemplate(models.Model):
     @api.model
     def create(self, vals):
         """Override create to handle SaaS package-triggered template creation."""
-        # template = super().create(vals)
-        print('self.env.context', self.env.context)
         # Check if template created from SaaS package context
         if self.env.context.get('from_saas_package'):
-            package_id = self.env.context.get('saas_package_id')
-            print('package_id', package_id)
             package_name = self.env.context.get('saas_package_name')
             package_price = self.env.context.get('saas_package_price', 0.0)
-            vals['name'] = package_name
-            product_values = {
-                'name': package_name,
-                'list_price': package_price,
-                'detailed_type': 'service',
-                'subscribable': True,
-                'subscription_template_id': self.id,
-            }
-            product = self.env['product.template'].create(product_values)
-
-            vals['product_ids'] = [(4, product.id)]
-
-        return super().create(vals)
+            
+            if package_name:
+                vals['name'] = package_name
+            
+            # Mark as SaaS template
+            vals['is_saas_template'] = True
+        
+        # Create the template first
+        template = super().create(vals)
+        
+        # Create product after template is created (if from SaaS context)
+        if self.env.context.get('from_saas_package'):
+            package_name = self.env.context.get('saas_package_name')
+            package_price = self.env.context.get('saas_package_price', 0.0)
+            
+            if package_name:
+                product_values = {
+                    'name': package_name,
+                    'list_price': package_price,
+                    'detailed_type': 'service',
+                    'subscribable': True,
+                    'subscription_template_id': template.id,
+                    'is_saas_product': True,
+                }
+                
+                product = self.env['product.template'].create(product_values)
+                _logger.info(f"Created SaaS product {product.name} for template {template.name}")
+        
+        return template
 
     def write(self, vals):
         """Override write to sync changes with SaaS packages."""
