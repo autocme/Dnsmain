@@ -73,7 +73,6 @@ class AccountMove(models.Model):
                 'default_partner_id': customer_invoices[0].partner_id.id,
                 'default_description': description,
                 'default_is_batch_payment': True,
-                'batch_invoice_ids': customer_invoices.ids,
                 # Don't pass active_ids to prevent single invoice processing
                 'active_model': False,
                 'active_ids': [],
