@@ -272,27 +272,9 @@ class SaasPackage(models.Model):
         if not self.pkg_name:
             return
         
-        # Create the product first
-        product_vals = {
-            'name': self.pkg_name,
-            'type': 'service',
-            'recurring_invoice': True,
-            'list_price': self.pkg_price or 0.0,
-            'sale_ok': True,
-            'purchase_ok': False,
-            'categ_id': self.env.ref('product.product_category_all').id,
-        }
-        
-        try:
-            product = self.env['product.product'].create(product_vals)
-        except Exception as e:
-            _logger.warning(f"Failed to create product for package {self.pkg_name}: {str(e)}")
-            return
-        
-        # Create the subscription template
+        # Create the subscription template first
         template_vals = {
             'name': self.pkg_name,
-            'product_id': product.id,
             'recurring_rule_type': 'monthly',
             'recurring_interval': 1,
             'user_closable': True,
@@ -300,14 +282,32 @@ class SaasPackage(models.Model):
         
         try:
             template = self.env['sale.subscription.template'].create(template_vals)
+        except Exception as e:
+            _logger.warning(f"Failed to create subscription template for package {self.pkg_name}: {str(e)}")
+            return
+        
+        # Create the product and link it to the template via inverse relationship
+        product_vals = {
+            'name': self.pkg_name,
+            'type': 'service',
+            'subscribable': True,
+            'list_price': self.pkg_price or 0.0,
+            'sale_ok': True,
+            'purchase_ok': False,
+            'subscription_template_id': template.id,
+            'categ_id': self.env.ref('product.product_category_all').id,
+        }
+        
+        try:
+            product = self.env['product.template'].create(product_vals)
             # Link the template back to the package
             self.write({'pkg_subscription_template_id': template.id})
             _logger.info(f"Created subscription template '{template.name}' and product '{product.name}' for package '{self.pkg_name}'")
         except Exception as e:
-            _logger.warning(f"Failed to create subscription template for package {self.pkg_name}: {str(e)}")
-            # Clean up the product if template creation failed
+            _logger.warning(f"Failed to create product for package {self.pkg_name}: {str(e)}")
+            # Clean up the template if product creation failed
             try:
-                product.unlink()
+                template.unlink()
             except:
                 pass
     
@@ -319,15 +319,18 @@ class SaasPackage(models.Model):
         if 'pkg_name' in vals and self.pkg_subscription_template_id:
             try:
                 self.pkg_subscription_template_id.write({'name': vals['pkg_name']})
-                if self.pkg_subscription_template_id.product_id:
-                    self.pkg_subscription_template_id.product_id.write({'name': vals['pkg_name']})
+                # Update products linked to this template
+                for product in self.pkg_subscription_template_id.product_ids:
+                    product.write({'name': vals['pkg_name']})
             except Exception as e:
                 _logger.warning(f"Failed to sync name changes for package {self.id}: {str(e)}")
         
         # Sync price changes
-        if 'pkg_price' in vals and self.pkg_subscription_template_id and self.pkg_subscription_template_id.product_id:
+        if 'pkg_price' in vals and self.pkg_subscription_template_id:
             try:
-                self.pkg_subscription_template_id.product_id.write({'list_price': vals['pkg_price'] or 0.0})
+                # Update all products linked to this template
+                for product in self.pkg_subscription_template_id.product_ids:
+                    product.write({'list_price': vals['pkg_price'] or 0.0})
             except Exception as e:
                 _logger.warning(f"Failed to sync price changes for package {self.id}: {str(e)}")
         
