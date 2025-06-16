@@ -267,35 +267,47 @@ class SaasPackage(models.Model):
         variable_pattern = r'@(\w+)'
         template_variables = set(re.findall(variable_pattern, self.docker_compose_template))
         
-        # Get existing variable names
+        # Get existing variable names and build new list without deleted ones
         existing_var_names = set()
-        variables_to_remove = []
+        variables_to_keep = []
         
         for var in self.template_variable_ids:
             if hasattr(var, 'variable_name') and var.variable_name:
                 existing_var_names.add(var.variable_name)
-                # Mark for removal if not in template anymore
-                if var.variable_name not in template_variables:
+                # Keep only variables that still exist in template
+                if var.variable_name in template_variables:
                     if hasattr(var, 'id') and var.id:
-                        variables_to_remove.append(var.id)
+                        # Saved variable - use link command
+                        variables_to_keep.append((4, var.id, 0))
+                    else:
+                        # Unsaved variable - recreate it
+                        variables_to_keep.append((0, 0, {
+                            'variable_name': var.variable_name,
+                            'field_domain': getattr(var, 'field_domain', '') or '',
+                            'field_name': getattr(var, 'field_name', '') or '',
+                        }))
         
         # Find variables to add
         variables_to_add = template_variables - existing_var_names
         
-        # Build simple command list
+        # Build new command list
         commands = []
         
-        # Remove variables no longer in template
-        for var_id in variables_to_remove:
-            commands.append((2, var_id, 0))
-        
-        # Add new variables
-        for var_name in variables_to_add:
-            commands.append((0, 0, {
-                'variable_name': var_name,
-                'field_domain': '',
-                'field_name': '',
-            }))
+        # If we have variables to remove or add, rebuild the entire list
+        if variables_to_add or len(existing_var_names) > len(template_variables):
+            # Clear and rebuild to handle deletions properly
+            commands.append((5, 0, 0))  # Clear all
+            
+            # Add back the variables we want to keep
+            commands.extend(variables_to_keep)
+            
+            # Add new variables
+            for var_name in variables_to_add:
+                commands.append((0, 0, {
+                    'variable_name': var_name,
+                    'field_domain': '',
+                    'field_name': '',
+                }))
         
         # Apply changes only if there are actual changes
         if commands:
