@@ -46,7 +46,7 @@ class SaasClient(models.Model):
     sc_subscription_id = fields.Many2one(
         comodel_name='sale.subscription',
         string='Subscription',
-        required=True,
+        required=False,
         tracking=True,
         help='The active subscription record that manages billing, lifecycle, '
              'and service status for this SaaS client'
