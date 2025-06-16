@@ -255,8 +255,8 @@ class SaasPackage(models.Model):
     # ========================================================================
     
     def write(self, vals):
-        """Override write to handle normal save operations."""
-        return super().write(vals)
+        """Override write to prevent onchange interference during save."""
+        return super().with_context(_from_save=True).write(vals)
     
     # ========================================================================
     # BUSINESS METHODS
@@ -267,9 +267,17 @@ class SaasPackage(models.Model):
         """Extract variables from Docker Compose template when content changes.
         Only adds new variables and removes specific deleted ones - NEVER recreates all."""
         
+        # Skip if we're in a save context or if no real change
+        if self.env.context.get('_from_save') or not hasattr(self, '_origin'):
+            return
+            
         if not self.docker_compose_template:
             # Clear all variables if template is empty
             self.template_variable_ids = [(5, 0, 0)]
+            return
+        
+        # Check if template actually changed to avoid unnecessary processing
+        if hasattr(self, '_origin') and self._origin.docker_compose_template == self.docker_compose_template:
             return
         
         # Find all @VARIABLE_NAME patterns in template
@@ -286,6 +294,10 @@ class SaasPackage(models.Model):
         variables_to_add = template_variables - existing_var_names
         variables_to_remove = existing_var_names - template_variables
         
+        # Only proceed if there are actual changes
+        if not variables_to_add and not variables_to_remove:
+            return
+        
         # Build command list for ONLY the changes needed
         commands = []
         
@@ -295,7 +307,6 @@ class SaasPackage(models.Model):
                 if hasattr(var, 'id') and var.id:
                     # Remove saved variable by ID
                     commands.append((2, var.id, 0))
-                # Unsaved variables will be automatically excluded from new list
         
         # Step 2: Add ONLY new variables
         for var_name in variables_to_add:
