@@ -107,12 +107,15 @@ class PortainerStack(models.Model):
             self.git_save_credential = False
             self.git_credential_name = False
 
-    @api.depends('container_ids', 'container_ids.volume_ids', 'container_ids.volume_ids.size_bytes')
+    @api.depends('container_ids', 'container_ids.volume_ids', 'container_ids.volume_ids.volume_id', 'container_ids.volume_ids.volume_id.size_bytes')
     def _compute_volume_stats(self):
         """Compute volume count and total size for this stack"""
         for record in self:
-            volumes = record.container_ids.mapped('volume_ids')
-            record.volume_count = len(volumes)
+            # Get unique volumes from all containers in this stack
+            # Filter only volume type mappings (not bind mounts) and ensure volume_id exists
+            volume_mappings = record.container_ids.mapped('volume_ids').filtered(lambda v: v.type == 'volume' and v.volume_id)
+            volumes = volume_mappings.mapped('volume_id')
+            record.volume_count = len(set(volumes.ids))  # Count unique volumes
             record.total_volume_size = sum(volumes.mapped('size_bytes'))
     
     @api.depends('total_volume_size')
