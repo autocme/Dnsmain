@@ -32,7 +32,6 @@
                             <field name="mountpoint" readonly="1"/>
                             <field name="created" readonly="1"/>
                             <field name="in_use" readonly="1"/>
-                            <field name="size_formatted" readonly="1" string="Size"/>
                         </group>
                     </group>
                     
@@ -76,7 +75,6 @@
                 <field name="created"/>
                 <field name="in_use"/>
                 <field name="container_count" string="Containers"/>
-                <field name="size_formatted" string="Size"/>
                 <button name="action_remove" string="Remove" type="object" 
                         icon="fa-trash" 
                         invisible="in_use == True or container_count > 0"/>

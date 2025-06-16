@@ -26,8 +26,6 @@ class PortainerVolume(models.Model):
     labels_html = fields.Html('Labels HTML', compute='_compute_labels_html')
     details = fields.Text('Details')
     in_use = fields.Boolean('In Use', default=False, help="Whether the volume is currently used by any containers")
-    size_bytes = fields.Float('Size (Bytes)', default=0.0, help="Volume size in bytes")
-    size_formatted = fields.Char('Size', compute='_compute_size_formatted', help="Human-readable volume size")
     
     server_id = fields.Many2one('j_portainer.server', string='Server', required=True, default=lambda self: self._default_server_id())
     environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True, 
@@ -60,12 +58,6 @@ class PortainerVolume(models.Model):
         """Compute the number of containers using this volume"""
         for record in self:
             record.container_count = len(record.container_volume_ids)
-    
-    @api.depends('size_bytes')
-    def _compute_size_formatted(self):
-        """Compute human-readable size format"""
-        for record in self:
-            record.size_formatted = record._format_size(record.size_bytes)
     
     @api.model
     def create(self, vals):
