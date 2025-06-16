@@ -16,20 +16,23 @@ class PortainerStack(models.Model):
         self.ensure_one()
         
         # Create SaaS client with stack as template
-        client_vals = {
-            'sc_stack_id': self.id,
-            'sc_server_id': self.server_id.id,
-            'sc_environment_id': self.environment_id.id,
-            'sc_template_content': self.file_content or self.content,
-        }
+        # client_vals = {
+        #     'sc_stack_id': self.id,
+            # 'sc_server_id': self.server_id.id,
+            # 'sc_environment_id': self.environment_id.id,
+            # 'sc_template_content': self.file_content or self.content,
+        # }
         
-        client = self.env['saas.client'].create(client_vals)
+        # client = self.env['saas.client'].create(client_vals)
         
         return {
             'name': _('SaaS Client'),
             'type': 'ir.actions.act_window',
             'res_model': 'saas.client',
-            'res_id': client.id,
+            # 'res_id': client.id,
             'view_mode': 'form',
-            'target': 'current',
+            'target': 'new',
+            'context':{
+                'default_sc_stack_id':self.id,
+            }
         }

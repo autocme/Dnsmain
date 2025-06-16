@@ -7,7 +7,7 @@
             <field name="model">j_portainer.stack</field>
             <field name="inherit_id" ref="j_portainer.view_portainer_stack_form"/>
             <field name="arch" type="xml">
-                <xpath expr="//header/button[@name='action_view_volumes']" position="after">
+                <xpath expr="//header" position="inside">
                     <button name="action_create_saas_client" 
                             type="object" 
                             string="Create SaaS Client" 
