@@ -256,30 +256,29 @@ class SaasPackage(models.Model):
     
     @api.onchange('docker_compose_template')
     def _onchange_docker_compose_template(self):
-        """Extract variables from Docker Compose template when content changes."""
+        """Extract variables from Docker Compose template when content changes.
+        Immediately adds new variables and removes deleted ones."""
         if not self.docker_compose_template:
             # Clear all variables if template is empty
             self.template_variable_ids = [(5, 0, 0)]
             return
         
-        # Find all @VARIABLE_NAME patterns
+        # Find all @VARIABLE_NAME patterns in template
         variable_pattern = r'@(\w+)'
-        variables = set(re.findall(variable_pattern, self.docker_compose_template))
+        template_variables = set(re.findall(variable_pattern, self.docker_compose_template))
         
-        # Get existing variables from current form state - handle both saved and unsaved records
+        # Get existing variables and build lookup dict
         existing_variables = {}
         current_variables = []
         
-        # Handle One2many field properly in onchange context
-        if hasattr(self.template_variable_ids, '_cache'):
-            # In form view, get from cache
+        # Handle One2many recordset in onchange context
+        try:
             current_variables = list(self.template_variable_ids)
-        else:
-            # Fallback for other contexts
-            current_variables = self.template_variable_ids
+        except:
+            current_variables = []
         
+        # Build existing variables lookup
         for var in current_variables:
-            # Handle both saved records (with id) and new records (NewId or dict-like)
             if hasattr(var, 'variable_name') and var.variable_name:
                 existing_variables[var.variable_name] = {
                     'id': getattr(var, 'id', None),
@@ -288,43 +287,63 @@ class SaasPackage(models.Model):
                     'record': var
                 }
         
-        # Build new variable list - preserve all existing data
-        new_variable_commands = []
+        existing_var_names = set(existing_variables.keys())
         
-        # Remove variables no longer in template
-        for var_name in list(existing_variables.keys()):
-            if var_name not in variables:
-                var_data = existing_variables[var_name]
-                if var_data['id'] and not str(var_data['id']).startswith('virtual_'):
-                    new_variable_commands.append((2, var_data['id']))
+        # Calculate changes
+        variables_to_add = template_variables - existing_var_names
+        variables_to_remove = existing_var_names - template_variables
+        variables_to_keep = template_variables & existing_var_names
         
-        # Keep/add variables that are in template
-        for var_name in variables:
-            if var_name in existing_variables:
-                # Keep existing variable with preserved field_domain
-                var_data = existing_variables[var_name]
-                if var_data['id'] and not str(var_data['id']).startswith('virtual_'):
-                    # Use update command for real database records
-                    new_variable_commands.append((1, var_data['id'], {
-                        'variable_name': var_name,
-                        'field_domain': var_data['field_domain'],
-                    }))
-                else:
-                    # For new/virtual records, recreate with preserved data
-                    new_variable_commands.append((0, 0, {
-                        'variable_name': var_name,
-                        'field_domain': var_data['field_domain'],
-                    }))
+        # Build command list for immediate synchronization
+        commands = []
+        
+        # Step 1: Remove variables no longer in template
+        for var_name in variables_to_remove:
+            var_data = existing_variables[var_name]
+            var_id = var_data['id']
+            if var_id and hasattr(var_id, '__int__') and var_id > 0:
+                # Remove saved record
+                commands.append((2, var_id, 0))
+            # For new records (NewId), they'll be excluded from the new list
+        
+        # Step 2: Keep existing variables that are still in template
+        for var_name in variables_to_keep:
+            var_data = existing_variables[var_name]
+            var_id = var_data['id']
+            if var_id and hasattr(var_id, '__int__') and var_id > 0:
+                # Keep saved record with its data intact
+                commands.append((4, var_id, 0))
             else:
-                # Add new variable
-                new_variable_commands.append((0, 0, {
+                # Recreate virtual/new record with preserved domain
+                commands.append((0, 0, {
                     'variable_name': var_name,
-                    'field_domain': '',
+                    'field_domain': var_data['field_domain'],
+                    'field_name': var_data['field_name'],
                 }))
         
-        # Only update if there are actual changes
-        if new_variable_commands:
-            self.template_variable_ids = new_variable_commands
+        # Step 3: Add new variables
+        for var_name in variables_to_add:
+            commands.append((0, 0, {
+                'variable_name': var_name,
+                'field_domain': '',
+                'field_name': '',
+            }))
+        
+        # Apply changes immediately
+        if commands or variables_to_remove:
+            # Always update to ensure immediate sync
+            if not commands:
+                # If only removing, clear and rebuild
+                commands = [(5, 0, 0)]  # Clear all
+                for var_name in variables_to_keep:
+                    var_data = existing_variables[var_name]
+                    commands.append((0, 0, {
+                        'variable_name': var_name,
+                        'field_domain': var_data['field_domain'],
+                        'field_name': var_data['field_name'],
+                    }))
+            
+            self.template_variable_ids = commands
     
     def _extract_template_variables(self):
         """Extract @VARIABLE_NAME patterns from Docker Compose template."""
