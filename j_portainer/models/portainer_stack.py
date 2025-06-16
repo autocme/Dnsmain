@@ -63,6 +63,11 @@ class PortainerStack(models.Model):
     # Related containers in this stack
     container_ids = fields.One2many('j_portainer.container', 'stack_id', string='Containers')
     
+    # Volume-related fields
+    volume_count = fields.Integer('Volume Count', compute='_compute_volume_stats', store=True)
+    total_volume_size = fields.Float('Total Volume Size (Bytes)', compute='_compute_volume_stats', store=True)
+    total_volume_size_formatted = fields.Char('Total Volume Size', compute='_compute_volume_stats_formatted')
+    
     _sql_constraints = [
         ('unique_stack_per_environment', 'unique(server_id, environment_id, stack_id)', 
          'Stack ID must be unique per environment on each server'),
@@ -101,6 +106,33 @@ class PortainerStack(models.Model):
             self.git_token = False
             self.git_save_credential = False
             self.git_credential_name = False
+
+    @api.depends('container_ids', 'container_ids.volume_ids', 'container_ids.volume_ids.size_bytes')
+    def _compute_volume_stats(self):
+        """Compute volume count and total size for this stack"""
+        for record in self:
+            volumes = record.container_ids.mapped('volume_ids')
+            record.volume_count = len(volumes)
+            record.total_volume_size = sum(volumes.mapped('size_bytes'))
+    
+    @api.depends('total_volume_size')
+    def _compute_volume_stats_formatted(self):
+        """Compute formatted total volume size"""
+        for record in self:
+            record.total_volume_size_formatted = record._format_size(record.total_volume_size)
+    
+    def _format_size(self, size_bytes):
+        """Format size in bytes to human-readable format"""
+        if not size_bytes or size_bytes == 0:
+            return "0 B"
+        
+        size = float(size_bytes)
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if size < 1024.0:
+                return f"{size:.2f} {unit}"
+            size /= 1024.0
+        
+        return f"{size:.2f} PB"
 
     def write(self, vals):
         """Override write to handle content updates"""
@@ -455,6 +487,25 @@ class PortainerStack(models.Model):
                 'default_source_stack_id': self.id,
                 'active_id': self.id,
                 'active_model': 'j_portainer.stack'
+            }
+        }
+    
+    def action_view_volumes(self):
+        """Smart button action to view volumes used by this stack"""
+        self.ensure_one()
+        
+        # Get all volumes from containers in this stack
+        volumes = self.container_ids.mapped('volume_ids')
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Stack Volumes'),
+            'res_model': 'j_portainer.volume',
+            'view_mode': 'tree,form',
+            'domain': [('id', 'in', volumes.ids)],
+            'context': {
+                'default_server_id': self.server_id.id,
+                'default_environment_id': self.environment_id.id,
             }
         }
 
