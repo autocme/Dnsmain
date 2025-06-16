@@ -251,6 +251,41 @@ class SaasPackage(models.Model):
                 ) % (record.pkg_drop_after_days_frozen, record.pkg_freezing_db_due_balance_days))
     
     # ========================================================================
+    # OVERRIDE METHODS
+    # ========================================================================
+    
+    def write(self, vals):
+        """Override write to preserve template variable domains during save."""
+        # If template variables are being updated, preserve their domains
+        if 'template_variable_ids' in vals:
+            # Store existing domains before write
+            existing_domains = {}
+            for var in self.template_variable_ids:
+                if var.variable_name and var.field_domain:
+                    existing_domains[var.variable_name] = {
+                        'field_domain': var.field_domain,
+                        'field_name': var.field_name,
+                    }
+            
+            # Call parent write
+            result = super().write(vals)
+            
+            # Restore domains for variables that still exist
+            for var in self.template_variable_ids:
+                if var.variable_name in existing_domains:
+                    stored_data = existing_domains[var.variable_name]
+                    if not var.field_domain and stored_data['field_domain']:
+                        # Restore lost domain
+                        var.with_context(skip_template_onchange=True).write({
+                            'field_domain': stored_data['field_domain'],
+                            'field_name': stored_data['field_name'],
+                        })
+            
+            return result
+        else:
+            return super().write(vals)
+    
+    # ========================================================================
     # BUSINESS METHODS
     # ========================================================================
     
@@ -258,6 +293,10 @@ class SaasPackage(models.Model):
     def _onchange_docker_compose_template(self):
         """Extract variables from Docker Compose template when content changes.
         Simply adds new variables and removes deleted ones."""
+        # Skip onchange during save operations to preserve domains
+        if self.env.context.get('skip_template_onchange'):
+            return
+            
         if not self.docker_compose_template:
             # Clear all variables if template is empty
             self.template_variable_ids = [(5, 0, 0)]
@@ -280,7 +319,7 @@ class SaasPackage(models.Model):
                         # Saved variable - use link command
                         variables_to_keep.append((4, var.id, 0))
                     else:
-                        # Unsaved variable - recreate it
+                        # Unsaved variable - recreate it with preserved domain
                         variables_to_keep.append((0, 0, {
                             'variable_name': var.variable_name,
                             'field_domain': getattr(var, 'field_domain', '') or '',
