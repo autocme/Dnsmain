@@ -48,7 +48,7 @@
                             <field name="creation_date" readonly="1"/>
                             <field name="update_date" readonly="1"/>
                             <field name="last_sync" readonly="1"/>
-                            <field name="total_volume_size_formatted" readonly="1" string="Total Volume Size"/>
+                            <field name="total_volume_size" readonly="1" string="Total Volume Size (Bytes)"/>
                         </group>
                     </group>
                     
@@ -142,7 +142,7 @@
                 <field name="server_id"/>
                 <field name="environment_id"/>
                 <field name="volume_count" string="Volumes"/>
-                <field name="total_volume_size_formatted" string="Volume Size"/>
+                <field name="total_volume_size" string="Volume Size (Bytes)"/>
                 <field name="creation_date"/>
                 <field name="update_date"/>
                 <button name="action_start" string="Start" type="object" 
