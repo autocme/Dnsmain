@@ -126,7 +126,6 @@ class PortainerStack(models.Model):
                     if volume_id not in volume_sizes_bytes:
                         try:
                             # Extract numeric value and unit from usage_size (e.g., "4.0K" -> 4.0 and "K")
-                            import re
                             size_match = re.match(r'^(\d+\.?\d*)\s*([KMGT]?)B?$', mapping.usage_size.upper().strip())
                             if size_match:
                                 size_value = float(size_match.group(1))
@@ -149,19 +148,19 @@ class PortainerStack(models.Model):
             # Sum all unique volume sizes in bytes
             total_bytes = sum(volume_sizes_bytes.values())
             
-            # Convert back to human readable format
+            # Convert back to human readable format with 2 decimal precision
             if total_bytes == 0:
                 record.total_volume_size = "0B"
             elif total_bytes < 1024:
                 record.total_volume_size = f"{total_bytes:.0f}B"
             elif total_bytes < 1024**2:
-                record.total_volume_size = f"{total_bytes/1024:.1f}K"
+                record.total_volume_size = f"{total_bytes/1024:.2f}K"
             elif total_bytes < 1024**3:
-                record.total_volume_size = f"{total_bytes/(1024**2):.1f}M"
+                record.total_volume_size = f"{total_bytes/(1024**2):.2f}M"
             elif total_bytes < 1024**4:
-                record.total_volume_size = f"{total_bytes/(1024**3):.1f}G"
+                record.total_volume_size = f"{total_bytes/(1024**3):.2f}G"
             else:
-                record.total_volume_size = f"{total_bytes/(1024**4):.1f}T"
+                record.total_volume_size = f"{total_bytes/(1024**4):.2f}T"
 
     def write(self, vals):
         """Override write to handle content updates"""
@@ -524,7 +523,7 @@ class PortainerStack(models.Model):
         self.ensure_one()
         
         # Get all volumes from containers in this stack
-        volumes = self.container_ids.mapped('volume_ids')
+        volumes = self.container_ids.mapped('volume_ids.volume_id')
         
         return {
             'type': 'ir.actions.act_window',
