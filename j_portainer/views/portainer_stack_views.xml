@@ -23,7 +23,9 @@
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        
+                        <button name="action_view_volumes" type="object" class="oe_stat_button" icon="fa-hdd-o">
+                            <field name="volume_count" widget="statinfo" string="Volumes"/>
+                        </button>
                     </div>
                     <div class="oe_title">
                         <label for="name" class="oe_edit_only"/>
