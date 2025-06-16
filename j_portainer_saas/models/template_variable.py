@@ -112,6 +112,10 @@ class TemplateVariable(models.Model):
     @api.model
     def create(self, vals):
         """Override create to extract field name on creation."""
+        # Ensure field_domain is properly stored
+        if 'field_domain' in vals and vals['field_domain']:
+            _logger.info(f"Creating template variable with field_domain: {vals['field_domain']}")
+        
         record = super().create(vals)
         if vals.get('field_domain'):
             record._extract_field_name()
