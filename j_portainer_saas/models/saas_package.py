@@ -255,35 +255,8 @@ class SaasPackage(models.Model):
     # ========================================================================
     
     def write(self, vals):
-        """Override write to preserve template variable domains during save."""
-        # If template variables are being updated, preserve their domains
-        if 'template_variable_ids' in vals:
-            # Store existing domains before write
-            existing_domains = {}
-            for var in self.template_variable_ids:
-                if var.variable_name and var.field_domain:
-                    existing_domains[var.variable_name] = {
-                        'field_domain': var.field_domain,
-                        'field_name': var.field_name,
-                    }
-            
-            # Call parent write
-            result = super().write(vals)
-            
-            # Restore domains for variables that still exist
-            for var in self.template_variable_ids:
-                if var.variable_name in existing_domains:
-                    stored_data = existing_domains[var.variable_name]
-                    if not var.field_domain and stored_data['field_domain']:
-                        # Restore lost domain
-                        var.with_context(skip_template_onchange=True).write({
-                            'field_domain': stored_data['field_domain'],
-                            'field_name': stored_data['field_name'],
-                        })
-            
-            return result
-        else:
-            return super().write(vals)
+        """Override write to handle normal save operations."""
+        return super().write(vals)
     
     # ========================================================================
     # BUSINESS METHODS
