@@ -112,22 +112,31 @@ class PortainerStack(models.Model):
         for record in self:
             # Get volume mappings from all containers in this stack
             volume_mappings = record.container_ids.mapped('volume_ids').filtered(lambda v: v.type == 'volume' and v.volume_id)
-            record.volume_count = len(volume_mappings)
+            
+            # Count unique volumes (not mappings) to avoid duplicates
+            unique_volume_ids = set(volume_mappings.mapped('volume_id.id'))
+            record.volume_count = len(unique_volume_ids)
             
             # Sum usage_size values (e.g., "40M" + "50M" = "90M")
-            total_size_mb = 0
+            # Group by volume_id to avoid counting the same volume multiple times
+            volume_sizes = {}
             for mapping in volume_mappings:
-                if mapping.usage_size and mapping.usage_size not in ['Error', 'N/A', '']:
-                    try:
-                        # Extract numeric part from usage_size (e.g., "40M" -> 40)
-                        import re
-                        size_match = re.match(r'^(\d+\.?\d*)', mapping.usage_size)
-                        if size_match:
-                            size_value = float(size_match.group(1))
-                            # Assume all sizes are in MB for simplicity (most common from du -sh)
-                            total_size_mb += size_value
-                    except (ValueError, AttributeError):
-                        continue
+                if mapping.volume_id and mapping.usage_size and mapping.usage_size not in ['Error', 'N/A', '']:
+                    volume_id = mapping.volume_id.id
+                    if volume_id not in volume_sizes:
+                        try:
+                            # Extract numeric part from usage_size (e.g., "40M" -> 40)
+                            import re
+                            size_match = re.match(r'^(\d+\.?\d*)', mapping.usage_size)
+                            if size_match:
+                                size_value = float(size_match.group(1))
+                                # Assume all sizes are in MB for simplicity (most common from du -sh)
+                                volume_sizes[volume_id] = size_value
+                        except (ValueError, AttributeError):
+                            continue
+            
+            # Sum all unique volume sizes
+            total_size_mb = sum(volume_sizes.values())
             
             # Store total as string with unit (e.g., "90M")
             if total_size_mb > 0:
