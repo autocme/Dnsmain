@@ -65,7 +65,7 @@ class PortainerStack(models.Model):
     
     # Volume-related fields
     volume_count = fields.Integer('Volume Count', compute='_compute_volume_stats', store=True)
-    total_volume_size = fields.Float('Total Volume Size (Bytes)', compute='_compute_volume_stats', store=True)
+    total_volume_size = fields.Char('Total Volume Size', compute='_compute_volume_stats', store=True)
     
     _sql_constraints = [
         ('unique_stack_per_environment', 'unique(server_id, environment_id, stack_id)', 
@@ -113,12 +113,27 @@ class PortainerStack(models.Model):
             # Get volume mappings from all containers in this stack
             volume_mappings = record.container_ids.mapped('volume_ids').filtered(lambda v: v.type == 'volume' and v.volume_id)
             record.volume_count = len(volume_mappings)
-            # Sum usage_size field if it contains numeric values
-            total_size = 0
+            
+            # Sum usage_size values (e.g., "40M" + "50M" = "90M")
+            total_size_mb = 0
             for mapping in volume_mappings:
                 if mapping.usage_size and mapping.usage_size not in ['Error', 'N/A', '']:
-                    total_size += 1  # Just count volumes with size data
-            record.total_volume_size = total_size
+                    try:
+                        # Extract numeric part from usage_size (e.g., "40M" -> 40)
+                        import re
+                        size_match = re.match(r'^(\d+\.?\d*)', mapping.usage_size)
+                        if size_match:
+                            size_value = float(size_match.group(1))
+                            # Assume all sizes are in MB for simplicity (most common from du -sh)
+                            total_size_mb += size_value
+                    except (ValueError, AttributeError):
+                        continue
+            
+            # Store total as string with unit (e.g., "90M")
+            if total_size_mb > 0:
+                record.total_volume_size = f"{total_size_mb:.1f}M"
+            else:
+                record.total_volume_size = "0M"
 
     def write(self, vals):
         """Override write to handle content updates"""
