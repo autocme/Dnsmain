@@ -113,7 +113,9 @@ class PortainerStack(models.Model):
             # Get volume mappings from all containers in this stack
             volume_mappings = record.container_ids.mapped('volume_ids').filtered(lambda v: v.type == 'volume' and v.volume_id)
             record.volume_count = len(volume_mappings)
-            record.total_volume_size = sum(volume_mappings.mapped('usage_size'))
+            # Convert usage_size strings to bytes and sum them
+            total_bytes = sum(mapping.get_usage_size_bytes() for mapping in volume_mappings)
+            record.total_volume_size = total_bytes
 
     def write(self, vals):
         """Override write to handle content updates"""

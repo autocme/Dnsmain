@@ -1616,6 +1616,10 @@ class PortainerContainer(models.Model):
             for volume_data in volumes_to_create:
                 volume_data['container_id'] = self.id
                 self.env['j_portainer.container.volume'].with_context(sync_from_portainer=True).create(volume_data)
+            
+            # Automatically check volume sizes for running containers
+            if self.state == 'running':
+                self._auto_check_volume_sizes()
                 
         except Exception as e:
             _logger.warning(f"Error syncing volumes for container {self.name}: {str(e)}")
@@ -2375,3 +2379,67 @@ class PortainerContainer(models.Model):
                     'type': 'danger',
                 }
             }
+    
+    def _auto_check_volume_sizes(self):
+        """Automatically check volume sizes for running containers during sync"""
+        self.ensure_one()
+        
+        if self.state != 'running':
+            return
+        
+        try:
+            # Get all volume mappings for this container
+            volume_mappings = self.volume_ids.filtered(lambda v: v.type == 'volume')
+            
+            for volume_mapping in volume_mappings:
+                try:
+                    # Skip if volume size was checked recently (within last hour)
+                    if volume_mapping.last_size_check:
+                        from datetime import datetime, timedelta
+                        now = fields.Datetime.now()
+                        one_hour_ago = now - timedelta(hours=1)
+                        if volume_mapping.last_size_check > one_hour_ago:
+                            continue
+                    
+                    # Check volume size using du command
+                    du_command = f"du -sh {volume_mapping.container_path}"
+                    
+                    # Get API client and execute command
+                    api = self.env['j_portainer.api']
+                    raw_result = api.execute_container_command(
+                        self.server_id.id,
+                        self.container_id,
+                        self.environment_id.environment_id,
+                        du_command
+                    )
+                    
+                    if raw_result:
+                        # Clean the output by removing non-printable characters
+                        import re
+                        cleaned_result = re.sub(r'[^\x20-\x7E\t]', '', raw_result).strip()
+                        
+                        # Update size check timestamp and details
+                        update_vals = {
+                            'size_description': cleaned_result or 'Empty output after cleaning',
+                            'last_size_check': fields.Datetime.now()
+                        }
+                        
+                        # Check if this looks like an error message
+                        if volume_mapping._is_error_message(cleaned_result):
+                            update_vals['usage_size'] = 'Error'
+                        else:
+                            # Try to extract size from successful output
+                            size_parts = cleaned_result.split()
+                            if size_parts:
+                                size_value = size_parts[0]
+                                update_vals['usage_size'] = size_value
+                        
+                        # Update the volume mapping record
+                        volume_mapping.with_context(sync_from_portainer=True).write(update_vals)
+                        
+                except Exception as e:
+                    _logger.warning(f"Failed to check size for volume {volume_mapping.name} in container {self.name}: {str(e)}")
+                    continue
+                    
+        except Exception as e:
+            _logger.warning(f"Error during automatic volume size check for container {self.name}: {str(e)}")
