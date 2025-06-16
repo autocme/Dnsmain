@@ -48,7 +48,7 @@
                             <field name="creation_date" readonly="1"/>
                             <field name="update_date" readonly="1"/>
                             <field name="last_sync" readonly="1"/>
-                            <field name="total_volume_size" readonly="1" string="Total Volume Size"/>
+                            <field name="total_volume_size" readonly="1" string="Stack Size"/>
                         </group>
                     </group>
                     

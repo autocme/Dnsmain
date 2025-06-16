@@ -266,23 +266,55 @@ class SaasPackage(models.Model):
         variable_pattern = r'@(\w+)'
         variables = set(re.findall(variable_pattern, self.docker_compose_template))
         
-        # Get existing variables from current form state
+        # Get existing variables from current form state - handle both saved and unsaved records
         existing_variables = {}
-        for var in self.template_variable_ids:
-            if hasattr(var, 'variable_name') and var.variable_name:
-                existing_variables[var.variable_name] = var
+        current_variables = []
         
-        # Build new variable list
+        # Handle One2many field properly in onchange context
+        if hasattr(self.template_variable_ids, '_cache'):
+            # In form view, get from cache
+            current_variables = list(self.template_variable_ids)
+        else:
+            # Fallback for other contexts
+            current_variables = self.template_variable_ids
+        
+        for var in current_variables:
+            # Handle both saved records (with id) and new records (NewId or dict-like)
+            if hasattr(var, 'variable_name') and var.variable_name:
+                existing_variables[var.variable_name] = {
+                    'id': getattr(var, 'id', None),
+                    'field_domain': getattr(var, 'field_domain', '') or '',
+                    'field_name': getattr(var, 'field_name', '') or '',
+                    'record': var
+                }
+        
+        # Build new variable list - preserve all existing data
         new_variable_commands = []
         
-        # Keep existing variables that are still in template
+        # Remove variables no longer in template
+        for var_name in list(existing_variables.keys()):
+            if var_name not in variables:
+                var_data = existing_variables[var_name]
+                if var_data['id'] and not str(var_data['id']).startswith('virtual_'):
+                    new_variable_commands.append((2, var_data['id']))
+        
+        # Keep/add variables that are in template
         for var_name in variables:
             if var_name in existing_variables:
-                # Keep existing variable with its field_domain
-                existing_var = existing_variables[var_name]
-                new_variable_commands.append((1, existing_var.id if hasattr(existing_var, 'id') else 0, {
-                    'variable_name': var_name,
-                }))
+                # Keep existing variable with preserved field_domain
+                var_data = existing_variables[var_name]
+                if var_data['id'] and not str(var_data['id']).startswith('virtual_'):
+                    # Use update command for real database records
+                    new_variable_commands.append((1, var_data['id'], {
+                        'variable_name': var_name,
+                        'field_domain': var_data['field_domain'],
+                    }))
+                else:
+                    # For new/virtual records, recreate with preserved data
+                    new_variable_commands.append((0, 0, {
+                        'variable_name': var_name,
+                        'field_domain': var_data['field_domain'],
+                    }))
             else:
                 # Add new variable
                 new_variable_commands.append((0, 0, {
@@ -290,8 +322,9 @@ class SaasPackage(models.Model):
                     'field_domain': '',
                 }))
         
-        # Update the One2many field
-        self.template_variable_ids = new_variable_commands
+        # Only update if there are actual changes
+        if new_variable_commands:
+            self.template_variable_ids = new_variable_commands
     
     def _extract_template_variables(self):
         """Extract @VARIABLE_NAME patterns from Docker Compose template."""
