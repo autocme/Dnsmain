@@ -26,7 +26,7 @@ class TemplateVariable(models.Model):
     
     variable_name = fields.Char(
         string='Variable Name',
-        required=True,
+        required=False,
         help='Variable name extracted from template (without @ prefix)'
     )
     
