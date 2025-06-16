@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Inherit Portainer Stack Form View to Add SaaS Client Button -->
+        <record id="view_portainer_stack_form_saas" model="ir.ui.view">
+            <field name="name">portainer.stack.form.saas</field>
+            <field name="model">j_portainer.stack</field>
+            <field name="inherit_id" ref="j_portainer.view_portainer_stack_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//header/button[@name='action_view_volumes']" position="after">
+                    <button name="action_create_saas_client" 
+                            type="object" 
+                            string="Create SaaS Client" 
+                            class="btn-primary"
+                            help="Create a SaaS client using this stack as a template"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>
