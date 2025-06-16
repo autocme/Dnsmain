@@ -292,11 +292,8 @@ class SaasPackage(models.Model):
     @api.onchange('docker_compose_template')
     def _onchange_docker_compose_template(self):
         """Extract variables from Docker Compose template when content changes.
-        Simply adds new variables and removes deleted ones."""
-        # Skip onchange during save operations to preserve domains
-        if self.env.context.get('skip_template_onchange'):
-            return
-            
+        Only adds new variables and removes specific deleted ones - NEVER recreates all."""
+        
         if not self.docker_compose_template:
             # Clear all variables if template is empty
             self.template_variable_ids = [(5, 0, 0)]
@@ -306,49 +303,36 @@ class SaasPackage(models.Model):
         variable_pattern = r'@(\w+)'
         template_variables = set(re.findall(variable_pattern, self.docker_compose_template))
         
-        # Get existing variable names and build new list without deleted ones
+        # Get existing variable names
         existing_var_names = set()
-        variables_to_keep = []
-        
         for var in self.template_variable_ids:
             if hasattr(var, 'variable_name') and var.variable_name:
                 existing_var_names.add(var.variable_name)
-                # Keep only variables that still exist in template
-                if var.variable_name in template_variables:
-                    if hasattr(var, 'id') and var.id:
-                        # Saved variable - use link command
-                        variables_to_keep.append((4, var.id, 0))
-                    else:
-                        # Unsaved variable - recreate it with preserved domain
-                        variables_to_keep.append((0, 0, {
-                            'variable_name': var.variable_name,
-                            'field_domain': getattr(var, 'field_domain', '') or '',
-                            'field_name': getattr(var, 'field_name', '') or '',
-                        }))
         
-        # Find variables to add
+        # Calculate what needs to be added or removed
         variables_to_add = template_variables - existing_var_names
+        variables_to_remove = existing_var_names - template_variables
         
-        # Build new command list
+        # Build command list for ONLY the changes needed
         commands = []
         
-        # If we have variables to remove or add, rebuild the entire list
-        if variables_to_add or len(existing_var_names) > len(template_variables):
-            # Clear and rebuild to handle deletions properly
-            commands.append((5, 0, 0))  # Clear all
-            
-            # Add back the variables we want to keep
-            commands.extend(variables_to_keep)
-            
-            # Add new variables
-            for var_name in variables_to_add:
-                commands.append((0, 0, {
-                    'variable_name': var_name,
-                    'field_domain': '',
-                    'field_name': '',
-                }))
+        # Step 1: Remove ONLY variables no longer in template
+        for var in self.template_variable_ids:
+            if hasattr(var, 'variable_name') and var.variable_name in variables_to_remove:
+                if hasattr(var, 'id') and var.id:
+                    # Remove saved variable by ID
+                    commands.append((2, var.id, 0))
+                # Unsaved variables will be automatically excluded from new list
         
-        # Apply changes only if there are actual changes
+        # Step 2: Add ONLY new variables
+        for var_name in variables_to_add:
+            commands.append((0, 0, {
+                'variable_name': var_name,
+                'field_domain': '',
+                'field_name': '',
+            }))
+        
+        # Apply changes only if there are actual additions or removals
         if commands:
             self.template_variable_ids = commands
     
