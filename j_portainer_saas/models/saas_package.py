@@ -255,8 +255,46 @@ class SaasPackage(models.Model):
     # ========================================================================
     
     def write(self, vals):
-        """Override write to prevent onchange interference during save."""
-        return super().with_context(_from_save=True).write(vals)
+        """Override write to prevent onchange interference and sync changes to subscription template and product."""
+        # Set context to prevent onchange interference during save
+        result = super().with_context(_from_save=True).write(vals)
+        
+        # Extract template variables if docker_compose_template changed
+        if 'docker_compose_template' in vals:
+            self._extract_template_variables()
+        
+        # Sync name changes
+        if 'pkg_name' in vals and self.pkg_subscription_template_id:
+            try:
+                # Update subscription template name (unless coming from template sync)
+                if not self.env.context.get('skip_template_sync'):
+                    if self.pkg_subscription_template_id.name != vals['pkg_name']:
+                        self.pkg_subscription_template_id.write({'name': vals['pkg_name']})
+                        
+                # Update products linked to this template (unless coming from product sync)
+                if not self.env.context.get('skip_product_sync'):
+                    for product in self.pkg_subscription_template_id.product_ids:
+                        if product.name != vals['pkg_name']:
+                            product.with_context(skip_saas_sync=True).write({'name': vals['pkg_name']})
+                            
+                _logger.info(f"Synced name change from package {self.pkg_name} to template and products")
+            except Exception as e:
+                _logger.warning(f"Failed to sync name changes for package {self.id}: {str(e)}")
+            
+        # Sync price changes  
+        if 'pkg_price' in vals and self.pkg_subscription_template_id:
+            try:
+                # Update all products linked to this template (unless coming from product sync)
+                if not self.env.context.get('skip_product_sync'):
+                    for product in self.pkg_subscription_template_id.product_ids:
+                        if product.list_price != (vals['pkg_price'] or 0.0):
+                            product.with_context(skip_saas_sync=True).write({'list_price': vals['pkg_price'] or 0.0})
+                            
+                _logger.info(f"Synced price change from package {self.pkg_name} to products")
+            except Exception as e:
+                _logger.warning(f"Failed to sync price changes for package {self.id}: {str(e)}")
+        
+        return result
     
     # ========================================================================
     # BUSINESS METHODS
@@ -385,46 +423,7 @@ class SaasPackage(models.Model):
 
         return package
 
-    def write(self, vals):
-        """Override write to sync changes to subscription template and product."""
-        result = super().write(vals)
-        
-        # Extract template variables if docker_compose_template changed
-        if 'docker_compose_template' in vals:
-            self._extract_template_variables()
-        
-        # Sync name changes
-        if 'pkg_name' in vals and self.pkg_subscription_template_id:
-            try:
-                # Update subscription template name (unless coming from template sync)
-                if not self.env.context.get('skip_template_sync'):
-                    if self.pkg_subscription_template_id.name != vals['pkg_name']:
-                        self.pkg_subscription_template_id.write({'name': vals['pkg_name']})
-                        
-                # Update products linked to this template (unless coming from product sync)
-                if not self.env.context.get('skip_product_sync'):
-                    for product in self.pkg_subscription_template_id.product_ids:
-                        if product.name != vals['pkg_name']:
-                            product.with_context(skip_saas_sync=True).write({'name': vals['pkg_name']})
-                            
-                _logger.info(f"Synced name change from package {self.pkg_name} to template and products")
-            except Exception as e:
-                _logger.warning(f"Failed to sync name changes for package {self.id}: {str(e)}")
-            
-        # Sync price changes  
-        if 'pkg_price' in vals and self.pkg_subscription_template_id:
-            try:
-                # Update all products linked to this template (unless coming from product sync)
-                if not self.env.context.get('skip_product_sync'):
-                    for product in self.pkg_subscription_template_id.product_ids:
-                        if product.list_price != (vals['pkg_price'] or 0.0):
-                            product.with_context(skip_saas_sync=True).write({'list_price': vals['pkg_price'] or 0.0})
-                            
-                _logger.info(f"Synced price change from package {self.pkg_name} to products")
-            except Exception as e:
-                _logger.warning(f"Failed to sync price changes for package {self.id}: {str(e)}")
-        
-        return result
+
     
     def action_view_saas_clients(self):
         """Open SaaS clients using this package."""
