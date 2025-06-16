@@ -64,8 +64,8 @@ class PortainerStack(models.Model):
     container_ids = fields.One2many('j_portainer.container', 'stack_id', string='Containers')
     
     # Volume-related fields
-    volume_count = fields.Integer('Volume Count', compute='_compute_volume_stats', store=True)
-    total_volume_size = fields.Char('Total Volume Size', compute='_compute_volume_stats', store=True)
+    volume_count = fields.Integer('Volume Count', compute='_compute_volume_stats', )
+    total_volume_size = fields.Char('Total Volume Size', compute='_compute_volume_stats', )
     
     _sql_constraints = [
         ('unique_stack_per_environment', 'unique(server_id, environment_id, stack_id)', 
@@ -117,32 +117,51 @@ class PortainerStack(models.Model):
             unique_volume_ids = set(volume_mappings.mapped('volume_id.id'))
             record.volume_count = len(unique_volume_ids)
             
-            # Sum usage_size values (e.g., "40M" + "50M" = "90M")
+            # Sum usage_size values with proper unit conversion
             # Group by volume_id to avoid counting the same volume multiple times
-            volume_sizes = {}
+            volume_sizes_bytes = {}
             for mapping in volume_mappings:
                 if mapping.volume_id and mapping.usage_size and mapping.usage_size not in ['Error', 'N/A', '']:
                     volume_id = mapping.volume_id.id
-                    if volume_id not in volume_sizes:
+                    if volume_id not in volume_sizes_bytes:
                         try:
-                            # Extract numeric part from usage_size (e.g., "40M" -> 40)
+                            # Extract numeric value and unit from usage_size (e.g., "4.0K" -> 4.0 and "K")
                             import re
-                            size_match = re.match(r'^(\d+\.?\d*)', mapping.usage_size)
+                            size_match = re.match(r'^(\d+\.?\d*)\s*([KMGT]?)B?$', mapping.usage_size.upper().strip())
                             if size_match:
                                 size_value = float(size_match.group(1))
-                                # Assume all sizes are in MB for simplicity (most common from du -sh)
-                                volume_sizes[volume_id] = size_value
+                                unit = size_match.group(2)
+                                
+                                # Convert to bytes based on unit
+                                multipliers = {
+                                    '': 1,          # bytes
+                                    'K': 1024,      # kilobytes
+                                    'M': 1024**2,   # megabytes
+                                    'G': 1024**3,   # gigabytes
+                                    'T': 1024**4,   # terabytes
+                                }
+                                
+                                size_bytes = size_value * multipliers.get(unit, 1)
+                                volume_sizes_bytes[volume_id] = size_bytes
                         except (ValueError, AttributeError):
                             continue
             
-            # Sum all unique volume sizes
-            total_size_mb = sum(volume_sizes.values())
+            # Sum all unique volume sizes in bytes
+            total_bytes = sum(volume_sizes_bytes.values())
             
-            # Store total as string with unit (e.g., "90M")
-            if total_size_mb > 0:
-                record.total_volume_size = f"{total_size_mb:.1f}M"
+            # Convert back to human readable format
+            if total_bytes == 0:
+                record.total_volume_size = "0B"
+            elif total_bytes < 1024:
+                record.total_volume_size = f"{total_bytes:.0f}B"
+            elif total_bytes < 1024**2:
+                record.total_volume_size = f"{total_bytes/1024:.1f}K"
+            elif total_bytes < 1024**3:
+                record.total_volume_size = f"{total_bytes/(1024**2):.1f}M"
+            elif total_bytes < 1024**4:
+                record.total_volume_size = f"{total_bytes/(1024**3):.1f}G"
             else:
-                record.total_volume_size = "0M"
+                record.total_volume_size = f"{total_bytes/(1024**4):.1f}T"
 
     def write(self, vals):
         """Override write to handle content updates"""
