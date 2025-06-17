@@ -17,38 +17,38 @@ class TemplateVariable(models.Model):
     """
     _name = 'saas.template.variable'
     _description = 'Template Variable'
-    _order = 'variable_name'
-    _rec_name = 'variable_name'
+    _order = 'tv_variable_name'
+    _rec_name = 'tv_variable_name'
     
     # ========================================================================
     # FIELDS
     # ========================================================================
     
-    variable_name = fields.Char(
+    tv_variable_name = fields.Char(
         string='Variable Name',
         required=False,
         help='Variable name extracted from template (without @ prefix and suffix)'
     )
     
-    field_domain = fields.Char(
+    tv_field_domain = fields.Char(
         string='Field Domain',
         help='Field path on client model for variable replacement (e.g., sc_client_name, sc_client_subdomain)'
     )
     
-    field_name = fields.Char(
+    tv_field_name = fields.Char(
         string='Field Name',
         readonly=True,
         help='Extracted field name from field_domain for rendering'
     )
     
-    package_id = fields.Many2one(
+    tv_package_id = fields.Many2one(
         comodel_name='saas.package',
         string='Package',
         ondelete='cascade',
         help='Associated SaaS package'
     )
     
-    client_id = fields.Many2one(
+    sc_client_id = fields.Many2one(
         comodel_name='saas.client',
         string='Client',
         ondelete='cascade',
@@ -62,17 +62,17 @@ class TemplateVariable(models.Model):
     _sql_constraints = [
         (
             'unique_variable_per_package',
-            'UNIQUE(variable_name, package_id)',
+            'UNIQUE(tv_variable_name, tv_package_id)',
             'Variable name must be unique per package.'
         ),
         (
             'unique_variable_per_client',
-            'UNIQUE(variable_name, client_id)',
+            'UNIQUE(tv_variable_name, sc_client_id)',
             'Variable name must be unique per client.'
         ),
         (
             'package_or_client_required',
-            'CHECK((package_id IS NOT NULL AND client_id IS NULL) OR (package_id IS NULL AND client_id IS NOT NULL))',
+            'CHECK((tv_package_id IS NOT NULL AND sc_client_id IS NULL) OR (tv_package_id IS NULL AND sc_client_id IS NOT NULL))',
             'Variable must belong to either a package or a client, but not both.'
         ),
     ]
