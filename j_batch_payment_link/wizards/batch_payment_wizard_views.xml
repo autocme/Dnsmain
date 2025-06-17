@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Batch Payment Wizard Form View -->
+        <record id="view_batch_payment_wizard_form" model="ir.ui.view">
+            <field name="name">batch.payment.wizard.form</field>
+            <field name="model">batch.payment.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Create Batch Payment">
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>Create Batch Payment</h1>
+                            <p>Generate a single payment link for multiple invoices</p>
+                        </div>
+                        
+                        <group>
+                            <group name="payment_summary">
+                                <field name="partner_id" readonly="1"/>
+                                <field name="invoice_count" readonly="1"/>
+                                <field name="total_amount" readonly="1"/>
+                                <field name="currency_id" readonly="1"/>
+                            </group>
+                        </group>
+                        
+                        <group name="notes_group">
+                            <field name="notes" placeholder="Additional notes for the batch payment..."/>
+                        </group>
+                        
+                        <notebook>
+                            <page string="Selected Invoices" name="invoices">
+                                <field name="invoice_ids" readonly="1">
+                                    <tree string="Selected Invoices" create="false" delete="false">
+                                        <field name="name"/>
+                                        <field name="partner_id"/>
+                                        <field name="invoice_date"/>
+                                        <field name="invoice_date_due"/>
+                                        <field name="amount_total"/>
+                                        <field name="amount_residual"/>
+                                        <field name="currency_id"/>
+                                        <field name="state" widget="badge"/>
+                                    </tree>
+                                </field>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <footer>
+                        <button name="action_create_batch_payment" string="Create Batch Payment" type="object" class="btn-primary"/>
+                        <button name="action_generate_link_and_create" string="Create and Generate Link" type="object" class="btn-success"/>
+                        <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+    </data>
+</odoo>
