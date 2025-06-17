@@ -16,7 +16,7 @@
                 <field name="pkg_company_limit"/>
                 <field name="pkg_database_limit_size"/>
                 <field name="pkg_price" widget="monetary"/>
-                <field name="currency_id" invisible="1"/>
+                <field name="pkg_currency_id" invisible="1"/>
                 <field name="pkg_subscription_template_id"/>
                 <field name="pkg_active"/>
             </tree>
@@ -64,7 +64,7 @@
 
                         <group name="pricing" string="Pricing">
                             <field name="pkg_price" widget="monetary"/>
-                            <field name="currency_id"/>
+                            <field name="pkg_currency_id"/>
                         </group>
                     </group>
 
@@ -88,16 +88,16 @@
                         </page>
 
                         <page name="deployment_template" string="Deployment Template">
-                            <field name="docker_compose_template" placeholder="Enter Docker Compose content with variables marked as @VARIABLE_NAME@..."/>
+                            <field name="pkg_docker_compose_template" placeholder="Enter Docker Compose content with variables marked as @VARIABLE_NAME@..."/>
                         </page>
 
                         <page name="template_variables" string="Variables">
-                            <field name="template_variable_ids" options="{'delete': False,'create': False}">
+                            <field name="pkg_template_variable_ids" options="{'delete': False,'create': False}">
                                 <tree editable="bottom">
                                     <field name="id" readonly="1"/>
-                                    <field name="variable_name" readonly="1"/>
-                                    <field name="field_domain" widget="domain" options="{'model': 'saas.client'}" placeholder="e.g., [(&quot;sc_partner_id&quot;, &quot;!=&quot;, False)] or sc_client_name"/>
-                                    <field name="field_name" readonly="1"/>
+                                    <field name="tv_variable_name" readonly="1"/>
+                                    <field name="tv_field_domain" widget="domain" options="{'model': 'saas.client'}" placeholder="e.g., [(&quot;sc_partner_id&quot;, &quot;!=&quot;, False)] or sc_client_name"/>
+                                    <field name="tv_field_name" readonly="1"/>
                                 </tree>
                             </field>
                         </page>
