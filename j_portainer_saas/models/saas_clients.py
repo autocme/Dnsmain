@@ -34,7 +34,7 @@ class SaasClient(models.Model):
     sc_sequence = fields.Char(
         string='Sequence',
         required=True,
-        default=lambda self: self._get_default_sequence(),
+        default=lambda self: _('New'),
         tracking=True,
         help='Unique sequence number for this SaaS client'
     )
