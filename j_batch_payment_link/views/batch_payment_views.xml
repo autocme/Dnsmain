@@ -12,6 +12,7 @@
                     <field name="invoice_count"/>
                     <field name="total_amount"/>
                     <field name="currency_id"/>
+                    <field name="payment_method_id"/>
                     <field name="state" widget="badge" decoration-success="state == 'paid'" decoration-info="state == 'link_generated'" decoration-muted="state == 'cancelled'"/>
                     <field name="payment_date"/>
                     <field name="expiry_date"/>
@@ -42,6 +43,11 @@
                                     <span class="o_stat_text">Payment</span>
                                 </div>
                             </button>
+                            <button name="action_view_payment_transaction" type="object" class="oe_stat_button" icon="fa-credit-card" invisible="not payment_transaction_id">
+                                <div class="o_field_widget o_stat_info">
+                                    <span class="o_stat_text">Transaction</span>
+                                </div>
+                            </button>
                         </div>
                         
                         <div class="oe_title">
@@ -61,6 +67,8 @@
                                 <field name="expiry_date"/>
                                 <field name="payment_date" readonly="1"/>
                                 <field name="payment_id" readonly="1" invisible="not payment_id"/>
+                                <field name="payment_method_id" readonly="1" invisible="not payment_method_id"/>
+                                <field name="payment_transaction_id" readonly="1" invisible="not payment_transaction_id"/>
                             </group>
                         </group>
                         
