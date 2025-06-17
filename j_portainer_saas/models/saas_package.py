@@ -309,8 +309,8 @@ class SaasPackage(models.Model):
             self.template_variable_ids = [(5, 0, 0)]
             return
         
-        # Find all @VARIABLE_NAME patterns in template
-        variable_pattern = r'@(\w+)'
+        # Find all @VARIABLE_NAME@ patterns in template
+        variable_pattern = r'@(\w+)@'
         template_variables = set(re.findall(variable_pattern, self.docker_compose_template))
         
         # Get existing variable names
@@ -352,8 +352,8 @@ class SaasPackage(models.Model):
             self.template_variable_ids.unlink()
             return
         
-        # Find all @VARIABLE_NAME patterns
-        variable_pattern = r'@(\w+)'
+        # Find all @VARIABLE_NAME@ patterns
+        variable_pattern = r'@(\w+)@'
         variables = set(re.findall(variable_pattern, self.docker_compose_template))
         
         # Get existing variables

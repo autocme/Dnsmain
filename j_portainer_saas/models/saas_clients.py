@@ -345,7 +345,7 @@ class SaasClient(models.Model):
                 if variable.variable_name and variable.field_name:
                     # Get field value from client record
                     field_value = record._get_field_value(variable.field_name)
-                    variable_placeholder = f'@{variable.variable_name}'
+                    variable_placeholder = f'@{variable.variable_name}@'
                     rendered_content = rendered_content.replace(variable_placeholder, str(field_value))
             
             record.rendered_template = rendered_content
