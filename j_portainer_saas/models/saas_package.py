@@ -31,6 +31,7 @@ class SaasPackage(models.Model):
         string='Package Sequence',
         readonly=True,
         copy=False,
+        default=lambda self: _('New'),
         tracking=True,
         help='Auto-generated sequence code for package ordering (e.g., PK00001)'
     )
@@ -390,7 +391,7 @@ class SaasPackage(models.Model):
     @api.model
     def create(self, vals):
         """Override create to generate sequence number and create subscription template."""
-        if not vals.get('pkg_sequence'):
+        if vals.get('pkg_sequence', 'New') == 'New':
             vals['pkg_sequence'] = self.env['ir.sequence'].next_by_code('saas.package')
         
         package = super().create(vals)
