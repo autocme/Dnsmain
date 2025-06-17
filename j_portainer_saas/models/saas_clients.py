@@ -100,6 +100,26 @@ class SaasClient(models.Model):
              'for this SaaS client.'
     )
     
+    sc_deployment_stack_id = fields.Many2one(
+        comodel_name='j_portainer.stack',
+        string='Deployment Stack',
+        required=False,
+        tracking=True,
+        help='The deployed stack created from the custom template for this client.'
+    )
+    
+    sc_container_count = fields.Integer(
+        string='Container Count',
+        compute='_compute_deployment_stats',
+        help='Number of containers deployed for this client'
+    )
+    
+    sc_volume_count = fields.Integer(
+        string='Volume Count', 
+        compute='_compute_deployment_stats',
+        help='Number of volumes created for this client'
+    )
+    
     # ========================================================================
     # DOCKER COMPOSE TEMPLATE FIELDS
     # ========================================================================
@@ -296,6 +316,17 @@ class SaasClient(models.Model):
                     rendered_content = rendered_content.replace(variable_placeholder, str(field_value))
             
             record.sc_rendered_template = rendered_content
+    
+    @api.depends('sc_deployment_stack_id', 'sc_deployment_stack_id.container_ids', 'sc_deployment_stack_id.volume_ids')
+    def _compute_deployment_stats(self):
+        """Compute container and volume counts from deployment stack."""
+        for record in self:
+            if record.sc_deployment_stack_id:
+                record.sc_container_count = len(record.sc_deployment_stack_id.container_ids)
+                record.sc_volume_count = len(record.sc_deployment_stack_id.volume_ids)
+            else:
+                record.sc_container_count = 0
+                record.sc_volume_count = 0
 
     def name_get(self):
         """Return client display name as sequence/client name."""
@@ -333,6 +364,168 @@ class SaasClient(models.Model):
             
         except Exception:
             return ''
+    
+    # ========================================================================
+    # ACTION METHODS
+    # ========================================================================
+    
+    def action_deploy(self):
+        """Deploy the client template to Portainer by creating custom template and stack."""
+        self.ensure_one()
+        
+        # Validate prerequisites
+        if not self.sc_rendered_template:
+            raise UserError(_('No rendered template available. Please ensure the package has a Docker Compose template with proper variables.'))
+        
+        if not self.sc_sequence:
+            raise UserError(_('Client sequence is required for deployment.'))
+            
+        # Check if already deployed
+        if self.sc_portainer_template_id:
+            raise UserError(_('Client is already deployed. Template: %s') % self.sc_portainer_template_id.name)
+        
+        # Get server and environment (use single ones or raise error for multiple)
+        server = self._get_deployment_server()
+        environment = self._get_deployment_environment(server)
+        
+        # Create custom template
+        template_vals = {
+            'name': self.sc_sequence,
+            'description': f'Custom template for SaaS client {self.sc_sequence} ({self.sc_partner_id.name if self.sc_partner_id else "Unknown Client"})',
+            'file_content': self.sc_rendered_template,
+            'server_id': server.id,
+            'environment_id': environment.id,
+        }
+        
+        custom_template = self.env['j_portainer.customtemplate'].create(template_vals)
+        
+        # Link template to client
+        self.sc_portainer_template_id = custom_template.id
+        
+        # Create stack using the template's action
+        stack = custom_template.action_create_stack()
+        
+        # Link stack to client
+        if stack:
+            self.sc_deployment_stack_id = stack.id
+            
+        # Log successful deployment
+        self.message_post(
+            body=_('SaaS client successfully deployed to Portainer.<br/>'
+                  'Custom Template: %s<br/>'
+                  'Stack: %s<br/>'
+                  'Server: %s<br/>'
+                  'Environment: %s') % (
+                custom_template.name,
+                stack.name if stack else 'Not Created',
+                server.name,
+                environment.name
+            ),
+            message_type='notification'
+        )
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Deployment Successful'),
+                'message': _('SaaS client %s has been deployed to Portainer successfully.') % self.sc_sequence,
+                'type': 'success',
+                'sticky': False,
+            }
+        }
+    
+    def _get_deployment_server(self):
+        """Get the server to use for deployment."""
+        servers = self.env['j_portainer.server'].search([])
+        
+        if not servers:
+            raise UserError(_('No Portainer servers configured. Please configure at least one server.'))
+        elif len(servers) == 1:
+            return servers[0]
+        else:
+            # For now, raise error - will handle multiple servers later
+            raise UserError(_('Multiple Portainer servers found. Please configure deployment to handle multiple servers.'))
+    
+    def _get_deployment_environment(self, server):
+        """Get the environment to use for deployment on the given server."""
+        environments = self.env['j_portainer.environment'].search([
+            ('server_id', '=', server.id)
+        ])
+        
+        if not environments:
+            raise UserError(_('No environments configured for server %s. Please configure at least one environment.') % server.name)
+        elif len(environments) == 1:
+            return environments[0]
+        else:
+            # For now, raise error - will handle multiple environments later
+            raise UserError(_('Multiple environments found for server %s. Please configure deployment to handle multiple environments.') % server.name)
+    
+    # ========================================================================
+    # SMART BUTTON ACTIONS
+    # ========================================================================
+    
+    def action_view_custom_template(self):
+        """Open the custom template form view."""
+        self.ensure_one()
+        if not self.sc_portainer_template_id:
+            raise UserError(_('No custom template linked to this client.'))
+            
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Custom Template'),
+            'res_model': 'j_portainer.customtemplate',
+            'res_id': self.sc_portainer_template_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+    
+    def action_view_deployment_stack(self):
+        """Open the deployment stack form view."""
+        self.ensure_one()
+        if not self.sc_deployment_stack_id:
+            raise UserError(_('No deployment stack linked to this client.'))
+            
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Deployment Stack'),
+            'res_model': 'j_portainer.stack',
+            'res_id': self.sc_deployment_stack_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+    
+    def action_view_containers(self):
+        """Open containers list view for this deployment."""
+        self.ensure_one()
+        if not self.sc_deployment_stack_id:
+            raise UserError(_('No deployment stack available to show containers.'))
+            
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Deployment Containers'),
+            'res_model': 'j_portainer.container',
+            'view_mode': 'tree,form',
+            'domain': [('stack_id', '=', self.sc_deployment_stack_id.id)],
+            'context': {'default_stack_id': self.sc_deployment_stack_id.id},
+            'target': 'current',
+        }
+    
+    def action_view_volumes(self):
+        """Open volumes list view for this deployment."""
+        self.ensure_one()
+        if not self.sc_deployment_stack_id:
+            raise UserError(_('No deployment stack available to show volumes.'))
+            
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Deployment Volumes'),
+            'res_model': 'j_portainer.volume',
+            'view_mode': 'tree,form',
+            'domain': [('stack_id', '=', self.sc_deployment_stack_id.id)],
+            'context': {'default_stack_id': self.sc_deployment_stack_id.id},
+            'target': 'current',
+        }
     
     # ========================================================================
     # BUSINESS METHODS
