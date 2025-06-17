@@ -13,9 +13,7 @@
                   decoration-muted="not sc_active"
                   decoration-success="sc_subscription_id"
                   decoration-danger="not sc_subscription_id">
-
                 <field name="sc_sequence" string="Sequence"/>
-                <field name="sc_display_name" string="Client"/>
                 <field name="sc_partner_id" string="Partner"/>
                 <field name="sc_package_id"/>
                 <field name="sc_subscription_id"/>
@@ -62,16 +60,15 @@
 
                     <!-- Status bar with active toggle -->
 
-                    <!-- <div class="oe_title">
+                    <div class="oe_title">
                         <h1>
-                            <field name="sc_partner_id" readonly="1"/>
+                            <field name="sc_sequence" readonly="1"/>
                         </h1>
-                    </div> -->
+                    </div>
                     <group>
 
                         <group>
-                            <field name="sc_sequence" readonly="1"/>
-                            <field name="sc_display_name" readonly="1"/>
+                            <field name="sc_complete_name" invisible="1"/>
                             <field name="sc_partner_id"
                                    options="{'no_create': True}"
                                    placeholder="Select the customer partner..."/>
