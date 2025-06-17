@@ -108,6 +108,22 @@ class BatchPayment(models.Model):
         help='Date and time when payment was made'
     )
     
+    payment_transaction_id = fields.Many2one(
+        comodel_name='payment.transaction',
+        string='Payment Transaction',
+        readonly=True,
+        tracking=True,
+        help='Payment transaction generated when customer pays through the link'
+    )
+    
+    payment_method_id = fields.Many2one(
+        comodel_name='payment.method',
+        string='Payment Method',
+        readonly=True,
+        tracking=True,
+        help='Payment method used by customer for the transaction'
+    )
+    
     expiry_date = fields.Datetime(
         string='Link Expiry Date',
         default=lambda self: fields.Datetime.now() + timedelta(days=30),
@@ -138,11 +154,19 @@ class BatchPayment(models.Model):
         for record in self:
             record.invoice_count = len(record.invoice_ids)
     
-    @api.depends('invoice_ids.amount_residual')
+    @api.depends('invoice_ids.amount_residual', 'invoice_ids.amount_total', 'invoice_ids.state')
     def _compute_total_amount(self):
         """Compute the total amount of all invoices in the batch."""
         for record in self:
-            record.total_amount = sum(record.invoice_ids.mapped('amount_residual'))
+            total = 0
+            for invoice in record.invoice_ids:
+                if invoice.state == 'draft':
+                    # For draft invoices, use amount_total
+                    total += invoice.amount_total
+                else:
+                    # For posted invoices, use amount_residual
+                    total += invoice.amount_residual
+            record.total_amount = total
     
     # ========================================================================
     # DEFAULT METHODS
@@ -172,27 +196,19 @@ class BatchPayment(models.Model):
                 if not record.partner_id and len(partners) == 1:
                     record.partner_id = partners[0]
     
-    @api.constrains('invoice_ids')
-    def _check_invoices_posted(self):
-        """Ensure all invoices are posted."""
-        for record in self:
-            if record.invoice_ids:
-                non_posted = record.invoice_ids.filtered(lambda inv: inv.state != 'posted')
-                if non_posted:
-                    raise ValidationError(_(
-                        'All invoices must be posted before creating batch payment. '
-                        'Non-posted invoices: %s'
-                    ) % ', '.join(non_posted.mapped('name')))
+    # Removed validation for posted invoices - draft invoices are now allowed
     
     @api.constrains('invoice_ids')
     def _check_invoices_unpaid(self):
         """Ensure all invoices have outstanding amounts."""
         for record in self:
             if record.invoice_ids:
-                paid_invoices = record.invoice_ids.filtered(lambda inv: inv.amount_residual <= 0)
+                paid_invoices = record.invoice_ids.filtered(
+                    lambda inv: inv.state == 'posted' and inv.amount_residual <= 0
+                )
                 if paid_invoices:
                     raise ValidationError(_(
-                        'All invoices must have outstanding amounts. '
+                        'All posted invoices must have outstanding amounts. '
                         'Already paid invoices: %s'
                     ) % ', '.join(paid_invoices.mapped('name')))
     
@@ -239,12 +255,23 @@ class BatchPayment(models.Model):
             }
         }
     
-    def process_payment(self, payment_method=None, payment_reference=None):
+    def process_payment(self, payment_method=None, payment_reference=None, payment_transaction=None):
         """Process the batch payment and mark invoices as paid."""
         self.ensure_one()
         
         if self.state != 'link_generated':
             raise UserError(_('Payment can only be processed for batch payments with generated links.'))
+        
+        # Post draft invoices first
+        draft_invoices = self.invoice_ids.filtered(lambda inv: inv.state == 'draft')
+        if draft_invoices:
+            for invoice in draft_invoices:
+                try:
+                    invoice.action_post()
+                except Exception as e:
+                    raise UserError(_(
+                        'Failed to post draft invoice %s: %s'
+                    ) % (invoice.name, str(e)))
         
         # Create payment record
         payment_vals = {
@@ -268,18 +295,37 @@ class BatchPayment(models.Model):
         payment.batch_payment_id = self.id
         self.payment_id = payment.id
         self.payment_date = fields.Datetime.now()
+        
+        # Store payment transaction and method info
+        if payment_transaction:
+            self.payment_transaction_id = payment_transaction.id
+            if payment_transaction.payment_method_id:
+                self.payment_method_id = payment_transaction.payment_method_id.id
+        elif payment_method:
+            self.payment_method_id = payment_method.id
+        
         self.state = 'paid'
         
         # Reconcile payment with invoices
         self._reconcile_payment_with_invoices(payment)
         
-        # Log payment completion
+        # Log payment completion with payment method info
+        payment_method_name = self.payment_method_id.name if self.payment_method_id else _('Unknown Payment Method')
+        
+        # Add message to batch payment chatter
         self.message_post(
-            body=_('Batch payment completed. Payment amount: %s %s') % (
-                self.total_amount, self.currency_id.name
+            body=_('Batch payment completed. Payment amount: %s %s. The customer has selected %s to make the payment.') % (
+                self.total_amount, self.currency_id.name, payment_method_name
             ),
             message_type='notification'
         )
+        
+        # Add similar message to each invoice chatter
+        for invoice in self.invoice_ids:
+            invoice.message_post(
+                body=_('The customer has selected %s to make the payment') % payment_method_name,
+                message_type='notification'
+            )
         
         return payment
     
@@ -340,6 +386,30 @@ class BatchPayment(models.Model):
         self.state = 'draft'
         self.payment_link = False
         self.payment_token = False
+        self.payment_transaction_id = False
+        self.payment_method_id = False
+    
+    def update_payment_transaction(self, transaction_id, payment_method_id=None):
+        """Update batch payment with payment transaction details."""
+        self.ensure_one()
+        
+        if transaction_id:
+            transaction = self.env['payment.transaction'].browse(transaction_id)
+            if transaction.exists():
+                self.payment_transaction_id = transaction.id
+                
+                # Get payment method from transaction or parameter
+                if transaction.payment_method_id:
+                    self.payment_method_id = transaction.payment_method_id.id
+                elif payment_method_id:
+                    self.payment_method_id = payment_method_id
+                
+                # Process payment if transaction is done
+                if transaction.state == 'done':
+                    self.process_payment(
+                        payment_transaction=transaction,
+                        payment_reference=transaction.reference
+                    )
         
     # ========================================================================
     # ACTION METHODS
@@ -366,21 +436,16 @@ class BatchPayment(models.Model):
             'target': 'current',
         }
     
-    def action_send_payment_link(self):
-        """Send payment link via email."""
-        self.ensure_one()
+    def action_view_payment_transaction(self):
+        """Open payment transaction record."""
+        if not self.payment_transaction_id:
+            raise UserError(_('No payment transaction found for this batch.'))
         
-        if not self.payment_link:
-            raise UserError(_('Please generate payment link first.'))
-        
-        # You can customize this to use email templates
         return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Payment Link'),
-                'message': _('Payment link: %s') % self.payment_link,
-                'type': 'info',
-                'sticky': True,
-            }
+            'name': _('Payment Transaction'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'payment.transaction',
+            'res_id': self.payment_transaction_id.id,
+            'view_mode': 'form',
+            'target': 'current',
         }

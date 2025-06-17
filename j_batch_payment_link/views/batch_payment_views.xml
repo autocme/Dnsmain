@@ -30,7 +30,6 @@
                         <button name="process_payment" string="Process Payment" type="object" class="btn-success" invisible="state != 'link_generated'" groups="account.group_account_manager"/>
                         <button name="cancel_batch_payment" string="Cancel" type="object" class="btn-secondary" invisible="state not in ['draft', 'link_generated']"/>
                         <button name="reset_to_draft" string="Reset to Draft" type="object" class="btn-warning" invisible="state != 'cancelled'"/>
-                        <button name="action_send_payment_link" string="Send Payment Link" type="object" class="btn-info" invisible="state != 'link_generated'"/>
                         <field name="state" widget="statusbar" statusbar_visible="draft,link_generated,paid"/>
                     </header>
                     <sheet>

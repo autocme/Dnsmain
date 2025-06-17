@@ -68,11 +68,19 @@ class BatchPaymentWizard(models.TransientModel):
             partners = wizard.invoice_ids.mapped('partner_id')
             wizard.partner_id = partners[0] if len(partners) == 1 else False
     
-    @api.depends('invoice_ids')
+    @api.depends('invoice_ids', 'invoice_ids.amount_residual', 'invoice_ids.amount_total', 'invoice_ids.state')
     def _compute_total_amount(self):
         """Compute total amount from invoices."""
         for wizard in self:
-            wizard.total_amount = sum(wizard.invoice_ids.mapped('amount_residual'))
+            total = 0
+            for invoice in wizard.invoice_ids:
+                if invoice.state == 'draft':
+                    # For draft invoices, use amount_total
+                    total += invoice.amount_total
+                else:
+                    # For posted invoices, use amount_residual
+                    total += invoice.amount_residual
+            wizard.total_amount = total
     
     @api.depends('invoice_ids')
     def _compute_currency_id(self):
@@ -116,19 +124,15 @@ class BatchPaymentWizard(models.TransientModel):
                     'Found invoices for multiple customers: %s'
                 ) % ', '.join(partners.mapped('name')))
             
-            # Check if all invoices are posted
-            non_posted = wizard.invoice_ids.filtered(lambda inv: inv.state != 'posted')
-            if non_posted:
-                raise ValidationError(_(
-                    'All invoices must be posted before creating batch payment. '
-                    'Non-posted invoices: %s'
-                ) % ', '.join(non_posted.mapped('name')))
+            # Draft invoices are now allowed - they will be posted during payment processing
             
-            # Check if all invoices have outstanding amounts
-            paid_invoices = wizard.invoice_ids.filtered(lambda inv: inv.amount_residual <= 0)
+            # Check if posted invoices have outstanding amounts (draft invoices are allowed)
+            paid_invoices = wizard.invoice_ids.filtered(
+                lambda inv: inv.state == 'posted' and inv.amount_residual <= 0
+            )
             if paid_invoices:
                 raise ValidationError(_(
-                    'All invoices must have outstanding amounts. '
+                    'All posted invoices must have outstanding amounts. '
                     'Already paid invoices: %s'
                 ) % ', '.join(paid_invoices.mapped('name')))
             
