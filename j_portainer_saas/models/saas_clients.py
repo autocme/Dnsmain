@@ -26,7 +26,6 @@ class SaasClient(models.Model):
     _description = 'SaaS Clients'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'sc_sequence, sc_partner_id'
-    _rec_name = 'sc_display_name'
     
     # ========================================================================
     # FIELDS
@@ -35,7 +34,7 @@ class SaasClient(models.Model):
     sc_sequence = fields.Char(
         string='Sequence',
         required=True,
-        default=lambda self: _('New'),
+        default=lambda self: self._get_default_sequence(),
         tracking=True,
         help='Unique sequence number for this SaaS client'
     )
@@ -298,6 +297,21 @@ class SaasClient(models.Model):
                     rendered_content = rendered_content.replace(variable_placeholder, str(field_value))
             
             record.sc_rendered_template = rendered_content
+    
+    def name_get(self):
+        """Return client display name as sequence/client name."""
+        result = []
+        for record in self:
+            if record.sc_sequence and record.sc_partner_id:
+                name = f"{record.sc_sequence}/{record.sc_partner_id.name}"
+            elif record.sc_sequence:
+                name = record.sc_sequence
+            elif record.sc_partner_id:
+                name = record.sc_partner_id.name
+            else:
+                name = 'New SaaS Client'
+            result.append((record.id, name))
+        return result
     
     def _get_field_value(self, field_path):
         """Get field value from record using dot notation path."""
