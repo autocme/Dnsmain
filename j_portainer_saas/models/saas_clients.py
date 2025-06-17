@@ -94,7 +94,7 @@ class SaasClient(models.Model):
     
     docker_compose_template = fields.Text(
         string='Docker Compose Template',
-        readonly=True,
+        readonly=True, related='sc_package_id.docker_compose_template',
         help='Docker Compose template inherited from package with variables'
     )
     
@@ -102,7 +102,7 @@ class SaasClient(models.Model):
         comodel_name='saas.template.variable',
         inverse_name='client_id',
         string='Template Variables',
-        readonly=True,
+        readonly=True, related='sc_package_id.template_variable_ids',
         help='Variables inherited from package for template rendering'
     )
     
@@ -177,23 +177,6 @@ class SaasClient(models.Model):
     ]
     
     # ========================================================================
-    # OVERRIDE METHODS
-    # ========================================================================
-    
-    def write(self, vals):
-        """Override write to handle template variable updates properly."""
-        # Prevent onchange interference during save operations
-        result = super().with_context(_from_save=True).write(vals)
-        
-        # If package is being changed, update template and variables
-        if 'sc_package_id' in vals:
-            for record in self:
-                if record.sc_package_id:
-                    record._update_from_package_template()
-        
-        return result
-    
-    # ========================================================================
     # VALIDATION METHODS
     # ========================================================================
     
@@ -221,10 +204,10 @@ class SaasClient(models.Model):
     def _check_subscription_template_consistency(self):
         """
         Validate that the subscription uses the specified template.
-        
+
         This ensures that the subscription was created from the template
         specified in this SaaS client record, maintaining service consistency.
-        
+
         Raises:
             ValidationError: If subscription template doesn't match the specified template
         """
@@ -239,59 +222,6 @@ class SaasClient(models.Model):
     # ========================================================================
     # ONCHANGE METHODS
     # ========================================================================
-    
-    @api.onchange('sc_template_id')
-    def _onchange_template_id(self):
-        """
-        Handle template change by filtering available subscriptions.
-        
-        When a template is selected, this method updates the domain
-        for the subscription field to only show subscriptions that
-        were created from the selected template.
-        """
-        if self.sc_template_id:
-            return {
-                'domain': {
-                    'sc_subscription_id': [
-                        ('template_id', '=', self.sc_template_id.id)
-                    ]
-                }
-            }
-        else:
-            return {
-                'domain': {
-                    'sc_subscription_id': []
-                }
-            }
-    
-    @api.onchange('sc_partner_id')
-    def _onchange_partner_id(self):
-        """
-        Handle partner change by filtering available subscriptions.
-        
-        When a partner is selected, this method updates the domain
-        for the subscription field to only show subscriptions that
-        belong to the selected partner.
-        """
-        if self.sc_partner_id:
-            domain = [('partner_id', '=', self.sc_partner_id.id)]
-            
-            # If template is also selected, add template filter
-            if self.sc_template_id:
-                template_filter = ('template_id', '=', self.sc_template_id.id)
-                domain = domain + [template_filter]
-            
-            return {
-                'domain': {
-                    'sc_subscription_id': domain
-                }
-            }
-        else:
-            return {
-                'domain': {
-                    'sc_subscription_id': []
-                }
-            }
     
     @api.onchange('sc_subscription_id')
     def _onchange_subscription_id(self):
@@ -311,66 +241,7 @@ class SaasClient(models.Model):
             if not self.sc_template_id:
                 self.sc_template_id = self.sc_subscription_id.template_id
     
-    @api.onchange('sc_package_id')
-    def _onchange_package_id(self):
-        """Inherit template and variables from selected package."""
-        # Skip if we're in a save context
-        if self.env.context.get('_from_save'):
-            return
-            
-        if self.sc_package_id:
-            self._inherit_package_template()
-    
-    def _inherit_package_template(self):
-        """Copy template and variables from package to client."""
-        if not self.sc_package_id:
-            return
-        
-        package = self.sc_package_id
-        
-        # Copy template content
-        self.docker_compose_template = package.docker_compose_template
-        
-        # Clear existing variables and copy from package
-        self.template_variable_ids = [(5, 0, 0)]  # Clear all
-        
-        # Copy variables from package
-        new_variables = []
-        for pkg_var in package.template_variable_ids:
-            new_variables.append((0, 0, {
-                'variable_name': pkg_var.variable_name,
-                'field_domain': pkg_var.field_domain,
-                'field_name': pkg_var.field_name,
-                # Don't set client_id during onchange - it will be set automatically on save
-            }))
-        
-        if new_variables:
-            self.template_variable_ids = new_variables
-    
-    def _update_from_package_template(self):
-        """Update client template and variables from package after save."""
-        if not self.sc_package_id:
-            return
-        
-        package = self.sc_package_id
-        
-        # Update template content directly to avoid recursion
-        super().write({
-            'docker_compose_template': package.docker_compose_template
-        })
-        
-        # Clear existing variables
-        self.template_variable_ids.unlink()
-        
-        # Create new variables from package
-        for pkg_var in package.template_variable_ids:
-            self.env['saas.template.variable'].create({
-                'variable_name': pkg_var.variable_name,
-                'field_domain': pkg_var.field_domain,
-                'field_name': pkg_var.field_name,
-                'client_id': self.id,
-            })
-    
+
     # ========================================================================
     # COMPUTED METHODS
     # ========================================================================
@@ -471,10 +342,6 @@ class SaasClient(models.Model):
         
         # Create the SaaS client
         client = super().create(vals)
-        
-        # Inherit template from package if package is specified
-        if vals.get('sc_package_id'):
-            client._inherit_package_template()
         
         return client
 
