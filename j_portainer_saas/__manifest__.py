@@ -46,7 +46,6 @@ Dependencies:
         'security/ir.model.access.csv',
         'views/saas_package_views.xml',
         'views/saas_clients_views.xml',
-        'views/portainer_stack_views.xml',
         'views/menu_views.xml',
     ],
     'demo': [],
