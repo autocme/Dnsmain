@@ -240,7 +240,7 @@ class SaasClient(models.Model):
     # ========================================================================
     # ONCHANGE METHODS
     # ========================================================================
-    
+
     @api.onchange('sc_subscription_id')
     def _onchange_subscription_id(self):
         """
