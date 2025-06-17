@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Extend Payment Form View to show batch payment info -->
+        <record id="view_account_payment_form_batch" model="ir.ui.view">
+            <field name="name">account.payment.form.batch</field>
+            <field name="model">account.payment</field>
+            <field name="inherit_id" ref="account.view_account_payment_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
+                    <button name="action_view_batch_payment" type="object" class="oe_stat_button" icon="fa-link" invisible="not batch_payment_id">
+                        <div class="o_field_widget o_stat_info">
+                            <span class="o_stat_text">Batch Payment</span>
+                        </div>
+                    </button>
+                    <button name="action_view_batch_invoices" type="object" class="oe_stat_button" icon="fa-file-text-o" invisible="batch_invoice_count == 0">
+                        <field name="batch_invoice_count" widget="statinfo" string="Batch Invoices"/>
+                    </button>
+                </xpath>
+                
+                <!-- Add batch payment info in payment details -->
+                <xpath expr="//group[@name='group2']" position="after">
+                    <group string="Batch Payment Info" invisible="not batch_payment_id">
+                        <field name="batch_payment_id" readonly="1"/>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>
