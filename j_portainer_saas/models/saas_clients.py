@@ -26,6 +26,7 @@ class SaasClient(models.Model):
     _description = 'SaaS Clients'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'sc_sequence, sc_partner_id'
+    _rec_name = 'sc_complete_name'
     
     # ========================================================================
     # FIELDS
@@ -39,12 +40,12 @@ class SaasClient(models.Model):
         help='Unique sequence number for this SaaS client'
     )
     
-    sc_display_name = fields.Char(
+    sc_complete_name = fields.Char(
         string='Display Name',
-        compute='_compute_display_name',
+        compute='_compute_sc_complete_name',
         help='Display name combining sequence and client name'
     )
-    
+
     sc_template_id = fields.Many2one(
         comodel_name='sale.subscription.template',
         string='Subscription Template',
@@ -261,21 +262,21 @@ class SaasClient(models.Model):
     # ========================================================================
     # COMPUTED METHODS
     # ========================================================================
-    
-    
+
+
     @api.depends('sc_sequence', 'sc_partner_id', 'sc_partner_id.name')
-    def _compute_display_name(self):
+    def _compute_sc_complete_name(self):
         """Compute display name as sequence/client name."""
         for record in self:
             if record.sc_sequence and record.sc_partner_id:
-                record.sc_display_name = f"{record.sc_sequence}/{record.sc_partner_id.name}"
+                record.sc_complete_name = f"{record.sc_sequence}/{record.sc_partner_id.name}"
             elif record.sc_sequence:
-                record.sc_display_name = record.sc_sequence
+                record.sc_complete_name = record.sc_sequence
             elif record.sc_partner_id:
-                record.sc_display_name = record.sc_partner_id.name
+                record.sc_complete_name = record.sc_partner_id.name
             else:
-                record.sc_display_name = 'New SaaS Client'
-    
+                record.sc_complete_name = 'New SaaS Client'
+
     @api.depends('sc_docker_compose_template', 'sc_template_variable_ids', 'sc_template_variable_ids.tv_field_name')
     def _compute_rendered_template(self):
         """Render template by replacing variables with actual field values."""
@@ -295,7 +296,7 @@ class SaasClient(models.Model):
                     rendered_content = rendered_content.replace(variable_placeholder, str(field_value))
             
             record.sc_rendered_template = rendered_content
-    
+
     def name_get(self):
         """Return client display name as sequence/client name."""
         result = []
