@@ -35,7 +35,7 @@ class SaasClient(models.Model):
     sc_sequence = fields.Char(
         string='Sequence',
         required=True,
-        default=lambda self: self._get_default_sequence(),
+        default=lambda self: _('New'),
         tracking=True,
         help='Unique sequence number for this SaaS client'
     )
@@ -178,6 +178,11 @@ class SaasClient(models.Model):
     
     _sql_constraints = [
         (
+            'unique_sc_sequence',
+            'UNIQUE(sc_sequence)',
+            'Client sequence must be unique.'
+        ),
+        (
             'unique_partner_subscription',
             'UNIQUE(sc_partner_id, sc_subscription_id)',
             'A partner can only have one SaaS client record per subscription.'
@@ -259,20 +264,6 @@ class SaasClient(models.Model):
     # COMPUTED METHODS
     # ========================================================================
     
-    def _get_default_sequence(self):
-        """Generate default sequence for new client records."""
-        sequence = self.env['ir.sequence'].next_by_code('saas.client.sequence')
-        if not sequence:
-            # Fallback if sequence doesn't exist
-            last_client = self.env['saas.client'].search([], order='sc_sequence desc', limit=1)
-            if last_client and last_client.sc_sequence:
-                try:
-                    last_number = int(last_client.sc_sequence[2:])  # Remove 'SC' prefix
-                    return f'SC{last_number + 1:05d}'
-                except (ValueError, IndexError):
-                    pass
-            return 'SC00001'
-        return sequence
     
     @api.depends('sc_sequence', 'sc_partner_id', 'sc_partner_id.name')
     def _compute_display_name(self):
@@ -336,6 +327,9 @@ class SaasClient(models.Model):
     @api.model
     def create(self, vals):
         """Override create to automatically create subscription for new SaaS clients."""
+        if vals.get('sc_sequence', 'New') == 'New':
+            vals['sc_sequence'] = self.env['ir.sequence'].next_by_code('saas.client')
+        
         # Check if subscription is provided to use as base
         base_subscription_id = vals.get('sc_subscription_id')
         
