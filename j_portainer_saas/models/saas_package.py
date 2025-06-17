@@ -98,7 +98,7 @@ class SaasPackage(models.Model):
         help='Monthly subscription price for this package'
     )
     
-    currency_id = fields.Many2one(
+    pkg_currency_id = fields.Many2one(
         comodel_name='res.currency',
         string='Currency',
         default=lambda self: self.env.company.currency_id,
@@ -115,14 +115,14 @@ class SaasPackage(models.Model):
         help='Associated subscription template for billing and lifecycle management'
     )
     
-    docker_compose_template = fields.Text(
+    pkg_docker_compose_template = fields.Text(
         string='Docker Compose Template',
         help='Docker Compose content with variables marked as @VARIABLE_NAME@'
     )
     
-    template_variable_ids = fields.One2many(
+    pkg_template_variable_ids = fields.One2many(
         comodel_name='saas.template.variable',
-        inverse_name='package_id',
+        inverse_name='tv_package_id',
         string='Template Variables',
         help='Auto-extracted variables from Docker Compose template'
     )
@@ -259,7 +259,7 @@ class SaasPackage(models.Model):
         result = super().write(vals)
 
         # Extract template variables if docker_compose_template changed
-        if 'docker_compose_template' in vals:
+        if 'pkg_docker_compose_template' in vals:
             self._extract_template_variables()
 
         # Sync name changes
@@ -299,25 +299,25 @@ class SaasPackage(models.Model):
     # BUSINESS METHODS
     # ========================================================================
     
-    @api.onchange('docker_compose_template')
+    @api.onchange('pkg_docker_compose_template')
     def _onchange_docker_compose_template(self):
         """Extract variables from Docker Compose template when content changes.
         Only adds new variables and removes specific deleted ones - NEVER recreates all."""
         
-        if not self.docker_compose_template:
+        if not self.pkg_docker_compose_template:
             # Clear all variables if template is empty
-            self.template_variable_ids = [(5, 0, 0)]
+            self.pkg_template_variable_ids = [(5, 0, 0)]
             return
         
         # Find all @VARIABLE_NAME@ patterns in template
         variable_pattern = r'@(\w+)@'
-        template_variables = set(re.findall(variable_pattern, self.docker_compose_template))
+        template_variables = set(re.findall(variable_pattern, self.pkg_docker_compose_template))
         
         # Get existing variable names
         existing_var_names = set()
-        for var in self.template_variable_ids:
-            if hasattr(var, 'variable_name') and var.variable_name:
-                existing_var_names.add(var.variable_name)
+        for var in self.pkg_template_variable_ids:
+            if hasattr(var, 'tv_variable_name') and var.tv_variable_name:
+                existing_var_names.add(var.tv_variable_name)
         
         # Calculate what needs to be added or removed
         variables_to_add = template_variables - existing_var_names
@@ -327,8 +327,8 @@ class SaasPackage(models.Model):
         commands = []
         
         # Step 1: Remove ONLY variables no longer in template
-        for var in self.template_variable_ids:
-            if hasattr(var, 'variable_name') and var.variable_name in variables_to_remove:
+        for var in self.pkg_template_variable_ids:
+            if hasattr(var, 'tv_variable_name') and var.tv_variable_name in variables_to_remove:
                 # Remove saved variable by ID
                 commands.append((2, var.id, 0))
                 # Unsaved variables will be automatically excluded from new list
@@ -336,34 +336,34 @@ class SaasPackage(models.Model):
         # Step 2: Add ONLY new variables
         for var_name in variables_to_add:
             commands.append((0, 0, {
-                'variable_name': var_name,
-                'field_domain': '',
-                'field_name': '',
+                'tv_variable_name': var_name,
+                'tv_field_domain': '',
+                'tv_field_name': '',
             }))
         
         # Apply changes only if there are actual additions or removals
         if commands:
-            self.template_variable_ids = commands
+            self.pkg_template_variable_ids = commands
     
     def _extract_template_variables(self):
         """Extract @VARIABLE_NAME@ patterns from Docker Compose template."""
-        if not self.docker_compose_template:
+        if not self.pkg_docker_compose_template:
             # Clear all variables if template is empty
-            self.template_variable_ids.unlink()
+            self.pkg_template_variable_ids.unlink()
             return
         
         # Find all @VARIABLE_NAME@ patterns
         variable_pattern = r'@(\w+)@'
-        variables = set(re.findall(variable_pattern, self.docker_compose_template))
+        variables = set(re.findall(variable_pattern, self.pkg_docker_compose_template))
         
         # Get existing variables
-        existing_variables = {var.variable_name for var in self.template_variable_ids}
+        existing_variables = {var.tv_variable_name for var in self.pkg_template_variable_ids}
         
         # Remove variables no longer in template
         variables_to_remove = existing_variables - variables
         if variables_to_remove:
-            variables_to_delete = self.template_variable_ids.filtered(
-                lambda v: v.variable_name in variables_to_remove
+            variables_to_delete = self.pkg_template_variable_ids.filtered(
+                lambda v: v.tv_variable_name in variables_to_remove
             )
             variables_to_delete.unlink()
         
