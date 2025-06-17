@@ -117,7 +117,7 @@ class SaasPackage(models.Model):
     
     docker_compose_template = fields.Text(
         string='Docker Compose Template',
-        help='Docker Compose content with variables marked as @VARIABLE_NAME'
+        help='Docker Compose content with variables marked as @VARIABLE_NAME@'
     )
     
     template_variable_ids = fields.One2many(
@@ -346,7 +346,7 @@ class SaasPackage(models.Model):
             self.template_variable_ids = commands
     
     def _extract_template_variables(self):
-        """Extract @VARIABLE_NAME patterns from Docker Compose template."""
+        """Extract @VARIABLE_NAME@ patterns from Docker Compose template."""
         if not self.docker_compose_template:
             # Clear all variables if template is empty
             self.template_variable_ids.unlink()
