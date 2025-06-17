@@ -92,7 +92,7 @@
                         </page>
 
                         <page name="template_variables" string="Variables">
-                            <field name="template_variable_ids">
+                            <field name="template_variable_ids" options="{'delete': False,'create': False}">
                                 <tree editable="bottom">
                                     <field name="id" readonly="1"/>
                                     <field name="variable_name" readonly="1"/>
