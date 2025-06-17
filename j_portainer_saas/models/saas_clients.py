@@ -177,6 +177,23 @@ class SaasClient(models.Model):
     ]
     
     # ========================================================================
+    # OVERRIDE METHODS
+    # ========================================================================
+    
+    def write(self, vals):
+        """Override write to handle template variable updates properly."""
+        # Prevent onchange interference during save operations
+        result = super().with_context(_from_save=True).write(vals)
+        
+        # If package is being changed, update template and variables
+        if 'sc_package_id' in vals:
+            for record in self:
+                if record.sc_package_id:
+                    record._update_from_package_template()
+        
+        return result
+    
+    # ========================================================================
     # VALIDATION METHODS
     # ========================================================================
     
@@ -297,6 +314,10 @@ class SaasClient(models.Model):
     @api.onchange('sc_package_id')
     def _onchange_package_id(self):
         """Inherit template and variables from selected package."""
+        # Skip if we're in a save context
+        if self.env.context.get('_from_save'):
+            return
+            
         if self.sc_package_id:
             self._inherit_package_template()
     
@@ -320,11 +341,35 @@ class SaasClient(models.Model):
                 'variable_name': pkg_var.variable_name,
                 'field_domain': pkg_var.field_domain,
                 'field_name': pkg_var.field_name,
-                'client_id': self.id if self.id else None,
+                # Don't set client_id during onchange - it will be set automatically on save
             }))
         
         if new_variables:
             self.template_variable_ids = new_variables
+    
+    def _update_from_package_template(self):
+        """Update client template and variables from package after save."""
+        if not self.sc_package_id:
+            return
+        
+        package = self.sc_package_id
+        
+        # Update template content directly to avoid recursion
+        super().write({
+            'docker_compose_template': package.docker_compose_template
+        })
+        
+        # Clear existing variables
+        self.template_variable_ids.unlink()
+        
+        # Create new variables from package
+        for pkg_var in package.template_variable_ids:
+            self.env['saas.template.variable'].create({
+                'variable_name': pkg_var.variable_name,
+                'field_domain': pkg_var.field_domain,
+                'field_name': pkg_var.field_name,
+                'client_id': self.id,
+            })
     
     # ========================================================================
     # COMPUTED METHODS
