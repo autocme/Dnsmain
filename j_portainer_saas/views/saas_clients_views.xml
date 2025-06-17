@@ -45,20 +45,56 @@
             <form string="SaaS Client">
 
                 <header>
-                    <field name="sc_active" widget="boolean_toggle"/>
-                    <!-- Action buttons in header -->
-
-                    <!-- <button name="action_view_stack" 
+                    <button name="action_deploy" 
                             type="object" 
-                            string="View Stack" 
-                            class="btn-secondary"
-                            invisible="not sc_stack_id"/> -->
-
+                            string="Deploy" 
+                            class="btn-primary"
+                            invisible="sc_portainer_template_id"
+                            confirm="This will create a custom template and deploy the stack to Portainer. Continue?"/>
+                    <field name="sc_active" widget="boolean_toggle"/>
                 </header>
 
                 <sheet>
-
-                    <!-- Status bar with active toggle -->
+                    
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_custom_template"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-file-code-o"
+                                invisible="not sc_portainer_template_id">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Custom</span>
+                                <span class="o_stat_text">Template</span>
+                            </div>
+                        </button>
+                        
+                        <button name="action_view_deployment_stack"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-stack-overflow"
+                                invisible="not sc_deployment_stack_id">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Deployment</span>
+                                <span class="o_stat_text">Stack</span>
+                            </div>
+                        </button>
+                        
+                        <button name="action_view_containers"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-cube"
+                                invisible="not sc_deployment_stack_id">
+                            <field name="sc_container_count" widget="statinfo" string="Containers"/>
+                        </button>
+                        
+                        <button name="action_view_volumes"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-database"
+                                invisible="not sc_deployment_stack_id">
+                            <field name="sc_volume_count" widget="statinfo" string="Volumes"/>
+                        </button>
+                    </div>
 
                     <div class="oe_title">
                         <h1>
