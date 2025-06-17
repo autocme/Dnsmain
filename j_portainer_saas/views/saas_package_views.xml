@@ -137,7 +137,7 @@
             <kanban class="o_kanban_mobile">
                 <field name="pkg_name"/>
                 <field name="pkg_price"/>
-                <field name="currency_id"/>
+                <field name="pkg_currency_id"/>
                 <field name="pkg_user_limit"/>
                 <field name="pkg_company_limit"/>
                 <field name="pkg_database_limit_size"/>
@@ -152,7 +152,7 @@
                                     </div>
                                     <div class="o_secondary">
                                         <span t-if="record.pkg_price.value">
-                                            <field name="currency_id" invisible="1"/>
+                                            <field name="pkg_currency_id" invisible="1"/>
                                             <field name="pkg_price" widget="monetary"/>
                                         </span>
                                     </div>

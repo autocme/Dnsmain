@@ -42,6 +42,7 @@ class SaasClient(models.Model):
     
     sc_display_name = fields.Char(
         string='Display Name',
+        default=lambda self: _('New'),
         compute='_compute_display_name',
         store=True,
         help='Display name combining sequence and client name'

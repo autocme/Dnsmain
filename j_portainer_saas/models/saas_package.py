@@ -94,7 +94,7 @@ class SaasPackage(models.Model):
     
     pkg_price = fields.Monetary(
         string='Price',
-        currency_field='currency_id',
+        currency_field='pkg_currency_id',
         tracking=True,
         help='Monthly subscription price for this package'
     )
