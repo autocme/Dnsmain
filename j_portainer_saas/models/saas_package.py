@@ -253,16 +253,15 @@ class SaasPackage(models.Model):
     # ========================================================================
     # OVERRIDE METHODS
     # ========================================================================
-    
+
     def write(self, vals):
-        """Override write to prevent onchange interference and sync changes to subscription template and product."""
-        # Set context to prevent onchange interference during save
-        result = super().with_context(_from_save=True).write(vals)
-        
+        """Override write to sync changes to subscription template and product."""
+        result = super().write(vals)
+
         # Extract template variables if docker_compose_template changed
         if 'docker_compose_template' in vals:
             self._extract_template_variables()
-        
+
         # Sync name changes
         if 'pkg_name' in vals and self.pkg_subscription_template_id:
             try:
@@ -270,18 +269,18 @@ class SaasPackage(models.Model):
                 if not self.env.context.get('skip_template_sync'):
                     if self.pkg_subscription_template_id.name != vals['pkg_name']:
                         self.pkg_subscription_template_id.write({'name': vals['pkg_name']})
-                        
+
                 # Update products linked to this template (unless coming from product sync)
                 if not self.env.context.get('skip_product_sync'):
                     for product in self.pkg_subscription_template_id.product_ids:
                         if product.name != vals['pkg_name']:
                             product.with_context(skip_saas_sync=True).write({'name': vals['pkg_name']})
-                            
+
                 _logger.info(f"Synced name change from package {self.pkg_name} to template and products")
             except Exception as e:
                 _logger.warning(f"Failed to sync name changes for package {self.id}: {str(e)}")
-            
-        # Sync price changes  
+
+        # Sync price changes
         if 'pkg_price' in vals and self.pkg_subscription_template_id:
             try:
                 # Update all products linked to this template (unless coming from product sync)
@@ -289,13 +288,13 @@ class SaasPackage(models.Model):
                     for product in self.pkg_subscription_template_id.product_ids:
                         if product.list_price != (vals['pkg_price'] or 0.0):
                             product.with_context(skip_saas_sync=True).write({'list_price': vals['pkg_price'] or 0.0})
-                            
+
                 _logger.info(f"Synced price change from package {self.pkg_name} to products")
             except Exception as e:
                 _logger.warning(f"Failed to sync price changes for package {self.id}: {str(e)}")
-        
+
         return result
-    
+
     # ========================================================================
     # BUSINESS METHODS
     # ========================================================================
@@ -305,17 +304,9 @@ class SaasPackage(models.Model):
         """Extract variables from Docker Compose template when content changes.
         Only adds new variables and removes specific deleted ones - NEVER recreates all."""
         
-        # Skip if we're in a save context or if no real change
-        if self.env.context.get('_from_save') or not hasattr(self, '_origin'):
-            return
-            
         if not self.docker_compose_template:
             # Clear all variables if template is empty
             self.template_variable_ids = [(5, 0, 0)]
-            return
-        
-        # Check if template actually changed to avoid unnecessary processing
-        if hasattr(self, '_origin') and self._origin.docker_compose_template == self.docker_compose_template:
             return
         
         # Find all @VARIABLE_NAME patterns in template
@@ -331,20 +322,16 @@ class SaasPackage(models.Model):
         # Calculate what needs to be added or removed
         variables_to_add = template_variables - existing_var_names
         variables_to_remove = existing_var_names - template_variables
-        
-        # Only proceed if there are actual changes
-        if not variables_to_add and not variables_to_remove:
-            return
-        
+        print('variables_to_remove', variables_to_remove)
         # Build command list for ONLY the changes needed
         commands = []
         
         # Step 1: Remove ONLY variables no longer in template
         for var in self.template_variable_ids:
             if hasattr(var, 'variable_name') and var.variable_name in variables_to_remove:
-                if hasattr(var, 'id') and var.id:
-                    # Remove saved variable by ID
-                    commands.append((2, var.id, 0))
+                # Remove saved variable by ID
+                commands.append((2, var.id, 0))
+                # Unsaved variables will be automatically excluded from new list
         
         # Step 2: Add ONLY new variables
         for var_name in variables_to_add:
@@ -423,8 +410,6 @@ class SaasPackage(models.Model):
 
         return package
 
-
-    
     def action_view_saas_clients(self):
         """Open SaaS clients using this package."""
         action = self.env.ref('j_portainer_saas.action_saas_client').read()[0]

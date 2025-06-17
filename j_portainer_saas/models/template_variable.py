@@ -96,7 +96,7 @@ class TemplateVariable(models.Model):
         # Examples: [("field_name", "!=", False)], ("sc_partner_id.active", "=", True)
         field_pattern = r'["\']([a-zA-Z_][a-zA-Z0-9_.]*)["\']'
         matches = re.findall(field_pattern, self.field_domain)
-        
+
         if matches:
             # Take the first field name found (includes dot notation)
             self.field_name = matches[0]
@@ -108,14 +108,14 @@ class TemplateVariable(models.Model):
                 self.field_name = match.group(1)
             else:
                 self.field_name = ''
-    
+
     @api.model
     def create(self, vals):
         """Override create to extract field name on creation."""
         # Ensure field_domain is properly stored
         if 'field_domain' in vals and vals['field_domain']:
             _logger.info(f"Creating template variable with field_domain: {vals['field_domain']}")
-        
+
         record = super().create(vals)
         if vals.get('field_domain'):
             record._extract_field_name()
