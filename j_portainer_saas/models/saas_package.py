@@ -372,9 +372,9 @@ class SaasPackage(models.Model):
         for var_name in variables_to_add:
             if var_name:  # Ensure variable name is not empty
                 self.env['saas.template.variable'].create({
-                    'variable_name': var_name,
-                    'field_domain': '',
-                    'package_id': self.id,
+                    'tv_variable_name': var_name,
+                    'tv_field_domain': '',
+                    'tv_package_id': self.id,
                 })
 
     def name_get(self):
@@ -382,8 +382,8 @@ class SaasPackage(models.Model):
         result = []
         for record in self:
             name = record.pkg_name
-            if record.pkg_price and record.currency_id:
-                name = f"{name} ({record.currency_id.symbol}{record.pkg_price:.2f})"
+            if record.pkg_price and record.pkg_currency_id:
+                name = f"{name} ({record.pkg_currency_id.symbol}{record.pkg_price:.2f})"
             result.append((record.id, name))
         return result
     
