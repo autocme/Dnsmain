@@ -222,60 +222,7 @@ class SaasClient(models.Model):
     # ========================================================================
     # ONCHANGE METHODS
     # ========================================================================
-    
-    @api.onchange('sc_template_id')
-    def _onchange_template_id(self):
-        """
-        Handle template change by filtering available subscriptions.
-        
-        When a template is selected, this method updates the domain
-        for the subscription field to only show subscriptions that
-        were created from the selected template.
-        """
-        if self.sc_template_id:
-            return {
-                'domain': {
-                    'sc_subscription_id': [
-                        ('template_id', '=', self.sc_template_id.id)
-                    ]
-                }
-            }
-        else:
-            return {
-                'domain': {
-                    'sc_subscription_id': []
-                }
-            }
-    
-    @api.onchange('sc_partner_id')
-    def _onchange_partner_id(self):
-        """
-        Handle partner change by filtering available subscriptions.
-        
-        When a partner is selected, this method updates the domain
-        for the subscription field to only show subscriptions that
-        belong to the selected partner.
-        """
-        if self.sc_partner_id:
-            domain = [('partner_id', '=', self.sc_partner_id.id)]
-            
-            # If template is also selected, add template filter
-            if self.sc_template_id:
-                template_filter = ('template_id', '=', self.sc_template_id.id)
-                domain = domain + [template_filter]
-            
-            return {
-                'domain': {
-                    'sc_subscription_id': domain
-                }
-            }
-        else:
-            return {
-                'domain': {
-                    'sc_subscription_id': []
-                }
-            }
-    
+
     @api.onchange('sc_subscription_id')
     def _onchange_subscription_id(self):
         """
@@ -294,38 +241,7 @@ class SaasClient(models.Model):
             if not self.sc_template_id:
                 self.sc_template_id = self.sc_subscription_id.template_id
     
-    # @api.onchange('sc_package_id')
-    # def _onchange_package_id(self):
-    #     """Inherit template and variables from selected package."""
-    #     if self.sc_package_id:
-    #         self._inherit_package_template()
-    
-    def _inherit_package_template(self):
-        """Copy template and variables from package to client."""
-        if not self.sc_package_id:
-            return
-        
-        package = self.sc_package_id
-        
-        # Copy template content
-        self.docker_compose_template = package.docker_compose_template
-        
-        # Clear existing variables and copy from package
-        self.template_variable_ids = [(5, 0, 0)]  # Clear all
-        
-        # Copy variables from package
-        new_variables = []
-        for pkg_var in package.template_variable_ids:
-            new_variables.append((0, 0, {
-                'variable_name': pkg_var.variable_name,
-                'field_domain': pkg_var.field_domain,
-                'field_name': pkg_var.field_name,
-                'client_id': self.id if self.id else None,
-            }))
-        
-        if new_variables:
-            self.template_variable_ids = new_variables
-    
+
     # ========================================================================
     # COMPUTED METHODS
     # ========================================================================
@@ -426,10 +342,6 @@ class SaasClient(models.Model):
         
         # Create the SaaS client
         client = super().create(vals)
-        
-        # Inherit template from package if package is specified
-        # if vals.get('sc_package_id'):
-        #     client._inherit_package_template()
         
         return client
 
