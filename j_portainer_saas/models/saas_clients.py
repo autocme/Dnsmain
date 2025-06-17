@@ -25,14 +25,27 @@ class SaasClient(models.Model):
     _name = 'saas.client'
     _description = 'SaaS Clients'
     _inherit = ['mail.thread', 'mail.activity.mixin']
-    _order = 'sc_partner_id, sc_subscription_id'
-    _rec_name = 'sc_partner_id'
+    _order = 'sc_sequence, sc_partner_id'
+    _rec_name = 'sc_display_name'
     
     # ========================================================================
     # FIELDS
     # ========================================================================
     
-
+    sc_sequence = fields.Char(
+        string='Sequence',
+        required=True,
+        default=lambda self: self._get_default_sequence(),
+        tracking=True,
+        help='Unique sequence number for this SaaS client'
+    )
+    
+    sc_display_name = fields.Char(
+        string='Display Name',
+        compute='_compute_display_name',
+        store=True,
+        help='Display name combining sequence and client name'
+    )
     
     sc_template_id = fields.Many2one(
         comodel_name='sale.subscription.template',
@@ -92,21 +105,21 @@ class SaasClient(models.Model):
     # DOCKER COMPOSE TEMPLATE FIELDS
     # ========================================================================
     
-    docker_compose_template = fields.Text(
+    sc_docker_compose_template = fields.Text(
         string='Docker Compose Template',
-        readonly=True, related='sc_package_id.docker_compose_template',
+        readonly=True, related='sc_package_id.pkg_docker_compose_template',
         help='Docker Compose template inherited from package with variables'
     )
     
-    template_variable_ids = fields.One2many(
+    sc_template_variable_ids = fields.One2many(
         comodel_name='saas.template.variable',
-        inverse_name='client_id',
+        inverse_name='sc_client_id',
         string='Template Variables',
-        readonly=True, related='sc_package_id.template_variable_ids',
+        readonly=True, related='sc_package_id.pkg_template_variable_ids',
         help='Variables inherited from package for template rendering'
     )
     
-    rendered_template = fields.Text(
+    sc_rendered_template = fields.Text(
         string='Rendered Template',
         compute='_compute_rendered_template',
         help='Final Docker Compose template with variables replaced by actual values'
@@ -246,25 +259,53 @@ class SaasClient(models.Model):
     # COMPUTED METHODS
     # ========================================================================
     
-    @api.depends('docker_compose_template', 'template_variable_ids', 'template_variable_ids.field_name')
+    def _get_default_sequence(self):
+        """Generate default sequence for new client records."""
+        sequence = self.env['ir.sequence'].next_by_code('saas.client.sequence')
+        if not sequence:
+            # Fallback if sequence doesn't exist
+            last_client = self.env['saas.client'].search([], order='sc_sequence desc', limit=1)
+            if last_client and last_client.sc_sequence:
+                try:
+                    last_number = int(last_client.sc_sequence[2:])  # Remove 'SC' prefix
+                    return f'SC{last_number + 1:05d}'
+                except (ValueError, IndexError):
+                    pass
+            return 'SC00001'
+        return sequence
+    
+    @api.depends('sc_sequence', 'sc_partner_id', 'sc_partner_id.name')
+    def _compute_display_name(self):
+        """Compute display name as sequence/client name."""
+        for record in self:
+            if record.sc_sequence and record.sc_partner_id:
+                record.sc_display_name = f"{record.sc_sequence}/{record.sc_partner_id.name}"
+            elif record.sc_sequence:
+                record.sc_display_name = record.sc_sequence
+            elif record.sc_partner_id:
+                record.sc_display_name = record.sc_partner_id.name
+            else:
+                record.sc_display_name = 'New SaaS Client'
+    
+    @api.depends('sc_docker_compose_template', 'sc_template_variable_ids', 'sc_template_variable_ids.tv_field_name')
     def _compute_rendered_template(self):
         """Render template by replacing variables with actual field values."""
         for record in self:
-            if not record.docker_compose_template:
-                record.rendered_template = ''
+            if not record.sc_docker_compose_template:
+                record.sc_rendered_template = ''
                 continue
             
-            rendered_content = record.docker_compose_template
+            rendered_content = record.sc_docker_compose_template
             
             # Replace each variable with actual field value
-            for variable in record.template_variable_ids:
-                if variable.variable_name and variable.field_name:
+            for variable in record.sc_template_variable_ids:
+                if variable.tv_variable_name and variable.tv_field_name:
                     # Get field value from client record
-                    field_value = record._get_field_value(variable.field_name)
-                    variable_placeholder = f'@{variable.variable_name}@'
+                    field_value = record._get_field_value(variable.tv_field_name)
+                    variable_placeholder = f'@{variable.tv_variable_name}@'
                     rendered_content = rendered_content.replace(variable_placeholder, str(field_value))
             
-            record.rendered_template = rendered_content
+            record.sc_rendered_template = rendered_content
     
     def _get_field_value(self, field_path):
         """Get field value from record using dot notation path."""
