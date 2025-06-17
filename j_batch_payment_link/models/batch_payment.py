@@ -117,11 +117,11 @@ class BatchPayment(models.Model):
     )
     
     payment_method_id = fields.Many2one(
-        comodel_name='payment.method',
-        string='Payment Method',
+        comodel_name='payment.provider',
+        string='Payment Provider',
         readonly=True,
         tracking=True,
-        help='Payment method used by customer for the transaction'
+        help='Payment provider used by customer for the transaction'
     )
     
     expiry_date = fields.Datetime(
@@ -296,11 +296,11 @@ class BatchPayment(models.Model):
         self.payment_id = payment.id
         self.payment_date = fields.Datetime.now()
         
-        # Store payment transaction and method info
+        # Store payment transaction and provider info
         if payment_transaction:
             self.payment_transaction_id = payment_transaction.id
-            if payment_transaction.payment_method_id:
-                self.payment_method_id = payment_transaction.payment_method_id.id
+            if payment_transaction.provider_id:
+                self.payment_method_id = payment_transaction.provider_id.id
         elif payment_method:
             self.payment_method_id = payment_method.id
         
@@ -309,13 +309,13 @@ class BatchPayment(models.Model):
         # Reconcile payment with invoices
         self._reconcile_payment_with_invoices(payment)
         
-        # Log payment completion with payment method info
-        payment_method_name = self.payment_method_id.name if self.payment_method_id else _('Unknown Payment Method')
+        # Log payment completion with payment provider info
+        provider_name = self.payment_method_id.name if self.payment_method_id else _('Unknown Payment Provider')
         
         # Add message to batch payment chatter
         self.message_post(
             body=_('Batch payment completed. Payment amount: %s %s. The customer has selected %s to make the payment.') % (
-                self.total_amount, self.currency_id.name, payment_method_name
+                self.total_amount, self.currency_id.name, provider_name
             ),
             message_type='notification'
         )
@@ -323,7 +323,7 @@ class BatchPayment(models.Model):
         # Add similar message to each invoice chatter
         for invoice in self.invoice_ids:
             invoice.message_post(
-                body=_('The customer has selected %s to make the payment') % payment_method_name,
+                body=_('The customer has selected %s to make the payment') % provider_name,
                 message_type='notification'
             )
         
@@ -383,11 +383,13 @@ class BatchPayment(models.Model):
         if self.state == 'paid':
             raise UserError(_('Cannot reset a paid batch payment to draft.'))
         
-        self.state = 'draft'
-        self.payment_link = False
-        self.payment_token = False
-        self.payment_transaction_id = False
-        self.payment_method_id = False
+        self.write({
+            'state': 'draft',
+            'payment_link': False,
+            'payment_token': False,
+            'payment_transaction_id': False,
+            'payment_method_id': False,
+        })
     
     def update_payment_transaction(self, transaction_id, payment_method_id=None):
         """Update batch payment with payment transaction details."""
@@ -398,9 +400,9 @@ class BatchPayment(models.Model):
             if transaction.exists():
                 self.payment_transaction_id = transaction.id
                 
-                # Get payment method from transaction or parameter
-                if transaction.payment_method_id:
-                    self.payment_method_id = transaction.payment_method_id.id
+                # Get payment provider from transaction or parameter
+                if transaction.provider_id:
+                    self.payment_method_id = transaction.provider_id.id
                 elif payment_method_id:
                     self.payment_method_id = payment_method_id
                 

@@ -52,21 +52,6 @@ class AccountMove(models.Model):
             
         return action
     
-    def action_create_batch_payment(self):
-        """Create batch payment for selected invoices."""
-        return {
-            'name': _('Create Batch Payment'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'batch.payment.wizard',
-            'view_mode': 'form',
-            'target': 'new',
-            'context': {
-                'default_invoice_ids': [(6, 0, self.ids)],
-                'active_ids': self.ids,
-                'active_model': 'account.move',
-            }
-        }
-    
     def action_batch_payment_generate_link(self):
         """Server action method for generating batch payment link."""
         from odoo.exceptions import UserError
@@ -88,14 +73,7 @@ class AccountMove(models.Model):
                 'Found invoices for multiple customers: %s'
             ) % ', '.join(partners.mapped('name')))
 
-        # Check if all invoices are posted
-        non_posted = customer_invoices.filtered(lambda inv: inv.state != 'posted')
-        if non_posted:
-            raise UserError(_(
-                'All invoices must be posted before creating batch payment. '
-                'Non-posted invoices: %s'
-            ) % ', '.join(non_posted.mapped('name')))
-
+        
         # Check if all invoices have outstanding amounts
         paid_invoices = customer_invoices.filtered(lambda inv: inv.amount_residual <= 0)
         if paid_invoices:
