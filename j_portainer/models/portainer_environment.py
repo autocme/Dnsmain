@@ -535,11 +535,11 @@ docker service create \\
             'view_mode': 'tree,form',
             'domain': [
                 ('server_id', '=', self.server_id.id),
-                ('environment_id', '=', self.environment_id)
+                ('environment_id', '=', self.id)
             ],
             'context': {
                 'default_server_id': self.server_id.id,
-                'default_environment_id': self.environment_id,
+                'default_environment_id': self.id,
                 'default_environment_name': self.name,
             }
         }
@@ -574,11 +574,11 @@ docker service create \\
             'view_mode': 'tree,form',
             'domain': [
                 ('server_id', '=', self.server_id.id),
-                ('environment_id', '=', self.environment_id)
+                ('environment_id', '=', self.id)
             ],
             'context': {
                 'default_server_id': self.server_id.id,
-                'default_environment_id': self.environment_id,
+                'default_environment_id': self.id,
                 'default_environment_name': self.name,
             }
         }
