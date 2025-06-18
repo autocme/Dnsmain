@@ -100,12 +100,11 @@ class SaasClient(models.Model):
              'for this SaaS client.'
     )
     
-    sc_dns_domain_id = fields.Many2one(
-        comodel_name='dns.domain',
-        string='DNS Domain',
-        required=False,
-        tracking=True,
-        help='The DNS domain associated with this SaaS client for web access and services.'
+    sc_dns_subdomain_ids = fields.One2many(
+        comodel_name='dns.subdomain',
+        inverse_name='client_id',
+        string='DNS Subdomains',
+        help='DNS subdomains associated with this SaaS client for web access and services.'
     )
     
 
