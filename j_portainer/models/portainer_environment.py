@@ -396,7 +396,7 @@ docker service create \\
             env.stack_count = len(stacks)
             
             # Active stacks (exclude removed/inactive stacks)
-            active_stacks = stacks.filtered(lambda s: s.active)
+            active_stacks = stacks.filtered(lambda s: s.status == '1')
             env.active_stack_count = len(active_stacks)
     
     @api.depends('allowed_stack_number', 'active_stack_count')
