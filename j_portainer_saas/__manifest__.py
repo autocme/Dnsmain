@@ -40,6 +40,7 @@ Dependencies:
         'mail',
         'j_portainer',
         'subscription_oca',
+        'dns_base',
     ],
     'data': [
         'data/sequences.xml',

@@ -60,6 +60,9 @@
                        'saas_package_price': pkg_price,
                        'saas_package_name': pkg_name,
                        }"/>
+                            <field name="pkg_dns_subdomain_id"
+                                   options="{'no_create': True}"
+                                   placeholder="Select DNS subdomain..."/>
                         </group>
 
                         <group name="pricing" string="Pricing">
