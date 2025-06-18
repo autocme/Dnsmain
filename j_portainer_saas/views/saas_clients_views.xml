@@ -146,6 +146,7 @@
                                 <tree editable="bottom">
                                     <field name="name"/>
                                     <field name="domain_id"/>
+                                    <field name="client_id" invisible="1"/>
                                     <field name="active"/>
                                 </tree>
                             </field>
