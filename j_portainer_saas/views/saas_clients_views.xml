@@ -141,6 +141,16 @@
                     </group>
 
                     <notebook>
+                        <page name="dns_subdomains" string="DNS Subdomains">
+                            <field name="sc_dns_subdomain_ids">
+                                <tree editable="bottom">
+                                    <field name="name"/>
+                                    <field name="domain_id"/>
+                                    <field name="active"/>
+                                </tree>
+                            </field>
+                        </page>
+                        
                         <page name="additional_notes" string="Additional Notes">
                             <field name="sc_notes"
                                    placeholder="Internal notes about this SaaS client..."/>
