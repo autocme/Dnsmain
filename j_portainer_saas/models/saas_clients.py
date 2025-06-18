@@ -317,7 +317,7 @@ class SaasClient(models.Model):
             
             record.sc_rendered_template = rendered_content
     
-    @api.depends('sc_deployment_stack_id', 'sc_deployment_stack_id.container_ids', 'sc_deployment_stack_id.volume_ids')
+    @api.depends('sc_deployment_stack_id', 'sc_deployment_stack_id.container_ids', 'sc_deployment_stack_id.container_ids.volume_ids')
     def _compute_deployment_stats(self):
         """Compute container and volume counts from deployment stack."""
         for record in self:
