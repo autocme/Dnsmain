@@ -143,7 +143,7 @@
                         </page>
 
                         <page name="deployment_template" string="Deployment Template">
-                            <field name="sc_docker_compose_template" readonly="1" placeholder="Docker Compose template inherited from package..."/>
+                            <field name="sc_docker_compose_template" widget="ace" readonly="1" placeholder="Docker Compose template inherited from package..."/>
                         </page>
 
                         <page name="template_variables" string="Variables">
@@ -157,7 +157,7 @@
                         </page>
 
                         <page name="rendered_template" string="Rendered Template">
-                            <field name="sc_rendered_template" readonly="1" placeholder="Final Docker Compose template with variables replaced..."/>
+                            <field name="sc_rendered_template" widget="ace" readonly="1" placeholder="Final Docker Compose template with variables replaced..."/>
                         </page>
 
                         <page name="tracking_info" string="Other Info">
