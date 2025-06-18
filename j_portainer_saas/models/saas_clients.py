@@ -311,13 +311,21 @@ class SaasClient(models.Model):
             
             record.sc_rendered_template = rendered_content
     
-    @api.depends('sc_stack_id', 'sc_stack_id.container_ids', 'sc_stack_id.container_ids.volume_ids')
+    @api.depends('sc_stack_id', 'sc_stack_id.container_ids', 'sc_stack_id.container_ids.volume_ids', 'sc_stack_id.container_ids.volume_ids.volume_id')
     def _compute_deployment_stats(self):
         """Compute container and volume counts from deployment stack."""
         for record in self:
             if record.sc_stack_id:
                 record.sc_container_count = len(record.sc_stack_id.container_ids)
-                record.sc_volume_count = len(record.sc_stack_id.volume_ids)
+                
+                # Calculate unique volumes from all containers
+                unique_volumes = set()
+                for container in record.sc_stack_id.container_ids:
+                    for volume_relation in container.volume_ids:
+                        if volume_relation.volume_id:
+                            unique_volumes.add(volume_relation.volume_id.id)
+                
+                record.sc_volume_count = len(unique_volumes)
             else:
                 record.sc_container_count = 0
                 record.sc_volume_count = 0
