@@ -88,7 +88,7 @@
                         </page>
 
                         <page name="deployment_template" string="Deployment Template">
-                            <field name="pkg_docker_compose_template" placeholder="Enter Docker Compose content with variables marked as @VARIABLE_NAME@..."/>
+                            <field name="pkg_docker_compose_template" widget="ace" placeholder="Enter Docker Compose content with variables marked as @VARIABLE_NAME@..."/>
                         </page>
 
                         <page name="template_variables" string="Variables">

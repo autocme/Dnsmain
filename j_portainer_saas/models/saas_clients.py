@@ -390,7 +390,7 @@ class SaasClient(models.Model):
         
         # Create custom template
         template_vals = {
-            'name': self.sc_sequence,
+            'title': self.sc_sequence,
             'description': f'Custom template for SaaS client {self.sc_sequence} ({self.sc_partner_id.name if self.sc_partner_id else "Unknown Client"})',
             'file_content': self.sc_rendered_template,
             'server_id': server.id,
