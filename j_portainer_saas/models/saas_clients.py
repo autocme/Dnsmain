@@ -450,16 +450,31 @@ class SaasClient(models.Model):
     def _get_deployment_environment(self, server):
         """Get the environment to use for deployment on the given server."""
         environments = self.env['j_portainer.environment'].search([
-            ('server_id', '=', server.id)
+            ('server_id', '=', server.id),
+            ('active', '=', True),
+            ('status', '=', 'up')
         ])
         
         if not environments:
-            raise UserError(_('No environments configured for server %s. Please configure at least one environment.') % server.name)
-        elif len(environments) == 1:
-            return environments[0]
-        else:
-            # For now, raise error - will handle multiple environments later
-            raise UserError(_('Multiple environments found for server %s. Please configure deployment to handle multiple environments.') % server.name)
+            raise UserError(_('No active environments configured for server %s. Please configure at least one active environment.') % server.name)
+        
+        # Filter environments that allow stack creation
+        available_environments = environments.filtered('allow_stack_creation')
+        
+        if not available_environments:
+            # Show detailed error with stack limits info
+            env_details = []
+            for env in environments:
+                env_details.append(f"- {env.name}: {env.active_stack_count}/{env.allowed_stack_number} stacks")
+            
+            raise UserError(_(
+                'No environments with available stack capacity found on server %s.\n\n'
+                'Environment stack usage:\n%s\n\n'
+                'Please increase the allowed stack number for an environment or remove unused stacks.'
+            ) % (server.name, '\n'.join(env_details)))
+        
+        # Return the environment with the most available capacity
+        return available_environments.sorted(lambda env: env.allowed_stack_number - env.active_stack_count, reverse=True)[0]
     
     # ========================================================================
     # SMART BUTTON ACTIONS
