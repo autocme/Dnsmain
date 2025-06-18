@@ -135,9 +135,8 @@
                                    decoration-danger="sc_stack_status == '2'"
                                    decoration-muted="sc_stack_status == '0'"/>
                             
-                            <field name="sc_dns_domain_id"
-                                   options="{'no_create': True}"
-                                   placeholder="Select DNS domain..."/>
+                            <field name="sc_dns_subdomain_ids" widget="many2many_tags"
+                                   placeholder="Select DNS subdomains..."/>
                         </group>
                     </group>
 
