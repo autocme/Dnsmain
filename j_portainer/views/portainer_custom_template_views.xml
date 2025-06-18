@@ -132,7 +132,7 @@
                         <page string="File Content" name="file_content" invisible="build_method != 'editor'">
                             <button name="action_refresh_file_content" string="Refresh File Content" type="object" 
                                     class="btn-secondary mb-2" invisible="not template_id"/>
-                            <field name="fileContent" placeholder="Docker Compose or Stack file content..." required="build_method == 'editor'"/>
+                            <field name="fileContent" placeholder="Docker Compose or Stack file content..." widget="ace" required="build_method == 'editor'"/>
                             <div class="text-muted">
                                 This field replaces the older "compose_file" field and is synchronized directly with Portainer.
                             </div>
