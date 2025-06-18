@@ -554,14 +554,24 @@ class SaasClient(models.Model):
         self.ensure_one()
         if not self.sc_stack_id:
             raise UserError(_('No deployment stack available to show volumes.'))
-            
+        
+        # Get unique volume IDs from all containers in the stack
+        volume_ids = set()
+        for container in self.sc_stack_id.container_ids:
+            for volume_relation in container.volume_ids:
+                if volume_relation.volume_id:
+                    volume_ids.add(volume_relation.volume_id.id)
+        
         return {
             'type': 'ir.actions.act_window',
             'name': _('Deployment Volumes'),
             'res_model': 'j_portainer.volume',
             'view_mode': 'tree,form',
-            'domain': [('stack_id', '=', self.sc_stack_id.id)],
-            'context': {'default_stack_id': self.sc_stack_id.id},
+            'domain': [('id', 'in', list(volume_ids))],
+            'context': {
+                'default_server_id': self.sc_stack_id.server_id.id,
+                'default_environment_id': self.sc_stack_id.environment_id.id,
+            },
             'target': 'current',
         }
     
