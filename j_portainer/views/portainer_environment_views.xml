@@ -101,6 +101,16 @@
                         </group>
                     </group>
                     
+                    <group string="Stack Limits">
+                        <group>
+                            <field name="allowed_stack_number"/>
+                            <field name="active_stack_count" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="allow_stack_creation" readonly="1" widget="boolean"/>
+                        </group>
+                    </group>
+                    
                     <group string="Environment Configuration" invisible="environment_id != False">
                         <group>
                             <field name="type" readonly="environment_id != False"/>
@@ -157,6 +167,11 @@
                 <field name="volume_count" sum="Total Volumes"/>
                 <field name="network_count" sum="Total Networks"/>
                 <field name="stack_count" sum="Total Stacks"/>
+                <field name="active_stack_count" sum="Active Stacks"/>
+                <field name="allowed_stack_number" sum="Allowed Stacks"/>
+                <field name="allow_stack_creation" widget="boolean" 
+                       decoration-success="allow_stack_creation == True"
+                       decoration-danger="allow_stack_creation == False"/>
                 <button name="sync_resources" string="Sync" type="object"
                         icon="fa-refresh"/>
             </tree>

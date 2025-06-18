@@ -190,6 +190,9 @@ class PortainerStack(models.Model):
             if not environment.exists():
                 raise UserError("Invalid environment specified.")
             
+            # Validate stack creation is allowed in this environment
+            environment.validate_stack_creation()
+            
             # Prepare stack content based on build method
             stack_file_content = ''
             

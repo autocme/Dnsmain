@@ -56,6 +56,12 @@ class PortainerEnvironment(models.Model):
          'Environment ID must be unique per server'),
     ]
     
+    # Stack limit fields
+    allowed_stack_number = fields.Integer('Allowed Stack Number', default=10, 
+                                        help="Maximum number of stacks allowed to be created in this environment")
+    allow_stack_creation = fields.Boolean('Allow Stack Creation?', compute='_compute_allow_stack_creation', 
+                                        help="Computed field based on allowed stack number vs active stack count")
+    
     # Count fields
     container_count = fields.Integer('Containers', compute='_compute_resource_counts')
     running_container_count = fields.Integer('Running Containers', compute='_compute_resource_counts')
@@ -63,6 +69,8 @@ class PortainerEnvironment(models.Model):
     volume_count = fields.Integer('Volumes', compute='_compute_resource_counts')
     network_count = fields.Integer('Networks', compute='_compute_resource_counts')
     stack_count = fields.Integer('Stacks', compute='_compute_resource_counts')
+    active_stack_count = fields.Integer('Active Stacks', compute='_compute_resource_counts', 
+                                      help="Number of active stacks in this environment")
     
     def _default_server_id(self):
         """Default server selection"""
@@ -381,10 +389,35 @@ docker service create \\
             ])
             
             # Stacks
-            env.stack_count = self.env['j_portainer.stack'].search_count([
+            stacks = self.env['j_portainer.stack'].search([
                 ('server_id', '=', env.server_id.id),
                 ('environment_id', '=', env.id)
             ])
+            env.stack_count = len(stacks)
+            
+            # Active stacks (exclude removed/inactive stacks)
+            active_stacks = stacks.filtered(lambda s: s.active)
+            env.active_stack_count = len(active_stacks)
+    
+    @api.depends('allowed_stack_number', 'active_stack_count')
+    def _compute_allow_stack_creation(self):
+        """Compute whether stack creation is allowed based on active stack count vs allowed limit"""
+        for env in self:
+            env.allow_stack_creation = env.active_stack_count < env.allowed_stack_number
+    
+    def validate_stack_creation(self):
+        """Validate if stack creation is allowed in this environment"""
+        self.ensure_one()
+        
+        if not self.allow_stack_creation:
+            raise UserError(_(
+                "Stack creation is not allowed in environment '%s'.\n"
+                "The number of stacks allowed to create in this environment has been consumed.\n"
+                "Active stacks: %d / %d\n"
+                "Please choose another environment to add the stack on."
+            ) % (self.name, self.active_stack_count, self.allowed_stack_number))
+        
+        return True
     
     def get_type_name(self):
         """Get type name"""
