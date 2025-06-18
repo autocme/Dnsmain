@@ -72,7 +72,7 @@
                                 type="object"
                                 class="oe_stat_button"
                                 icon="fa-stack-overflow"
-                                invisible="not sc_deployment_stack_id">
+                                invisible="not sc_stack_id">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_text">Deployment</span>
                                 <span class="o_stat_text">Stack</span>
@@ -83,7 +83,7 @@
                                 type="object"
                                 class="oe_stat_button"
                                 icon="fa-cube"
-                                invisible="not sc_deployment_stack_id">
+                                invisible="not sc_stack_id">
                             <field name="sc_container_count" widget="statinfo" string="Containers"/>
                         </button>
                         
@@ -91,7 +91,7 @@
                                 type="object"
                                 class="oe_stat_button"
                                 icon="fa-database"
-                                invisible="not sc_deployment_stack_id">
+                                invisible="not sc_stack_id">
                             <field name="sc_volume_count" widget="statinfo" string="Volumes"/>
                         </button>
                     </div>

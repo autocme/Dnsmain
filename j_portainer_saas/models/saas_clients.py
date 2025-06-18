@@ -100,13 +100,7 @@ class SaasClient(models.Model):
              'for this SaaS client.'
     )
     
-    sc_deployment_stack_id = fields.Many2one(
-        comodel_name='j_portainer.stack',
-        string='Deployment Stack',
-        required=False,
-        tracking=True,
-        help='The deployed stack created from the custom template for this client.'
-    )
+
     
     sc_container_count = fields.Integer(
         string='Container Count',
@@ -317,13 +311,13 @@ class SaasClient(models.Model):
             
             record.sc_rendered_template = rendered_content
     
-    @api.depends('sc_deployment_stack_id', 'sc_deployment_stack_id.container_ids', 'sc_deployment_stack_id.container_ids.volume_ids')
+    @api.depends('sc_stack_id', 'sc_stack_id.container_ids', 'sc_stack_id.container_ids.volume_ids')
     def _compute_deployment_stats(self):
         """Compute container and volume counts from deployment stack."""
         for record in self:
-            if record.sc_deployment_stack_id:
-                record.sc_container_count = len(record.sc_deployment_stack_id.container_ids)
-                record.sc_volume_count = len(record.sc_deployment_stack_id.volume_ids)
+            if record.sc_stack_id:
+                record.sc_container_count = len(record.sc_stack_id.container_ids)
+                record.sc_volume_count = len(record.sc_stack_id.volume_ids)
             else:
                 record.sc_container_count = 0
                 record.sc_volume_count = 0
@@ -397,43 +391,64 @@ class SaasClient(models.Model):
             'environment_id': environment.id,
         }
         
-        custom_template = self.env['j_portainer.customtemplate'].create(template_vals)
-        
-        # Link template to client
-        self.sc_portainer_template_id = custom_template.id
-        
-        # Create stack using the template's action
-        stack = custom_template.action_create_stack()
-        
-        # Link stack to client
-        if stack:
-            self.sc_deployment_stack_id = stack.id
+        try:
+            custom_template = self.env['j_portainer.customtemplate'].create(template_vals)
             
-        # Log successful deployment
-        self.message_post(
-            body=_('SaaS client successfully deployed to Portainer.<br/>'
-                  'Custom Template: %s<br/>'
-                  'Stack: %s<br/>'
-                  'Server: %s<br/>'
-                  'Environment: %s') % (
-                custom_template.name,
-                stack.name if stack else 'Not Created',
-                server.name,
-                environment.name
-            ),
-            message_type='notification'
-        )
-        
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Deployment Successful'),
-                'message': _('SaaS client %s has been deployed to Portainer successfully.') % self.sc_sequence,
-                'type': 'success',
-                'sticky': False,
-            }
-        }
+            # Link template to client immediately to preserve relationship
+            self.sc_portainer_template_id = custom_template.id
+            
+            # Commit the template creation to ensure it's saved
+            self.env.cr.commit()
+            
+            # Create stack using the template's action
+            try:
+                stack = custom_template.action_create_stack()
+                
+                # Link stack to client if creation was successful
+                if stack:
+                    self.sc_stack_id = stack.id
+                    self.env.cr.commit()
+                    
+                    # Log successful deployment
+                    self.message_post(
+                        body=_('SaaS client successfully deployed to Portainer.<br/>'
+                              'Custom Template: %s<br/>'
+                              'Stack: %s<br/>'
+                              'Server: %s<br/>'
+                              'Environment: %s') % (
+                            custom_template.name,
+                            stack.name,
+                            server.name,
+                            environment.name
+                        ),
+                        message_type='notification'
+                    )
+                    
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Deployment Successful'),
+                            'message': _('SaaS client %s has been deployed to Portainer successfully.') % self.sc_sequence,
+                            'type': 'success',
+                            'sticky': False,
+                        }
+                    }
+                else:
+                    # Template created but stack creation failed
+                    raise UserError(_('Custom template was created successfully, but stack creation failed. Please check the template and try again manually.'))
+                    
+            except Exception as stack_error:
+                # Template was created and linked, but stack creation failed
+                # Keep the template relationship intact for manual retry
+                raise UserError(_(
+                    'Custom template was created successfully, but stack creation failed: %s\n\n'
+                    'The template is available in your client record. You can try creating the stack manually from the template.'
+                ) % str(stack_error))
+                
+        except Exception as template_error:
+            # Template creation failed entirely
+            raise UserError(_('Failed to create custom template: %s') % str(template_error))
     
     def _get_deployment_server(self):
         """Get the server to use for deployment."""
@@ -498,14 +513,14 @@ class SaasClient(models.Model):
     def action_view_deployment_stack(self):
         """Open the deployment stack form view."""
         self.ensure_one()
-        if not self.sc_deployment_stack_id:
+        if not self.sc_stack_id:
             raise UserError(_('No deployment stack linked to this client.'))
             
         return {
             'type': 'ir.actions.act_window',
             'name': _('Deployment Stack'),
             'res_model': 'j_portainer.stack',
-            'res_id': self.sc_deployment_stack_id.id,
+            'res_id': self.sc_stack_id.id,
             'view_mode': 'form',
             'target': 'current',
         }
@@ -513,7 +528,7 @@ class SaasClient(models.Model):
     def action_view_containers(self):
         """Open containers list view for this deployment."""
         self.ensure_one()
-        if not self.sc_deployment_stack_id:
+        if not self.sc_stack_id:
             raise UserError(_('No deployment stack available to show containers.'))
             
         return {
@@ -521,15 +536,15 @@ class SaasClient(models.Model):
             'name': _('Deployment Containers'),
             'res_model': 'j_portainer.container',
             'view_mode': 'tree,form',
-            'domain': [('stack_id', '=', self.sc_deployment_stack_id.id)],
-            'context': {'default_stack_id': self.sc_deployment_stack_id.id},
+            'domain': [('stack_id', '=', self.sc_stack_id.id)],
+            'context': {'default_stack_id': self.sc_stack_id.id},
             'target': 'current',
         }
     
     def action_view_volumes(self):
         """Open volumes list view for this deployment."""
         self.ensure_one()
-        if not self.sc_deployment_stack_id:
+        if not self.sc_stack_id:
             raise UserError(_('No deployment stack available to show volumes.'))
             
         return {
@@ -537,8 +552,8 @@ class SaasClient(models.Model):
             'name': _('Deployment Volumes'),
             'res_model': 'j_portainer.volume',
             'view_mode': 'tree,form',
-            'domain': [('stack_id', '=', self.sc_deployment_stack_id.id)],
-            'context': {'default_stack_id': self.sc_deployment_stack_id.id},
+            'domain': [('stack_id', '=', self.sc_stack_id.id)],
+            'context': {'default_stack_id': self.sc_stack_id.id},
             'target': 'current',
         }
     
