@@ -116,6 +116,14 @@ class SaasPackage(models.Model):
         help='Associated subscription template for billing and lifecycle management'
     )
     
+    pkg_dns_subdomain_id = fields.Many2one(
+        comodel_name='dns.subdomain',
+        string='DNS Subdomain',
+        required=False,
+        tracking=True,
+        help='The DNS subdomain template associated with this SaaS package for client deployments.'
+    )
+    
     pkg_docker_compose_template = fields.Text(
         string='Docker Compose Template',
         help='Docker Compose content with variables marked as @VARIABLE_NAME@'

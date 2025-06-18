@@ -100,6 +100,14 @@ class SaasClient(models.Model):
              'for this SaaS client.'
     )
     
+    sc_dns_domain_id = fields.Many2one(
+        comodel_name='dns.domain',
+        string='DNS Domain',
+        required=False,
+        tracking=True,
+        help='The DNS domain associated with this SaaS client for web access and services.'
+    )
+    
 
     
     sc_container_count = fields.Integer(
