@@ -457,44 +457,40 @@ class PortainerStack(models.Model):
 
     
     @api.model
-    def create_stack(self, server_id, environment_id, name, stack_file_content, deployment_method=1):
-        """Create a new stack
+    def create_stack(self):
+        """Create this stack in Portainer
         
-        Args:
-            server_id: ID of the server to create the stack on
-            environment_id: ID of the environment to create the stack on
-            name: Name of the stack
-            stack_file_content: Content of the stack file (docker-compose.yml)
-            deployment_method: Deployment method (1 = File, 2 = String)
-            
-        Returns:
-            bool: True if successful
+        Raises:
+            UserError: If stack creation fails in Portainer
         """
+        self.ensure_one()
+        
+        # Validate required fields
+        if not self.content:
+            raise UserError(_("Stack content is required to create stack in Portainer"))
+        
         try:
-            server = self.env['j_portainer.server'].browse(server_id)
+            server = self.server_id
             if not server:
-                return False
+                raise UserError(_("Server is required to create stack in Portainer"))
                 
-            # Prepare data for stack creation
-            data = {
-                'Name': name,
-                'StackFileContent': stack_file_content,
-                'Environment': [],
-                'EndpointId': environment_id,
-                'SwarmID': '',
-                'Type': 2  # Compose (API expects integer here)
-            }
+            environment = self.environment_id
+            if not environment:
+                raise UserError(_("Environment is required to create stack in Portainer"))
+            
+            # Validate stack creation is allowed in this environment
+            environment.validate_stack_creation()
                 
             # Use the correct Portainer API endpoint for stack creation
-            endpoint = f'/api/stacks/create/standalone/string?endpointId={environment_id}'
+            endpoint = f'/api/stacks/create/standalone/string?endpointId={environment.environment_id}'
             
             # Prepare the payload according to the API specification
             stack_payload = {
-                'Name': name,
-                'StackFileContent': stack_file_content
+                'Name': self.name,
+                'StackFileContent': self.content
             }
             
-            _logger.info(f"Creating stack '{name}' using endpoint: {endpoint}")
+            _logger.info(f"Creating stack '{self.name}' using endpoint: {endpoint}")
             _logger.info(f"Stack payload: {stack_payload}")
             
             # Use longer timeout for stack creation as it can take time
@@ -503,11 +499,24 @@ class PortainerStack(models.Model):
             _logger.info(f"Stack creation response: Status {response.status_code}, Content: {response.text}")
             
             if response.status_code in [200, 201, 204]:
+                # Update stack with actual stack_id from response if available
+                try:
+                    if response.text:
+                        response_data = response.json()
+                        if 'Id' in response_data:
+                            self.stack_id = response_data['Id']
+                        self.status = '1'  # Active
+                except:
+                    # If we can't parse response, just mark as active
+                    self.status = '1'
+                
                 # Refresh stacks and containers
-                server.sync_stacks(environment_id)
-                server.sync_volumes(environment_id)
-                server.sync_networks(environment_id)
-                server.sync_containers(environment_id)
+                server.sync_stacks(environment.environment_id)
+                server.sync_volumes(environment.environment_id)
+                server.sync_networks(environment.environment_id)
+                server.sync_containers(environment.environment_id)
+                
+                _logger.info(f"Stack '{self.name}' created successfully in Portainer")
                 return True
             else:
                 # Extract detailed error message from Portainer response
@@ -527,12 +536,11 @@ class PortainerStack(models.Model):
                     # If JSON parsing fails, use raw response text
                     error_message = response.text if response.text else f"HTTP {response.status_code} error"
                 
-                # Store the detailed error message in server for user display
-                server.error_message = f"Failed to create stack '{name}': {error_message}"
+                _logger.error(f"Failed to create stack '{self.name}': Status {response.status_code}, Response: {response.text}")
+                raise UserError(_("Failed to create stack in Portainer: %s") % error_message)
                 
-                _logger.error(f"Failed to create stack '{name}': Status {response.status_code}, Response: {response.text}")
-                return False
-                
+        except UserError:
+            raise
         except Exception as e:
-            _logger.error(f"Error creating stack {name}: {str(e)}")
-            return False
+            _logger.error(f"Error creating stack {self.name}: {str(e)}")
+            raise UserError(_("Error creating stack in Portainer: %s") % str(e))
