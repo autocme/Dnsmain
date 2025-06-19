@@ -94,6 +94,14 @@
                                 invisible="not sc_stack_id">
                             <field name="sc_volume_count" widget="statinfo" string="Volumes"/>
                         </button>
+                        
+                        <button name="action_view_networks"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-sitemap"
+                                invisible="not sc_stack_id">
+                            <field name="sc_network_count" widget="statinfo" string="Networks"/>
+                        </button>
                     </div>
 
                     <div class="oe_title">

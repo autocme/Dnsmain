@@ -62,7 +62,7 @@
                        }"/>
                             <field name="pkg_dns_domain_id"
                                    options="{'no_create': True}"
-                                   placeholder="Select DNS domain..."/>
+                                   placeholder="Select domain..."/>
                         </group>
 
                         <group name="pricing" string="Pricing">
