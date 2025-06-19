@@ -440,25 +440,14 @@ class SaasClient(models.Model):
             
             # Create stack using the template's action
             try:
-                stack_action = custom_template.action_create_stack()
-                
-                # Get the stack from the action response
-                stack = None
-                if stack_action and 'res_id' in stack_action:
-                    stack = self.env['j_portainer.stack'].browse(stack_action['res_id'])
-                
-                # Fallback: Find the stack created by this template (most recent one)
-                if not stack or not stack.exists():
-                    stack = self.env['j_portainer.stack'].search([
-                        ('custom_template_id', '=', custom_template.id)
-                    ], order='create_date desc', limit=1)
+                stack = custom_template.action_create_stack()
                 
                 # Link stack to client if creation was successful
-                if stack and stack.exists():
+                if stack:
                     self.sc_stack_id = stack.id
                     self.sc_status = 'running'
                     self.env.cr.commit()
-                
+                    
                     # Log successful deployment
                     self.message_post(
                         body=_('SaaS client successfully deployed to Portainer.<br/>'
