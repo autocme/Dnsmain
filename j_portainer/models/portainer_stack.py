@@ -38,6 +38,10 @@ class PortainerStack(models.Model):
     environment_name = fields.Char('Environment Name', related='environment_id.name', readonly=True, store=True)
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     
+    # Custom template relationship
+    custom_template_id = fields.Many2one('j_portainer.customtemplate', string='Custom Template',
+                                        help='The custom template this stack was created from')
+    
     # Build functionality fields
     build_method = fields.Selection([
         ('web_editor', 'Web Editor'),

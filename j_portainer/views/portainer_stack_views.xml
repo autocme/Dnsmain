@@ -38,6 +38,7 @@
                             <field name="server_id" readonly="stack_id"/>
                             <field name="environment_id" readonly="stack_id"/>
                             <field name="build_method" readonly="stack_id"/>
+                            <field name="custom_template_id" readonly="1"/>
                         </group>
                         <group>
                             <field name="type" readonly="stack_id"/>
@@ -141,6 +142,7 @@
                        decoration-muted="status == '0'"/>
                 <field name="server_id"/>
                 <field name="environment_id"/>
+                <field name="custom_template_id" optional="show"/>
                 <field name="volume_count" string="Volumes"/>
                 <field name="total_volume_size" string="Volume Size"/>
                 <field name="creation_date"/>
