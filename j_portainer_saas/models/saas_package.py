@@ -28,7 +28,7 @@ class SaasPackage(models.Model):
     # ========================================================================
     
     pkg_sequence = fields.Char(
-        string='Package Sequence',
+        string='Sequence',
         readonly=True,
         copy=False,
         default=lambda self: _('New'),
@@ -37,7 +37,7 @@ class SaasPackage(models.Model):
     )
     
     pkg_name = fields.Char(
-        string='Package Name',
+        string='Name',
         required=True,
         translate=True,
         tracking=True,
@@ -118,10 +118,10 @@ class SaasPackage(models.Model):
     
     pkg_dns_domain_id = fields.Many2one(
         comodel_name='dns.domain',
-        string='DNS Domain',
+        string='Domain',
         required=False,
         tracking=True,
-        help='The DNS domain associated with this SaaS package for client deployments.'
+        help='The domain associated with this SaaS package for client deployments.'
     )
     
     pkg_docker_compose_template = fields.Text(

@@ -57,7 +57,7 @@ class PortainerEnvironment(models.Model):
     ]
     
     # Stack limit fields
-    allowed_stack_number = fields.Integer('Allowed Stack Number', default=10, 
+    allowed_stack_number = fields.Integer('Max Stack', default=10, 
                                         help="Maximum number of stacks allowed to be created in this environment")
     allow_stack_creation = fields.Boolean('Allow Stack Creation?', compute='_compute_allow_stack_creation', 
                                         help="Computed field based on allowed stack number vs active stack count")

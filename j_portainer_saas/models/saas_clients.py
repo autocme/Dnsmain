@@ -121,6 +121,12 @@ class SaasClient(models.Model):
         help='Number of volumes created for this client'
     )
     
+    sc_network_count = fields.Integer(
+        string='Network Count',
+        compute='_compute_deployment_stats',
+        help='Number of networks used by this client'
+    )
+    
     # ========================================================================
     # DOCKER COMPOSE TEMPLATE FIELDS
     # ========================================================================
@@ -318,9 +324,9 @@ class SaasClient(models.Model):
             
             record.sc_rendered_template = rendered_content
     
-    @api.depends('sc_stack_id', 'sc_stack_id.container_ids', 'sc_stack_id.container_ids.volume_ids', 'sc_stack_id.container_ids.volume_ids.volume_id')
+    @api.depends('sc_stack_id', 'sc_stack_id.container_ids', 'sc_stack_id.container_ids.volume_ids', 'sc_stack_id.container_ids.volume_ids.volume_id', 'sc_stack_id.container_ids.network_ids')
     def _compute_deployment_stats(self):
-        """Compute container and volume counts from deployment stack."""
+        """Compute container, volume, and network counts from deployment stack."""
         for record in self:
             if record.sc_stack_id:
                 record.sc_container_count = len(record.sc_stack_id.container_ids)
@@ -333,9 +339,19 @@ class SaasClient(models.Model):
                             unique_volumes.add(volume_relation.volume_id.id)
                 
                 record.sc_volume_count = len(unique_volumes)
+                
+                # Calculate unique networks from all containers
+                unique_networks = set()
+                for container in record.sc_stack_id.container_ids:
+                    for network_relation in container.network_ids:
+                        if network_relation.network_id:
+                            unique_networks.add(network_relation.network_id.id)
+                
+                record.sc_network_count = len(unique_networks)
             else:
                 record.sc_container_count = 0
                 record.sc_volume_count = 0
+                record.sc_network_count = 0
 
     def name_get(self):
         """Return client display name as sequence/client name."""
@@ -575,6 +591,32 @@ class SaasClient(models.Model):
             'res_model': 'j_portainer.volume',
             'view_mode': 'tree,form',
             'domain': [('id', 'in', list(volume_ids))],
+            'context': {
+                'default_server_id': self.sc_stack_id.server_id.id,
+                'default_environment_id': self.sc_stack_id.environment_id.id,
+            },
+            'target': 'current',
+        }
+    
+    def action_view_networks(self):
+        """Open networks list view for this deployment."""
+        self.ensure_one()
+        if not self.sc_stack_id:
+            raise UserError(_('No deployment stack available to show networks.'))
+        
+        # Get unique network IDs from all containers in the stack
+        network_ids = set()
+        for container in self.sc_stack_id.container_ids:
+            for network_relation in container.network_ids:
+                if network_relation.network_id:
+                    network_ids.add(network_relation.network_id.id)
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Deployment Networks'),
+            'res_model': 'j_portainer.network',
+            'view_mode': 'tree,form',
+            'domain': [('id', 'in', list(network_ids))],
             'context': {
                 'default_server_id': self.sc_stack_id.server_id.id,
                 'default_environment_id': self.sc_stack_id.environment_id.id,
