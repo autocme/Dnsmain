@@ -442,10 +442,16 @@ class SaasClient(models.Model):
             try:
                 stack_action = custom_template.action_create_stack()
                 
-                # Find the stack created by this template (should be the most recent one)
-                stack = self.env['j_portainer.stack'].search([
-                    ('custom_template_id', '=', custom_template.id)
-                ], order='create_date desc', limit=1)
+                # Get the stack from the action response
+                stack = None
+                if stack_action and 'res_id' in stack_action:
+                    stack = self.env['j_portainer.stack'].browse(stack_action['res_id'])
+                
+                # Fallback: Find the stack created by this template (most recent one)
+                if not stack or not stack.exists():
+                    stack = self.env['j_portainer.stack'].search([
+                        ('custom_template_id', '=', custom_template.id)
+                    ], order='create_date desc', limit=1)
                 
                 # Link stack to client if creation was successful
                 if stack and stack.exists():

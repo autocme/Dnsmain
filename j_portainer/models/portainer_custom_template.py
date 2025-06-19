@@ -1845,7 +1845,7 @@ class PortainerCustomTemplate(models.Model):
             # Create the stack record directly without Portainer API call
             stack = self.env['j_portainer.stack'].create(stack_vals)
             
-            # Return success notification instead of form view
+            # Return success notification with the created stack ID for SaaS deployment
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -1854,7 +1854,8 @@ class PortainerCustomTemplate(models.Model):
                     'message': _('Stack "%s" has been created from template "%s". You can find it in the Stacks menu.') % (stack.name, self.title),
                     'type': 'success',
                     'sticky': False,
-                }
+                },
+                'res_id': stack.id,  # Include the stack ID for deployment linking
             }
             
         except Exception as e:
