@@ -441,7 +441,7 @@ class SaasClient(models.Model):
             # Create stack using the template's action
             try:
                 stack = custom_template.action_create_stack()
-                
+                print('stack ...........', stack)
                 # Link stack to client if creation was successful
                 if stack:
                     self.sc_stack_id = stack.id
