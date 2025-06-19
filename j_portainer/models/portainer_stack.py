@@ -178,6 +178,14 @@ class PortainerStack(models.Model):
         if vals.get('stack_id'):
             return super().create(vals)
         
+        # If custom_template_id is provided, create directly without Portainer API
+        if vals.get('custom_template_id'):
+            # Set required fields for template-based stacks
+            vals.setdefault('stack_id', 0)  # Temporary ID, will be updated on sync
+            vals.setdefault('status', '1')  # Active status
+            vals.setdefault('build_method', 'web_editor')
+            return super().create(vals)
+        
         # New stack creation - create in Portainer first using existing method
         try:
             # Get required data
