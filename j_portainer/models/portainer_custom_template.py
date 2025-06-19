@@ -1842,19 +1842,7 @@ class PortainerCustomTemplate(models.Model):
         try:
             # Create the stack record
             stack = self.env['j_portainer.stack'].create(stack_vals)
-            
-            # Return success notification for UI feedback
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Stack Created Successfully'),
-                    'message': _('Stack "%s" has been created from template "%s" and deployed to Portainer successfully.') % (stack.name, self.title),
-                    'type': 'success',
-                    'sticky': False,
-                },
-                'res_id': stack.id,  # Include stack ID for SaaS deployment linking
-            }
+            return stack
             
         except Exception as e:
             _logger.error(f"Error creating stack from template {self.title}: {str(e)}")
