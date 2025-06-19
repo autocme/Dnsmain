@@ -440,39 +440,44 @@ class SaasClient(models.Model):
             
             # Create stack using the template's action
             try:
-                stack = custom_template.action_create_stack()
+                stack_action = custom_template.action_create_stack()
                 
-                # Link stack to client if creation was successful
-                if stack:
-                    self.sc_stack_id = stack.id
-                    self.sc_status = 'running'
-                    self.env.cr.commit()
+                # Check if stack action was successful and get the created stack
+                if stack_action and 'res_id' in stack_action:
+                    stack = self.env['j_portainer.stack'].browse(stack_action['res_id'])
                     
-                    # Log successful deployment
-                    self.message_post(
-                        body=_('SaaS client successfully deployed to Portainer.<br/>'
-                              'Custom Template: %s<br/>'
-                              'Stack: %s<br/>'
-                              'Server: %s<br/>'
-                              'Environment: %s') % (
-                            custom_template.name,
-                            stack.name,
-                            server.name,
-                            environment.name
-                        ),
-                        message_type='notification'
-                    )
-                    
-                    return {
-                        'type': 'ir.actions.client',
-                        'tag': 'display_notification',
-                        'params': {
-                            'title': _('Deployment Successful'),
-                            'message': _('SaaS client %s has been deployed to Portainer successfully.') % self.sc_sequence,
-                            'type': 'success',
-                            'sticky': False,
+                    if stack.exists():
+                        self.sc_stack_id = stack.id
+                        self.sc_status = 'running' 
+                        self.env.cr.commit()
+                        
+                        # Log successful deployment
+                        self.message_post(
+                            body=_('SaaS client successfully deployed to Portainer.<br/>'
+                                  'Custom Template: %s<br/>'
+                                  'Stack: %s<br/>'
+                                  'Server: %s<br/>'
+                                  'Environment: %s') % (
+                                custom_template.name,
+                                stack.name,
+                                server.name,
+                                environment.name
+                            ),
+                            message_type='notification'
+                        )
+                        
+                        return {
+                            'type': 'ir.actions.client',
+                            'tag': 'display_notification',
+                            'params': {
+                                'title': _('Deployment Successful'),
+                                'message': _('SaaS client %s has been deployed to Portainer successfully.') % self.sc_sequence,
+                                'type': 'success',
+                                'sticky': False,
+                            }
                         }
-                    }
+                    else:
+                        raise UserError(_('Stack was created but could not be linked to client. Please check manually.'))
                 else:
                     # Template created but stack creation failed
                     raise UserError(_('Custom template was created successfully, but stack creation failed. Please check the template and try again manually.'))
