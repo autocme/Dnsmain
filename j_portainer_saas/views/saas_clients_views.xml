@@ -58,7 +58,6 @@
                             class="btn-primary"
                             invisible="sc_portainer_template_id or sc_status != 'draft'"
                             confirm="This will create a custom template and deploy the stack to Portainer. Continue?"/>
-                    <field name="sc_active" widget="boolean_toggle"/>
                 </header>
 
                 <sheet>
@@ -153,6 +152,8 @@
                             <field name="sc_subdomain_id"
                                    options="{'no_create': True}"
                                    placeholder="Select subdomain..."/>
+                            <field name="sc_active" widget="boolean_toggle"/>
+
                         </group>
                     </group>
 
