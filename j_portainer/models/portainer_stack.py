@@ -242,7 +242,11 @@ class PortainerStack(models.Model):
             
             # Stack creation successful in Portainer
             _logger.info(f"Stack {name} successfully created in Portainer")
-            return True
+            
+            # Create the Odoo record with stack_id=0 (will be updated on sync)
+            vals['stack_id'] = 0
+            vals['status'] = '1'  # Active
+            return super().create(vals)
             
         except UserError:
             raise
