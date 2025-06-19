@@ -499,24 +499,63 @@ class PortainerStack(models.Model):
             _logger.info(f"Stack creation response: Status {response.status_code}, Content: {response.text}")
             
             if response.status_code in [200, 201, 204]:
-                # Update stack with actual stack_id from response if available
+                # Update stack with actual values from Portainer response
+                update_vals = {'status': '1'}  # Active
+                
                 try:
                     if response.text:
                         response_data = response.json()
+                        _logger.info(f"Portainer response data: {response_data}")
+                        
+                        # Extract stack ID
                         if 'Id' in response_data:
-                            self.stack_id = response_data['Id']
-                        self.status = '1'  # Active
-                except:
-                    # If we can't parse response, just mark as active
-                    self.status = '1'
+                            update_vals['stack_id'] = response_data['Id']
+                        
+                        # Extract other relevant fields from response
+                        if 'Name' in response_data:
+                            update_vals['name'] = response_data['Name']
+                        
+                        if 'Type' in response_data:
+                            update_vals['type'] = str(response_data['Type'])
+                        
+                        if 'CreationDate' in response_data:
+                            update_vals['creation_date'] = self._parse_portainer_date(response_data['CreationDate'])
+                        
+                        if 'UpdatedDate' in response_data:
+                            update_vals['update_date'] = self._parse_portainer_date(response_data['UpdatedDate'])
+                        
+                        # Store the original file content
+                        if 'StackFileContent' in response_data:
+                            update_vals['file_content'] = response_data['StackFileContent']
+                        
+                        # Store any additional details
+                        if 'Status' in response_data:
+                            # Map Portainer status to our status
+                            portainer_status = response_data['Status']
+                            if portainer_status == 1:
+                                update_vals['status'] = '1'  # Active
+                            elif portainer_status == 2:
+                                update_vals['status'] = '2'  # Inactive
+                            else:
+                                update_vals['status'] = '0'  # Unknown
+                        
+                        # Store full response as details for debugging
+                        update_vals['details'] = str(response_data)
+                        
+                except Exception as parse_error:
+                    _logger.warning(f"Could not parse Portainer response: {str(parse_error)}")
+                    # Still proceed with basic status update
                 
-                # Refresh stacks and containers
+                # Update the stack record with response data
+                self.write(update_vals)
+                
+                # Refresh stacks and containers to ensure everything is in sync
                 server.sync_stacks(environment.environment_id)
                 server.sync_volumes(environment.environment_id)
                 server.sync_networks(environment.environment_id)
                 server.sync_containers(environment.environment_id)
                 
-                _logger.info(f"Stack '{self.name}' created successfully in Portainer")
+                _logger.info(f"Stack '{self.name}' created successfully in Portainer with ID {self.stack_id}")
                 return True
             else:
                 # Extract detailed error message from Portainer response
