@@ -182,8 +182,10 @@ class PortainerStack(models.Model):
 
         # Auto-create in Portainer using the separated method
         # If this fails, it will raise UserError and prevent record creation
-        record.create_stack()
+        result = record.create_stack()
 
+        # If create_stack returns a notification action, we still return the record
+        # The notification will be handled by the calling method
         return record
     
     def _parse_portainer_date(self, date_value):
@@ -556,7 +558,18 @@ class PortainerStack(models.Model):
                 server.sync_containers(environment.environment_id)
                 
                 _logger.info(f"Stack '{self.name}' created successfully in Portainer with ID {self.stack_id}")
-                return True
+                
+                # Return success action for UI feedback
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Stack Created Successfully'),
+                        'message': _('Stack "%s" has been created in Portainer successfully with ID %s.') % (self.name, self.stack_id),
+                        'type': 'success',
+                        'sticky': False,
+                    }
+                }
             else:
                 # Extract detailed error message from Portainer response
                 error_message = f"Status {response.status_code}"
