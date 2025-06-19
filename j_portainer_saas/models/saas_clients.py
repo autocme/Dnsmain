@@ -100,11 +100,18 @@ class SaasClient(models.Model):
              'for this SaaS client.'
     )
     
-    sc_dns_subdomain_ids = fields.One2many(
+    sc_status = fields.Selection([
+        ('draft', 'Draft'),
+        ('running', 'Running'),
+        ('freezed', 'Freezed'),
+        ('removed', 'Removed'),
+    ], string='Status', default='draft', required=True, tracking=True,
+       help='Current status of the SaaS client lifecycle')
+    
+    sc_subdomain_id = fields.Many2one(
         comodel_name='dns.subdomain',
-        inverse_name='client_id',
-        string='DNS Subdomains',
-        help='DNS subdomains associated with this SaaS client for web access and services.'
+        string='Subdomain',
+        help='Subdomain associated with this SaaS client for web access and services.'
     )
     
 
@@ -438,6 +445,7 @@ class SaasClient(models.Model):
                 # Link stack to client if creation was successful
                 if stack:
                     self.sc_stack_id = stack.id
+                    self.sc_status = 'running'
                     self.env.cr.commit()
                     
                     # Log successful deployment
