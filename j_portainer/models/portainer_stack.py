@@ -287,29 +287,8 @@ class PortainerStack(models.Model):
                 return new_stack
             else:
                 # Stack was created in Portainer but couldn't be synced to Odoo
-                # This is not necessarily an error - the stack exists and works
-                _logger.warning(f"Stack {name} was created in Portainer but couldn't be immediately synced to Odoo")
-                
-                # Create a minimal record in Odoo with available information
-                # This ensures the relationship can be established
-                try:
-                    fallback_stack = super().create({
-                        'name': name,
-                        'server_id': server_id,
-                        'environment_id': environment_id,
-                        'stack_id': 0,  # Will be updated on next sync
-                        'content': stack_file_content,
-                        'build_method': build_method,
-                        'type': vals.get('type', '2'),
-                        'status': '1'  # Assume active since creation succeeded
-                    })
-                    
-                    _logger.info(f"Created fallback stack record with ID {fallback_stack.id}")
-                    return fallback_stack
-                    
-                except Exception as fallback_error:
-                    _logger.error(f"Failed to create fallback stack record: {str(fallback_error)}")
-                    raise UserError(f"Stack was created in Portainer successfully, but could not create the record in Odoo. Please manually sync the environment to see the stack.")
+                _logger.error(f"Stack {name} was created in Portainer but couldn't be immediately synced to Odoo")
+                raise UserError(f"Stack was created in Portainer successfully, but could not create the record in Odoo. Please manually sync the environment to see the stack.")
             
         except UserError:
             raise
