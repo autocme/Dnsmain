@@ -1835,21 +1835,26 @@ class PortainerCustomTemplate(models.Model):
             'server_id': self.server_id.id,
             'environment_id': self.environment_id.id,
             'content': self.fileContent,
-            'type': 'compose',  # Default to compose type
+            'file_content': self.fileContent,  # Also set file_content for compatibility
+            'type': '2',  # Set as compose type (string value)
             'custom_template_id': self.id,  # Link to the custom template
+            'stack_id': 0,  # Temporary value, will be updated when synced with Portainer
         }
         
         try:
-            # Create the stack record
+            # Create the stack record directly without Portainer API call
             stack = self.env['j_portainer.stack'].create(stack_vals)
             
+            # Return success notification instead of form view
             return {
-                'type': 'ir.actions.act_window',
-                'name': _('Created Stack'),
-                'res_model': 'j_portainer.stack',
-                'res_id': stack.id,
-                'view_mode': 'form',
-                'target': 'current',
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Stack Created Successfully'),
+                    'message': _('Stack "%s" has been created from template "%s". You can find it in the Stacks menu.') % (stack.name, self.title),
+                    'type': 'success',
+                    'sticky': False,
+                }
             }
             
         except Exception as e:

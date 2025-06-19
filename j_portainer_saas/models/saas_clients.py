@@ -442,47 +442,44 @@ class SaasClient(models.Model):
             try:
                 stack_action = custom_template.action_create_stack()
                 
-                # Extract the actual stack record from the action response
-                if stack_action and 'res_id' in stack_action:
-                    stack_id = stack_action['res_id']
-                    stack = self.env['j_portainer.stack'].browse(stack_id)
+                # Find the stack created by this template (should be the most recent one)
+                stack = self.env['j_portainer.stack'].search([
+                    ('custom_template_id', '=', custom_template.id)
+                ], order='create_date desc', limit=1)
+                
+                # Link stack to client if creation was successful
+                if stack and stack.exists():
+                    self.sc_stack_id = stack.id
+                    self.sc_status = 'running'
+                    self.env.cr.commit()
+                
+                    # Log successful deployment
+                    self.message_post(
+                        body=_('SaaS client successfully deployed to Portainer.<br/>'
+                              'Custom Template: %s<br/>'
+                              'Stack: %s<br/>'
+                              'Server: %s<br/>'
+                              'Environment: %s') % (
+                            custom_template.name,
+                            stack.name,
+                            server.name,
+                            environment.name
+                        ),
+                        message_type='notification'
+                    )
                     
-                    # Link stack to client if creation was successful
-                    if stack.exists():
-                        self.sc_stack_id = stack.id
-                        self.sc_status = 'running'
-                        self.env.cr.commit()
-                    
-                        # Log successful deployment
-                        self.message_post(
-                            body=_('SaaS client successfully deployed to Portainer.<br/>'
-                                  'Custom Template: %s<br/>'
-                                  'Stack: %s<br/>'
-                                  'Server: %s<br/>'
-                                  'Environment: %s') % (
-                                custom_template.name,
-                                stack.name,
-                                server.name,
-                                environment.name
-                            ),
-                            message_type='notification'
-                        )
-                        
-                        return {
-                            'type': 'ir.actions.client',
-                            'tag': 'display_notification',
-                            'params': {
-                                'title': _('Deployment Successful'),
-                                'message': _('SaaS client %s has been deployed to Portainer successfully.') % self.sc_sequence,
-                                'type': 'success',
-                                'sticky': False,
-                            }
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Deployment Successful'),
+                            'message': _('SaaS client %s has been deployed to Portainer successfully.') % self.sc_sequence,
+                            'type': 'success',
+                            'sticky': False,
                         }
-                    else:
-                        # Stack record was created but doesn't exist or is invalid
-                        raise UserError(_('Custom template was created and stack was initiated, but stack linking failed. Please check manually.'))
+                    }
                 else:
-                    # Template created but stack creation action failed
+                    # Template created but stack creation failed
                     raise UserError(_('Custom template was created successfully, but stack creation failed. Please check the template and try again manually.'))
                     
             except Exception as stack_error:
