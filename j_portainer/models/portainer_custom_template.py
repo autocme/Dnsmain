@@ -102,6 +102,9 @@ class PortainerCustomTemplate(models.Model):
     get_formatted_volumes = fields.Text('Formatted Volumes', compute='_compute_formatted_volumes')
     get_formatted_ports = fields.Text('Formatted Ports', compute='_compute_formatted_ports')
     
+    # Related stacks count
+    stack_count = fields.Integer('Stack Count', compute='_compute_stack_count')
+    
     # SQL Constraint to ensure Template ID is unique within a server
     _sql_constraints = [
         ('template_id_server_unique', 'UNIQUE(server_id, template_id)', 'Template ID must be unique within the same Portainer server!'),
@@ -206,6 +209,13 @@ class PortainerCustomTemplate(models.Model):
         """Copy content from compose_file to fileContent field for backward compatibility"""
         for template in self:
             template.fileContent = template.compose_file
+    
+    def _compute_stack_count(self):
+        """Compute number of stacks created from this template"""
+        for template in self:
+            template.stack_count = self.env['j_portainer.stack'].search_count([
+                ('custom_template_id', '=', template.id)
+            ])
             
     # The ports formatting function is now inherited from j_portainer.template.mixin
     
@@ -1826,6 +1836,7 @@ class PortainerCustomTemplate(models.Model):
             'environment_id': self.environment_id.id,
             'content': self.fileContent,
             'type': 'compose',  # Default to compose type
+            'custom_template_id': self.id,  # Link to the custom template
         }
         
         try:
@@ -1844,3 +1855,21 @@ class PortainerCustomTemplate(models.Model):
         except Exception as e:
             _logger.error(f"Error creating stack from template {self.title}: {str(e)}")
             raise UserError(_("Error creating stack: %s") % str(e))
+    
+    def action_view_stacks(self):
+        """Open list view of stacks created from this template"""
+        self.ensure_one()
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Stacks from Template: %s') % self.title,
+            'res_model': 'j_portainer.stack',
+            'view_mode': 'tree,form',
+            'domain': [('custom_template_id', '=', self.id)],
+            'context': {
+                'default_custom_template_id': self.id,
+                'default_server_id': self.server_id.id,
+                'default_environment_id': self.environment_id.id,
+            },
+            'target': 'current',
+        }
