@@ -1842,19 +1842,24 @@ class PortainerCustomTemplate(models.Model):
         try:
             # Create the stack record
             stack = self.env['j_portainer.stack'].create(stack_vals)
-            
-            return {
-                'type': 'ir.actions.act_window',
-                'name': _('Created Stack'),
-                'res_model': 'j_portainer.stack',
-                'res_id': stack.id,
-                'view_mode': 'form',
-                'target': 'current',
-            }
+            return stack
             
         except Exception as e:
             _logger.error(f"Error creating stack from template {self.title}: {str(e)}")
             raise UserError(_("Error creating stack: %s") % str(e))
+    
+    def action_create_stack_and_open(self):
+        """Create a stack record and return UI action to open it"""
+        stack = self.action_create_stack()
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Created Stack'),
+            'res_model': 'j_portainer.stack',
+            'res_id': stack.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
     
     def action_view_stacks(self):
         """Open list view of stacks created from this template"""
