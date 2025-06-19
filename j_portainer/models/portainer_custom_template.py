@@ -1835,7 +1835,7 @@ class PortainerCustomTemplate(models.Model):
             'server_id': self.server_id.id,
             'environment_id': self.environment_id.id,
             'content': self.fileContent,
-            'type': 'compose',  # Default to compose type
+            'type': '2',  # Compose type (2 = Compose, 1 = Swarm)
             'custom_template_id': self.id,  # Link to the custom template
         }
         
