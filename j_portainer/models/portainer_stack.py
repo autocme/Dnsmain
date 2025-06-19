@@ -175,126 +175,16 @@ class PortainerStack(models.Model):
     def create(self, vals):
         """Override create to create stack in Portainer first"""
         # If stack_id is provided, this is a sync operation - save directly
+        record = super(PortainerStack, self).create(vals)
+
         if vals.get('stack_id'):
-            return super().create(vals)
-        
-        # New stack creation - create in Portainer first using existing method
-        try:
-            # Get required data
-            server_id = vals.get('server_id')
-            environment_id = vals.get('environment_id')
-            name = vals.get('name')
-            build_method = vals.get('build_method', 'web_editor')
-            
-            if not all([server_id, environment_id, name]):
-                raise UserError("Server, Environment, and Name are required to create a stack.")
-            
-            # Get environment record to get the environment_id for Portainer API
-            environment = self.env['j_portainer.environment'].browse(environment_id)
-            if not environment.exists():
-                raise UserError("Invalid environment specified.")
-            
-            # Validate stack creation is allowed in this environment
-            environment.validate_stack_creation()
-            
-            # Prepare stack content based on build method
-            stack_file_content = ''
-            
-            if build_method == 'web_editor':
-                content = vals.get('content')
-                if not content:
-                    raise UserError("Stack content is required for Web Editor method.")
-                stack_file_content = content
-                
-            elif build_method == 'upload':
-                # Handle file upload - would need to process the binary file
-                if not vals.get('compose_file_upload'):
-                    raise UserError("Compose file upload is required for Upload method.")
-                # TODO: Process uploaded file content
-                raise UserError("File upload method is not yet implemented.")
-                
-            elif build_method == 'repository':
-                # For repository method, we'll need to enhance the create_stack method
-                # For now, raise an error as repository method needs different handling
-                raise UserError("Repository method is not yet supported for direct creation. Use Web Editor method.")
-            
-            # Use the existing create_stack method
-            _logger.info(f"Creating stack {name} in Portainer using environment ID {environment.environment_id}")
-            
-            success = self.create_stack(
-                server_id=server_id,
-                environment_id=environment.environment_id,  # Use the Portainer environment ID
-                name=name,
-                stack_file_content=stack_file_content,
-                deployment_method=1  # File method
-            )
-            
-            if not success:
-                # Get the server to check its status and last error
-                server = self.env['j_portainer.server'].browse(server_id)
-                
-                # Show the actual error message if available
-                if server.error_message:
-                    raise UserError(f"Failed to create stack in Portainer: {server.error_message}")
-                else:
-                    error_details = f"Server: {server.name}, Status: {server.status}"
-                    raise UserError(f"Failed to create stack in Portainer. {error_details}")
-            
-            # If successful, the create_stack method triggers sync_stacks which creates the Odoo record
-            # We need to find the newly created record and return it
-            # Wait a moment for the sync to complete
-            self.env.cr.commit()
-            
-            # Try multiple attempts to find the newly created stack
-            new_stack = None
-            for attempt in range(3):
-                # Force sync from Portainer to ensure the stack is in Odoo
-                server = self.env['j_portainer.server'].browse(server_id)
-                try:
-                    server.sync_stacks(environment.environment_id)
-                except Exception as sync_error:
-                    _logger.warning(f"Sync attempt {attempt + 1} failed: {str(sync_error)}")
-                
-                # Search for the newly created stack
-                new_stack = self.env['j_portainer.stack'].search([
-                    ('server_id', '=', server_id),
-                    ('environment_id', '=', environment_id),
-                    ('name', '=', name)
-                ], limit=1, order='id desc')
-                
-                if new_stack:
-                    break
-                    
-                # Wait a bit before retrying
-                import time
-                time.sleep(1)
-            
-            if new_stack:
-                # Update any additional fields from vals that weren't set during sync
-                update_vals = {}
-                for field in ['build_method', 'git_repository_url', 'git_repository_reference', 
-                              'git_compose_path', 'git_authentication', 'git_username', 'git_token']:
-                    if field in vals:
-                        update_vals[field] = vals[field]
-                
-                # Most importantly, ensure the content field is set with the original content
-                update_vals['content'] = stack_file_content
-                
-                if update_vals:
-                    new_stack.write(update_vals)
-                
-                _logger.info(f"Stack {name} successfully created and synced with ID {new_stack.id}")
-                return new_stack
-            else:
-                # Stack was created in Portainer but couldn't be synced to Odoo
-                _logger.error(f"Stack {name} was created in Portainer but couldn't be immediately synced to Odoo")
-                raise UserError(f"Stack was created in Portainer successfully, but could not create the record in Odoo. Please manually sync the environment to see the stack.")
-            
-        except UserError:
-            raise
-        except Exception as e:
-            _logger.error(f"Error creating stack: {str(e)}")
-            raise UserError(f"Failed to create stack: {str(e)}")
+            return record
+
+        # Auto-create in Portainer using the separated method
+        # If this fails, it will raise UserError and prevent record creation
+        record.create_stack()
+
+        return record
     
     def _parse_portainer_date(self, date_value):
         """Parse Portainer date format to Odoo datetime"""
