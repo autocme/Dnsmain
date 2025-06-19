@@ -178,14 +178,6 @@ class PortainerStack(models.Model):
         if vals.get('stack_id'):
             return super().create(vals)
         
-        # If custom_template_id is provided, create directly without Portainer API
-        if vals.get('custom_template_id'):
-            # Set required fields for template-based stacks
-            vals.setdefault('stack_id', 0)  # Temporary ID, will be updated on sync
-            vals.setdefault('status', '1')  # Active status
-            vals.setdefault('build_method', 'web_editor')
-            return super().create(vals)
-        
         # New stack creation - create in Portainer first using existing method
         try:
             # Get required data
@@ -248,76 +240,9 @@ class PortainerStack(models.Model):
                     error_details = f"Server: {server.name}, Status: {server.status}"
                     raise UserError(f"Failed to create stack in Portainer. {error_details}")
             
-            # If successful, the create_stack method triggers sync_stacks which creates the Odoo record
-            # We need to find the newly created record and return it
-            # Wait a moment for the sync to complete
-            self.env.cr.commit()
-            
-            # Try multiple attempts to find the newly created stack
-            new_stack = None
-            for attempt in range(3):
-                # Force sync from Portainer to ensure the stack is in Odoo
-                server = self.env['j_portainer.server'].browse(server_id)
-                try:
-                    server.sync_stacks(environment.environment_id)
-                except Exception as sync_error:
-                    _logger.warning(f"Sync attempt {attempt + 1} failed: {str(sync_error)}")
-                
-                # Search for the newly created stack
-                new_stack = self.env['j_portainer.stack'].search([
-                    ('server_id', '=', server_id),
-                    ('environment_id', '=', environment_id),
-                    ('name', '=', name)
-                ], limit=1, order='id desc')
-                
-                if new_stack:
-                    break
-                    
-                # Wait a bit before retrying
-                import time
-                time.sleep(1)
-            
-            if new_stack:
-                # Update any additional fields from vals that weren't set during sync
-                update_vals = {}
-                for field in ['build_method', 'git_repository_url', 'git_repository_reference', 
-                              'git_compose_path', 'git_authentication', 'git_username', 'git_token']:
-                    if field in vals:
-                        update_vals[field] = vals[field]
-                
-                # Most importantly, ensure the content field is set with the original content
-                update_vals['content'] = stack_file_content
-                
-                if update_vals:
-                    new_stack.write(update_vals)
-                
-                _logger.info(f"Stack {name} successfully created and synced with ID {new_stack.id}")
-                return new_stack
-            else:
-                # Stack was created in Portainer but couldn't be synced to Odoo
-                # This is not necessarily an error - the stack exists and works
-                _logger.warning(f"Stack {name} was created in Portainer but couldn't be immediately synced to Odoo")
-                
-                # Create a minimal record in Odoo with available information
-                # This ensures the relationship can be established
-                try:
-                    fallback_stack = super().create({
-                        'name': name,
-                        'server_id': server_id,
-                        'environment_id': environment_id,
-                        'stack_id': 0,  # Will be updated on next sync
-                        'content': stack_file_content,
-                        'build_method': build_method,
-                        'type': vals.get('type', '2'),
-                        'status': '1'  # Assume active since creation succeeded
-                    })
-                    
-                    _logger.info(f"Created fallback stack record with ID {fallback_stack.id}")
-                    return fallback_stack
-                    
-                except Exception as fallback_error:
-                    _logger.error(f"Failed to create fallback stack record: {str(fallback_error)}")
-                    raise UserError(f"Stack was created in Portainer successfully, but could not create the record in Odoo. Please manually sync the environment to see the stack.")
+            # Stack creation successful in Portainer
+            _logger.info(f"Stack {name} successfully created in Portainer")
+            return True
             
         except UserError:
             raise
