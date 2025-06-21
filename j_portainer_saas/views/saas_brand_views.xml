@@ -27,12 +27,14 @@
                            options="{'preview_image': 'sb_brand_image', 'size': [90, 90]}"/>
                     <div class="oe_title">
                         <label for="sb_name" class="oe_edit_only"/>
-                        <h1><field name="sb_name" placeholder="e.g., obill"/></h1>
+                        <h1>
+                            <field name="sb_sequence" readonly="1"/>
+                        </h1>
                     </div>
                     
                     <group>
                         <group name="basic_info">
-                            <field name="sb_sequence" readonly="1"/>
+                            <field name="sb_name" placeholder="e.g., jaah"/>
                             <field name="sb_title"/>
                             <field name="sb_default_logo_module"/>
                             <field name="sb_company_id" groups="base.group_multi_company"/>
