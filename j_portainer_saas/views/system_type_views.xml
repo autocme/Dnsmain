@@ -10,6 +10,7 @@
                 <field name="st_name"/>
                 <field name="st_description" optional="hide"/>
                 <field name="st_domain_id" optional="show"/>
+                <field name="st_brand_id" optional="show"/>
                 <field name="st_environment_count" string="Environments"/>
                 <field name="st_stack_count" string="Stacks"/>
                 <field name="st_saas_package_count" string="Packages"/>
@@ -59,8 +60,11 @@
                     
                     <group>
                         <group name="basic_info">
-                            <field name="st_name" placeholder="e.g., Production, Development, Testing"/>
+                            <field name="st_sequence" readonly="1"/>
                             <field name="st_domain_id"/>
+                            <field name="st_brand_id" 
+                                   options="{'no_create': True}"
+                                   placeholder="Select brand..."/>
                             <field name="st_company_id" groups="base.group_multi_company"/>
                             <field name="st_send_email_on_stack_create"/>
                         </group>

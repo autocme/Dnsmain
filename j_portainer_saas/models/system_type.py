@@ -105,6 +105,13 @@ class SystemType(models.Model):
         tracking=True,
         help='Primary DNS domain for this system type deployments'
     )
+    
+    st_brand_id = fields.Many2one(
+        'saas.brand',
+        string='Brand',
+        tracking=True,
+        help='Default SaaS brand for this system type'
+    )
 
     # ========================================================================
     # STACK MANAGEMENT
