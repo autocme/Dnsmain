@@ -26,7 +26,7 @@ class PortainerEnvironment(models.Model):
         ('3', 'Edge Agent'),
         ('4', 'Azure ACI'),
         ('5', 'Kubernetes')
-    ], string='Environment Type', help="Type of Docker environment", default='1', readonly="environment_id != False")
+    ], string='Environment Type', help="Type of Docker environment", default='1', readonly=True)
     public_url = fields.Char('Public URL', readonly=True)
     group_id = fields.Integer('Group ID', readonly=True)
     group_name = fields.Char('Group', readonly=True)
@@ -42,7 +42,7 @@ class PortainerEnvironment(models.Model):
         ('agent', 'Portainer Agent'),
         ('api', 'Docker API'),
         ('socket', 'Docker Socket')
-    ], string='Connection Method', default='agent', required=True, readonly="environment_id != False", help="Method to connect to Docker environment")
+    ], string='Connection Method', default='agent', required=True, readonly=True, help="Method to connect to Docker environment")
     docker_command = fields.Text('Docker Command', help="Command to run the Portainer agent")
     platform = fields.Selection([
         ('linux', 'Linux / Windows WSL'),
