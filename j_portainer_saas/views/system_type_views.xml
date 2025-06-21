@@ -26,15 +26,7 @@
         <field name="arch" type="xml">
             <form string="System Type">
                 <header>
-                    <button name="action_view_environments" type="object" 
-                            string="View Environments" class="btn-primary"
-                            invisible="st_environment_count == 0"/>
-                    <button name="action_view_packages" type="object" 
-                            string="View Packages" class="btn-primary"
-                            invisible="st_saas_package_count == 0"/>
-                    <button name="action_view_stacks" type="object" 
-                            string="View Stacks" class="btn-secondary"
-                            invisible="st_stack_count == 0"/>
+                    
                     <button name="toggle_active" type="object" 
                             string="Archive" class="btn-warning"
                             invisible="not st_active"/>
