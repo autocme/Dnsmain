@@ -135,7 +135,12 @@ class SaasPackage(models.Model):
         string='Template Variables',
         help='Auto-extracted variables from Docker Compose template'
     )
-    
+
+    pkg_system_type_id = fields.Many2one(
+        comodel_name='system.type',
+        string='System Type'
+    )
+
     # ========================================================================
     # ADDITIONAL TRACKING FIELDS
     # ========================================================================
