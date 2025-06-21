@@ -20,6 +20,10 @@
                             invisible="status != '1'"/>
                     <button name="action_open_migration_wizard" string="Migrate/Duplicate" type="object" 
                             class="btn-secondary"/>
+                    <button name="action_redeploy_stack" string="Re-deploy" type="object" 
+                            class="btn-success" 
+                            invisible="stack_id == 0"
+                            confirm="Are you sure? Do you want to force an update of the stack?"/>
                     <button name="action_remove" string="Remove" type="object" 
                             class="btn-danger" 
                             confirm="Are you sure you want to remove this stack?"/>

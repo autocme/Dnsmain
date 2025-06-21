@@ -615,3 +615,128 @@ class PortainerStack(models.Model):
         except Exception as e:
             _logger.error(f"Error creating stack {self.name}: {str(e)}")
             raise UserError(_("Error creating stack in Portainer: %s") % str(e))
+
+    def action_redeploy_stack(self):
+        """Re-deploy (update) stack in Portainer with current content"""
+        self.ensure_one()
+        
+        # Validate required fields
+        if not self.stack_id or self.stack_id == 0:
+            raise UserError(_("Cannot re-deploy: Stack does not exist in Portainer"))
+        
+        if not self.content:
+            raise UserError(_("Cannot re-deploy: Stack content is required"))
+        
+        try:
+            server = self.server_id
+            if not server:
+                raise UserError(_("Server is required to re-deploy stack"))
+                
+            environment = self.environment_id
+            if not environment:
+                raise UserError(_("Environment is required to re-deploy stack"))
+            
+            # Use Portainer API endpoint for stack updates
+            endpoint = f'/api/stacks/{self.stack_id}?endpointId={environment.environment_id}'
+            
+            # Prepare the payload for stack update according to API specification
+            update_payload = {
+                'StackFileContent': self.content,
+                'Env': []  # Environment variables (empty for now)
+            }
+            
+            _logger.info(f"Re-deploying stack '{self.name}' (ID: {self.stack_id}) using endpoint: {endpoint}")
+            _logger.info(f"Update payload: {update_payload}")
+            
+            # Make PUT request to update the stack
+            response = server._make_api_request(endpoint, 'PUT', data=update_payload)
+            
+            _logger.info(f"Stack update response: Status {response.status_code}, Content: {response.text}")
+            
+            if response.status_code in [200, 201, 204]:
+                # Update stack fields with response data if available
+                update_vals = {}
+                
+                try:
+                    if response.text:
+                        response_data = response.json()
+                        _logger.info(f"Portainer update response data: {response_data}")
+                        
+                        # Update timestamp fields
+                        if 'UpdatedDate' in response_data:
+                            update_vals['update_date'] = self._parse_portainer_date(response_data['UpdatedDate'])
+                        else:
+                            # Set current timestamp if not provided
+                            update_vals['update_date'] = fields.Datetime.now()
+                        
+                        # Update file content if returned
+                        if 'StackFileContent' in response_data:
+                            update_vals['file_content'] = response_data['StackFileContent']
+                        
+                        # Update status if provided
+                        if 'Status' in response_data:
+                            portainer_status = response_data['Status']
+                            if portainer_status == 1:
+                                update_vals['status'] = '1'  # Active
+                            elif portainer_status == 2:
+                                update_vals['status'] = '2'  # Inactive
+                            else:
+                                update_vals['status'] = '0'  # Unknown
+                        
+                        # Store updated response details
+                        update_vals['details'] = str(response_data)
+                        
+                except Exception as parse_error:
+                    _logger.warning(f"Could not parse update response: {str(parse_error)}")
+                    # Still set update timestamp
+                    update_vals['update_date'] = fields.Datetime.now()
+                
+                # Update the stack record
+                if update_vals:
+                    self.write(update_vals)
+                
+                # Sync resources after successful update
+                server.sync_stacks(environment.environment_id)
+                server.sync_volumes(environment.environment_id)
+                server.sync_networks(environment.environment_id)
+                server.sync_containers(environment.environment_id)
+                
+                _logger.info(f"Stack '{self.name}' re-deployed successfully in Portainer")
+                
+                # Return success notification
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Stack Re-deployed Successfully'),
+                        'message': _('Stack "%s" has been re-deployed in Portainer successfully.') % self.name,
+                        'type': 'success',
+                        'sticky': False,
+                    }
+                }
+            else:
+                # Extract detailed error message from Portainer response
+                error_message = f"Status {response.status_code}"
+                try:
+                    if response.text:
+                        error_data = response.json()
+                        if 'message' in error_data:
+                            error_message = error_data['message']
+                        elif 'details' in error_data:
+                            error_message = error_data['details']
+                        else:
+                            error_message = response.text
+                    else:
+                        error_message = f"HTTP {response.status_code} error with no response body"
+                except:
+                    # If JSON parsing fails, use raw response text
+                    error_message = response.text if response.text else f"HTTP {response.status_code} error"
+                
+                _logger.error(f"Failed to re-deploy stack '{self.name}': Status {response.status_code}, Response: {response.text}")
+                raise UserError(_("Failed to re-deploy stack in Portainer: %s") % error_message)
+                
+        except UserError:
+            raise
+        except Exception as e:
+            _logger.error(f"Error re-deploying stack {self.name}: {str(e)}")
+            raise UserError(_("Error re-deploying stack in Portainer: %s") % str(e))
