@@ -146,11 +146,11 @@
                 <filter string="Archived" name="archived" domain="[('st_active', '=', False)]"/>
                 <separator/>
                 <filter string="With Environments" name="with_environments" 
-                        domain="[('st_environment_count', '>', 0)]"/>
+                        domain="[('st_environment_ids', '!=', False)]"/>
                 <filter string="With Packages" name="with_packages" 
-                        domain="[('st_saas_package_count', '>', 0)]"/>
+                        domain="[('st_saas_package_ids', '!=', False)]"/>
                 <filter string="With Stacks" name="with_stacks" 
-                        domain="[('st_stack_count', '>', 0)]"/>
+                        domain="[('st_environment_ids.active_stack_count', '>', 0)]"/>
                 <filter string="Email Notifications" name="email_notifications" 
                         domain="[('st_send_email_on_stack_create', '=', True)]"/>
                 
