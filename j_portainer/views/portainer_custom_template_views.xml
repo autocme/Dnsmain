@@ -76,6 +76,7 @@
                             <field name="create_date" invisible="1"/>
                             <field name="build_method" readonly="create_date"/>
                             <field name="logo"/>
+                            <field name="stack_id" invisible="1"/>
                             <!-- <field name="registry" invisible="template_type != '1'"/> -->
                             <!-- <field name="registry_url"/> -->
                             <!-- <field name="image" invisible="template_type != '1'"/> -->

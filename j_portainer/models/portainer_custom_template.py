@@ -41,6 +41,7 @@ class PortainerCustomTemplate(models.Model):
     last_sync = fields.Datetime('Last Synchronized', readonly=True)
     environment_id = fields.Many2one('j_portainer.environment', string='Environment', required=True,
                                 domain="[('server_id', '=', server_id)]", default=lambda self: self._default_environment_id())
+    stack_id = fields.Many2one('j_portainer.stack', string='Stack', required=False)
     logo = fields.Char('Logo URL')
     registry = fields.Char('Registry')
     image = fields.Char('Image')
@@ -1842,6 +1843,7 @@ class PortainerCustomTemplate(models.Model):
         try:
             # Create the stack record
             stack = self.env['j_portainer.stack'].create(stack_vals)
+            self.stack_id = stack.id
             return stack
             
         except Exception as e:
