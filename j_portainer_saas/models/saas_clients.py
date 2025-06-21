@@ -401,7 +401,10 @@ class SaasClient(models.Model):
     # ========================================================================
     # ACTION METHODS
     # ========================================================================
-    
+
+    def action_deploy_client(self):
+        self.with_delay().action_deploy()
+
     def action_deploy(self):
         """Deploy the client template to Portainer by creating custom template and stack."""
         self.ensure_one()
@@ -498,19 +501,7 @@ class SaasClient(models.Model):
         except Exception as template_error:
             # Template creation failed entirely
             raise UserError(_('Failed to create custom template: %s') % str(template_error))
-    
-    def _get_deployment_server(self):
-        """Get the server to use for deployment."""
-        servers = self.env['j_portainer.server'].search([])
-        
-        if not servers:
-            raise UserError(_('No Portainer servers configured. Please configure at least one server.'))
-        elif len(servers) == 1:
-            return servers[0]
-        else:
-            # For now, raise error - will handle multiple servers later
-            raise UserError(_('Multiple Portainer servers found. Please configure deployment to handle multiple servers.'))
-    
+
     def _get_deployment_environment(self):
         """Get the environment to use for deployment (environment-first approach)."""
         # Get all active environments across all servers
