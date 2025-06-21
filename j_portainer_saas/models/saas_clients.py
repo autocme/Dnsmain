@@ -417,9 +417,9 @@ class SaasClient(models.Model):
         if self.sc_portainer_template_id:
             raise UserError(_('Client is already deployed. Template: %s') % self.sc_portainer_template_id.title)
         
-        # Get server and environment (use single ones or raise error for multiple)
-        server = self._get_deployment_server()
-        environment = self._get_deployment_environment(server)
+        # Get environment first using existing logic, then get the server that environment belongs to
+        environment = self._get_deployment_environment()
+        server = environment.server_id
         
         # Create custom template
         template_vals = {
@@ -511,33 +511,33 @@ class SaasClient(models.Model):
             # For now, raise error - will handle multiple servers later
             raise UserError(_('Multiple Portainer servers found. Please configure deployment to handle multiple servers.'))
     
-    def _get_deployment_environment(self, server):
-        """Get the environment to use for deployment on the given server."""
+    def _get_deployment_environment(self):
+        """Get the environment to use for deployment (environment-first approach)."""
+        # Get all active environments across all servers
         environments = self.env['j_portainer.environment'].search([
-            ('server_id', '=', server.id),
             ('active', '=', True),
             ('status', '=', 'up')
         ])
         
         if not environments:
-            raise UserError(_('No active environments configured for server %s. Please configure at least one active environment.') % server.name)
+            raise UserError(_('No active environments configured. Please configure at least one active environment on any server.'))
         
         # Filter environments that allow stack creation
         available_environments = environments.filtered('allow_stack_creation')
         
         if not available_environments:
-            # Show detailed error with stack limits info
+            # Show detailed error with stack limits info across all servers
             env_details = []
             for env in environments:
-                env_details.append(f"- {env.name}: {env.active_stack_count}/{env.allowed_stack_number} stacks")
+                env_details.append(f"- {env.server_id.name}/{env.name}: {env.active_stack_count}/{env.allowed_stack_number} stacks")
             
             raise UserError(_(
-                'No environments with available stack capacity found on server %s.\n\n'
+                'No environments with available stack capacity found across all servers.\n\n'
                 'Environment stack usage:\n%s\n\n'
                 'Please increase the allowed stack number for an environment or remove unused stacks.'
-            ) % (server.name, '\n'.join(env_details)))
+            ) % '\n'.join(env_details))
         
-        # Return the environment with the most available capacity
+        # Return the environment with the most available capacity (regardless of server)
         return available_environments.sorted(lambda env: env.allowed_stack_number - env.active_stack_count, reverse=True)[0]
     
     # ========================================================================
