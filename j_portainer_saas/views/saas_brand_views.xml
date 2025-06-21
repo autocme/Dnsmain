@@ -50,6 +50,7 @@
                         </group>
                     </group>
                     
+                    <group>
                         <group name="urls" string="URLs">
                             <field name="sb_website"/>
                             <field name="sb_docs_website"/>
