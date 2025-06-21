@@ -68,6 +68,7 @@ class SaasClient(models.Model):
         comodel_name='j_portainer.stack',
         string='Portainer Stack',
         required=False,
+        related='sc_portainer_template_id.stack_id',
         tracking=True,
         help='The Portainer stack that deploys and manages the containerized '
              'services for this SaaS client. Can be empty if services are not yet deployed.'
