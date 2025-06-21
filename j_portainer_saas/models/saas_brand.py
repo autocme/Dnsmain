@@ -14,22 +14,13 @@ class SaasBrand(models.Model):
     _name = 'saas.brand'
     _description = 'SaaS Brand Management'
     _inherit = ['mail.thread', 'mail.activity.mixin']
-    _order = 'sb_sequence, sb_name'
+    _order = 'sb_name'
     _rec_name = 'sb_name'
 
     # ========================================================================
     # BASIC FIELDS
     # ========================================================================
 
-    sb_sequence = fields.Char(
-        string='Sequence',
-        readonly=True,
-        copy=False,
-        default=lambda self: _('New'),
-        tracking=True,
-        help='Auto-generated sequence code for brand identification (e.g., BR00001)'
-    )
-    
     sb_name = fields.Char(
         string='Name',
         required=True,
@@ -128,11 +119,6 @@ class SaasBrand(models.Model):
 
     _sql_constraints = [
         (
-            'unique_brand_sequence',
-            'UNIQUE(sb_sequence)',
-            'Brand sequence must be unique.'
-        ),
-        (
             'unique_brand_name_company',
             'UNIQUE(sb_name, sb_company_id)',
             'Brand name must be unique per company.'
@@ -143,10 +129,3 @@ class SaasBrand(models.Model):
     # CRUD METHODS
     # ========================================================================
 
-    @api.model
-    def create(self, vals):
-        """Override create to generate sequence number."""
-        if vals.get('sb_sequence', _('New')) == _('New'):
-            vals['sb_sequence'] = self.env['ir.sequence'].next_by_code('saas.brand') or _('New')
-        
-        return super().create(vals)
