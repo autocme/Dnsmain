@@ -85,6 +85,12 @@ class SaasBrand(models.Model):
         help='URL to the brand logo image file'
     )
     
+    sb_brand_image = fields.Binary(
+        string='Brand Image',
+        tracking=True,
+        help='Upload brand logo/image file'
+    )
+    
     sb_docs_website = fields.Char(
         string='Docs Website',
         tracking=True,
