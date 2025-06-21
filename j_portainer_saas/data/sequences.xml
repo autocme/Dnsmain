@@ -22,5 +22,15 @@
             <field name="padding">5</field>
         </record>
 
+        <!-- ========================================================================== -->
+        <!--                           SYSTEM TYPE SEQUENCE                           -->
+        <!-- ========================================================================== -->
+        <record id="seq_system_type" model="ir.sequence">
+            <field name="name">System Type Sequence</field>
+            <field name="code">system.type</field>
+            <field name="prefix">ST</field>
+            <field name="padding">5</field>
+        </record>
+
     </data>
 </odoo>
