@@ -26,19 +26,5 @@
         </field>
     </record>
 
-    <!-- Inherit Portainer Environment Search View -->
-    <record id="view_portainer_environment_search_inherit" model="ir.ui.view">
-        <field name="name">j_portainer.environment.search.inherit</field>
-        <field name="model">j_portainer.environment</field>
-        <field name="inherit_id" ref="j_portainer.view_portainer_environment_search"/>
-        <field name="arch" type="xml">
-            <field name="server_id" position="after">
-                <field name="system_type_id"/>
-            </field>
-            <group expand="0" string="Group By" position="inside">
-                <filter string="System Type" name="group_system_type" 
-                        context="{'group_by': 'system_type_id'}"/>
-            </group>
-        </field>
-    </record>
+    
 </odoo>
