@@ -138,7 +138,9 @@ class SaasPackage(models.Model):
 
     pkg_system_type_id = fields.Many2one(
         comodel_name='system.type',
-        string='System Type'
+        string='System Type',
+        tracking=True,
+        help='System type this package is designed for (e.g., Production, Development, Testing)'
     )
 
     # ========================================================================
