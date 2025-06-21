@@ -108,12 +108,7 @@
                                 </tree>
                             </field>
                         </page>
-                        
-                        <page string="Domain" name="domain">
-                            <group>
-                                <field name="st_domain_id"/>
-                            </group>
-                        </page>
+
                     </notebook>
                 </sheet>
                 <div class="oe_chatter">
