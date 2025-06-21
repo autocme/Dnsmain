@@ -7,10 +7,15 @@
         <field name="arch" type="xml">
             <form string="Stack">
                 <header>
-                    <button name="action_start" string="Start" type="object" 
+                    <button name="create_stack_in_portainer" string="Deploy" type="object"
+                            class="btn-primary"
+                            invisible="status != '0'"/>
+                    <button name="action_sync_stack_resources" string="Sync Resources" type="object"
+                            class="btn-primary" help="This will sync all the related stack resources including volumes, networks, and containers"/>
+                    <button name="action_start" string="Start" type="object"
                             class="btn-primary"
                             invisible="status == '1'"/>
-                    <button name="action_stop" string="Stop" type="object" 
+                    <button name="action_stop" string="Stop" type="object"
                             class="btn-warning"
                             invisible="status != '1'"/>
                     <button name="action_open_migration_wizard" string="Migrate/Duplicate" type="object" 
