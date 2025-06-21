@@ -91,6 +91,7 @@ class SystemType(models.Model):
     st_environment_count = fields.Integer(
         string='Environment Count',
         compute='_compute_environment_count',
+        tracking=True,
         help='Total number of environments linked to this system type'
     )
 
@@ -112,6 +113,7 @@ class SystemType(models.Model):
     st_stack_count = fields.Integer(
         string='Stack Count',
         compute='_compute_stack_count',
+        tracking=True,
         help='Total number of stacks across all environments in this system type'
     )
 
@@ -141,6 +143,7 @@ class SystemType(models.Model):
     st_saas_package_count = fields.Integer(
         string='Package Count',
         compute='_compute_package_count',
+        tracking=True,
         help='Total number of SaaS packages configured for this system type'
     )
 
