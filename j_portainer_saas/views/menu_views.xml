@@ -31,6 +31,13 @@
               action="action_saas_package"
               sequence="5"/>
 
+    <!-- Queue Job Menu Item -->
+    <menuitem id="menu_j_portainer_queue_job"
+              name="Queue Jobs"
+              parent="menu_j_portainer_saas_configuration"
+              action="queue_job.action_queue_job"
+              sequence="6"/>
+
 
 
 </odoo>
