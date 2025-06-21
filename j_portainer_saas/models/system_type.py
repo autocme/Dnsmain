@@ -166,13 +166,13 @@ class SystemType(models.Model):
         for record in self:
             record.st_environment_count = len(record.st_environment_ids)
 
-    @api.depends('st_environment_ids.active_stack_count')
+    @api.depends('st_environment_ids.stack_count')
     def _compute_stack_count(self):
         """Compute the total number of stacks across all environments."""
         for record in self:
             total_stacks = 0
             for environment in record.st_environment_ids:
-                total_stacks += environment.active_stack_count or 0
+                total_stacks += environment.stack_count or 0
             record.st_stack_count = total_stacks
 
     @api.depends('st_saas_package_ids')
