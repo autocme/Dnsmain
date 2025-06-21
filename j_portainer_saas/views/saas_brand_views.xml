@@ -9,7 +9,6 @@
                 <field name="sb_sequence" optional="show"/>
                 <field name="sb_name"/>
                 <field name="sb_title" optional="show"/>
-                <field name="sb_system_type_id" optional="show"/>
                 <field name="sb_website" optional="hide"/>
                 <field name="sb_company_id" groups="base.group_multi_company" optional="hide"/>
                 <field name="sb_active" widget="boolean_toggle" optional="show"/>
@@ -34,9 +33,6 @@
                             <field name="sb_sequence" readonly="1"/>
                             <field name="sb_title"/>
                             <field name="sb_default_logo_module"/>
-                            <field name="sb_system_type_id" 
-                                   options="{'no_create': True}"
-                                   placeholder="Select system type..."/>
                             <field name="sb_company_id" groups="base.group_multi_company"/>
                             <field name="sb_active"/>
                         </group>
@@ -79,7 +75,6 @@
             <search string="SaaS Brands">
                 <field name="sb_name"/>
                 <field name="sb_title"/>
-                <field name="sb_system_type_id"/>
                 <field name="sb_company_id" groups="base.group_multi_company"/>
                 
                 <separator/>
@@ -90,8 +85,6 @@
                         domain="[('sb_warranty', '=', True)]"/>
                 
                 <group expand="0" string="Group By">
-                    <filter string="System Type" name="group_system_type" 
-                            context="{'group_by': 'sb_system_type_id'}"/>
                     <filter string="Company" name="group_company" 
                             context="{'group_by': 'sb_company_id'}" 
                             groups="base.group_multi_company"/>

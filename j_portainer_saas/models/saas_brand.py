@@ -104,16 +104,7 @@ class SaasBrand(models.Model):
         help='Indicates if warranty is provided for this brand'
     )
 
-    # ========================================================================
-    # RELATIONSHIPS
-    # ========================================================================
-    
-    sb_system_type_id = fields.Many2one(
-        'system.type',
-        string='System Type',
-        tracking=True,
-        help='System type this brand is associated with'
-    )
+
     
     sb_company_id = fields.Many2one(
         'res.company',
