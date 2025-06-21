@@ -574,10 +574,6 @@ class PortainerStack(models.Model):
                 self.write(update_vals)
                 
                 # Refresh stacks and containers to ensure everything is in sync
-                # server.sync_stacks(environment.environment_id)
-                # server.sync_volumes(environment.environment_id)
-                # server.sync_networks(environment.environment_id)
-                # server.sync_containers(environment.environment_id)
                 self.action_sync_stack_resources()
                 
                 _logger.info(f"Stack '{self.name}' created successfully in Portainer with ID {self.stack_id}")
@@ -700,16 +696,7 @@ class PortainerStack(models.Model):
                     self.write(update_vals)
                 
                 # Sync resources after successful update
-
                 self.action_sync_stack_resources()
-                
-
-                # server.sync_stacks(environment.environment_id)
-                # server.sync_volumes(environment.environment_id)
-                # server.sync_networks(environment.environment_id)
-                # server.sync_containers(environment.environment_id)
-                self.action_sync_stack_resources()
-
                 _logger.info(f"Stack '{self.name}' re-deployed successfully in Portainer")
                 
                 # Return success notification
