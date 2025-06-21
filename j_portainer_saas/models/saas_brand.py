@@ -49,13 +49,13 @@ class SaasBrand(models.Model):
         help='Display title used in web applications (e.g., obill)'
     )
     
-    sb_favicon_url = fields.Url(
+    sb_favicon_url = fields.Char(
         string='Favicon URL',
         tracking=True,
         help='URL to the favicon icon file (e.g., https://www.obill.it/favicon.ico)'
     )
     
-    sb_website = fields.Url(
+    sb_website = fields.Char(
         string='Website',
         tracking=True,
         help='Main website URL (e.g., https://www.obill.it)'
@@ -79,13 +79,13 @@ class SaasBrand(models.Model):
         help='Marketing slogan or tagline for the brand'
     )
     
-    sb_brand_logo_link = fields.Url(
+    sb_brand_logo_link = fields.Char(
         string='Brand Logo Link',
         tracking=True,
         help='URL to the brand logo image file'
     )
     
-    sb_docs_website = fields.Url(
+    sb_docs_website = fields.Char(
         string='Docs Website',
         tracking=True,
         help='URL to documentation website (e.g., https://www.jaah.it/documentation/)'
