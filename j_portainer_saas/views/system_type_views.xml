@@ -102,9 +102,8 @@
                                 <tree string="SaaS Packages" editable="bottom">
                                     <field name="pkg_sequence"/>
                                     <field name="pkg_name"/>
-                                    <field name="pkg_max_users"/>
-                                    <field name="pkg_max_companies"/>
-                                    <field name="pkg_max_databases"/>
+                                    <field name="pkg_user_limit"/>
+                                    <field name="pkg_company_limit"/>
                                     <field name="pkg_active" widget="boolean_toggle"/>
                                 </tree>
                             </field>
@@ -114,7 +113,6 @@
                             <field name="st_domain_ids" nolabel="1">
                                 <tree string="DNS Domains">
                                     <field name="name"/>
-                                    <field name="zone_id"/>
                                     <field name="active" widget="boolean_toggle"/>
                                 </tree>
                             </field>
