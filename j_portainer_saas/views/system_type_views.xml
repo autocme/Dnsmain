@@ -40,8 +40,6 @@
                     <button name="toggle_active" type="object" 
                             string="Unarchive" class="btn-success"
                             invisible="st_active"/>
-                    <field name="st_active" widget="statusbar" statusbar_visible="1" 
-                           statusbar_colors='{"1": "success", "0": "danger"}' options="{'clickable': false}"/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
@@ -71,7 +69,7 @@
                             <field name="st_send_email_on_stack_create"/>
                         </group>
                         <group name="status_info">
-                            <field name="st_active" invisible="1"/>
+                            <field name="st_active"/>
                         </group>
                     </group>
                     
