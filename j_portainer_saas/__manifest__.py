@@ -47,9 +47,11 @@ Dependencies:
     'data': [
         'data/sequences.xml',
         'data/data.xml',
+        'data/ir_sequence_data.xml',
         'security/ir.model.access.csv',
         'views/saas_package_views.xml',
         'views/saas_clients_views.xml',
+        'views/system_type_views.xml',
         'views/menu_views.xml',
     ],
     'demo': [],

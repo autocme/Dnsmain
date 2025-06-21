@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- System Type Tree View -->
+    <record id="view_system_type_tree" model="ir.ui.view">
+        <field name="name">system.type.tree</field>
+        <field name="model">system.type</field>
+        <field name="arch" type="xml">
+            <tree string="System Types" default_order="st_sequence, st_name">
+                <field name="st_sequence" optional="show"/>
+                <field name="st_name"/>
+                <field name="st_description" optional="hide"/>
+                <field name="st_environment_count" string="Environments"/>
+                <field name="st_stack_count" string="Stacks"/>
+                <field name="st_saas_package_count" string="Packages"/>
+                <field name="st_company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="st_active" widget="boolean_toggle" optional="show"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- System Type Form View -->
+    <record id="view_system_type_form" model="ir.ui.view">
+        <field name="name">system.type.form</field>
+        <field name="model">system.type</field>
+        <field name="arch" type="xml">
+            <form string="System Type">
+                <header>
+                    <button name="action_view_environments" type="object" 
+                            string="View Environments" class="btn-primary"
+                            invisible="st_environment_count == 0"/>
+                    <button name="action_view_packages" type="object" 
+                            string="View Packages" class="btn-primary"
+                            invisible="st_saas_package_count == 0"/>
+                    <button name="action_view_stacks" type="object" 
+                            string="View Stacks" class="btn-secondary"
+                            invisible="st_stack_count == 0"/>
+                    <button name="toggle_active" type="object" 
+                            string="Archive" class="btn-warning"
+                            invisible="not st_active"/>
+                    <button name="toggle_active" type="object" 
+                            string="Unarchive" class="btn-success"
+                            invisible="st_active"/>
+                    <field name="st_active" widget="statusbar" statusbar_visible="1" 
+                           statusbar_colors='{"1": "success", "0": "danger"}' options="{'clickable': false}"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_environments" type="object" 
+                                class="oe_stat_button" icon="fa-server">
+                            <field name="st_environment_count" widget="statinfo" string="Environments"/>
+                        </button>
+                        <button name="action_view_packages" type="object" 
+                                class="oe_stat_button" icon="fa-cube">
+                            <field name="st_saas_package_count" widget="statinfo" string="Packages"/>
+                        </button>
+                        <button name="action_view_stacks" type="object" 
+                                class="oe_stat_button" icon="fa-layer-group">
+                            <field name="st_stack_count" widget="statinfo" string="Stacks"/>
+                        </button>
+                    </div>
+                    
+                    <div class="oe_title">
+                        <label for="st_name" class="oe_edit_only"/>
+                        <h1><field name="st_name" placeholder="e.g., Production, Development, Testing"/></h1>
+                    </div>
+                    
+                    <group>
+                        <group name="basic_info">
+                            <field name="st_sequence" readonly="1"/>
+                            <field name="st_company_id" groups="base.group_multi_company"/>
+                            <field name="st_send_email_on_stack_create"/>
+                        </group>
+                        <group name="status_info">
+                            <field name="st_active" invisible="1"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Description" name="description">
+                            <group>
+                                <field name="st_description" nolabel="1" 
+                                       placeholder="Describe the purpose and usage of this system type..."/>
+                            </group>
+                        </page>
+                        
+                        <page string="Environments" name="environments">
+                            <field name="st_environment_ids" nolabel="1">
+                                <tree string="Environments" editable="bottom">
+                                    <field name="name"/>
+                                    <field name="server_id"/>
+                                    <field name="environment_id"/>
+                                    <field name="active_stack_count"/>
+                                    <field name="allowed_stack_number"/>
+                                    <field name="status" widget="badge"/>
+                                    <field name="active" widget="boolean_toggle"/>
+                                </tree>
+                            </field>
+                        </page>
+                        
+                        <page string="SaaS Packages" name="packages">
+                            <field name="st_saas_package_ids" nolabel="1">
+                                <tree string="SaaS Packages" editable="bottom">
+                                    <field name="pkg_sequence"/>
+                                    <field name="pkg_name"/>
+                                    <field name="pkg_max_users"/>
+                                    <field name="pkg_max_companies"/>
+                                    <field name="pkg_max_databases"/>
+                                    <field name="pkg_active" widget="boolean_toggle"/>
+                                </tree>
+                            </field>
+                        </page>
+                        
+                        <page string="Domains" name="domains">
+                            <field name="st_domain_ids" nolabel="1">
+                                <tree string="DNS Domains">
+                                    <field name="name"/>
+                                    <field name="zone_id"/>
+                                    <field name="active" widget="boolean_toggle"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- System Type Search View -->
+    <record id="view_system_type_search" model="ir.ui.view">
+        <field name="name">system.type.search</field>
+        <field name="model">system.type</field>
+        <field name="arch" type="xml">
+            <search string="System Types">
+                <field name="st_name" string="Name" 
+                       filter_domain="['|', ('st_name', 'ilike', self), ('st_sequence', 'ilike', self)]"/>
+                <field name="st_description"/>
+                <field name="st_company_id" groups="base.group_multi_company"/>
+                
+                <separator/>
+                <filter string="Active" name="active" domain="[('st_active', '=', True)]" default="1"/>
+                <filter string="Archived" name="archived" domain="[('st_active', '=', False)]"/>
+                <separator/>
+                <filter string="With Environments" name="with_environments" 
+                        domain="[('st_environment_count', '>', 0)]"/>
+                <filter string="With Packages" name="with_packages" 
+                        domain="[('st_saas_package_count', '>', 0)]"/>
+                <filter string="With Stacks" name="with_stacks" 
+                        domain="[('st_stack_count', '>', 0)]"/>
+                <filter string="Email Notifications" name="email_notifications" 
+                        domain="[('st_send_email_on_stack_create', '=', True)]"/>
+                
+                <group expand="0" string="Group By">
+                    <filter string="Company" name="group_company" 
+                            domain="[]" context="{'group_by': 'st_company_id'}" 
+                            groups="base.group_multi_company"/>
+                    <filter string="Status" name="group_status" 
+                            domain="[]" context="{'group_by': 'st_active'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- System Type Kanban View -->
+    <record id="view_system_type_kanban" model="ir.ui.view">
+        <field name="name">system.type.kanban</field>
+        <field name="model">system.type</field>
+        <field name="arch" type="xml">
+            <kanban string="System Types" default_group_by="st_active">
+                <field name="st_sequence"/>
+                <field name="st_name"/>
+                <field name="st_description"/>
+                <field name="st_environment_count"/>
+                <field name="st_stack_count"/>
+                <field name="st_saas_package_count"/>
+                <field name="st_active"/>
+                <field name="st_send_email_on_stack_create"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click">
+                            <div class="oe_kanban_content">
+                                <div class="o_kanban_record_top">
+                                    <div class="o_kanban_record_headings">
+                                        <strong class="o_kanban_record_title">
+                                            <field name="st_name"/>
+                                        </strong>
+                                        <small class="text-muted">
+                                            <field name="st_sequence"/>
+                                        </small>
+                                    </div>
+                                    <div class="o_kanban_record_top_right">
+                                        <div class="o_kanban_record_top_right">
+                                            <span t-if="record.st_send_email_on_stack_create.raw_value" 
+                                                  class="fa fa-envelope text-primary" 
+                                                  title="Email notifications enabled"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_body">
+                                    <div t-if="record.st_description.raw_value" class="text-muted">
+                                        <field name="st_description"/>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_bottom">
+                                    <div class="oe_kanban_bottom_left">
+                                        <span class="badge badge-pill badge-info" 
+                                              t-if="record.st_environment_count.raw_value > 0">
+                                            <i class="fa fa-server"/> <t t-esc="record.st_environment_count.value"/> Env
+                                        </span>
+                                        <span class="badge badge-pill badge-success" 
+                                              t-if="record.st_saas_package_count.raw_value > 0">
+                                            <i class="fa fa-cube"/> <t t-esc="record.st_saas_package_count.value"/> Pkg
+                                        </span>
+                                        <span class="badge badge-pill badge-warning" 
+                                              t-if="record.st_stack_count.raw_value > 0">
+                                            <i class="fa fa-layer-group"/> <t t-esc="record.st_stack_count.value"/> Stack
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- System Type Action -->
+    <record id="action_system_type" model="ir.actions.act_window">
+        <field name="name">System Types</field>
+        <field name="res_model">system.type</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="search_view_id" ref="view_system_type_search"/>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first System Type!
+            </p>
+            <p>
+                System Types help organize your SaaS environments and packages.<br/>
+                They provide a way to categorize different types of deployments
+                (e.g., Production, Development, Testing) and manage them effectively.
+            </p>
+        </field>
+    </record>
+
+</odoo>
