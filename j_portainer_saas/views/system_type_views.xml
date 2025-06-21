@@ -148,7 +148,7 @@
                 <filter string="With Packages" name="with_packages" 
                         domain="[('st_saas_package_ids', '!=', False)]"/>
                 <filter string="With Stacks" name="with_stacks" 
-                        domain="[('st_environment_ids.active_stack_count', '>', 0)]"/>
+                        domain="[('st_environment_ids.stack_count', '>', 0)]"/>
                 <filter string="Email Notifications" name="email_notifications" 
                         domain="[('st_send_email_on_stack_create', '=', True)]"/>
                 
