@@ -31,12 +31,19 @@
               action="action_saas_package"
               sequence="5"/>
 
+    <!-- System Types Menu Item -->
+    <menuitem id="menu_j_portainer_system_types"
+              name="System Types"
+              parent="menu_j_portainer_saas_configuration"
+              action="action_system_type"
+              sequence="10"/>
+
     <!-- Queue Job Menu Item -->
     <menuitem id="menu_j_portainer_queue_job"
               name="Queue Jobs"
               parent="menu_j_portainer_saas_configuration"
               action="queue_job.action_queue_job"
-              sequence="6"/>
+              sequence="20"/>
 
 
 

@@ -5,3 +5,5 @@ access_saas_package_user,saas.package.user,model_saas_package,base.group_user,1,
 access_saas_package_manager,saas.package.manager,model_saas_package,base.group_system,1,1,1,1
 access_saas_template_variable_user,saas.template.variable.user,model_saas_template_variable,base.group_user,1,0,0,0
 access_saas_template_variable_manager,saas.template.variable.manager,model_saas_template_variable,base.group_system,1,1,1,1
+access_system_type_user,system.type.user,model_system_type,base.group_user,1,0,0,0
+access_system_type_manager,system.type.manager,model_system_type,base.group_system,1,1,1,1
