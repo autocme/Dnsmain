@@ -99,11 +99,11 @@ class SystemType(models.Model):
     # DOMAIN MANAGEMENT
     # ========================================================================
     
-    st_domain_ids = fields.Many2many(
+    st_domain_id = fields.Many2one(
         'dns.domain',
-        string='Domains',
+        string='Domain',
         tracking=True,
-        help='DNS domains available for this system type deployments'
+        help='Primary DNS domain for this system type deployments'
     )
 
     # ========================================================================
