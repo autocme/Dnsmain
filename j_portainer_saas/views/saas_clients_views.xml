@@ -52,7 +52,7 @@
 
                 <header>
                     <field name="sc_status" widget="statusbar" statusbar_visible="draft,running,freezed,removed"/>
-                    <button name="action_deploy" 
+                    <button name="action_deploy_client"
                             type="object" 
                             string="Deploy" 
                             class="btn-primary"
