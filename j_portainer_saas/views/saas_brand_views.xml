@@ -49,6 +49,11 @@
                     </group>
                     
                     <group>
+                        <group name="brand_image" string="Brand Image">
+                            <field name="sb_brand_image" widget="image" class="oe_avatar"/>
+                        </group>
+                    </group>
+                    
                         <group name="urls" string="URLs">
                             <field name="sb_website"/>
                             <field name="sb_docs_website"/>
