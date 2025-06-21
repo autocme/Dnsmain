@@ -41,6 +41,8 @@ Dependencies:
         'j_portainer',
         'subscription_oca',
         'dns_base',
+        'web',
+        'queue_job',
     ],
     'data': [
         'data/sequences.xml',
