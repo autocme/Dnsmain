@@ -60,16 +60,15 @@
                     
                     <group>
                         <group name="basic_info">
-                            <field name="st_sequence" readonly="1"/>
+                            <field name="st_name" readonly="1"/>
                             <field name="st_domain_id"/>
+                            <field name="st_company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group name="status_info">
                             <field name="st_brand_id" 
                                    options="{'no_create': True}"
                                    placeholder="Select brand..."/>
-                            <field name="st_company_id" groups="base.group_multi_company"/>
                             <field name="st_send_email_on_stack_create"/>
-                        </group>
-                        <group name="status_info">
-                            <field name="st_active"/>
                         </group>
                     </group>
                     
