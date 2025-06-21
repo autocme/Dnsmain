@@ -395,11 +395,14 @@ class PortainerStack(models.Model):
                 # This ensures we don't have orphaned references
                 if self.container_ids:
                     self.container_ids.write({'stack_id': False})
-                
+
+                # Sync resources after successful delete
+                self.action_sync_stack_resources()
+
                 # Now delete the record
                 self.unlink()
                 self.env.cr.commit()
-                
+
                 return message
             else:
                 # If Portainer deletion returned an unexpected result, don't delete from Odoo
@@ -575,6 +578,7 @@ class PortainerStack(models.Model):
                 # server.sync_volumes(environment.environment_id)
                 # server.sync_networks(environment.environment_id)
                 # server.sync_containers(environment.environment_id)
+                self.action_sync_stack_resources()
                 
                 _logger.info(f"Stack '{self.name}' created successfully in Portainer with ID {self.stack_id}")
                 
@@ -696,8 +700,16 @@ class PortainerStack(models.Model):
                     self.write(update_vals)
                 
                 # Sync resources after successful update
+
                 self.action_sync_stack_resources()
                 
+
+                # server.sync_stacks(environment.environment_id)
+                # server.sync_volumes(environment.environment_id)
+                # server.sync_networks(environment.environment_id)
+                # server.sync_containers(environment.environment_id)
+                self.action_sync_stack_resources()
+
                 _logger.info(f"Stack '{self.name}' re-deployed successfully in Portainer")
                 
                 # Return success notification
