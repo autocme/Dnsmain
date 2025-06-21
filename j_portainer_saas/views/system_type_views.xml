@@ -69,6 +69,7 @@
                                    options="{'no_create': True}"
                                    placeholder="Select brand..."/>
                             <field name="st_send_email_on_stack_create"/>
+                            <field name="st_active" invisible="1"/>
                         </group>
                     </group>
                     
