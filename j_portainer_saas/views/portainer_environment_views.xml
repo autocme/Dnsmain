@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inherit Portainer Environment Tree View -->
+    <record id="view_portainer_environment_tree_inherit" model="ir.ui.view">
+        <field name="name">j_portainer.environment.tree.inherit</field>
+        <field name="model">j_portainer.environment</field>
+        <field name="inherit_id" ref="j_portainer.view_portainer_environment_tree"/>
+        <field name="arch" type="xml">
+            <field name="name" position="after">
+                <field name="system_type_id" optional="show"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Inherit Portainer Environment Form View -->
+    <record id="view_portainer_environment_form_inherit" model="ir.ui.view">
+        <field name="name">j_portainer.environment.form.inherit</field>
+        <field name="model">j_portainer.environment</field>
+        <field name="inherit_id" ref="j_portainer.view_portainer_environment_form"/>
+        <field name="arch" type="xml">
+            <field name="server_id" position="after">
+                <field name="system_type_id" 
+                       options="{'no_create': True}"
+                       placeholder="Select system type..."/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Inherit Portainer Environment Search View -->
+    <record id="view_portainer_environment_search_inherit" model="ir.ui.view">
+        <field name="name">j_portainer.environment.search.inherit</field>
+        <field name="model">j_portainer.environment</field>
+        <field name="inherit_id" ref="j_portainer.view_portainer_environment_search"/>
+        <field name="arch" type="xml">
+            <field name="server_id" position="after">
+                <field name="system_type_id"/>
+            </field>
+            <group expand="0" string="Group By" position="inside">
+                <filter string="System Type" name="group_system_type" 
+                        context="{'group_by': 'system_type_id'}"/>
+            </group>
+        </field>
+    </record>
+</odoo>

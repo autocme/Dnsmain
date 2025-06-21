@@ -51,6 +51,7 @@ Dependencies:
         'views/saas_package_views.xml',
         'views/saas_clients_views.xml',
         'views/system_type_views.xml',
+        'views/portainer_environment_views.xml',
         'views/menu_views.xml',
     ],
     'demo': [],
