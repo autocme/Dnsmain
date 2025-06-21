@@ -414,7 +414,7 @@ class SaasClient(models.Model):
             
         # Check if already deployed
         if self.sc_portainer_template_id:
-            raise UserError(_('Client is already deployed. Template: %s') % self.sc_portainer_template_id.name)
+            raise UserError(_('Client is already deployed. Template: %s') % self.sc_portainer_template_id.title)
         
         # Get server and environment (use single ones or raise error for multiple)
         server = self._get_deployment_server()
@@ -477,9 +477,9 @@ class SaasClient(models.Model):
                         'tag': 'display_notification',
                         'params': {
                             'title': _('Deployment Successful'),
-                            'message': _('SaaS client %s has been deployed to Portainer successfully. Stack: %s') % (self.sc_sequence, stack.name),
+                            'message': _('SaaS client %s has been deployed to Portainer successfully. Stack: %s, just sync the deployment stack resources to get the full details') % (self.sc_sequence, stack.name),
                             'type': 'success',
-                            'sticky': False,
+                            'sticky': True,
                         }
                     }
                 else:
