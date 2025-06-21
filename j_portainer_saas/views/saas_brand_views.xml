@@ -48,14 +48,21 @@
                         </group>
                     </group>
                     
-                    <group>
-                        <group name="urls" string="URLs">
-                            <field name="sb_website"/>
-                            <field name="sb_docs_website"/>
-                            <field name="sb_favicon_url"/>
-                            <field name="sb_brand_logo_link"/>
-                        </group>
-                    </group>
+                    <notebook>
+                        <page name="urls" string="URLs">
+                            <group>
+                                <group>
+                                    <field name="sb_website"/>
+                                    <field name="sb_docs_website"/>
+                                </group>
+                                <group>
+                                    <field name="sb_favicon_url"/>
+                                    <field name="sb_brand_logo_link"/>
+                                </group>
+                            </group>
+                        </page>
+
+                    </notebook>
                 </sheet>
                 <div class="oe_chatter">
                     <field name="message_follower_ids"/>
