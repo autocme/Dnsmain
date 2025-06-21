@@ -18,7 +18,7 @@
         <field name="model">j_portainer.environment</field>
         <field name="inherit_id" ref="j_portainer.view_portainer_environment_form"/>
         <field name="arch" type="xml">
-            <field name="server_id" position="after">
+            <field name="active" position="after">
                 <field name="system_type_id" 
                        options="{'no_create': True}"
                        placeholder="Select system type..."/>
