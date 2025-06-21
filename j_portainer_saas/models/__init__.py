@@ -3,6 +3,7 @@
 
 from . import saas_clients
 from . import saas_package
+from . import saas_brand
 from . import system_type
 from . import sale_subscription_template
 from . import product_template

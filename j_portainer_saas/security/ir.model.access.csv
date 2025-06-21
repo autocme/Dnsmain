@@ -7,3 +7,5 @@ access_saas_template_variable_user,saas.template.variable.user,model_saas_templa
 access_saas_template_variable_manager,saas.template.variable.manager,model_saas_template_variable,base.group_system,1,1,1,1
 access_system_type_user,system.type.user,model_system_type,base.group_user,1,0,0,0
 access_system_type_manager,system.type.manager,model_system_type,base.group_system,1,1,1,1
+access_saas_brand_user,saas.brand.user,model_saas_brand,base.group_user,1,0,0,0
+access_saas_brand_manager,saas.brand.manager,model_saas_brand,base.group_system,1,1,1,1
