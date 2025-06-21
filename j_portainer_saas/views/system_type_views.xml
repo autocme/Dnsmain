@@ -78,7 +78,7 @@
                     <notebook>
                         <page string="Description" name="description">
                             <group>
-                                <field name="st_description" nolabel="1" 
+                                <field name="st_description" 
                                        placeholder="Describe the purpose and usage of this system type..."/>
                             </group>
                         </page>
