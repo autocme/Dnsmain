@@ -5,8 +5,7 @@
         <field name="name">saas.brand.tree</field>
         <field name="model">saas.brand</field>
         <field name="arch" type="xml">
-            <tree string="SaaS Brands" default_order="sb_sequence, sb_name">
-                <field name="sb_sequence" optional="show"/>
+            <tree string="SaaS Brands" default_order="sb_name">
                 <field name="sb_name"/>
                 <field name="sb_title" optional="show"/>
                 <field name="sb_website" optional="hide"/>
