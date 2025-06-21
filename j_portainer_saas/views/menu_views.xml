@@ -38,6 +38,13 @@
               action="action_system_type"
               sequence="10"/>
 
+    <!-- SaaS Brands Menu Item -->
+    <menuitem id="menu_j_portainer_saas_brands"
+              name="SaaS Brands"
+              parent="menu_j_portainer_saas_configuration"
+              action="action_saas_brand"
+              sequence="15"/>
+
     <!-- Queue Job Menu Item -->
     <menuitem id="menu_j_portainer_queue_job"
               name="Queue Jobs"

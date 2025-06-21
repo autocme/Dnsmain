@@ -32,5 +32,15 @@
             <field name="padding">5</field>
         </record>
 
+        <!-- ========================================================================== -->
+        <!--                           BRAND SEQUENCE                                 -->
+        <!-- ========================================================================== -->
+        <record id="seq_saas_brand" model="ir.sequence">
+            <field name="name">SaaS Brand Sequence</field>
+            <field name="code">saas.brand</field>
+            <field name="prefix">BR</field>
+            <field name="padding">5</field>
+        </record>
+
     </data>
 </odoo>

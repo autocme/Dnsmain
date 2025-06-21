@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- SaaS Brand Tree View -->
+    <record id="view_saas_brand_tree" model="ir.ui.view">
+        <field name="name">saas.brand.tree</field>
+        <field name="model">saas.brand</field>
+        <field name="arch" type="xml">
+            <tree string="SaaS Brands" default_order="sb_sequence, sb_name">
+                <field name="sb_sequence" optional="show"/>
+                <field name="sb_name"/>
+                <field name="sb_title" optional="show"/>
+                <field name="sb_system_type_id" optional="show"/>
+                <field name="sb_website" optional="hide"/>
+                <field name="sb_company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="sb_active" widget="boolean_toggle" optional="show"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- SaaS Brand Form View -->
+    <record id="view_saas_brand_form" model="ir.ui.view">
+        <field name="name">saas.brand.form</field>
+        <field name="model">saas.brand</field>
+        <field name="arch" type="xml">
+            <form string="SaaS Brand">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="sb_name" class="oe_edit_only"/>
+                        <h1><field name="sb_name" placeholder="e.g., obill"/></h1>
+                    </div>
+                    
+                    <group>
+                        <group name="basic_info">
+                            <field name="sb_sequence" readonly="1"/>
+                            <field name="sb_title"/>
+                            <field name="sb_default_logo_module"/>
+                            <field name="sb_system_type_id" 
+                                   options="{'no_create': True}"
+                                   placeholder="Select system type..."/>
+                            <field name="sb_company_id" groups="base.group_multi_company"/>
+                            <field name="sb_active"/>
+                        </group>
+                        <group name="branding_info">
+                            <field name="sb_brand_slogan"/>
+                            <field name="sb_primary_color"/>
+                            <field name="sb_secondary_color"/>
+                            <field name="sb_warranty"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <group name="urls" string="URLs">
+                            <field name="sb_website"/>
+                            <field name="sb_docs_website"/>
+                            <field name="sb_favicon_url"/>
+                            <field name="sb_brand_logo_link"/>
+                        </group>
+                    </group>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- SaaS Brand Search View -->
+    <record id="view_saas_brand_search" model="ir.ui.view">
+        <field name="name">saas.brand.search</field>
+        <field name="model">saas.brand</field>
+        <field name="arch" type="xml">
+            <search string="SaaS Brands">
+                <field name="sb_name"/>
+                <field name="sb_title"/>
+                <field name="sb_system_type_id"/>
+                <field name="sb_company_id" groups="base.group_multi_company"/>
+                
+                <separator/>
+                <filter string="Active" name="active" domain="[('sb_active', '=', True)]"/>
+                <filter string="Archived" name="archived" domain="[('sb_active', '=', False)]"/>
+                <separator/>
+                <filter string="With Warranty" name="with_warranty" 
+                        domain="[('sb_warranty', '=', True)]"/>
+                
+                <group expand="0" string="Group By">
+                    <filter string="System Type" name="group_system_type" 
+                            context="{'group_by': 'sb_system_type_id'}"/>
+                    <filter string="Company" name="group_company" 
+                            context="{'group_by': 'sb_company_id'}" 
+                            groups="base.group_multi_company"/>
+                    <filter string="Status" name="group_status" 
+                            context="{'group_by': 'sb_active'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- SaaS Brand Action -->
+    <record id="action_saas_brand" model="ir.actions.act_window">
+        <field name="name">SaaS Brands</field>
+        <field name="res_model">saas.brand</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_saas_brand_search"/>
+        <field name="context">{'search_default_active': True}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first SaaS Brand!
+            </p>
+            <p>
+                SaaS Brands define the visual identity and branding for your SaaS deployments.<br/>
+                Configure logos, colors, websites, and other branding elements here.
+            </p>
+        </field>
+    </record>
+
+</odoo>
