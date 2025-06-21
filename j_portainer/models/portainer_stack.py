@@ -15,7 +15,7 @@ class PortainerStack(models.Model):
     _order = 'name'
     
     name = fields.Char('Name', required=True)
-    stack_id = fields.Integer('Stack ID', required=True, copy=False)
+    stack_id = fields.Integer('Stack ID', required=False, copy=False)
     type = fields.Selection([
         ('1', 'Swarm'),
         ('2', 'Compose')
@@ -182,9 +182,9 @@ class PortainerStack(models.Model):
 
         # Auto-create in Portainer using the separated method
         # If this fails, it will raise UserError and prevent record creation
-        result = record.create_stack()
+        record.create_stack_in_portainer()
 
-        # If create_stack returns a notification action, we still return the record
+        # If create_stack_in_portainer returns a notification action, we still return the record
         # The notification will be handled by the calling method
         return record
     
@@ -457,9 +457,28 @@ class PortainerStack(models.Model):
             }
         }
 
-    
-    @api.model
-    def create_stack(self):
+
+    def action_sync_stack_resources(self):
+        try:
+            self.server_id.sync_volumes(self.environment_id.environment_id)
+            self.server_id.sync_networks(self.environment_id.environment_id)
+            self.server_id.sync_containers(self.environment_id.environment_id)
+
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Stack Resources Synchronized'),
+                    'message': _('All resources for stack %s have been synchronized') % self.name,
+                    'sticky': False,
+                    'type': 'success',
+                }
+            }
+        except Exception as e:
+            _logger.error(f"Error syncing environment {self.name}: {str(e)}")
+            raise UserError(_("Error syncing environment: %s") % str(e))
+    # @api.model
+    def create_stack_in_portainer(self):
         """Create this stack in Portainer
         
         Raises:
@@ -552,10 +571,10 @@ class PortainerStack(models.Model):
                 self.write(update_vals)
                 
                 # Refresh stacks and containers to ensure everything is in sync
-                server.sync_stacks(environment.environment_id)
-                server.sync_volumes(environment.environment_id)
-                server.sync_networks(environment.environment_id)
-                server.sync_containers(environment.environment_id)
+                # server.sync_stacks(environment.environment_id)
+                # server.sync_volumes(environment.environment_id)
+                # server.sync_networks(environment.environment_id)
+                # server.sync_containers(environment.environment_id)
                 
                 _logger.info(f"Stack '{self.name}' created successfully in Portainer with ID {self.stack_id}")
                 
