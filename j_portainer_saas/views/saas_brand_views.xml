@@ -23,6 +23,8 @@
         <field name="arch" type="xml">
             <form string="SaaS Brand">
                 <sheet>
+                    <field name="sb_brand_image" widget="image" class="oe_avatar" 
+                           options="{'preview_image': 'sb_brand_image', 'size': [90, 90]}"/>
                     <div class="oe_title">
                         <label for="sb_name" class="oe_edit_only"/>
                         <h1><field name="sb_name" placeholder="e.g., obill"/></h1>
@@ -41,12 +43,6 @@
                             <field name="sb_primary_color"/>
                             <field name="sb_secondary_color"/>
                             <field name="sb_warranty"/>
-                        </group>
-                    </group>
-                    
-                    <group>
-                        <group name="brand_image" string="Brand Image">
-                            <field name="sb_brand_image" widget="image" class="oe_avatar"/>
                         </group>
                     </group>
                     
