@@ -9,6 +9,7 @@
                 <field name="st_sequence" optional="show"/>
                 <field name="st_name"/>
                 <field name="st_description" optional="hide"/>
+                <field name="st_domain_id" optional="show"/>
                 <field name="st_environment_count" string="Environments"/>
                 <field name="st_stack_count" string="Stacks"/>
                 <field name="st_saas_package_count" string="Packages"/>
@@ -65,6 +66,7 @@
                     <group>
                         <group name="basic_info">
                             <field name="st_sequence" readonly="1"/>
+                            <field name="st_domain_id"/>
                             <field name="st_company_id" groups="base.group_multi_company"/>
                             <field name="st_send_email_on_stack_create"/>
                         </group>
@@ -107,13 +109,10 @@
                             </field>
                         </page>
                         
-                        <page string="Domains" name="domains">
-                            <field name="st_domain_ids" nolabel="1">
-                                <tree string="DNS Domains">
-                                    <field name="name"/>
-                                    <field name="active" widget="boolean_toggle"/>
-                                </tree>
-                            </field>
+                        <page string="Domain" name="domain">
+                            <group>
+                                <field name="st_domain_id"/>
+                            </group>
                         </page>
                     </notebook>
                 </sheet>
