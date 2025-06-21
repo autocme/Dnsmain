@@ -134,28 +134,24 @@
         <field name="model">system.type</field>
         <field name="arch" type="xml">
             <search string="System Types">
-                <field name="st_name" string="Name" 
-                       filter_domain="['|', ('st_name', 'ilike', self), ('st_sequence', 'ilike', self)]"/>
+                <field name="st_name"/>
+                <field name="st_sequence"/>
                 <field name="st_description"/>
                 <field name="st_company_id" groups="base.group_multi_company"/>
                 
                 <separator/>
-                <filter string="Active" name="active" domain="[('st_active', '=', True)]" default="1"/>
+                <filter string="Active" name="active" domain="[('st_active', '=', True)]"/>
                 <filter string="Archived" name="archived" domain="[('st_active', '=', False)]"/>
                 <separator/>
-                <filter string="With Environments" name="with_environments" 
-                        domain="[('st_environment_ids', '!=', False)]"/>
-                <filter string="With Packages" name="with_packages" 
-                        domain="[('st_saas_package_ids', '!=', False)]"/>
                 <filter string="Email Notifications" name="email_notifications" 
                         domain="[('st_send_email_on_stack_create', '=', True)]"/>
                 
                 <group expand="0" string="Group By">
                     <filter string="Company" name="group_company" 
-                            domain="[]" context="{'group_by': 'st_company_id'}" 
+                            context="{'group_by': 'st_company_id'}" 
                             groups="base.group_multi_company"/>
                     <filter string="Status" name="group_status" 
-                            domain="[]" context="{'group_by': 'st_active'}"/>
+                            context="{'group_by': 'st_active'}"/>
                 </group>
             </search>
         </field>
@@ -231,7 +227,7 @@
         <field name="res_model">system.type</field>
         <field name="view_mode">kanban,tree,form</field>
         <field name="search_view_id" ref="view_system_type_search"/>
-        <field name="context">{'search_default_active': 1}</field>
+        <field name="context">{'search_default_active': True}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Create your first System Type!
