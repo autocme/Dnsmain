@@ -94,6 +94,13 @@
                                 </tree>
                             </field>
                         </page>
+                        <page string="Request Details" name="request_details">
+                            <group>
+                                <field name="gss_last_request_details" readonly="1" 
+                                       widget="text" nolabel="1"
+                                       placeholder="API request and response details will appear here..."/>
+                            </group>
+                        </page>
                     </notebook>
                 </sheet>
                 <div class="oe_chatter">

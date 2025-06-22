@@ -125,6 +125,12 @@ class GitHubSyncServer(models.Model):
         tracking=True,
         help='Enable demo mode to test functionality without external server'
     )
+    
+    gss_last_request_details = fields.Text(
+        string='Last Request Details',
+        readonly=True,
+        help='Details of the last API request and response'
+    )
 
     # ========================================================================
     # COMPUTED FIELDS
@@ -183,7 +189,9 @@ class GitHubSyncServer(models.Model):
         
         # Demo mode simulation
         if self.gss_demo_mode:
-            return self._simulate_api_response(method, endpoint)
+            result = self._simulate_api_response(method, endpoint)
+            self._log_request_details(method, endpoint, data, result, demo_mode=True)
+            return result
         
         url = self._get_api_url(endpoint)
         headers = self._get_headers()
@@ -202,29 +210,65 @@ class GitHubSyncServer(models.Model):
             )
             
             if response.status_code == 200:
-                return response.json()
+                result = response.json()
+                self._log_request_details(method, endpoint, data, result, response_code=response.status_code)
+                return result
             elif response.status_code in [401, 403]:
+                self._log_request_details(method, endpoint, data, None, response_code=response.status_code, error='Authentication failed')
                 raise UserError(_('Authentication failed. Please check your API key.'))
             elif response.status_code == 404:
+                self._log_request_details(method, endpoint, data, None, response_code=response.status_code, error='Endpoint not found')
                 raise UserError(_('Endpoint not found: %s') % endpoint)
             else:
                 response.raise_for_status()
                 
-        except requests.exceptions.ConnectTimeout:
+        except requests.exceptions.ConnectTimeout as e:
+            self._log_request_details(method, endpoint, data, None, error=str(e))
             raise UserError(_('Connection timeout. The server at %s is not responding within 10 seconds. Try enabling Demo Mode for testing.') % self.gss_server_url)
         except requests.exceptions.ConnectionError as e:
+            self._log_request_details(method, endpoint, data, None, error=str(e))
             if 'Name or service not known' in str(e):
                 raise UserError(_('Cannot resolve hostname. Please check the server URL: %s. Try enabling Demo Mode for testing.') % self.gss_server_url)
             elif 'Connection refused' in str(e):
                 raise UserError(_('Connection refused. The server might be offline: %s. Try enabling Demo Mode for testing.') % self.gss_server_url)
             else:
                 raise UserError(_('Connection failed: %s. Try enabling Demo Mode for testing.') % str(e))
-        except requests.exceptions.Timeout:
+        except requests.exceptions.Timeout as e:
+            self._log_request_details(method, endpoint, data, None, error=str(e))
             raise UserError(_('Request timeout. Try enabling Demo Mode for testing.'))
         except requests.exceptions.RequestException as e:
+            self._log_request_details(method, endpoint, data, None, error=str(e))
             raise UserError(_('Request failed: %s. Try enabling Demo Mode for testing.') % str(e))
         
         return None
+    
+    def _log_request_details(self, method, endpoint, request_data, response_data, response_code=None, error=None, demo_mode=False):
+        """Log request and response details."""
+        details = {
+            'timestamp': fields.Datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'method': method,
+            'endpoint': endpoint,
+            'demo_mode': demo_mode
+        }
+        
+        if demo_mode:
+            details['url'] = f"DEMO MODE - {endpoint}"
+        else:
+            details['url'] = self._get_api_url(endpoint)
+            
+        if request_data:
+            details['request_data'] = request_data
+            
+        if response_code:
+            details['response_code'] = response_code
+            
+        if response_data:
+            details['response_data'] = response_data
+            
+        if error:
+            details['error'] = error
+            
+        self.write({'gss_last_request_details': json.dumps(details, indent=2)})
     
     def _simulate_api_response(self, method, endpoint):
         """Simulate API responses for demo mode."""
@@ -415,10 +459,30 @@ class GitHubSyncServer(models.Model):
             ('gsl_server_id', '=', self.id)
         ], limit=1)
         
+        # Parse timestamp properly
+        timestamp_str = log_data.get('timestamp')
+        if timestamp_str:
+            try:
+                # Handle ISO format with or without timezone
+                if 'T' in timestamp_str:
+                    # Remove timezone info if present
+                    if '+' in timestamp_str:
+                        timestamp_str = timestamp_str.split('+')[0]
+                    elif 'Z' in timestamp_str:
+                        timestamp_str = timestamp_str.replace('Z', '')
+                    # Convert ISO format to Odoo datetime format
+                    timestamp = datetime.strptime(timestamp_str, '%Y-%m-%dT%H:%M:%S')
+                else:
+                    timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+            except (ValueError, TypeError):
+                timestamp = fields.Datetime.now()
+        else:
+            timestamp = fields.Datetime.now()
+        
         vals = {
             'gsl_external_id': external_id,
             'gsl_server_id': self.id,
-            'gsl_timestamp': log_data.get('timestamp', fields.Datetime.now()),
+            'gsl_timestamp': timestamp,
             'gsl_level': log_data.get('level', 'info'),
             'gsl_message': log_data.get('message', ''),
             'gsl_operation': log_data.get('operation', ''),
