@@ -150,17 +150,7 @@ class GitHubRepository(models.Model):
             self.write({'gr_status': 'error'})
             raise UserError(_('Sync failed: %s') % str(e))
     
-    def action_edit_repository(self):
-        """Open edit repository wizard."""
-        self.ensure_one()
-        return {
-            'type': 'ir.actions.act_window',
-            'name': _('Edit Repository'),
-            'res_model': 'github.repository.edit.wizard',
-            'view_mode': 'form',
-            'target': 'new',
-            'context': {'default_repository_id': self.id},
-        }
+
     
     def action_delete_repository(self):
         """Delete repository with confirmation."""

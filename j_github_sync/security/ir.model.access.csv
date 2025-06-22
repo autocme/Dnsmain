@@ -5,5 +5,3 @@ access_github_repository_user,github.repository.user,model_github_repository,bas
 access_github_repository_manager,github.repository.manager,model_github_repository,base.group_system,1,1,1,1
 access_github_sync_log_user,github.sync.log.user,model_github_sync_log,base.group_user,1,0,0,0
 access_github_sync_log_manager,github.sync.log.manager,model_github_sync_log,base.group_system,1,1,1,1
-access_github_repository_edit_wizard_user,github.repository.edit.wizard.user,model_github_repository_edit_wizard,base.group_user,1,1,1,1
-access_github_repository_edit_wizard_manager,github.repository.edit.wizard.manager,model_github_repository_edit_wizard,base.group_system,1,1,1,1

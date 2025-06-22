@@ -28,8 +28,6 @@
                 <header>
                     <button name="action_sync_repository" string="Sync" 
                             type="object" class="btn-primary"/>
-                    <button name="action_edit_repository" string="Edit" 
-                            type="object" class="btn-secondary"/>
                     <button name="action_delete_repository" string="Delete" 
                             type="object" class="btn-secondary"
                             confirm="Are you sure you want to delete this repository?"/>
@@ -46,16 +44,16 @@
                     
                     <group>
                         <group name="basic_info" string="Repository Information">
-                            <field name="gr_url" widget="url"/>
-                            <field name="gr_branch"/>
-                            <field name="gr_local_path"/>
-                            <field name="gr_last_pull"/>
+                            <field name="gr_url" widget="url" required="1"/>
+                            <field name="gr_branch" required="1"/>
+                            <field name="gr_local_path" required="1"/>
+                            <field name="gr_last_pull" readonly="1"/>
                         </group>
                         <group name="status_info" string="Status & Settings">
-                            <field name="gr_server_id"/>
+                            <field name="gr_server_id" readonly="1"/>
                             <field name="gr_active"/>
-                            <field name="gr_private"/>
-                            <field name="gr_company_id" groups="base.group_multi_company"/>
+                            <field name="gr_private" readonly="1"/>
+                            <field name="gr_company_id" groups="base.group_multi_company" readonly="1"/>
                         </group>
                     </group>
                     
