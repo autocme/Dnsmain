@@ -37,9 +37,7 @@ class GitHubSyncLog(models.Model):
     gsl_status = fields.Selection([
         ('success', 'Success'),
         ('error', 'Error'),
-        ('warning', 'Warning'),
-        ('pending', 'Pending'),
-        ('syncing', 'Syncing')
+        ('warning', 'Warning')
     ], string='Status', required=True,
        help='Status of the operation')
     

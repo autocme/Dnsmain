@@ -658,26 +658,26 @@ class GitHubSyncServer(models.Model):
         raw_status = log_data.get('status', '').lower().strip()
         _logger.info(f"Raw status from server: '{raw_status}'")
         
-        # Map server statuses to Odoo statuses
+        # Map server statuses to Odoo statuses (only success, error, warning)
         status_mapping = {
             'success': 'success',
             'error': 'error',
             'warning': 'warning', 
-            'pending': 'pending',
-            'syncing': 'syncing',
-            'in_progress': 'syncing',
-            'running': 'syncing',
-            'failed': 'error',
-            'completed': 'success',
-            'finished': 'success',
+            'pending': 'warning',      # Map pending to warning
+            'syncing': 'warning',      # Map syncing to warning
+            'in_progress': 'warning',  # Map in_progress to warning
+            'running': 'warning',      # Map running to warning
+            'failed': 'error',         # Map failed to error
+            'completed': 'success',    # Map completed to success
+            'finished': 'success',     # Map finished to success
         }
         
         status = status_mapping.get(raw_status, raw_status)
-        valid_statuses = ['success', 'error', 'warning', 'pending', 'syncing']
+        valid_statuses = ['success', 'error', 'warning']
         
         if status not in valid_statuses:
-            _logger.warning(f"Unknown status '{raw_status}', mapping to 'pending'")
-            status = 'pending'
+            _logger.warning(f"Unknown status '{raw_status}', mapping to 'warning'")
+            status = 'warning'
         
         _logger.info(f"Final status: '{status}'")
         

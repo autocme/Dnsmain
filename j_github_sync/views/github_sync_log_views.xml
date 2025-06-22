@@ -64,8 +64,6 @@
                 <filter string="Success" name="success" domain="[('gsl_status', '=', 'success')]"/>
                 <filter string="Error" name="error" domain="[('gsl_status', '=', 'error')]"/>
                 <filter string="Warning" name="warning" domain="[('gsl_status', '=', 'warning')]"/>
-                <filter string="Pending" name="pending" domain="[('gsl_status', '=', 'pending')]"/>
-                <filter string="In Progress" name="in_progress" domain="[('gsl_status', '=', 'in_progress')]"/>
                 <separator/>
                 <filter string="Pull" name="pull" domain="[('gsl_operation', '=', 'pull')]"/>
                 <filter string="Clone" name="clone" domain="[('gsl_operation', '=', 'clone')]"/>
