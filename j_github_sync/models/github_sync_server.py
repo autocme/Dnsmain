@@ -682,6 +682,9 @@ class GitHubSyncServer(models.Model):
         
         _logger.info(f"Final status: '{status}'")
         
+        # Store complete raw JSON response
+        raw_response = json.dumps(log_data, indent=2, ensure_ascii=False) if log_data else ''
+        
         vals = {
             'gsl_external_id': str(external_id),
             'gsl_server_id': self.id,
@@ -690,6 +693,7 @@ class GitHubSyncServer(models.Model):
             'gsl_status': status,
             'gsl_message': str(log_data.get('message', '')),
             'gsl_details': json.dumps(log_data.get('details', {}), indent=2) if log_data.get('details') else '',
+            'gsl_raw_response': raw_response,
         }
         
         # Add repository_id only if found

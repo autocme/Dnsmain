@@ -57,6 +57,11 @@ class GitHubSyncLog(models.Model):
         help='Additional details about the log entry in JSON format'
     )
     
+    gsl_raw_response = fields.Text(
+        string='Raw Response',
+        help='Complete raw JSON response from the GitHub Sync Server'
+    )
+    
     # ========================================================================
     # RELATIONSHIPS
     # ========================================================================
