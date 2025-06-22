@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Main Menu -->
+    <menuitem id="menu_j_github_sync_root"
+              name="GitHub Sync"
+              sequence="100"/>
+
+    <!-- GitHub Sync Servers Menu -->
+    <menuitem id="menu_j_github_sync_servers"
+              name="Sync Servers"
+              parent="menu_j_github_sync_root"
+              action="action_github_sync_server"
+              sequence="10"/>
+
+    <!-- GitHub Repositories Menu -->
+    <menuitem id="menu_j_github_repositories"
+              name="Repositories"
+              parent="menu_j_github_sync_root"
+              action="action_github_repository"
+              sequence="20"/>
+
+    <!-- GitHub Sync Logs Menu -->
+    <menuitem id="menu_j_github_sync_logs"
+              name="Sync Logs"
+              parent="menu_j_github_sync_root"
+              action="action_github_sync_log"
+              sequence="30"/>
+
+</odoo>

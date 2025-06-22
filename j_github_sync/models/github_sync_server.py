@@ -87,6 +87,12 @@ class GitHubSyncServer(models.Model):
         help='Number of repositories managed by this server'
     )
     
+    gss_log_count = fields.Integer(
+        string='Logs',
+        compute='_compute_log_count',
+        help='Number of logs for this server'
+    )
+    
     # ========================================================================
     # RELATIONSHIPS
     # ========================================================================
@@ -96,6 +102,13 @@ class GitHubSyncServer(models.Model):
         'gr_server_id',
         string='Repositories',
         help='Repositories managed by this server'
+    )
+    
+    gss_log_ids = fields.One2many(
+        'github.sync.log',
+        'gsl_server_id',
+        string='Logs',
+        help='Logs from this server'
     )
     
     gss_company_id = fields.Many2one(
@@ -115,6 +128,12 @@ class GitHubSyncServer(models.Model):
         """Compute the number of repositories."""
         for record in self:
             record.gss_repository_count = len(record.gss_repository_ids)
+    
+    @api.depends('gss_log_ids')
+    def _compute_log_count(self):
+        """Compute the number of logs."""
+        for record in self:
+            record.gss_log_count = len(record.gss_log_ids)
 
     # ========================================================================
     # CONSTRAINTS
@@ -265,6 +284,57 @@ class GitHubSyncServer(models.Model):
     # ACTION METHODS
     # ========================================================================
     
+    def sync_logs(self):
+        """Sync logs from the GitHub Sync Server."""
+        self.ensure_one()
+        try:
+            result = self._make_request('GET', 'logs')
+            if result and result.get('success'):
+                logs = result.get('data', [])
+                
+                for log_data in logs:
+                    self._create_or_update_log(log_data)
+                
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': _('Successfully synced %s logs') % len(logs),
+                        'type': 'success',
+                        'sticky': False,
+                    }
+                }
+            else:
+                raise UserError(_('Failed to sync logs: %s') % result.get('message', 'Unknown error'))
+                
+        except Exception as e:
+            raise
+    
+    def _create_or_update_log(self, log_data):
+        """Create or update log record."""
+        external_id = log_data.get('id')
+        if not external_id:
+            return
+        
+        log = self.env['github.sync.log'].search([
+            ('gsl_external_id', '=', external_id),
+            ('gsl_server_id', '=', self.id)
+        ], limit=1)
+        
+        vals = {
+            'gsl_external_id': external_id,
+            'gsl_server_id': self.id,
+            'gsl_timestamp': log_data.get('timestamp', fields.Datetime.now()),
+            'gsl_level': log_data.get('level', 'info'),
+            'gsl_message': log_data.get('message', ''),
+            'gsl_operation': log_data.get('operation', ''),
+        }
+        
+        if log:
+            log.write(vals)
+        else:
+            self.env['github.sync.log'].create(vals)
+    
     def action_view_repositories(self):
         """Open repositories view filtered by this server."""
         self.ensure_one()
@@ -275,5 +345,18 @@ class GitHubSyncServer(models.Model):
             'view_mode': 'tree,form',
             'domain': [('gr_server_id', '=', self.id)],
             'context': {'default_gr_server_id': self.id},
+            'target': 'current',
+        }
+    
+    def action_view_logs(self):
+        """Open logs view filtered by this server."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Logs - %s') % self.gss_name,
+            'res_model': 'github.sync.log',
+            'view_mode': 'tree,form',
+            'domain': [('gsl_server_id', '=', self.id)],
+            'context': {'default_gsl_server_id': self.id},
             'target': 'current',
         }

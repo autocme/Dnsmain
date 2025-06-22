@@ -45,6 +45,7 @@ Features:
         'security/ir.model.access.csv',
         'views/github_sync_server_views.xml',
         'views/github_repository_views.xml',
+        'views/github_sync_log_views.xml',
         'views/menu_views.xml',
     ],
     'demo': [],

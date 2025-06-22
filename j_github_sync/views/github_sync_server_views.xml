@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- GitHub Sync Server Tree View -->
+    <record id="view_github_sync_server_tree" model="ir.ui.view">
+        <field name="name">github.sync.server.tree</field>
+        <field name="model">github.sync.server</field>
+        <field name="arch" type="xml">
+            <tree string="GitHub Sync Servers" default_order="gss_name">
+                <field name="gss_name"/>
+                <field name="gss_server_url"/>
+                <field name="gss_server_status"/>
+                <field name="gss_repository_count" string="Repositories"/>
+                <field name="gss_log_count" string="Logs"/>
+                <field name="gss_last_sync"/>
+                <field name="gss_company_id" groups="base.group_multi_company"/>
+                <field name="gss_active" widget="boolean_toggle"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- GitHub Sync Server Form View -->
+    <record id="view_github_sync_server_form" model="ir.ui.view">
+        <field name="name">github.sync.server.form</field>
+        <field name="model">github.sync.server</field>
+        <field name="arch" type="xml">
+            <form string="GitHub Sync Server">
+                <header>
+                    <button name="test_connection" string="Test Connection" 
+                            type="object" class="btn-primary"/>
+                    <button name="sync_repositories" string="Sync Repositories" 
+                            type="object" class="btn-secondary"/>
+                    <button name="sync_logs" string="Sync Logs" 
+                            type="object" class="btn-secondary"/>
+                    <field name="gss_server_status" widget="statusbar" 
+                           statusbar_visible="unknown,online,offline,error"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="gss_name" class="oe_edit_only"/>
+                        <h1><field name="gss_name" placeholder="e.g., Production GitHub Sync"/></h1>
+                    </div>
+                    
+                    <group>
+                        <group name="connection_info" string="Connection">
+                            <field name="gss_server_url"/>
+                            <field name="gss_api_key" password="True"/>
+                        </group>
+                        <group name="status_info" string="Status">
+                            <field name="gss_active"/>
+                            <field name="gss_last_sync" readonly="1"/>
+                            <field name="gss_company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Repositories" name="repositories">
+                            <group>
+                                <group>
+                                    <field name="gss_repository_count" readonly="1"/>
+                                    <field name="gss_log_count" readonly="1"/>
+                                </group>
+                                <group>
+                                    <button name="action_view_repositories" 
+                                            string="View Repositories" 
+                                            type="object" 
+                                            class="btn-secondary"
+                                            attrs="{'invisible': [('gss_repository_count', '=', 0)]}"/>
+                                    <button name="action_view_logs" 
+                                            string="View Logs" 
+                                            type="object" 
+                                            class="btn-secondary"
+                                            attrs="{'invisible': [('gss_log_count', '=', 0)]}"/>
+                                </group>
+                            </group>
+                            <field name="gss_repository_ids" readonly="1">
+                                <tree>
+                                    <field name="gr_name"/>
+                                    <field name="gr_url"/>
+                                    <field name="gr_private"/>
+                                    <field name="gr_active"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- GitHub Sync Server Search View -->
+    <record id="view_github_sync_server_search" model="ir.ui.view">
+        <field name="name">github.sync.server.search</field>
+        <field name="model">github.sync.server</field>
+        <field name="arch" type="xml">
+            <search string="GitHub Sync Servers">
+                <field name="gss_name"/>
+                <field name="gss_server_url"/>
+                <field name="gss_company_id" groups="base.group_multi_company"/>
+                
+                <separator/>
+                <filter string="Active" name="active" domain="[('gss_active', '=', True)]"/>
+                <filter string="Inactive" name="inactive" domain="[('gss_active', '=', False)]"/>
+                <separator/>
+                <filter string="Online" name="online" domain="[('gss_server_status', '=', 'online')]"/>
+                <filter string="Offline" name="offline" domain="[('gss_server_status', '=', 'offline')]"/>
+                <filter string="Error" name="error" domain="[('gss_server_status', '=', 'error')]"/>
+                
+                <group expand="0" string="Group By">
+                    <filter string="Status" name="group_status" 
+                            context="{'group_by': 'gss_server_status'}"/>
+                    <filter string="Company" name="group_company" 
+                            context="{'group_by': 'gss_company_id'}" 
+                            groups="base.group_multi_company"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- GitHub Sync Server Action -->
+    <record id="action_github_sync_server" model="ir.actions.act_window">
+        <field name="name">GitHub Sync Servers</field>
+        <field name="res_model">github.sync.server</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_github_sync_server_search"/>
+        <field name="context">{'search_default_active': True}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first GitHub Sync Server!
+            </p>
+            <p>
+                GitHub Sync Servers allow you to connect to GitHub Sync Server APIs
+                for repository management and synchronization.
+            </p>
+        </field>
+    </record>
+
+</odoo>

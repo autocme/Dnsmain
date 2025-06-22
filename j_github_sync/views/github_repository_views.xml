@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- GitHub Repository Tree View -->
+    <record id="view_github_repository_tree" model="ir.ui.view">
+        <field name="name">github.repository.tree</field>
+        <field name="model">github.repository</field>
+        <field name="arch" type="xml">
+            <tree string="GitHub Repositories" default_order="gr_name">
+                <field name="gr_name"/>
+                <field name="gr_server_id"/>
+                <field name="gr_url"/>
+                <field name="gr_private"/>
+                <field name="gr_company_id" groups="base.group_multi_company"/>
+                <field name="gr_active" widget="boolean_toggle"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- GitHub Repository Form View -->
+    <record id="view_github_repository_form" model="ir.ui.view">
+        <field name="name">github.repository.form</field>
+        <field name="model">github.repository</field>
+        <field name="arch" type="xml">
+            <form string="GitHub Repository">
+                <header>
+                    <button name="sync_repository" string="Sync Repository" 
+                            type="object" class="btn-primary"/>
+                    <button name="action_open_repository" string="Open in GitHub" 
+                            type="object" class="btn-secondary"
+                            attrs="{'invisible': [('gr_url', '=', False)]}"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="gr_name" class="oe_edit_only"/>
+                        <h1><field name="gr_name" placeholder="Repository name"/></h1>
+                    </div>
+                    
+                    <group>
+                        <group name="basic_info" string="Basic Information">
+                            <field name="gr_external_id"/>
+                            <field name="gr_server_id"/>
+                            <field name="gr_url" widget="url"/>
+                            <field name="gr_private"/>
+                        </group>
+                        <group name="status_info" string="Status">
+                            <field name="gr_active"/>
+                            <field name="gr_company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <field name="gr_description" placeholder="Repository description..."/>
+                    </group>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- GitHub Repository Search View -->
+    <record id="view_github_repository_search" model="ir.ui.view">
+        <field name="name">github.repository.search</field>
+        <field name="model">github.repository</field>
+        <field name="arch" type="xml">
+            <search string="GitHub Repositories">
+                <field name="gr_name"/>
+                <field name="gr_server_id"/>
+                <field name="gr_url"/>
+                <field name="gr_company_id" groups="base.group_multi_company"/>
+                
+                <separator/>
+                <filter string="Active" name="active" domain="[('gr_active', '=', True)]"/>
+                <filter string="Inactive" name="inactive" domain="[('gr_active', '=', False)]"/>
+                <separator/>
+                <filter string="Private" name="private" domain="[('gr_private', '=', True)]"/>
+                <filter string="Public" name="public" domain="[('gr_private', '=', False)]"/>
+                
+                <group expand="0" string="Group By">
+                    <filter string="Server" name="group_server" 
+                            context="{'group_by': 'gr_server_id'}"/>
+                    <filter string="Privacy" name="group_private" 
+                            context="{'group_by': 'gr_private'}"/>
+                    <filter string="Company" name="group_company" 
+                            context="{'group_by': 'gr_company_id'}" 
+                            groups="base.group_multi_company"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- GitHub Repository Action -->
+    <record id="action_github_repository" model="ir.actions.act_window">
+        <field name="name">GitHub Repositories</field>
+        <field name="res_model">github.repository</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_github_repository_search"/>
+        <field name="context">{'search_default_active': True}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No repositories found!
+            </p>
+            <p>
+                Repositories will appear here after synchronization from GitHub Sync Servers.
+                Configure a GitHub Sync Server and run synchronization to see repositories.
+            </p>
+        </field>
+    </record>
+
+</odoo>

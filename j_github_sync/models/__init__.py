@@ -3,3 +3,4 @@
 
 from . import github_sync_server
 from . import github_repository
+from . import github_sync_log
