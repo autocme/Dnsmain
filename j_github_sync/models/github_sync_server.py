@@ -187,12 +187,6 @@ class GitHubSyncServer(models.Model):
         """Make HTTP request to the API."""
         self.ensure_one()
         
-        # Demo mode simulation
-        if self.gss_demo_mode:
-            result = self._simulate_api_response(method, endpoint)
-            self._log_request_details(method, endpoint, data, result, demo_mode=True)
-            return result
-        
         url = self._get_api_url(endpoint)
         headers = self._get_headers()
         
@@ -205,7 +199,7 @@ class GitHubSyncServer(models.Model):
                 headers=headers,
                 json=data,
                 params=params,
-                timeout=10,
+                timeout=30,
                 verify=False
             )
             
@@ -220,29 +214,35 @@ class GitHubSyncServer(models.Model):
                 self._log_request_details(method, endpoint, data, None, response_code=response.status_code, error='Endpoint not found')
                 raise UserError(_('Endpoint not found: %s') % endpoint)
             else:
-                response.raise_for_status()
+                try:
+                    error_data = response.json()
+                    error_message = error_data.get('message', f'HTTP {response.status_code}')
+                except:
+                    error_message = f'HTTP {response.status_code}: {response.text}'
+                self._log_request_details(method, endpoint, data, None, response_code=response.status_code, error=error_message)
+                raise UserError(_('API Error: %s') % error_message)
                 
         except requests.exceptions.ConnectTimeout as e:
             self._log_request_details(method, endpoint, data, None, error=str(e))
-            raise UserError(_('Connection timeout. The server at %s is not responding within 10 seconds. Try enabling Demo Mode for testing.') % self.gss_server_url)
+            raise UserError(_('Connection timeout. The server at %s is not responding within 30 seconds.') % self.gss_server_url)
         except requests.exceptions.ConnectionError as e:
             self._log_request_details(method, endpoint, data, None, error=str(e))
             if 'Name or service not known' in str(e):
-                raise UserError(_('Cannot resolve hostname. Please check the server URL: %s. Try enabling Demo Mode for testing.') % self.gss_server_url)
+                raise UserError(_('Cannot resolve hostname. Please check the server URL: %s') % self.gss_server_url)
             elif 'Connection refused' in str(e):
-                raise UserError(_('Connection refused. The server might be offline: %s. Try enabling Demo Mode for testing.') % self.gss_server_url)
+                raise UserError(_('Connection refused. The server might be offline: %s') % self.gss_server_url)
             else:
-                raise UserError(_('Connection failed: %s. Try enabling Demo Mode for testing.') % str(e))
+                raise UserError(_('Connection failed: %s') % str(e))
         except requests.exceptions.Timeout as e:
             self._log_request_details(method, endpoint, data, None, error=str(e))
-            raise UserError(_('Request timeout. Try enabling Demo Mode for testing.'))
+            raise UserError(_('Request timeout'))
         except requests.exceptions.RequestException as e:
             self._log_request_details(method, endpoint, data, None, error=str(e))
-            raise UserError(_('Request failed: %s. Try enabling Demo Mode for testing.') % str(e))
+            raise UserError(_('Request failed: %s') % str(e))
         
         return None
     
-    def _log_request_details(self, method, endpoint, request_data, response_data, response_code=None, error=None, demo_mode=False):
+    def _log_request_details(self, method, endpoint, request_data, response_data, response_code=None, error=None):
         """Log request and response details."""
         if response_data:
             # Store the raw response as-is
@@ -252,101 +252,12 @@ class GitHubSyncServer(models.Model):
             error_details = {
                 'error': error,
                 'endpoint': endpoint,
-                'method': method
+                'method': method,
+                'response_code': response_code
             }
             self.write({'gss_last_request_details': json.dumps(error_details, indent=2)})
     
-    def _simulate_api_response(self, method, endpoint):
-        """Simulate API responses for demo mode."""
-        import time
-        time.sleep(0.5)  # Simulate network delay
-        
-        if endpoint == 'status':
-            return {
-                'success': True,
-                'data': {
-                    'status': 'online',
-                    'version': '1.0.0',
-                    'uptime': '2 days'
-                },
-                'message': 'Server is running'
-            }
-        elif endpoint == 'repositories':
-            return {
-                'success': True,
-                'data': [
-                    {
-                        'id': 'demo_repo_1',
-                        'name': 'Dnsmain',
-                        'url': 'git@github.com:autocme/Dnsmain.git',
-                        'branch': 'main',
-                        'local_path': '/repos/Dnsmain',
-                        'status': 'success',
-                        'last_pull': '2025-06-22 07:50',
-                        'description': 'DNS management system',
-                        'private': False
-                    },
-                    {
-                        'id': 'demo_repo_2', 
-                        'name': 'server-backend',
-                        'url': 'https://github.com/OCA/server-backend.git',
-                        'branch': '17.0',
-                        'local_path': '/repos/server-backend',
-                        'status': 'success',
-                        'last_pull': '2025-06-22 00:07',
-                        'description': 'OCA server backend modules',
-                        'private': False
-                    }
-                ],
-                'message': 'Repositories retrieved successfully'
-            }
-        elif endpoint == 'logs':
-            from datetime import timedelta
-            return {
-                'success': True,
-                'data': [
-                    {
-                        'id': 'log_1',
-                        'timestamp': fields.Datetime.now().isoformat(),
-                        'operation': 'webhook',
-                        'status': 'success',
-                        'message': 'Successfully processed webhook for Dnsmain Repository: Dnsmain'
-                    },
-                    {
-                        'id': 'log_2',
-                        'timestamp': (fields.Datetime.now() - timedelta(minutes=5)).isoformat(),
-                        'operation': 'pull',
-                        'status': 'success',
-                        'message': 'Repository pulled successfully from main branch'
-                    },
-                    {
-                        'id': 'log_3',
-                        'timestamp': (fields.Datetime.now() - timedelta(minutes=10)).isoformat(),
-                        'operation': 'clone',
-                        'status': 'error',
-                        'message': 'Failed to clone repository: authentication failed'
-                    },
-                    {
-                        'id': 'log_4',
-                        'timestamp': (fields.Datetime.now() - timedelta(minutes=15)).isoformat(),
-                        'operation': 'restart',
-                        'status': 'warning',
-                        'message': 'Container restart requested due to configuration changes'
-                    }
-                ],
-                'message': 'Logs retrieved successfully'
-            }
-        elif endpoint.startswith('repositories/') and endpoint.endswith('/sync'):
-            return {
-                'success': True,
-                'data': {},
-                'message': 'Repository sync initiated successfully'
-            }
-        else:
-            return {
-                'success': False,
-                'message': f'Demo endpoint not implemented: {endpoint}'
-            }
+
     
     def test_connection(self):
         """Test connection to the GitHub Sync Server."""
@@ -412,6 +323,15 @@ class GitHubSyncServer(models.Model):
             ('gr_server_id', '=', self.id)
         ], limit=1)
         
+        # Parse last_pull timestamp
+        last_pull = None
+        if repo_data.get('last_pull'):
+            try:
+                last_pull = fields.Datetime.to_datetime(repo_data['last_pull'])
+            except:
+                # If parsing fails, leave as None
+                pass
+        
         vals = {
             'gr_name': repo_data.get('name', ''),
             'gr_external_id': external_id,
@@ -419,8 +339,8 @@ class GitHubSyncServer(models.Model):
             'gr_url': repo_data.get('url', ''),
             'gr_branch': repo_data.get('branch', 'main'),
             'gr_local_path': repo_data.get('local_path', f'/repos/{repo_data.get("name", "")}'),
-            'gr_status': repo_data.get('status', 'success'),
-            'gr_last_pull': repo_data.get('last_pull'),
+            'gr_status': repo_data.get('status', 'pending'),
+            'gr_last_pull': last_pull,
             'gr_description': repo_data.get('description', ''),
             'gr_private': repo_data.get('private', False),
         }

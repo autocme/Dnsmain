@@ -48,8 +48,8 @@
                         </group>
                         <group name="status_info" string="Status">
                             <field name="gss_active"/>
-                            <field name="gss_demo_mode"/>
                             <field name="gss_last_sync" readonly="1"/>
+                            <field name="gss_server_status" readonly="1"/>
                             <field name="gss_company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
@@ -60,8 +60,7 @@
                             <li>Ensure the GitHub Sync Server is running and accessible</li>
                             <li>Check if the server URL is correct (e.g., http://3.110.88.87:5000)</li>
                             <li>Verify your API key is valid</li>
-                            <li>Make sure port 5000 is not blocked by firewall</li>
-                            <li><strong>Enable Demo Mode</strong> to test functionality without external server</li>
+                            <li>Make sure the server port is not blocked by firewall</li>
                         </ul>
                     </div>
                     
