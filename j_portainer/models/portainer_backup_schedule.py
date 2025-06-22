@@ -30,10 +30,10 @@ class PortainerBackupSchedule(models.Model):
     total_backups = fields.Integer('Total Backups', compute='_compute_backup_stats')
     backup_size_total = fields.Float('Total Backup Size (MB)', compute='_compute_backup_stats')
     
-    _sql_constraints = [
-        ('unique_server_schedule', 'unique(server_id)', 'Each server can have only one backup schedule.'),
-        ('positive_schedule_days', 'check(schedule_days > 0)', 'Schedule days must be positive.'),
-    ]
+    # _sql_constraints = [
+    #     ('unique_server_schedule', 'unique(server_id)', 'Each server can have only one backup schedule.'),
+    #     ('positive_schedule_days', 'check(schedule_days > 0)', 'Schedule days must be positive.'),
+    # ]
     
     @api.depends('server_id', 'schedule_days')
     def _compute_display_name(self):
