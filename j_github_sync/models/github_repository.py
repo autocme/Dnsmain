@@ -128,23 +128,44 @@ class GitHubRepository(models.Model):
         try:
             self.write({'gr_status': 'syncing'})
             result = self.gr_server_id._make_request('POST', f'repositories/{self.gr_external_id}/sync')
-            if result and result.get('success'):
-                self.write({
-                    'gr_status': 'success',
-                    'gr_last_pull': fields.Datetime.now()
-                })
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'message': _('Repository synced successfully'),
-                        'type': 'success',
-                        'sticky': False,
+            
+            if result:
+                # Handle different response formats
+                success = False
+                message = 'Unknown response'
+                
+                if isinstance(result, dict):
+                    success = result.get('success', False)
+                    message = result.get('message', 'Repository sync completed')
+                elif isinstance(result, list):
+                    success = True
+                    message = 'Repository sync initiated'
+                else:
+                    success = True
+                    message = 'Repository sync response received'
+                
+                if success:
+                    # Update status to success and set current time as last_pull
+                    # Note: Actual last_pull time should come from next repository sync
+                    self.write({
+                        'gr_status': 'success',
+                        'gr_last_pull': fields.Datetime.now()
+                    })
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'message': _('Repository synced successfully'),
+                            'type': 'success',
+                            'sticky': False,
+                        }
                     }
-                }
+                else:
+                    self.write({'gr_status': 'error'})
+                    raise UserError(_('Failed to sync repository: %s') % message)
             else:
                 self.write({'gr_status': 'error'})
-                raise UserError(_('Failed to sync repository: %s') % result.get('message', 'Unknown error'))
+                raise UserError(_('No response from sync server'))
                 
         except Exception as e:
             self.write({'gr_status': 'error'})

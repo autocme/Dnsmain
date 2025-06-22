@@ -408,14 +408,78 @@ class GitHubSyncServer(models.Model):
             ('gr_server_id', '=', self.id)
         ], limit=1)
         
-        # Parse last_pull timestamp
+        # Parse last_pull timestamp properly - preserve actual server timestamp
         last_pull = None
-        if repo_data.get('last_pull'):
+        last_pull_str = repo_data.get('last_pull') or repo_data.get('last_sync') or repo_data.get('updated_at')
+        
+        if last_pull_str:
             try:
-                last_pull = fields.Datetime.to_datetime(repo_data['last_pull'])
-            except:
-                # If parsing fails, leave as None
-                pass
+                last_pull_str = str(last_pull_str).strip()
+                _logger.info(f"Parsing repository last_pull: '{last_pull_str}'")
+                
+                # Handle different timestamp formats from server
+                if 'T' in last_pull_str:
+                    # ISO format: 2025-06-22T07:50:00 or 2025-06-22T07:50:00Z
+                    if last_pull_str.endswith('Z'):
+                        last_pull_str = last_pull_str[:-1]
+                    if '+' in last_pull_str:
+                        last_pull_str = last_pull_str.split('+')[0]
+                    if '.' in last_pull_str:
+                        last_pull_str = last_pull_str.split('.')[0]
+                    last_pull = datetime.strptime(last_pull_str, '%Y-%m-%dT%H:%M:%S')
+                elif '-' in last_pull_str and ':' in last_pull_str:
+                    # Standard format: 2025-06-22 07:50 or 2025-06-22 07:50:00
+                    if '.' in last_pull_str:
+                        last_pull_str = last_pull_str.split('.')[0]
+                    if len(last_pull_str.split(':')) == 2:
+                        # Add seconds if missing: 2025-06-22 07:50
+                        last_pull_str += ':00'
+                    last_pull = datetime.strptime(last_pull_str, '%Y-%m-%d %H:%M:%S')
+                else:
+                    # Try other formats
+                    for fmt in ['%Y-%m-%d %H:%M', '%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M']:
+                        try:
+                            last_pull = datetime.strptime(last_pull_str, fmt)
+                            break
+                        except ValueError:
+                            continue
+                
+                if last_pull:
+                    _logger.info(f"Successfully parsed last_pull: {last_pull}")
+                    
+            except (ValueError, TypeError) as e:
+                _logger.error(f"Failed to parse last_pull timestamp '{last_pull_str}': {e}")
+                last_pull = None
+        
+        # Map and validate repository status - preserve actual server status
+        raw_status = repo_data.get('status', '').lower().strip()
+        _logger.info(f"Raw repository status from server: '{raw_status}'")
+        
+        # Map server statuses to Odoo repository statuses
+        status_mapping = {
+            'success': 'success',
+            'error': 'error',
+            'warning': 'warning',
+            'pending': 'pending',
+            'syncing': 'syncing',
+            'active': 'success',       # Map active to success
+            'healthy': 'success',      # Map healthy to success
+            'online': 'success',       # Map online to success
+            'ready': 'success',        # Map ready to success
+            'failed': 'error',         # Map failed to error
+            'offline': 'error',        # Map offline to error
+            'inactive': 'warning',     # Map inactive to warning
+            'disabled': 'warning',     # Map disabled to warning
+        }
+        
+        status = status_mapping.get(raw_status, raw_status)
+        valid_statuses = ['success', 'error', 'warning', 'pending', 'syncing']
+        
+        if status not in valid_statuses:
+            _logger.warning(f"Unknown repository status '{raw_status}', mapping to 'success'")
+            status = 'success'  # Default to success instead of pending for repositories
+        
+        _logger.info(f"Final repository status: '{status}'")
         
         vals = {
             'gr_name': repo_data.get('name', ''),
@@ -424,7 +488,7 @@ class GitHubSyncServer(models.Model):
             'gr_url': repo_data.get('url', ''),
             'gr_branch': repo_data.get('branch', 'main'),
             'gr_local_path': repo_data.get('local_path', f'/repos/{repo_data.get("name", "")}'),
-            'gr_status': repo_data.get('status', 'pending'),
+            'gr_status': status,
             'gr_last_pull': last_pull,
             'gr_description': repo_data.get('description', ''),
             'gr_private': repo_data.get('private', False),
