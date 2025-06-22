@@ -5,13 +5,13 @@
         <field name="name">github.sync.log.tree</field>
         <field name="model">github.sync.log</field>
         <field name="arch" type="xml">
-            <tree string="Operation Logs" default_order="gsl_timestamp desc">
-                <field name="gsl_timestamp" string="Time"/>
-                <field name="gsl_operation_type" string="Operation"/>
-                <field name="gsl_status" string="Status"/>
-                <field name="gsl_message" string="Message"/>
-                <field name="gsl_repository"/>
+            <tree string="GitHub Sync Logs" default_order="gsl_timestamp desc">
+                <field name="gsl_timestamp"/>
+                <field name="gsl_level"/>
+                <field name="gsl_operation"/>
+                <field name="gsl_message"/>
                 <field name="gsl_server_id"/>
+                <field name="gsl_company_id" groups="base.group_multi_company"/>
             </tree>
         </field>
     </record>
@@ -24,24 +24,20 @@
             <form string="GitHub Sync Log" create="false" edit="false">
                 <sheet>
                     <group>
-                        <group name="basic_info" string="Basic Information">
-                            <field name="gsl_external_id"/>
-                            <field name="gsl_server_id"/>
+                        <group name="basic_info" string="Log Information">
                             <field name="gsl_timestamp"/>
-                            <field name="gsl_repository"/>
-                        </group>
-                        <group name="log_info" string="Log Information">
                             <field name="gsl_level"/>
-                            <field name="gsl_status"/>
-                            <field name="gsl_operation_type"/>
                             <field name="gsl_operation"/>
+                            <field name="gsl_server_id"/>
+                        </group>
+                        <group name="system_info" string="System">
+                            <field name="gsl_external_id"/>
+                            <field name="gsl_company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
-                    <group name="message_info" string="Message">
-                        <field name="gsl_message" nolabel="1"/>
-                    </group>
-                    <group name="details_info" string="Details">
-                        <field name="gsl_details" nolabel="1"/>
+                    
+                    <group>
+                        <field name="gsl_message" readonly="1"/>
                     </group>
                 </sheet>
             </form>
@@ -53,33 +49,33 @@
         <field name="name">github.sync.log.search</field>
         <field name="model">github.sync.log</field>
         <field name="arch" type="xml">
-            <search string="Search GitHub Sync Logs">
-                <field name="gsl_server_id"/>
-                <field name="gsl_level"/>
-                <field name="gsl_status"/>
-                <field name="gsl_operation_type"/>
-                <field name="gsl_operation"/>
-                <field name="gsl_repository"/>
+            <search string="GitHub Sync Logs">
                 <field name="gsl_message"/>
+                <field name="gsl_operation"/>
+                <field name="gsl_server_id"/>
+                <field name="gsl_company_id" groups="base.group_multi_company"/>
                 
-                <!-- Operation Type Filters -->
-                <filter string="All Operations" name="filter_all_operations" domain="[]"/>
-                <filter string="Pull" name="filter_pull" domain="[('gsl_operation_type', '=', 'pull')]"/>
-                <filter string="Clone" name="filter_clone" domain="[('gsl_operation_type', '=', 'clone')]"/>
-                <filter string="Restart" name="filter_restart" domain="[('gsl_operation_type', '=', 'restart')]"/>
-                <filter string="Webhook" name="filter_webhook" domain="[('gsl_operation_type', '=', 'webhook')]"/>
-                
-                <!-- Status Filters -->
-                <filter string="All Status" name="filter_all_status" domain="[]"/>
-                <filter string="Success" name="filter_success" domain="[('gsl_status', '=', 'success')]"/>
-                <filter string="Error" name="filter_error" domain="[('gsl_status', '=', 'error')]"/>
-                <filter string="Warning" name="filter_warning" domain="[('gsl_status', '=', 'warning')]"/>
+                <separator/>
+                <filter string="Today" name="today" 
+                        domain="[('gsl_timestamp', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))), ('gsl_timestamp', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
+                <filter string="Last 7 Days" name="last_week" 
+                        domain="[('gsl_timestamp', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter string="Debug" name="debug" domain="[('gsl_level', '=', 'debug')]"/>
+                <filter string="Info" name="info" domain="[('gsl_level', '=', 'info')]"/>
+                <filter string="Warning" name="warning" domain="[('gsl_level', '=', 'warning')]"/>
+                <filter string="Error" name="error" domain="[('gsl_level', '=', 'error')]"/>
+                <filter string="Critical" name="critical" domain="[('gsl_level', '=', 'critical')]"/>
                 
                 <group expand="0" string="Group By">
-                    <filter string="Server" name="group_server" context="{'group_by': 'gsl_server_id'}"/>
-                    <filter string="Operation Type" name="group_operation_type" context="{'group_by': 'gsl_operation_type'}"/>
-                    <filter string="Status" name="group_status" context="{'group_by': 'gsl_status'}"/>
-                    <filter string="Repository" name="group_repository" context="{'group_by': 'gsl_repository'}"/>
+                    <filter string="Level" name="group_level" 
+                            context="{'group_by': 'gsl_level'}"/>
+                    <filter string="Operation" name="group_operation" 
+                            context="{'group_by': 'gsl_operation'}"/>
+                    <filter string="Server" name="group_server" 
+                            context="{'group_by': 'gsl_server_id'}"/>
+                    <filter string="Date" name="group_date" 
+                            context="{'group_by': 'gsl_timestamp:day'}"/>
                 </group>
             </search>
         </field>
@@ -87,10 +83,11 @@
 
     <!-- GitHub Sync Log Action -->
     <record id="action_github_sync_log" model="ir.actions.act_window">
-        <field name="name">Operation Logs</field>
+        <field name="name">GitHub Sync Logs</field>
         <field name="res_model">github.sync.log</field>
         <field name="view_mode">tree,form</field>
         <field name="search_view_id" ref="view_github_sync_log_search"/>
+        <field name="context">{'search_default_last_week': True}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 No logs found!

@@ -294,24 +294,24 @@ class GitHubSyncServer(models.Model):
             }
         elif endpoint == 'logs':
             from datetime import timedelta
-            # Generate 22 demo logs to match the expected count
-            logs = []
-            for i in range(1, 23):
-                logs.append({
-                    'id': f'log_{i}',
-                    'timestamp': (fields.Datetime.now() - timedelta(minutes=i*5)).isoformat(),
-                    'level': ['info', 'warning', 'error', 'debug'][i % 4],
-                    'status': ['success', 'warning', 'error', 'pending'][i % 4],
-                    'operation_type': ['webhook', 'pull', 'clone', 'restart', 'sync', 'deploy'][i % 6],
-                    'message': f'Operation {i}: Successfully processed webhook for Repository_{i % 5}',
-                    'operation': f'operation_{i}',
-                    'repository': f'Repository_{i % 5}',
-                    'details': f'Additional details for operation {i}'
-                })
-            
             return {
                 'success': True,
-                'data': logs,
+                'data': [
+                    {
+                        'id': 'log_1',
+                        'timestamp': fields.Datetime.now().isoformat(),
+                        'level': 'info',
+                        'message': 'Repository sync completed successfully',
+                        'operation': 'sync_repositories'
+                    },
+                    {
+                        'id': 'log_2',
+                        'timestamp': (fields.Datetime.now() - timedelta(minutes=5)).isoformat(),
+                        'level': 'warning',
+                        'message': 'Connection timeout during sync operation',
+                        'operation': 'sync_repositories'
+                    }
+                ],
                 'message': 'Logs retrieved successfully'
             }
         elif endpoint.startswith('repositories/') and endpoint.endswith('/sync'):
@@ -470,12 +470,8 @@ class GitHubSyncServer(models.Model):
             'gsl_server_id': self.id,
             'gsl_timestamp': timestamp,
             'gsl_level': log_data.get('level', 'info'),
-            'gsl_status': log_data.get('status', 'pending'),
-            'gsl_operation_type': log_data.get('operation_type', 'other'),
             'gsl_message': log_data.get('message', ''),
             'gsl_operation': log_data.get('operation', ''),
-            'gsl_repository': log_data.get('repository', ''),
-            'gsl_details': log_data.get('details', ''),
         }
         
         if log:
