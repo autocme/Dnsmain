@@ -60,7 +60,7 @@
                     
                     <group>
                         <group name="basic_info">
-                            <field name="st_name" readonly="1"/>
+                            <field name="st_name"/>
                             <field name="st_domain_id"/>
                             <field name="st_company_id" groups="base.group_multi_company"/>
                         </group>
