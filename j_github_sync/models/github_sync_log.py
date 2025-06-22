@@ -54,6 +54,11 @@ class GitHubSyncLog(models.Model):
         help='External log ID from GitHub Sync Server'
     )
     
+    gsl_details = fields.Text(
+        string='Details',
+        help='Additional details about the log entry in JSON format'
+    )
+    
     # ========================================================================
     # RELATIONSHIPS
     # ========================================================================
