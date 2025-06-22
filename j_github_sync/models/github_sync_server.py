@@ -179,7 +179,12 @@ class GitHubSyncServer(models.Model):
         self.ensure_one()
         base_url = self.gss_server_url.rstrip('/')
         endpoint = endpoint.lstrip('/')
-        return f"{base_url}/api/{endpoint}"
+        
+        # Handle cases where the base URL already includes /api
+        if '/api' in base_url:
+            return f"{base_url}/{endpoint}"
+        else:
+            return f"{base_url}/api/{endpoint}"
     
     def _make_request(self, method, endpoint, data=None, params=None):
         """Make HTTP request to the API."""
@@ -210,10 +215,12 @@ class GitHubSyncServer(models.Model):
             if response.status_code in [200, 201]:
                 try:
                     result = response.json()
+                    _logger.info(f"API Response: {result}")
                     self._log_request_details(method, endpoint, data, result, response_code=response.status_code)
                     return result
                 except ValueError as e:
                     # Handle non-JSON responses
+                    _logger.warning(f"Non-JSON response: {response.text[:200]}")
                     result = {'success': True, 'data': response.text, 'raw_response': True}
                     self._log_request_details(method, endpoint, data, result, response_code=response.status_code)
                     return result
@@ -284,6 +291,19 @@ class GitHubSyncServer(models.Model):
             
         try:
             _logger.info(f"Testing connection to {self.gss_server_url}")
+            
+            # First try a simple connectivity test
+            test_url = self.gss_server_url.rstrip('/')
+            _logger.info(f"Testing basic connectivity to {test_url}")
+            
+            try:
+                # Simple connectivity check
+                basic_response = requests.get(test_url, timeout=30, verify=False)
+                _logger.info(f"Basic connectivity test - Status: {basic_response.status_code}")
+            except Exception as basic_error:
+                _logger.error(f"Basic connectivity failed: {basic_error}")
+            
+            # Now try the API status endpoint
             result = self._make_request('GET', 'status')
             
             if result:
@@ -293,11 +313,15 @@ class GitHubSyncServer(models.Model):
                 })
                 
                 # Extract useful info from response
-                status_info = result.get('data', {}) if isinstance(result.get('data'), dict) else {}
-                server_version = status_info.get('version', 'Unknown')
-                server_status = status_info.get('status', 'Unknown')
-                
-                message = _('Connection successful!\n\nServer Status: %s\nVersion: %s') % (server_status, server_version)
+                if isinstance(result.get('data'), dict):
+                    status_info = result.get('data', {})
+                    server_version = status_info.get('version', 'Unknown')
+                    server_status = status_info.get('status', 'Unknown')
+                    uptime = status_info.get('uptime', 'Unknown')
+                    
+                    message = _('Connection successful!\n\nServer Status: %s\nVersion: %s\nUptime: %s') % (server_status, server_version, uptime)
+                else:
+                    message = _('Connection successful!\n\nServer is responding to API requests.')
                 
                 return {
                     'type': 'ir.actions.client',
@@ -310,7 +334,7 @@ class GitHubSyncServer(models.Model):
                 }
             else:
                 self.write({'gss_server_status': 'error'})
-                raise UserError(_('No response from server. Please check the server URL and try again.'))
+                raise UserError(_('No response from server. Please verify:\n- Server URL is correct\n- GitHub Sync Server is running\n- API endpoints are available'))
                 
         except Exception as e:
             self.write({'gss_server_status': 'error'})
@@ -461,7 +485,7 @@ class GitHubSyncServer(models.Model):
             'gsl_external_id': external_id,
             'gsl_server_id': self.id,
             'gsl_repository_id': repository_id,
-            'gsl_timestamp': timestamp,
+            'gsl_time': timestamp,
             'gsl_operation': log_data.get('operation', 'pull'),
             'gsl_status': log_data.get('status', 'pending'),
             'gsl_message': log_data.get('message', ''),
