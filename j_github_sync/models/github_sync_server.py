@@ -119,12 +119,7 @@ class GitHubSyncServer(models.Model):
         tracking=True
     )
     
-    gss_demo_mode = fields.Boolean(
-        string='Demo Mode',
-        default=False,
-        tracking=True,
-        help='Enable demo mode to test functionality without external server'
-    )
+
     
     gss_last_request_details = fields.Text(
         string='Last Request Details',
@@ -170,11 +165,14 @@ class GitHubSyncServer(models.Model):
     def _get_headers(self):
         """Get API headers with authentication."""
         self.ensure_one()
-        return {
-            'Authorization': f'Bearer {self.gss_api_key}',
+        headers = {
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'User-Agent': 'Odoo-GitHub-Sync-Client/1.0'
         }
+        if self.gss_api_key:
+            headers['Authorization'] = f'Bearer {self.gss_api_key}'
+        return headers
     
     def _get_api_url(self, endpoint):
         """Get full API URL for endpoint."""
@@ -192,6 +190,9 @@ class GitHubSyncServer(models.Model):
         
         try:
             _logger.info(f"Making {method} request to {url}")
+            _logger.info(f"Headers: {headers}")
+            if data:
+                _logger.info(f"Request data: {data}")
             
             response = requests.request(
                 method=method,
@@ -199,46 +200,61 @@ class GitHubSyncServer(models.Model):
                 headers=headers,
                 json=data,
                 params=params,
-                timeout=30,
-                verify=False
+                timeout=60,
+                verify=False,
+                allow_redirects=True
             )
             
-            if response.status_code == 200:
-                result = response.json()
-                self._log_request_details(method, endpoint, data, result, response_code=response.status_code)
-                return result
+            _logger.info(f"Response status: {response.status_code}")
+            
+            if response.status_code in [200, 201]:
+                try:
+                    result = response.json()
+                    self._log_request_details(method, endpoint, data, result, response_code=response.status_code)
+                    return result
+                except ValueError as e:
+                    # Handle non-JSON responses
+                    result = {'success': True, 'data': response.text, 'raw_response': True}
+                    self._log_request_details(method, endpoint, data, result, response_code=response.status_code)
+                    return result
             elif response.status_code in [401, 403]:
                 self._log_request_details(method, endpoint, data, None, response_code=response.status_code, error='Authentication failed')
                 raise UserError(_('Authentication failed. Please check your API key.'))
             elif response.status_code == 404:
                 self._log_request_details(method, endpoint, data, None, response_code=response.status_code, error='Endpoint not found')
-                raise UserError(_('Endpoint not found: %s') % endpoint)
+                raise UserError(_('Endpoint not found: %s. Please verify the server URL and API endpoints.') % endpoint)
+            elif response.status_code == 500:
+                self._log_request_details(method, endpoint, data, None, response_code=response.status_code, error='Internal server error')
+                raise UserError(_('Server error (500). The GitHub Sync Server encountered an internal error.'))
             else:
                 try:
                     error_data = response.json()
                     error_message = error_data.get('message', f'HTTP {response.status_code}')
                 except:
-                    error_message = f'HTTP {response.status_code}: {response.text}'
+                    error_message = f'HTTP {response.status_code}: {response.text[:200]}'
                 self._log_request_details(method, endpoint, data, None, response_code=response.status_code, error=error_message)
                 raise UserError(_('API Error: %s') % error_message)
                 
         except requests.exceptions.ConnectTimeout as e:
             self._log_request_details(method, endpoint, data, None, error=str(e))
-            raise UserError(_('Connection timeout. The server at %s is not responding within 30 seconds.') % self.gss_server_url)
+            raise UserError(_('Connection timeout. The server at %s is not responding within 60 seconds. Please check if the server is running and accessible.') % self.gss_server_url)
         except requests.exceptions.ConnectionError as e:
             self._log_request_details(method, endpoint, data, None, error=str(e))
-            if 'Name or service not known' in str(e):
-                raise UserError(_('Cannot resolve hostname. Please check the server URL: %s') % self.gss_server_url)
-            elif 'Connection refused' in str(e):
-                raise UserError(_('Connection refused. The server might be offline: %s') % self.gss_server_url)
+            error_msg = str(e).lower()
+            if 'name or service not known' in error_msg or 'nodename nor servname provided' in error_msg:
+                raise UserError(_('Cannot resolve hostname. Please verify the server URL: %s\n\nCommon issues:\n- Check if the IP address is correct\n- Ensure the server is accessible from your network\n- Try using the full URL with protocol (http:// or https://)') % self.gss_server_url)
+            elif 'connection refused' in error_msg:
+                raise UserError(_('Connection refused. The server is not accepting connections on %s\n\nPossible causes:\n- Server is not running\n- Port is blocked by firewall\n- Service is not listening on the specified port') % self.gss_server_url)
+            elif 'timeout' in error_msg:
+                raise UserError(_('Network timeout connecting to %s\n\nTry:\n- Check network connectivity\n- Verify server is responsive\n- Contact your network administrator') % self.gss_server_url)
             else:
-                raise UserError(_('Connection failed: %s') % str(e))
+                raise UserError(_('Connection failed to %s\n\nError details: %s\n\nPlease verify:\n- Server URL is correct\n- Server is running and accessible\n- Network allows outbound connections') % (self.gss_server_url, str(e)))
         except requests.exceptions.Timeout as e:
             self._log_request_details(method, endpoint, data, None, error=str(e))
-            raise UserError(_('Request timeout'))
+            raise UserError(_('Request timeout after 60 seconds. The server may be overloaded or network is slow.'))
         except requests.exceptions.RequestException as e:
             self._log_request_details(method, endpoint, data, None, error=str(e))
-            raise UserError(_('Request failed: %s') % str(e))
+            raise UserError(_('Request failed: %s\n\nPlease check your network connection and server availability.') % str(e))
         
         return None
     
@@ -262,27 +278,44 @@ class GitHubSyncServer(models.Model):
     def test_connection(self):
         """Test connection to the GitHub Sync Server."""
         self.ensure_one()
+        
+        if not self.gss_server_url:
+            raise UserError(_('Please configure the server URL first.'))
+            
         try:
+            _logger.info(f"Testing connection to {self.gss_server_url}")
             result = self._make_request('GET', 'status')
+            
             if result:
                 self.write({
                     'gss_server_status': 'online',
+                    'gss_last_sync': fields.Datetime.now()
                 })
+                
+                # Extract useful info from response
+                status_info = result.get('data', {}) if isinstance(result.get('data'), dict) else {}
+                server_version = status_info.get('version', 'Unknown')
+                server_status = status_info.get('status', 'Unknown')
+                
+                message = _('Connection successful!\n\nServer Status: %s\nVersion: %s') % (server_status, server_version)
+                
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'message': _('Connection successful!'),
+                        'message': message,
                         'type': 'success',
                         'sticky': False,
                     }
                 }
             else:
-                raise UserError(_('No response from server'))
+                self.write({'gss_server_status': 'error'})
+                raise UserError(_('No response from server. Please check the server URL and try again.'))
                 
         except Exception as e:
             self.write({'gss_server_status': 'error'})
-            raise UserError(_('Connection failed: %s') % str(e))
+            # Re-raise the exception to show the detailed error message
+            raise
     
     def sync_repositories(self):
         """Sync repositories from the GitHub Sync Server."""
@@ -411,13 +444,28 @@ class GitHubSyncServer(models.Model):
         else:
             timestamp = fields.Datetime.now()
         
+        # Find repository if referenced
+        repository_id = None
+        repo_ref = log_data.get('repository_id') or log_data.get('repository_name')
+        if repo_ref:
+            repository = self.env['github.repository'].search([
+                '|',
+                ('gr_external_id', '=', repo_ref),
+                ('gr_name', '=', repo_ref),
+                ('gr_server_id', '=', self.id)
+            ], limit=1)
+            if repository:
+                repository_id = repository.id
+        
         vals = {
             'gsl_external_id': external_id,
             'gsl_server_id': self.id,
-            'gsl_time': timestamp,
-            'gsl_operation': log_data.get('operation', 'sync'),
-            'gsl_status': log_data.get('status', 'success'),
+            'gsl_repository_id': repository_id,
+            'gsl_timestamp': timestamp,
+            'gsl_operation': log_data.get('operation', 'pull'),
+            'gsl_status': log_data.get('status', 'pending'),
             'gsl_message': log_data.get('message', ''),
+            'gsl_details': json.dumps(log_data.get('details', {}), indent=2) if log_data.get('details') else '',
         }
         
         if log:
