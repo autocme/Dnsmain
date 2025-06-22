@@ -30,11 +30,7 @@ class GitHubSyncLog(models.Model):
         ('pull', 'Pull'),
         ('clone', 'Clone'),
         ('restart', 'Restart'),
-        ('webhook', 'Webhook'),
-        ('sync', 'Sync'),
-        ('deploy', 'Deploy'),
-        ('backup', 'Backup'),
-        ('maintenance', 'Maintenance')
+        ('webhook', 'Webhook')
     ], string='Operation', required=True,
        help='Type of operation that generated this log')
     
