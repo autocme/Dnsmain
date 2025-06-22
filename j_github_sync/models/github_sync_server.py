@@ -502,26 +502,52 @@ class GitHubSyncServer(models.Model):
             ('gsl_server_id', '=', self.id)
         ], limit=1)
         
-        # Parse timestamp properly
+        # Parse timestamp properly - use actual server timestamp, not sync time
         timestamp_str = log_data.get('timestamp') or log_data.get('time') or log_data.get('created_at')
+        timestamp = None
+        
         if timestamp_str:
             try:
-                # Handle ISO format with or without timezone
-                if 'T' in str(timestamp_str):
-                    # Remove timezone info if present
-                    timestamp_str = str(timestamp_str)
+                timestamp_str = str(timestamp_str).strip()
+                _logger.info(f"Parsing timestamp: '{timestamp_str}'")
+                
+                # Handle different timestamp formats from server
+                if 'T' in timestamp_str:
+                    # ISO format: 2025-06-22T10:30:00 or 2025-06-22T10:30:00Z
+                    if timestamp_str.endswith('Z'):
+                        timestamp_str = timestamp_str[:-1]
                     if '+' in timestamp_str:
                         timestamp_str = timestamp_str.split('+')[0]
-                    elif 'Z' in timestamp_str:
-                        timestamp_str = timestamp_str.replace('Z', '')
-                    # Convert ISO format to Odoo datetime format
+                    if '.' in timestamp_str:
+                        # Handle microseconds: 2025-06-22T10:30:00.123
+                        timestamp_str = timestamp_str.split('.')[0]
                     timestamp = datetime.strptime(timestamp_str, '%Y-%m-%dT%H:%M:%S')
+                elif '-' in timestamp_str and ':' in timestamp_str:
+                    # Standard format: 2025-06-22 10:30:00
+                    if '.' in timestamp_str:
+                        timestamp_str = timestamp_str.split('.')[0]
+                    timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
                 else:
-                    timestamp = datetime.strptime(str(timestamp_str), '%Y-%m-%d %H:%M:%S')
+                    # Try other common formats
+                    for fmt in ['%Y-%m-%d %H:%M', '%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M']:
+                        try:
+                            timestamp = datetime.strptime(timestamp_str, fmt)
+                            break
+                        except ValueError:
+                            continue
+                
+                if timestamp:
+                    _logger.info(f"Successfully parsed timestamp: {timestamp}")
+                else:
+                    raise ValueError(f"No matching format found for: {timestamp_str}")
+                    
             except (ValueError, TypeError) as e:
-                _logger.warning(f"Failed to parse timestamp '{timestamp_str}': {e}")
+                _logger.error(f"Failed to parse timestamp '{timestamp_str}': {e}")
+                # Only use current time as absolute fallback
                 timestamp = fields.Datetime.now()
+                _logger.warning(f"Using current time as fallback: {timestamp}")
         else:
+            _logger.warning("No timestamp found in log data, using current time")
             timestamp = fields.Datetime.now()
         
         # Find repository if referenced
@@ -540,17 +566,56 @@ class GitHubSyncServer(models.Model):
             if repository:
                 repository_id = repository.id
         
-        # Validate operation value
-        operation = log_data.get('operation', 'pull')
-        valid_operations = ['pull', 'clone', 'restart', 'webhook']
-        if operation not in valid_operations:
-            operation = 'pull'  # Default fallback
+        # Map and validate operation value - preserve actual server operation
+        raw_operation = log_data.get('operation', '').lower().strip()
+        _logger.info(f"Raw operation from server: '{raw_operation}'")
         
-        # Validate status value
-        status = log_data.get('status', 'pending')
+        # Map server operations to Odoo operations (preserve original values)
+        operation_mapping = {
+            'webhook': 'webhook',
+            'pull': 'pull', 
+            'clone': 'clone',
+            'restart': 'restart',
+            'push': 'webhook',  # Map push events to webhook
+            'sync': 'pull',     # Map generic sync to pull
+            'update': 'pull',   # Map update to pull
+        }
+        
+        operation = operation_mapping.get(raw_operation, raw_operation)
+        valid_operations = ['pull', 'clone', 'restart', 'webhook']
+        
+        if operation not in valid_operations:
+            _logger.warning(f"Unknown operation '{raw_operation}', mapping to 'webhook'")
+            operation = 'webhook'  # Map unknown operations to webhook instead of pull
+        
+        _logger.info(f"Final operation: '{operation}'")
+        
+        # Map and validate status value - preserve actual server status
+        raw_status = log_data.get('status', '').lower().strip()
+        _logger.info(f"Raw status from server: '{raw_status}'")
+        
+        # Map server statuses to Odoo statuses
+        status_mapping = {
+            'success': 'success',
+            'error': 'error',
+            'warning': 'warning', 
+            'pending': 'pending',
+            'syncing': 'syncing',
+            'in_progress': 'syncing',
+            'running': 'syncing',
+            'failed': 'error',
+            'completed': 'success',
+            'finished': 'success',
+        }
+        
+        status = status_mapping.get(raw_status, raw_status)
         valid_statuses = ['success', 'error', 'warning', 'pending', 'syncing']
+        
         if status not in valid_statuses:
-            status = 'pending'  # Default fallback
+            _logger.warning(f"Unknown status '{raw_status}', mapping to 'pending'")
+            status = 'pending'
+        
+        _logger.info(f"Final status: '{status}'")
         
         vals = {
             'gsl_external_id': str(external_id),

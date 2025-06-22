@@ -39,7 +39,7 @@ class GitHubSyncLog(models.Model):
         ('error', 'Error'),
         ('warning', 'Warning'),
         ('pending', 'Pending'),
-        ('in_progress', 'In Progress')
+        ('syncing', 'Syncing')
     ], string='Status', required=True,
        help='Status of the operation')
     
