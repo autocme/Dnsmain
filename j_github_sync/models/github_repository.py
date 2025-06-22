@@ -22,23 +22,50 @@ class GitHubRepository(models.Model):
     # ========================================================================
     
     gr_name = fields.Char(
-        string='Repository Name',
+        string='Name',
         required=True,
         tracking=True,
         help='Name of the GitHub repository'
     )
     
-    gr_external_id = fields.Char(
-        string='External ID',
+    gr_url = fields.Char(
+        string='URL',
         required=True,
         tracking=True,
-        help='External repository ID from GitHub Sync Server'
+        help='URL of the GitHub repository'
     )
     
-    gr_url = fields.Char(
-        string='Repository URL',
+    gr_branch = fields.Char(
+        string='Branch',
+        default='main',
         tracking=True,
-        help='URL of the GitHub repository'
+        help='Branch name for the repository'
+    )
+    
+    gr_local_path = fields.Char(
+        string='Local Path',
+        tracking=True,
+        help='Local storage path for the repository'
+    )
+    
+    gr_status = fields.Selection([
+        ('success', 'Success'),
+        ('error', 'Error'),
+        ('warning', 'Warning'),
+        ('pending', 'Pending'),
+        ('syncing', 'Syncing')
+    ], string='Status', default='pending', tracking=True,
+       help='Current status of the repository')
+    
+    gr_last_pull = fields.Datetime(
+        string='Last Pull',
+        tracking=True,
+        help='Timestamp of the last pull operation'
+    )
+    
+    gr_external_id = fields.Char(
+        string='External ID',
+        help='External repository ID from GitHub Sync Server'
     )
     
     gr_description = fields.Text(
@@ -58,7 +85,7 @@ class GitHubRepository(models.Model):
         string='Active',
         default=True,
         tracking=True,
-        help='Whether this repository is active'
+        help='Whether this repository is active (repository will be synced)'
     )
     
     # ========================================================================
@@ -95,12 +122,17 @@ class GitHubRepository(models.Model):
     # REPOSITORY OPERATIONS
     # ========================================================================
     
-    def sync_repository(self):
+    def action_sync_repository(self):
         """Manually sync this repository."""
         self.ensure_one()
         try:
+            self.write({'gr_status': 'syncing'})
             result = self.gr_server_id._make_request('POST', f'repositories/{self.gr_external_id}/sync')
             if result and result.get('success'):
+                self.write({
+                    'gr_status': 'success',
+                    'gr_last_pull': fields.Datetime.now()
+                })
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
@@ -111,10 +143,46 @@ class GitHubRepository(models.Model):
                     }
                 }
             else:
+                self.write({'gr_status': 'error'})
                 raise UserError(_('Failed to sync repository: %s') % result.get('message', 'Unknown error'))
                 
         except Exception as e:
+            self.write({'gr_status': 'error'})
             raise UserError(_('Sync failed: %s') % str(e))
+    
+    def action_edit_repository(self):
+        """Open edit repository wizard."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Edit Repository'),
+            'res_model': 'github.repository.edit.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_repository_id': self.id},
+        }
+    
+    def action_delete_repository(self):
+        """Delete repository with confirmation."""
+        self.ensure_one()
+        try:
+            if self.gr_external_id:
+                result = self.gr_server_id._make_request('DELETE', f'repositories/{self.gr_external_id}')
+                if not (result and result.get('success')):
+                    raise UserError(_('Failed to delete repository from server: %s') % result.get('message', 'Unknown error'))
+            
+            self.unlink()
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'message': _('Repository deleted successfully'),
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }
+        except Exception as e:
+            raise UserError(_('Delete failed: %s') % str(e))
     
     def action_open_repository(self):
         """Open repository in GitHub."""

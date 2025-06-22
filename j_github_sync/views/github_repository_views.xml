@@ -7,11 +7,14 @@
         <field name="arch" type="xml">
             <tree string="GitHub Repositories" default_order="gr_name">
                 <field name="gr_name"/>
-                <field name="gr_server_id"/>
                 <field name="gr_url"/>
-                <field name="gr_private"/>
-                <field name="gr_company_id" groups="base.group_multi_company"/>
-                <field name="gr_active" widget="boolean_toggle"/>
+                <field name="gr_branch"/>
+                <field name="gr_local_path"/>
+                <field name="gr_status"/>
+                <field name="gr_last_pull"/>
+                <field name="gr_server_id" optional="hide"/>
+                <field name="gr_company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="gr_active" widget="boolean_toggle" optional="hide"/>
             </tree>
         </field>
     </record>
@@ -23,11 +26,17 @@
         <field name="arch" type="xml">
             <form string="GitHub Repository">
                 <header>
-                    <button name="sync_repository" string="Sync Repository" 
+                    <button name="action_sync_repository" string="Sync" 
                             type="object" class="btn-primary"/>
+                    <button name="action_edit_repository" string="Edit" 
+                            type="object" class="btn-secondary"/>
+                    <button name="action_delete_repository" string="Delete" 
+                            type="object" class="btn-secondary"
+                            confirm="Are you sure you want to delete this repository?"/>
                     <button name="action_open_repository" string="Open in GitHub" 
                             type="object" class="btn-secondary"
                             invisible="not gr_url"/>
+                    <field name="gr_status" widget="statusbar"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -36,20 +45,26 @@
                     </div>
                     
                     <group>
-                        <group name="basic_info" string="Basic Information">
-                            <field name="gr_external_id"/>
-                            <field name="gr_server_id"/>
+                        <group name="basic_info" string="Repository Information">
                             <field name="gr_url" widget="url"/>
-                            <field name="gr_private"/>
+                            <field name="gr_branch"/>
+                            <field name="gr_local_path"/>
+                            <field name="gr_last_pull"/>
                         </group>
-                        <group name="status_info" string="Status">
+                        <group name="status_info" string="Status & Settings">
+                            <field name="gr_server_id"/>
                             <field name="gr_active"/>
+                            <field name="gr_private"/>
                             <field name="gr_company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
                     
                     <group>
                         <field name="gr_description" placeholder="Repository description..."/>
+                    </group>
+                    
+                    <group name="technical_info" string="Technical Information">
+                        <field name="gr_external_id" readonly="1"/>
                     </group>
                 </sheet>
                 <div class="oe_chatter">
@@ -68,18 +83,30 @@
         <field name="arch" type="xml">
             <search string="GitHub Repositories">
                 <field name="gr_name"/>
-                <field name="gr_server_id"/>
                 <field name="gr_url"/>
+                <field name="gr_branch"/>
+                <field name="gr_local_path"/>
+                <field name="gr_server_id"/>
                 <field name="gr_company_id" groups="base.group_multi_company"/>
                 
                 <separator/>
                 <filter string="Active" name="active" domain="[('gr_active', '=', True)]"/>
                 <filter string="Inactive" name="inactive" domain="[('gr_active', '=', False)]"/>
                 <separator/>
+                <filter string="Success" name="success" domain="[('gr_status', '=', 'success')]"/>
+                <filter string="Error" name="error" domain="[('gr_status', '=', 'error')]"/>
+                <filter string="Warning" name="warning" domain="[('gr_status', '=', 'warning')]"/>
+                <filter string="Pending" name="pending" domain="[('gr_status', '=', 'pending')]"/>
+                <filter string="Syncing" name="syncing" domain="[('gr_status', '=', 'syncing')]"/>
+                <separator/>
                 <filter string="Private" name="private" domain="[('gr_private', '=', True)]"/>
                 <filter string="Public" name="public" domain="[('gr_private', '=', False)]"/>
                 
                 <group expand="0" string="Group By">
+                    <filter string="Status" name="group_status" 
+                            context="{'group_by': 'gr_status'}"/>
+                    <filter string="Branch" name="group_branch" 
+                            context="{'group_by': 'gr_branch'}"/>
                     <filter string="Server" name="group_server" 
                             context="{'group_by': 'gr_server_id'}"/>
                     <filter string="Privacy" name="group_private" 

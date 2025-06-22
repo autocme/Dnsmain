@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- GitHub Repository Edit Wizard Form View -->
+    <record id="view_github_repository_edit_wizard_form" model="ir.ui.view">
+        <field name="name">github.repository.edit.wizard.form</field>
+        <field name="model">github.repository.edit.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Edit Repository">
+                <sheet>
+                    <group>
+                        <field name="repository_id" invisible="1"/>
+                        
+                        <label for="gre_name" string="Repository Name"/>
+                        <field name="gre_name" required="1" placeholder="Dnsmain"/>
+                        
+                        <label for="gre_url" string="Repository URL"/>
+                        <field name="gre_url" required="1" placeholder="git@github.com:autocme/Dnsmain.git"/>
+                        
+                        <label for="gre_branch" string="Branch"/>
+                        <field name="gre_branch" required="1" placeholder="main"/>
+                        
+                        <label for="gre_local_path" string="Local Path"/>
+                        <field name="gre_local_path" required="1" placeholder="/repos/Dnsmain"/>
+                        
+                        <separator/>
+                        <field name="gre_active" string="Active (repository will be synced)"/>
+                        
+                        <div class="text-muted">
+                            Repository storage path (automatically detected)
+                        </div>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_save_changes" string="Save Changes" 
+                            type="object" class="btn-primary"/>
+                    <button name="action_cancel" string="Cancel" 
+                            type="object" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

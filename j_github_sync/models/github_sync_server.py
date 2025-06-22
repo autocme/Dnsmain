@@ -277,17 +277,25 @@ class GitHubSyncServer(models.Model):
                 'data': [
                     {
                         'id': 'demo_repo_1',
-                        'name': 'odoo-modules',
-                        'url': 'https://github.com/demo/odoo-modules',
-                        'description': 'Demo Odoo modules repository',
+                        'name': 'Dnsmain',
+                        'url': 'git@github.com:autocme/Dnsmain.git',
+                        'branch': 'main',
+                        'local_path': '/repos/Dnsmain',
+                        'status': 'success',
+                        'last_pull': '2025-06-22 07:50',
+                        'description': 'DNS management system',
                         'private': False
                     },
                     {
                         'id': 'demo_repo_2', 
-                        'name': 'portainer-config',
-                        'url': 'https://github.com/demo/portainer-config',
-                        'description': 'Portainer configuration files',
-                        'private': True
+                        'name': 'server-backend',
+                        'url': 'https://github.com/OCA/server-backend.git',
+                        'branch': '17.0',
+                        'local_path': '/repos/server-backend',
+                        'status': 'success',
+                        'last_pull': '2025-06-22 00:07',
+                        'description': 'OCA server backend modules',
+                        'private': False
                     }
                 ],
                 'message': 'Repositories retrieved successfully'
@@ -409,6 +417,10 @@ class GitHubSyncServer(models.Model):
             'gr_external_id': external_id,
             'gr_server_id': self.id,
             'gr_url': repo_data.get('url', ''),
+            'gr_branch': repo_data.get('branch', 'main'),
+            'gr_local_path': repo_data.get('local_path', f'/repos/{repo_data.get("name", "")}'),
+            'gr_status': repo_data.get('status', 'success'),
+            'gr_last_pull': repo_data.get('last_pull'),
             'gr_description': repo_data.get('description', ''),
             'gr_private': repo_data.get('private', False),
         }
