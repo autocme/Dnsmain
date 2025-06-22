@@ -39,17 +39,17 @@
                     <notebook>
                         <page string="Message">
                             <group>
-                                <field name="gsl_message" nolabel="1" readonly="1"/>
+                                <field name="gsl_message" readonly="1"/>
                             </group>
                         </page>
                         <page string="Details">
                             <group>
-                                <field name="gsl_details" nolabel="1" readonly="1"/>
+                                <field name="gsl_details" readonly="1"/>
                             </group>
                         </page>
                         <page string="Raw Response">
                             <group>
-                                <field name="gsl_raw_response" nolabel="1" readonly="1" widget="ace" options="{'mode': 'json'}"/>
+                                <field name="gsl_raw_response" readonly="1" widget="ace"/>
                             </group>
                         </page>
                     </notebook>
