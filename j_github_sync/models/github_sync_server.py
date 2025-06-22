@@ -155,8 +155,12 @@ class GitHubSyncServer(models.Model):
     def _check_server_url(self):
         """Validate server URL format."""
         for record in self:
-            if record.gss_server_url and not record.gss_server_url.startswith(('http://', 'https://')):
-                raise ValidationError(_('Server URL must start with http:// or https://'))
+            if record.gss_server_url:
+                if not record.gss_server_url.startswith(('http://', 'https://')):
+                    raise ValidationError(_('Server URL must start with http:// or https://'))
+                # Ensure URL ends with slash for proper API handling
+                if not record.gss_server_url.endswith('/'):
+                    record.gss_server_url = record.gss_server_url + '/'
 
     # ========================================================================
     # API METHODS
