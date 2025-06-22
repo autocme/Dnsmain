@@ -66,6 +66,13 @@ class GitHubSyncLog(models.Model):
         help='GitHub Sync Server that generated this log'
     )
     
+    gsl_repository_id = fields.Many2one(
+        'github.repository',
+        string='Repository',
+        ondelete='cascade',
+        help='The repository this log entry is related to'
+    )
+    
     gsl_company_id = fields.Many2one(
         'res.company',
         string='Company',

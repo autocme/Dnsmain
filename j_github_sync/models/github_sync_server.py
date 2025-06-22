@@ -555,13 +555,16 @@ class GitHubSyncServer(models.Model):
         vals = {
             'gsl_external_id': str(external_id),
             'gsl_server_id': self.id,
-            'gsl_repository_id': repository_id,
             'gsl_time': timestamp,
             'gsl_operation': operation,
             'gsl_status': status,
             'gsl_message': str(log_data.get('message', '')),
             'gsl_details': json.dumps(log_data.get('details', {}), indent=2) if log_data.get('details') else '',
         }
+        
+        # Add repository_id only if found
+        if repository_id:
+            vals['gsl_repository_id'] = repository_id
         
         try:
             if log:
