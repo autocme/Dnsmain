@@ -244,31 +244,17 @@ class GitHubSyncServer(models.Model):
     
     def _log_request_details(self, method, endpoint, request_data, response_data, response_code=None, error=None, demo_mode=False):
         """Log request and response details."""
-        details = {
-            'timestamp': fields.Datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'method': method,
-            'endpoint': endpoint,
-            'demo_mode': demo_mode
-        }
-        
-        if demo_mode:
-            details['url'] = f"DEMO MODE - {endpoint}"
-        else:
-            details['url'] = self._get_api_url(endpoint)
-            
-        if request_data:
-            details['request_data'] = request_data
-            
-        if response_code:
-            details['response_code'] = response_code
-            
         if response_data:
-            details['response_data'] = response_data
-            
-        if error:
-            details['error'] = error
-            
-        self.write({'gss_last_request_details': json.dumps(details, indent=2)})
+            # Store the raw response as-is
+            self.write({'gss_last_request_details': json.dumps(response_data, indent=2)})
+        elif error:
+            # Store error information
+            error_details = {
+                'error': error,
+                'endpoint': endpoint,
+                'method': method
+            }
+            self.write({'gss_last_request_details': json.dumps(error_details, indent=2)})
     
     def _simulate_api_response(self, method, endpoint):
         """Simulate API responses for demo mode."""
