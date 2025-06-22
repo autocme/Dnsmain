@@ -27,7 +27,7 @@
                             type="object" class="btn-primary"/>
                     <button name="action_open_repository" string="Open in GitHub" 
                             type="object" class="btn-secondary"
-                            attrs="{'invisible': [('gr_url', '=', False)]}"/>
+                            invisible="not gr_url"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
