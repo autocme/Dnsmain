@@ -32,18 +32,45 @@ class GitHubSyncLog(models.Model):
         ('warning', 'Warning'),
         ('error', 'Error'),
         ('critical', 'Critical')
-    ], string='Level', required=True, default='info',
-       help='Log level severity')
+    ], string='Level', required=True, default='info')
+    
+    gsl_status = fields.Selection([
+        ('success', 'Success'),
+        ('error', 'Error'),
+        ('warning', 'Warning'),
+        ('pending', 'Pending'),
+        ('failed', 'Failed')
+    ], string='Status')
+    
+    gsl_operation_type = fields.Selection([
+        ('pull', 'Pull'),
+        ('clone', 'Clone'),
+        ('restart', 'Restart'),
+        ('webhook', 'Webhook'),
+        ('sync', 'Sync'),
+        ('deploy', 'Deploy'),
+        ('backup', 'Backup'),
+        ('other', 'Other')
+    ], string='Operation Type')
     
     gsl_message = fields.Text(
         string='Message',
-        required=True,
-        help='Log message content'
+        required=True
     )
     
     gsl_operation = fields.Char(
         string='Operation',
-        help='Type of operation that generated this log'
+        help='Operation identifier'
+    )
+    
+    gsl_repository = fields.Char(
+        string='Repository',
+        help='Repository name'
+    )
+    
+    gsl_details = fields.Text(
+        string='Details',
+        help='Additional operation details'
     )
     
     gsl_external_id = fields.Char(
