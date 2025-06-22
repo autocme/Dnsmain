@@ -368,17 +368,36 @@ class GitHubSyncServer(models.Model):
             else:
                 raise UserError(_('Invalid response format from server'))
             
+            # Get external IDs from server response
+            server_repo_ids = set()
+            synced_count = 0
+            
             if repositories:
                 for repo_data in repositories:
+                    external_id = repo_data.get('id')
+                    if external_id:
+                        server_repo_ids.add(str(external_id))
                     self._create_or_update_repository(repo_data)
+                    synced_count += 1
                 
                 self.write({'gss_last_sync': fields.Datetime.now()})
-                
+            
+            # Delete repositories that no longer exist on server
+            existing_repos = self.env['github.repository'].search([('gr_server_id', '=', self.id)])
+            repos_to_delete = existing_repos.filtered(
+                lambda repo: repo.gr_external_id not in server_repo_ids
+            )
+            deleted_count = len(repos_to_delete)
+            if repos_to_delete:
+                repos_to_delete.unlink()
+                _logger.info(f"Deleted {deleted_count} repositories that no longer exist on server")
+            
+            if repositories:
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'message': _('Successfully synced %s repositories') % len(repositories),
+                        'message': _('Successfully synced %s repositories. Deleted %s obsolete repositories.') % (synced_count, deleted_count),
                         'type': 'success',
                         'sticky': False,
                     }
@@ -388,7 +407,7 @@ class GitHubSyncServer(models.Model):
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'message': _('No repositories found on server'),
+                        'message': _('No repositories found on server. Deleted %s obsolete repositories.') % deleted_count,
                         'type': 'info',
                         'sticky': False,
                     }
@@ -525,15 +544,34 @@ class GitHubSyncServer(models.Model):
             else:
                 raise UserError(_('Invalid response format from server'))
             
+            # Get external IDs from server response
+            server_log_ids = set()
+            synced_count = 0
+            
             if logs:
                 for log_data in logs:
+                    external_id = log_data.get('id')
+                    if external_id:
+                        server_log_ids.add(str(external_id))
                     self._create_or_update_log(log_data)
-                
+                    synced_count += 1
+            
+            # Delete logs that no longer exist on server
+            existing_logs = self.env['github.sync.log'].search([('gsl_server_id', '=', self.id)])
+            logs_to_delete = existing_logs.filtered(
+                lambda log: log.gsl_external_id not in server_log_ids
+            )
+            deleted_count = len(logs_to_delete)
+            if logs_to_delete:
+                logs_to_delete.unlink()
+                _logger.info(f"Deleted {deleted_count} logs that no longer exist on server")
+            
+            if logs:
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'message': _('Successfully synced %s logs') % len(logs),
+                        'message': _('Successfully synced %s logs. Deleted %s obsolete logs.') % (synced_count, deleted_count),
                         'type': 'success',
                         'sticky': False,
                     }
@@ -543,7 +581,7 @@ class GitHubSyncServer(models.Model):
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'message': _('No logs found on server'),
+                        'message': _('No logs found on server. Deleted %s obsolete logs.') % deleted_count,
                         'type': 'info',
                         'sticky': False,
                     }
