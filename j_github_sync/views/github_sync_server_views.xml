@@ -9,7 +9,6 @@
                 <field name="gss_name"/>
                 <field name="gss_server_url"/>
                 <field name="gss_server_status"/>
-                <field name="gss_demo_mode" widget="boolean_toggle"/>
                 <field name="gss_repository_count" string="Repositories"/>
                 <field name="gss_log_count" string="Logs"/>
                 <field name="gss_last_sync"/>

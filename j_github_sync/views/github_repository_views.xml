@@ -49,7 +49,7 @@
                             <field name="gr_local_path" required="1"/>
                             <field name="gr_last_pull" readonly="1"/>
                         </group>
-                        <group name="status_info" string="Status & Settings">
+                        <group name="status_info" string="Status/Settings">
                             <field name="gr_server_id" readonly="1"/>
                             <field name="gr_active"/>
                             <field name="gr_private" readonly="1"/>
