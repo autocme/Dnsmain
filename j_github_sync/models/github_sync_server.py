@@ -631,8 +631,9 @@ class GitHubSyncServer(models.Model):
                 repository_id = repository.id
         
         # Map and validate operation value - preserve actual server operation
-        raw_operation = log_data.get('operation', '').lower().strip()
-        _logger.info(f"Raw operation from server: '{raw_operation}'")
+        # Server uses 'operation_type' field, not 'operation'
+        raw_operation = log_data.get('operation_type', log_data.get('operation', '')).lower().strip()
+        _logger.info(f"Raw operation from server (operation_type): '{raw_operation}'")
         
         # Map server operations to Odoo operations (preserve original values)
         operation_mapping = {
@@ -649,8 +650,8 @@ class GitHubSyncServer(models.Model):
         valid_operations = ['pull', 'clone', 'restart', 'webhook']
         
         if operation not in valid_operations:
-            _logger.warning(f"Unknown operation '{raw_operation}', mapping to 'webhook'")
-            operation = 'webhook'  # Map unknown operations to webhook instead of pull
+            _logger.warning(f"Unknown operation '{raw_operation}', defaulting to 'pull'")
+            operation = 'pull'  # Default to pull for unknown operations
         
         _logger.info(f"Final operation: '{operation}'")
         
