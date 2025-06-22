@@ -300,16 +300,30 @@ class GitHubSyncServer(models.Model):
                     {
                         'id': 'log_1',
                         'timestamp': fields.Datetime.now().isoformat(),
-                        'level': 'info',
-                        'message': 'Repository sync completed successfully',
-                        'operation': 'sync_repositories'
+                        'operation': 'webhook',
+                        'status': 'success',
+                        'message': 'Successfully processed webhook for Dnsmain Repository: Dnsmain'
                     },
                     {
                         'id': 'log_2',
                         'timestamp': (fields.Datetime.now() - timedelta(minutes=5)).isoformat(),
-                        'level': 'warning',
-                        'message': 'Connection timeout during sync operation',
-                        'operation': 'sync_repositories'
+                        'operation': 'pull',
+                        'status': 'success',
+                        'message': 'Repository pulled successfully from main branch'
+                    },
+                    {
+                        'id': 'log_3',
+                        'timestamp': (fields.Datetime.now() - timedelta(minutes=10)).isoformat(),
+                        'operation': 'clone',
+                        'status': 'error',
+                        'message': 'Failed to clone repository: authentication failed'
+                    },
+                    {
+                        'id': 'log_4',
+                        'timestamp': (fields.Datetime.now() - timedelta(minutes=15)).isoformat(),
+                        'operation': 'restart',
+                        'status': 'warning',
+                        'message': 'Container restart requested due to configuration changes'
                     }
                 ],
                 'message': 'Logs retrieved successfully'
@@ -468,10 +482,10 @@ class GitHubSyncServer(models.Model):
         vals = {
             'gsl_external_id': external_id,
             'gsl_server_id': self.id,
-            'gsl_timestamp': timestamp,
-            'gsl_level': log_data.get('level', 'info'),
+            'gsl_time': timestamp,
+            'gsl_operation': log_data.get('operation', 'sync'),
+            'gsl_status': log_data.get('status', 'success'),
             'gsl_message': log_data.get('message', ''),
-            'gsl_operation': log_data.get('operation', ''),
         }
         
         if log:

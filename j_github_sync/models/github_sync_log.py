@@ -13,37 +13,44 @@ class GitHubSyncLog(models.Model):
     
     _name = 'github.sync.log'
     _description = 'GitHub Sync Log'
-    _order = 'gsl_timestamp desc'
+    _order = 'gsl_time desc'
     _rec_name = 'gsl_message'
 
     # ========================================================================
     # BASIC FIELDS
     # ========================================================================
     
-    gsl_timestamp = fields.Datetime(
-        string='Timestamp',
+    gsl_time = fields.Datetime(
+        string='Time',
         required=True,
         help='When the log entry was created'
     )
     
-    gsl_level = fields.Selection([
-        ('debug', 'Debug'),
-        ('info', 'Info'),
-        ('warning', 'Warning'),
+    gsl_operation = fields.Selection([
+        ('pull', 'Pull'),
+        ('clone', 'Clone'),
+        ('restart', 'Restart'),
+        ('webhook', 'Webhook'),
+        ('sync', 'Sync'),
+        ('deploy', 'Deploy'),
+        ('backup', 'Backup'),
+        ('maintenance', 'Maintenance')
+    ], string='Operation', required=True,
+       help='Type of operation that generated this log')
+    
+    gsl_status = fields.Selection([
+        ('success', 'Success'),
         ('error', 'Error'),
-        ('critical', 'Critical')
-    ], string='Level', required=True, default='info',
-       help='Log level severity')
+        ('warning', 'Warning'),
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress')
+    ], string='Status', required=True,
+       help='Status of the operation')
     
     gsl_message = fields.Text(
         string='Message',
         required=True,
         help='Log message content'
-    )
-    
-    gsl_operation = fields.Char(
-        string='Operation',
-        help='Type of operation that generated this log'
     )
     
     gsl_external_id = fields.Char(

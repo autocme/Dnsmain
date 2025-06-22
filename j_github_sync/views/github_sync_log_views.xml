@@ -5,10 +5,10 @@
         <field name="name">github.sync.log.tree</field>
         <field name="model">github.sync.log</field>
         <field name="arch" type="xml">
-            <tree string="GitHub Sync Logs" default_order="gsl_timestamp desc">
-                <field name="gsl_timestamp"/>
-                <field name="gsl_level"/>
+            <tree string="GitHub Sync Logs" default_order="gsl_time desc">
+                <field name="gsl_time"/>
                 <field name="gsl_operation"/>
+                <field name="gsl_status"/>
                 <field name="gsl_message"/>
                 <field name="gsl_server_id"/>
                 <field name="gsl_company_id" groups="base.group_multi_company"/>
@@ -25,9 +25,9 @@
                 <sheet>
                     <group>
                         <group name="basic_info" string="Log Information">
-                            <field name="gsl_timestamp"/>
-                            <field name="gsl_level"/>
+                            <field name="gsl_time"/>
                             <field name="gsl_operation"/>
+                            <field name="gsl_status"/>
                             <field name="gsl_server_id"/>
                         </group>
                         <group name="system_info" string="System">
@@ -57,25 +57,30 @@
                 
                 <separator/>
                 <filter string="Today" name="today" 
-                        domain="[('gsl_timestamp', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))), ('gsl_timestamp', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
+                        domain="[('gsl_time', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))), ('gsl_time', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
                 <filter string="Last 7 Days" name="last_week" 
-                        domain="[('gsl_timestamp', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                        domain="[('gsl_time', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
                 <separator/>
-                <filter string="Debug" name="debug" domain="[('gsl_level', '=', 'debug')]"/>
-                <filter string="Info" name="info" domain="[('gsl_level', '=', 'info')]"/>
-                <filter string="Warning" name="warning" domain="[('gsl_level', '=', 'warning')]"/>
-                <filter string="Error" name="error" domain="[('gsl_level', '=', 'error')]"/>
-                <filter string="Critical" name="critical" domain="[('gsl_level', '=', 'critical')]"/>
+                <filter string="Success" name="success" domain="[('gsl_status', '=', 'success')]"/>
+                <filter string="Error" name="error" domain="[('gsl_status', '=', 'error')]"/>
+                <filter string="Warning" name="warning" domain="[('gsl_status', '=', 'warning')]"/>
+                <filter string="Pending" name="pending" domain="[('gsl_status', '=', 'pending')]"/>
+                <filter string="In Progress" name="in_progress" domain="[('gsl_status', '=', 'in_progress')]"/>
+                <separator/>
+                <filter string="Pull" name="pull" domain="[('gsl_operation', '=', 'pull')]"/>
+                <filter string="Clone" name="clone" domain="[('gsl_operation', '=', 'clone')]"/>
+                <filter string="Webhook" name="webhook" domain="[('gsl_operation', '=', 'webhook')]"/>
+                <filter string="Restart" name="restart" domain="[('gsl_operation', '=', 'restart')]"/>
                 
                 <group expand="0" string="Group By">
-                    <filter string="Level" name="group_level" 
-                            context="{'group_by': 'gsl_level'}"/>
+                    <filter string="Status" name="group_status" 
+                            context="{'group_by': 'gsl_status'}"/>
                     <filter string="Operation" name="group_operation" 
                             context="{'group_by': 'gsl_operation'}"/>
                     <filter string="Server" name="group_server" 
                             context="{'group_by': 'gsl_server_id'}"/>
                     <filter string="Date" name="group_date" 
-                            context="{'group_by': 'gsl_timestamp:day'}"/>
+                            context="{'group_by': 'gsl_time:day'}"/>
                 </group>
             </search>
         </field>
