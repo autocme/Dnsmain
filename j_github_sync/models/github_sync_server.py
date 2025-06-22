@@ -317,15 +317,19 @@ class GitHubSyncServer(models.Model):
                 })
                 
                 # Extract useful info from response
-                if isinstance(result.get('data'), dict):
-                    status_info = result.get('data', {})
-                    server_version = status_info.get('version', 'Unknown')
-                    server_status = status_info.get('status', 'Unknown')
-                    uptime = status_info.get('uptime', 'Unknown')
-                    
-                    message = _('Connection successful!\n\nServer Status: %s\nVersion: %s\nUptime: %s') % (server_status, server_version, uptime)
-                else:
-                    message = _('Connection successful!\n\nServer is responding to API requests.')
+                message = _('Connection successful!\n\nServer is responding to API requests.')
+                
+                if isinstance(result, dict):
+                    if isinstance(result.get('data'), dict):
+                        status_info = result.get('data', {})
+                        server_version = status_info.get('version', 'Unknown')
+                        server_status = status_info.get('status', 'Unknown')
+                        uptime = status_info.get('uptime', 'Unknown')
+                        
+                        message = _('Connection successful!\n\nServer Status: %s\nVersion: %s\nUptime: %s') % (server_status, server_version, uptime)
+                    elif result.get('status'):
+                        # Handle simple status response
+                        message = _('Connection successful!\n\nServer Status: %s') % result.get('status')
                 
                 return {
                     'type': 'ir.actions.client',
@@ -350,9 +354,21 @@ class GitHubSyncServer(models.Model):
         self.ensure_one()
         try:
             result = self._make_request('GET', 'repositories')
-            if result and result.get('success'):
-                repositories = result.get('data', [])
-                
+            
+            # Handle different response formats
+            repositories = []
+            if isinstance(result, list):
+                # Direct list response
+                repositories = result
+            elif isinstance(result, dict):
+                if result.get('success'):
+                    repositories = result.get('data', [])
+                else:
+                    raise UserError(_('Failed to sync repositories: %s') % result.get('message', 'Unknown error'))
+            else:
+                raise UserError(_('Invalid response format from server'))
+            
+            if repositories:
                 for repo_data in repositories:
                     self._create_or_update_repository(repo_data)
                 
@@ -368,7 +384,15 @@ class GitHubSyncServer(models.Model):
                     }
                 }
             else:
-                raise UserError(_('Failed to sync repositories: %s') % result.get('message', 'Unknown error'))
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': _('No repositories found on server'),
+                        'type': 'info',
+                        'sticky': False,
+                    }
+                }
                 
         except Exception as e:
             raise
@@ -420,9 +444,21 @@ class GitHubSyncServer(models.Model):
         self.ensure_one()
         try:
             result = self._make_request('GET', 'logs')
-            if result and result.get('success'):
-                logs = result.get('data', [])
-                
+            
+            # Handle different response formats
+            logs = []
+            if isinstance(result, list):
+                # Direct list response
+                logs = result
+            elif isinstance(result, dict):
+                if result.get('success'):
+                    logs = result.get('data', [])
+                else:
+                    raise UserError(_('Failed to sync logs: %s') % result.get('message', 'Unknown error'))
+            else:
+                raise UserError(_('Invalid response format from server'))
+            
+            if logs:
                 for log_data in logs:
                     self._create_or_update_log(log_data)
                 
@@ -436,7 +472,15 @@ class GitHubSyncServer(models.Model):
                     }
                 }
             else:
-                raise UserError(_('Failed to sync logs: %s') % result.get('message', 'Unknown error'))
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'message': _('No logs found on server'),
+                        'type': 'info',
+                        'sticky': False,
+                    }
+                }
                 
         except Exception as e:
             raise
