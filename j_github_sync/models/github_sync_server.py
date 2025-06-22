@@ -487,22 +487,29 @@ class GitHubSyncServer(models.Model):
     
     def _create_or_update_log(self, log_data):
         """Create or update log record."""
-        external_id = log_data.get('id')
+        # Handle different log data formats
+        if not isinstance(log_data, dict):
+            _logger.warning(f"Invalid log data format: {type(log_data)}")
+            return
+            
+        external_id = log_data.get('id') or log_data.get('log_id') or log_data.get('external_id')
         if not external_id:
+            _logger.warning(f"No external ID found in log data: {log_data}")
             return
         
         log = self.env['github.sync.log'].search([
-            ('gsl_external_id', '=', external_id),
+            ('gsl_external_id', '=', str(external_id)),
             ('gsl_server_id', '=', self.id)
         ], limit=1)
         
         # Parse timestamp properly
-        timestamp_str = log_data.get('timestamp')
+        timestamp_str = log_data.get('timestamp') or log_data.get('time') or log_data.get('created_at')
         if timestamp_str:
             try:
                 # Handle ISO format with or without timezone
-                if 'T' in timestamp_str:
+                if 'T' in str(timestamp_str):
                     # Remove timezone info if present
+                    timestamp_str = str(timestamp_str)
                     if '+' in timestamp_str:
                         timestamp_str = timestamp_str.split('+')[0]
                     elif 'Z' in timestamp_str:
@@ -510,40 +517,62 @@ class GitHubSyncServer(models.Model):
                     # Convert ISO format to Odoo datetime format
                     timestamp = datetime.strptime(timestamp_str, '%Y-%m-%dT%H:%M:%S')
                 else:
-                    timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
-            except (ValueError, TypeError):
+                    timestamp = datetime.strptime(str(timestamp_str), '%Y-%m-%d %H:%M:%S')
+            except (ValueError, TypeError) as e:
+                _logger.warning(f"Failed to parse timestamp '{timestamp_str}': {e}")
                 timestamp = fields.Datetime.now()
         else:
             timestamp = fields.Datetime.now()
         
         # Find repository if referenced
         repository_id = None
-        repo_ref = log_data.get('repository_id') or log_data.get('repository_name')
+        repo_ref = (log_data.get('repository_id') or 
+                   log_data.get('repository_name') or 
+                   log_data.get('repo_id') or 
+                   log_data.get('repo_name'))
         if repo_ref:
             repository = self.env['github.repository'].search([
                 '|',
-                ('gr_external_id', '=', repo_ref),
-                ('gr_name', '=', repo_ref),
+                ('gr_external_id', '=', str(repo_ref)),
+                ('gr_name', '=', str(repo_ref)),
                 ('gr_server_id', '=', self.id)
             ], limit=1)
             if repository:
                 repository_id = repository.id
         
+        # Validate operation value
+        operation = log_data.get('operation', 'pull')
+        valid_operations = ['pull', 'clone', 'restart', 'webhook']
+        if operation not in valid_operations:
+            operation = 'pull'  # Default fallback
+        
+        # Validate status value
+        status = log_data.get('status', 'pending')
+        valid_statuses = ['success', 'error', 'warning', 'pending', 'syncing']
+        if status not in valid_statuses:
+            status = 'pending'  # Default fallback
+        
         vals = {
-            'gsl_external_id': external_id,
+            'gsl_external_id': str(external_id),
             'gsl_server_id': self.id,
             'gsl_repository_id': repository_id,
             'gsl_time': timestamp,
-            'gsl_operation': log_data.get('operation', 'pull'),
-            'gsl_status': log_data.get('status', 'pending'),
-            'gsl_message': log_data.get('message', ''),
+            'gsl_operation': operation,
+            'gsl_status': status,
+            'gsl_message': str(log_data.get('message', '')),
             'gsl_details': json.dumps(log_data.get('details', {}), indent=2) if log_data.get('details') else '',
         }
         
-        if log:
-            log.write(vals)
-        else:
-            self.env['github.sync.log'].create(vals)
+        try:
+            if log:
+                log.write(vals)
+            else:
+                self.env['github.sync.log'].create(vals)
+        except Exception as e:
+            _logger.error(f"Failed to create/update log record: {e}")
+            _logger.error(f"Log data: {log_data}")
+            _logger.error(f"Processed vals: {vals}")
+            raise
     
     def action_view_repositories(self):
         """Open repositories view filtered by this server."""
