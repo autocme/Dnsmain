@@ -445,7 +445,10 @@ class GitHubSyncServer(models.Model):
                             continue
                 
                 if last_pull:
-                    _logger.info(f"Successfully parsed last_pull: {last_pull}")
+                    # Adjust for server timezone offset (server is 3 hours ahead)
+                    from datetime import timedelta
+                    last_pull = last_pull - timedelta(hours=3)
+                    _logger.info(f"Successfully parsed and adjusted last_pull: {last_pull}")
                     
             except (ValueError, TypeError) as e:
                 _logger.error(f"Failed to parse last_pull timestamp '{last_pull_str}': {e}")
@@ -567,6 +570,7 @@ class GitHubSyncServer(models.Model):
         ], limit=1)
         
         # Parse timestamp properly - use actual server timestamp, not sync time
+        # Note: Server appears to be 3 hours ahead, adjust timezone
         timestamp_str = log_data.get('timestamp') or log_data.get('time') or log_data.get('created_at')
         timestamp = None
         
@@ -601,7 +605,10 @@ class GitHubSyncServer(models.Model):
                             continue
                 
                 if timestamp:
-                    _logger.info(f"Successfully parsed timestamp: {timestamp}")
+                    # Adjust for server timezone offset (server is 3 hours ahead)
+                    from datetime import timedelta
+                    timestamp = timestamp - timedelta(hours=3)
+                    _logger.info(f"Successfully parsed and adjusted timestamp: {timestamp}")
                 else:
                     raise ValueError(f"No matching format found for: {timestamp_str}")
                     
