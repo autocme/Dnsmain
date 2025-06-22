@@ -118,6 +118,13 @@ class GitHubSyncServer(models.Model):
         default=lambda self: self.env.company,
         tracking=True
     )
+    
+    gss_demo_mode = fields.Boolean(
+        string='Demo Mode',
+        default=False,
+        tracking=True,
+        help='Enable demo mode to test functionality without external server'
+    )
 
     # ========================================================================
     # COMPUTED FIELDS
@@ -173,6 +180,11 @@ class GitHubSyncServer(models.Model):
     def _make_request(self, method, endpoint, data=None, params=None):
         """Make HTTP request to the API."""
         self.ensure_one()
+        
+        # Demo mode simulation
+        if self.gss_demo_mode:
+            return self._simulate_api_response(method, endpoint)
+        
         url = self._get_api_url(endpoint)
         headers = self._get_headers()
         
@@ -185,8 +197,8 @@ class GitHubSyncServer(models.Model):
                 headers=headers,
                 json=data,
                 params=params,
-                timeout=10,  # Reduced timeout for faster feedback
-                verify=False  # Skip SSL verification for internal servers
+                timeout=10,
+                verify=False
             )
             
             if response.status_code == 200:
@@ -199,20 +211,90 @@ class GitHubSyncServer(models.Model):
                 response.raise_for_status()
                 
         except requests.exceptions.ConnectTimeout:
-            raise UserError(_('Connection timeout. The server at %s is not responding within 10 seconds.') % self.gss_server_url)
+            raise UserError(_('Connection timeout. The server at %s is not responding within 10 seconds. Try enabling Demo Mode for testing.') % self.gss_server_url)
         except requests.exceptions.ConnectionError as e:
             if 'Name or service not known' in str(e):
-                raise UserError(_('Cannot resolve hostname. Please check the server URL: %s') % self.gss_server_url)
+                raise UserError(_('Cannot resolve hostname. Please check the server URL: %s. Try enabling Demo Mode for testing.') % self.gss_server_url)
             elif 'Connection refused' in str(e):
-                raise UserError(_('Connection refused. The server might be offline or the port is not accessible: %s') % self.gss_server_url)
+                raise UserError(_('Connection refused. The server might be offline: %s. Try enabling Demo Mode for testing.') % self.gss_server_url)
             else:
-                raise UserError(_('Connection failed: %s') % str(e))
+                raise UserError(_('Connection failed: %s. Try enabling Demo Mode for testing.') % str(e))
         except requests.exceptions.Timeout:
-            raise UserError(_('Request timeout. The server is taking too long to respond.'))
+            raise UserError(_('Request timeout. Try enabling Demo Mode for testing.'))
         except requests.exceptions.RequestException as e:
-            raise UserError(_('Request failed: %s') % str(e))
+            raise UserError(_('Request failed: %s. Try enabling Demo Mode for testing.') % str(e))
         
         return None
+    
+    def _simulate_api_response(self, method, endpoint):
+        """Simulate API responses for demo mode."""
+        import time
+        time.sleep(0.5)  # Simulate network delay
+        
+        if endpoint == 'status':
+            return {
+                'success': True,
+                'data': {
+                    'status': 'online',
+                    'version': '1.0.0',
+                    'uptime': '2 days'
+                },
+                'message': 'Server is running'
+            }
+        elif endpoint == 'repositories':
+            return {
+                'success': True,
+                'data': [
+                    {
+                        'id': 'demo_repo_1',
+                        'name': 'odoo-modules',
+                        'url': 'https://github.com/demo/odoo-modules',
+                        'description': 'Demo Odoo modules repository',
+                        'private': False
+                    },
+                    {
+                        'id': 'demo_repo_2', 
+                        'name': 'portainer-config',
+                        'url': 'https://github.com/demo/portainer-config',
+                        'description': 'Portainer configuration files',
+                        'private': True
+                    }
+                ],
+                'message': 'Repositories retrieved successfully'
+            }
+        elif endpoint == 'logs':
+            from datetime import timedelta
+            return {
+                'success': True,
+                'data': [
+                    {
+                        'id': 'log_1',
+                        'timestamp': fields.Datetime.now().isoformat(),
+                        'level': 'info',
+                        'message': 'Repository sync completed successfully',
+                        'operation': 'sync_repositories'
+                    },
+                    {
+                        'id': 'log_2',
+                        'timestamp': (fields.Datetime.now() - timedelta(minutes=5)).isoformat(),
+                        'level': 'warning',
+                        'message': 'Connection timeout during sync operation',
+                        'operation': 'sync_repositories'
+                    }
+                ],
+                'message': 'Logs retrieved successfully'
+            }
+        elif endpoint.startswith('repositories/') and endpoint.endswith('/sync'):
+            return {
+                'success': True,
+                'data': {},
+                'message': 'Repository sync initiated successfully'
+            }
+        else:
+            return {
+                'success': False,
+                'message': f'Demo endpoint not implemented: {endpoint}'
+            }
     
     def test_connection(self):
         """Test connection to the GitHub Sync Server."""
