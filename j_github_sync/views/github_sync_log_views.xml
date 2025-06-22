@@ -5,7 +5,10 @@
         <field name="name">github.sync.log.tree</field>
         <field name="model">github.sync.log</field>
         <field name="arch" type="xml">
-            <tree string="GitHub Sync Logs" default_order="gsl_time desc">
+            <tree string="GitHub Sync Logs" default_order="gsl_time desc"
+                  decoration-success="gsl_status == 'success'"
+                  decoration-danger="gsl_status == 'error'"
+                  decoration-warning="gsl_status == 'warning'">
                 <field name="gsl_time"/>
                 <field name="gsl_operation"/>
                 <field name="gsl_status"/>

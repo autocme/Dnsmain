@@ -5,7 +5,12 @@
         <field name="name">github.repository.tree</field>
         <field name="model">github.repository</field>
         <field name="arch" type="xml">
-            <tree string="GitHub Repositories" default_order="gr_name">
+            <tree string="GitHub Repositories" default_order="gr_name"
+                  decoration-success="gr_status == 'success'"
+                  decoration-danger="gr_status == 'error'"
+                  decoration-warning="gr_status == 'warning'"
+                  decoration-muted="gr_status == 'pending'"
+                  decoration-info="gr_status == 'syncing'">
                 <field name="gr_name"/>
                 <field name="gr_url"/>
                 <field name="gr_branch"/>
