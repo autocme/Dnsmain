@@ -185,7 +185,8 @@ class GitHubSyncServer(models.Model):
                 headers=headers,
                 json=data,
                 params=params,
-                timeout=30
+                timeout=10,  # Reduced timeout for faster feedback
+                verify=False  # Skip SSL verification for internal servers
             )
             
             if response.status_code == 200:
@@ -197,6 +198,17 @@ class GitHubSyncServer(models.Model):
             else:
                 response.raise_for_status()
                 
+        except requests.exceptions.ConnectTimeout:
+            raise UserError(_('Connection timeout. The server at %s is not responding within 10 seconds.') % self.gss_server_url)
+        except requests.exceptions.ConnectionError as e:
+            if 'Name or service not known' in str(e):
+                raise UserError(_('Cannot resolve hostname. Please check the server URL: %s') % self.gss_server_url)
+            elif 'Connection refused' in str(e):
+                raise UserError(_('Connection refused. The server might be offline or the port is not accessible: %s') % self.gss_server_url)
+            else:
+                raise UserError(_('Connection failed: %s') % str(e))
+        except requests.exceptions.Timeout:
+            raise UserError(_('Request timeout. The server is taking too long to respond.'))
         except requests.exceptions.RequestException as e:
             raise UserError(_('Request failed: %s') % str(e))
         

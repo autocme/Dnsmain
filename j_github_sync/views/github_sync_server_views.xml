@@ -42,8 +42,8 @@
                     
                     <group>
                         <group name="connection_info" string="Connection">
-                            <field name="gss_server_url"/>
-                            <field name="gss_api_key" password="True"/>
+                            <field name="gss_server_url" placeholder="http://3.110.88.87:5000"/>
+                            <field name="gss_api_key" password="True" placeholder="Enter your API key..."/>
                         </group>
                         <group name="status_info" string="Status">
                             <field name="gss_active"/>
@@ -51,6 +51,16 @@
                             <field name="gss_company_id" groups="base.group_multi_company"/>
                         </group>
                     </group>
+                    
+                    <div class="alert alert-info" role="alert">
+                        <strong>Connection Help:</strong>
+                        <ul>
+                            <li>Ensure the GitHub Sync Server is running and accessible</li>
+                            <li>Check if the server URL is correct (e.g., http://3.110.88.87:5000)</li>
+                            <li>Verify your API key is valid</li>
+                            <li>Make sure port 5000 is not blocked by firewall</li>
+                        </ul>
+                    </div>
                     
                     <notebook>
                         <page string="Repositories" name="repositories">
