@@ -13,11 +13,9 @@
                 <field name="pkg_sequence"/>
                 <field name="pkg_name"/>
                 <field name="pkg_system_type_id" optional="show"/>
-                <field name="pkg_user_limit"/>
-                <field name="pkg_company_limit"/>
-                <field name="pkg_database_limit_size"/>
                 <field name="pkg_price" widget="monetary"/>
                 <field name="pkg_currency_id" invisible="1"/>
+                <field name="pkg_subscription_period"/>
                 <field name="pkg_subscription_template_id"/>
                 <field name="pkg_active"/>
             </tree>
@@ -145,9 +143,7 @@
                 <field name="pkg_name"/>
                 <field name="pkg_price"/>
                 <field name="pkg_currency_id"/>
-                <field name="pkg_user_limit"/>
-                <field name="pkg_company_limit"/>
-                <field name="pkg_database_limit_size"/>
+                <field name="pkg_subscription_period"/>
                 <field name="pkg_active"/>
                 <templates>
                     <t t-name="kanban-box">
@@ -191,21 +187,15 @@
                                 </div>
                                 <hr/>
                                 <div class="row">
-                                    <div class="col-4">
-                                        <strong>Users:</strong>
+                                    <div class="col-6">
+                                        <strong>Period:</strong>
                                         <br/>
-                                        <field name="pkg_user_limit"/>
+                                        <field name="pkg_subscription_period"/>
                                     </div>
-                                    <div class="col-4">
-                                        <strong>Companies:</strong>
+                                    <div class="col-6">
+                                        <strong>Warning Days:</strong>
                                         <br/>
-                                        <field name="pkg_company_limit"/>
-                                    </div>
-                                    <div class="col-4">
-                                        <strong>DB Size:</strong>
-                                        <br/>
-                                        <field name="pkg_database_limit_size"/>
-                                        GB
+                                        <field name="pkg_warning_delay"/>
                                     </div>
                                 </div>
                             </div>

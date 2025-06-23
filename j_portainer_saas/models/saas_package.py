@@ -13,9 +13,9 @@ class SaasPackage(models.Model):
     """
     Package Management Model
     
-    This model defines SaaS packages with resource limits and pricing.
-    Each package specifies user limits, company limits, database constraints,
-    and billing information for SaaS client subscriptions.
+    This model defines SaaS packages with pricing and subscription management.
+    Each package specifies billing information and warning delays for SaaS 
+    client subscriptions.
     """
     _name = 'saas.package'
     _description = 'SaaS Package'
