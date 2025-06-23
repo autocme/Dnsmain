@@ -149,13 +149,13 @@ class GitHubRepository(models.Model):
                     message = 'Repository sync response received'
                 
                 if success:
-                    # Extract last_pull_time from response if available
-                    last_pull_time = None
-                    gr_last_pull = None
+                    # Extract last_pull_time from response - ONLY update if provided by server
+                    update_vals = {'gr_status': 'success'}
                     
-                    if isinstance(result, dict):
-                        last_pull_time = result.get('last_pull_time')
+                    if isinstance(result, dict) and 'last_pull_time' in result:
+                        last_pull_time = result['last_pull_time']
                         
+                        # Only update gr_last_pull if server provides last_pull_time
                         if last_pull_time:
                             try:
                                 from datetime import datetime, timedelta
@@ -167,18 +167,18 @@ class GitHubRepository(models.Model):
                                     gr_last_pull = datetime.strptime(last_pull_time, '%Y-%m-%dT%H:%M:%S')
                                     # Adjust for server timezone offset (server is 3 hours ahead)
                                     gr_last_pull = gr_last_pull - timedelta(hours=3)
+                                    update_vals['gr_last_pull'] = gr_last_pull
+                                    _logger.info(f"Updated gr_last_pull from server response: {gr_last_pull}")
                             except (ValueError, TypeError) as e:
                                 _logger.error(f"Failed to parse last_pull_time '{last_pull_time}': {e}")
-                                gr_last_pull = None
+                        elif last_pull_time is None:
+                            # Server explicitly says no pull time - don't update the field
+                            _logger.info("Server response has last_pull_time=None, keeping existing gr_last_pull")
+                    else:
+                        # No last_pull_time in response - don't update gr_last_pull field
+                        _logger.info("No last_pull_time in server response, keeping existing gr_last_pull")
                     
-                    # If no last_pull_time in response, use current time as fallback
-                    if not gr_last_pull:
-                        gr_last_pull = fields.Datetime.now()
-                    
-                    self.write({
-                        'gr_status': 'success',
-                        'gr_last_pull': gr_last_pull
-                    })
+                    self.write(update_vals)
                     return {
                         'type': 'ir.actions.client',
                         'tag': 'display_notification',
