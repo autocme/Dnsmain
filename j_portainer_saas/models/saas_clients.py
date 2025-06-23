@@ -370,6 +370,7 @@ class SaasClient(models.Model):
                 'type': 'a',
                 'value': environment_ip,
                 'ttl': 300,
+                'saas_client_id': self.id,
             }
             
             subdomain = self.env['dns.subdomain'].create(subdomain_vals)

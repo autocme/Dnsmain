@@ -6,4 +6,8 @@ from odoo import models, fields, api, _
 class DnsSubdomainInherit(models.Model):
     _inherit = 'dns.subdomain'
     
-    # Additional fields or methods for DNS subdomain can be added here if needed in the future
+    saas_client_id = fields.Many2one(
+        comodel_name='saas.client',
+        string='SaaS Client',
+        help='The SaaS client that owns this subdomain'
+    )
