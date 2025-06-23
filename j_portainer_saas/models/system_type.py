@@ -335,7 +335,6 @@ class SystemType(models.Model):
             commands.append((0, 0, {
                 'stv_variable_name': var_name,
                 'stv_field_domain': '',
-                'stv_field_name': '',
             }))
         
         # Apply changes only if there are actual additions or removals

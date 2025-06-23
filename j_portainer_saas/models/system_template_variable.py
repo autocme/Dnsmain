@@ -4,6 +4,7 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
 import logging
+import re
 
 _logger = logging.getLogger(__name__)
 
@@ -84,14 +85,51 @@ class SystemTemplateVariable(models.Model):
     
     @api.onchange('stv_field_domain')
     def _onchange_field_domain(self):
-        """Extract field name from field domain for display purposes."""
-        if self.stv_field_domain:
-            # Extract the last part after the last dot (if any)
-            field_parts = self.stv_field_domain.split('.')
-            self.stv_field_name = field_parts[-1] if field_parts else ''
-        else:
-            self.stv_field_name = ''
+        """Extract field name from field_domain when it changes."""
+        self._extract_field_name()
     
+    def _extract_field_name(self):
+        """Extract field name from field_domain patterns."""
+        if not self.stv_field_domain:
+            self.stv_field_name = ''
+            return
+        
+        # Pattern to match field names with dot notation in domain expressions
+        # Examples: [("field_name", "!=", False)], ("sc_partner_id.active", "=", True)
+        field_pattern = r'["\']([a-zA-Z_][a-zA-Z0-9_.]*)["\']'
+        matches = re.findall(field_pattern, self.stv_field_domain)
+
+        if matches:
+            # Take the first field name found (includes dot notation)
+            self.stv_field_name = matches[0]
+        else:
+            # Try simpler pattern for direct field names with dot notation
+            simple_pattern = r'^([a-zA-Z_][a-zA-Z0-9_.]*)$'
+            match = re.match(simple_pattern, self.stv_field_domain.strip())
+            if match:
+                self.stv_field_name = match.group(1)
+            else:
+                self.stv_field_name = ''
+    
+    @api.model
+    def create(self, vals):
+        """Override create to extract field name on creation."""
+        # Ensure field_domain is properly stored
+        if 'stv_field_domain' in vals and vals['stv_field_domain']:
+            _logger.info(f"Creating system template variable with field_domain: {vals['stv_field_domain']}")
+
+        record = super().create(vals)
+        if vals.get('stv_field_domain'):
+            record._extract_field_name()
+        return record
+    
+    def write(self, vals):
+        """Override write to extract field name on update."""
+        result = super().write(vals)
+        if 'stv_field_domain' in vals:
+            self._extract_field_name()
+        return result
+
     def name_get(self):
         """Custom name display for template variables."""
         result = []

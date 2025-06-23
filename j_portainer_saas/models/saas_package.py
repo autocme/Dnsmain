@@ -260,16 +260,28 @@ class SaasPackage(models.Model):
             if self.pkg_system_type_id.st_docker_compose_template:
                 self.pkg_docker_compose_template = self.pkg_system_type_id.st_docker_compose_template
                 
-                # Copy template variables if they exist
+                # Copy template variables if they exist, avoiding duplicates
                 if self.pkg_system_type_id.st_template_variable_ids:
+                    # Get existing variable names to avoid duplicates
+                    existing_var_names = set()
+                    for existing_var in self.pkg_template_variable_ids:
+                        if hasattr(existing_var, 'tv_variable_name') and existing_var.tv_variable_name:
+                            existing_var_names.add(existing_var.tv_variable_name)
+                    
+                    # Build commands for only new variables
                     variable_commands = []
                     for st_var in self.pkg_system_type_id.st_template_variable_ids:
-                        variable_commands.append((0, 0, {
-                            'tv_variable_name': st_var.stv_variable_name,
-                            'tv_field_domain': st_var.stv_field_domain,
-                            'tv_field_name': st_var.stv_field_name,
-                        }))
-                    self.pkg_template_variable_ids = variable_commands
+                        # Only add if variable doesn't already exist
+                        if st_var.stv_variable_name and st_var.stv_variable_name not in existing_var_names:
+                            variable_commands.append((0, 0, {
+                                'tv_variable_name': st_var.stv_variable_name,
+                                'tv_field_domain': st_var.stv_field_domain,
+                                # tv_field_name will be computed automatically
+                            }))
+                    
+                    # Apply commands only if there are new variables to add
+                    if variable_commands:
+                        self.pkg_template_variable_ids = variable_commands
             else:
                 # Clear template and variables if system type has none
                 self.pkg_docker_compose_template = False
