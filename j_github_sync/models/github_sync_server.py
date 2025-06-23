@@ -516,7 +516,8 @@ class GitHubSyncServer(models.Model):
             status = 'pending'  # Default to pending for unknown statuses
         
         # Override status based on last_pull_time for repositories that have never been synced
-        if 'last_pull_time' in repo_data and repo_data['last_pull_time'] is None:
+        # Only override if the server explicitly provides last_pull_time as None AND we have no parsed timestamp
+        if 'last_pull_time' in repo_data and repo_data['last_pull_time'] is None and last_pull is None:
             status = 'pending'  # Never synced repositories should show as pending
             _logger.info(f"Repository {repo_data.get('name')} has no sync history, setting status to pending")
         
