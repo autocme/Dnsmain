@@ -106,10 +106,9 @@
                         </page>
                         
                         <page string="Deployment Template" name="deployment_template">
-                            <group>
-                                <field name="st_docker_compose_template" 
+                            <field name="st_docker_compose_template" 
+                                    widget="ace"
                                        placeholder="Enter your Docker Compose template with variables marked as @VARIABLE_NAME@..."/>
-                            </group>
                         </page>
                         
                         <page string="Template Variables" name="template_variables">
