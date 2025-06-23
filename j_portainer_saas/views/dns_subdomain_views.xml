@@ -5,13 +5,13 @@
         <record id="view_dns_subdomain_form_inherit_saas" model="ir.ui.view">
             <field name="name">dns.subdomain.form.inherit.saas</field>
             <field name="model">dns.subdomain</field>
-            <field name="inherit_id" ref="dns_base.view_dns_subdomain_form"/>
+            <field name="inherit_id" ref="dns_base.view_dns_record_form"/>
             <field name="arch" type="xml">
-                <xpath expr="//sheet" position="before">
+                <xpath expr="//sheet" position="inside">
                     <div class="oe_button_box" name="button_box">
-                        <button name="action_view_saas_client" 
-                                type="object" 
-                                class="oe_stat_button" 
+                        <button name="action_view_saas_client"
+                                type="object"
+                                class="oe_stat_button"
                                 icon="fa-user"
                                 invisible="not saas_client_id">
                             <div class="o_stat_info">
@@ -20,22 +20,22 @@
                         </button>
                     </div>
                 </xpath>
-                
+
                 <!-- Add SaaS Client field to the form -->
-                <xpath expr="//field[@name='active']" position="after">
-                    <field name="saas_client_id" readonly="1"/>
+                <xpath expr="//field[@name='value']" position="after">
+                    <field name="saas_client_id" invisible="1"/>
                 </xpath>
             </field>
         </record>
-        
+
         <!-- Inherit DNS Subdomain Tree View to Show SaaS Client -->
         <record id="view_dns_subdomain_tree_inherit_saas" model="ir.ui.view">
             <field name="name">dns.subdomain.tree.inherit.saas</field>
             <field name="model">dns.subdomain</field>
-            <field name="inherit_id" ref="dns_base.view_dns_subdomain_tree"/>
+            <field name="inherit_id" ref="dns_base.view_dns_record_tree"/>
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='value']" position="after">
-                    <field name="saas_client_id" optional="show"/>
+                    <field name="saas_client_id" optional="hide"/>
                 </xpath>
             </field>
         </record>
