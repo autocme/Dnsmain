@@ -116,7 +116,7 @@
                             <field name="st_template_variable_ids" nolabel="1">
                                 <tree string="Template Variables" editable="bottom">
                                     <field name="stv_variable_name"/>
-                                    <field name="stv_field_domain" 
+                                    <field name="stv_field_domain" widget="domain" options="{'model': 'saas.client'}" 
                                            placeholder="e.g., sc_client_name, sc_client_subdomain"/>
                                     <field name="stv_field_name" readonly="1"/>
                                 </tree>
