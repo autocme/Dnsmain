@@ -43,9 +43,11 @@ Features:
     ],
     'data': [
         'security/ir.model.access.csv',
+        'data/cron_data.xml',
         'views/github_sync_server_views.xml',
         'views/github_repository_views.xml',
         'views/github_sync_log_views.xml',
+        'wizards/sync_config_wizard_view.xml',
         'views/menu_views.xml',
     ],
     'demo': [],

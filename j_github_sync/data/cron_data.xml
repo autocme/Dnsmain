@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- Scheduled action to sync GitHub repositories and logs -->
+        <record id="ir_cron_github_sync_repositories" model="ir.cron">
+            <field name="name">GitHub Sync: Sync Repositories and Logs</field>
+            <field name="model_id" ref="model_github_sync_server"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_sync_all_servers()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+            <field name="doall" eval="False"/>
+            <field name="active" eval="True"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="priority">5</field>
+        </record>
+
+        <!-- Configuration parameter for sync period -->
+        <record id="config_param_sync_period_days" model="ir.config_parameter">
+            <field name="key">j_github_sync.sync_period_days</field>
+            <field name="value">1</field>
+        </record>
+        
+    </data>
+</odoo>

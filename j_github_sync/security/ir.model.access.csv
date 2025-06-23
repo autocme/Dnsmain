@@ -3,5 +3,6 @@ access_github_sync_server_user,github.sync.server.user,model_github_sync_server,
 access_github_sync_server_manager,github.sync.server.manager,model_github_sync_server,base.group_system,1,1,1,1
 access_github_repository_user,github.repository.user,model_github_repository,base.group_user,1,0,0,0
 access_github_repository_manager,github.repository.manager,model_github_repository,base.group_system,1,1,1,1
+access_github_sync_config_wizard,github.sync.config.wizard,model_j_github_sync_sync_config_wizard,base.group_system,1,1,1,1
 access_github_sync_log_user,github.sync.log.user,model_github_sync_log,base.group_user,1,0,0,0
 access_github_sync_log_manager,github.sync.log.manager,model_github_sync_log,base.group_system,1,1,1,1

@@ -42,7 +42,6 @@ class GitHubSyncServer(models.Model):
         required=True,
         tracking=True,
         help='Base URL of the GitHub Sync Server (e.g., http://3.110.88.87:5000)',
-        default='http://3.110.88.87:5000'
     )
     
     gss_api_key = fields.Char(
@@ -521,6 +520,64 @@ class GitHubSyncServer(models.Model):
         else:
             self.env['github.repository'].create(vals)
     
+    # ========================================================================
+    # SCHEDULED ACTION METHODS
+    # ========================================================================
+    
+    @api.model
+    def cron_sync_all_servers(self):
+        """Scheduled action to sync all GitHub sync servers"""
+        _logger.info("Starting scheduled sync for all GitHub sync servers")
+        
+        # Get all active sync servers
+        servers = self.search([('gss_active', '=', True)])
+        
+        if not servers:
+            _logger.info("No active GitHub sync servers found")
+            return
+        
+        success_count = 0
+        error_count = 0
+        
+        for server in servers:
+            try:
+                _logger.info(f"Syncing server: {server.gss_name} ({server.gss_url})")
+                
+                # Check connection first
+                if not server.action_test_connection_silent():
+                    _logger.warning(f"Connection test failed for server: {server.gss_name}")
+                    error_count += 1
+                    continue
+                
+                # Sync repositories and logs
+                server.action_sync_repositories()
+                success_count += 1
+                
+            except Exception as e:
+                _logger.error(f"Error syncing server {server.gss_name}: {str(e)}")
+                error_count += 1
+        
+        _logger.info(f"Scheduled sync completed. Success: {success_count}, Errors: {error_count}")
+
+    def action_test_connection_silent(self):
+        """Test connection without showing user messages (for cron jobs)"""
+        self.ensure_one()
+        try:
+            response = requests.get(
+                f"{self.gss_url}/api/health",
+                timeout=30,
+                headers={'Accept': 'application/json'}
+            )
+            
+            if response.status_code == 200:
+                return True
+            else:
+                return False
+                
+        except Exception as e:
+            _logger.error(f"Connection test failed for {self.gss_name}: {str(e)}")
+            return False
+
     # ========================================================================
     # ACTION METHODS
     # ========================================================================

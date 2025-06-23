@@ -26,4 +26,17 @@
               action="action_github_sync_log"
               sequence="30"/>
 
+    <!-- Configuration submenu -->
+    <menuitem id="menu_j_github_sync_configuration"
+              name="Configuration"
+              parent="menu_j_github_sync_root"
+              sequence="90"/>
+
+    <!-- Sync Configuration Menu -->
+    <menuitem id="menu_j_github_sync_config"
+              name="Configure Sync Period"
+              parent="menu_j_github_sync_configuration"
+              action="action_sync_config_wizard"
+              sequence="10"/>
+
 </odoo>

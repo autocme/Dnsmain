@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <!-- GitHub Sync Configuration Wizard Form -->
+    <record id="view_sync_config_wizard_form" model="ir.ui.view">
+        <field name="name">j_github_sync.sync.config.wizard.form</field>
+        <field name="model">j_github_sync.sync.config.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Configure GitHub Sync Period">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="sync_period_days" class="oe_inline"/> days
+                        </h1>
+                        <p>
+                            Configure how often the system automatically syncs repositories and logs from GitHub Sync Servers.
+                        </p>
+                    </div>
+                    <group>
+                        <field name="sync_period_days" 
+                               string="Sync Period (Days)"
+                               help="The scheduled action will run every this number of days to check connections and sync data."/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="save_config" 
+                            string="Save Configuration" 
+                            type="object" 
+                            class="btn-primary"/>
+                    <button string="Cancel" 
+                            class="btn-secondary" 
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- GitHub Sync Configuration Wizard Action -->
+    <record id="action_sync_config_wizard" model="ir.actions.act_window">
+        <field name="name">Configure Sync Period</field>
+        <field name="res_model">j_github_sync.sync.config.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{}</field>
+    </record>
+
+</odoo>
