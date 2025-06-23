@@ -31,11 +31,7 @@
         <field name="arch" type="xml">
             <form string="GitHub Repository">
                 <header>
-                    <div class="alert alert-warning" role="alert" 
-                         invisible="gr_external_id and gr_external_id != '0'">
-                        <strong>Repository Not Found:</strong> This repository does not exist on the sync server. 
-                        Click "Create Repository" to create it on the selected sync server.
-                    </div>
+                    
                     <button name="action_create_repository" string="Create Repository" 
                             type="object" class="btn-success"
                             invisible="gr_external_id and gr_external_id != '0'"
@@ -48,6 +44,11 @@
                     <field name="gr_status" widget="statusbar"/>
                 </header>
                 <sheet>
+                    <div class="alert alert-warning" role="alert" 
+                         invisible="gr_external_id and gr_external_id != '0'">
+                        <strong>Repository Not Found:</strong> This repository does not exist on the sync server. 
+                        Click "Create Repository" to create it on the selected sync server.
+                    </div>
                     <div class="oe_title">
                         <label for="gr_name" class="oe_edit_only"/>
                         <h1><field name="gr_name" placeholder="Repository name"/></h1>
