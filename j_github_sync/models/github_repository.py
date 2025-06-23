@@ -3,6 +3,9 @@
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class GitHubRepository(models.Model):
@@ -196,12 +199,35 @@ class GitHubRepository(models.Model):
             result = self.gr_server_id._make_request('POST', 'repositories', repo_data)
             
             if result and isinstance(result, dict):
-                # Update repository with returned external ID
+                # Update repository with returned external ID and last_pull_time
                 external_id = result.get('id') or result.get('external_id')
+                last_pull_time = result.get('last_pull_time')
+                
                 if external_id:
+                    # Parse last_pull_time if provided
+                    gr_last_pull = None
+                    if last_pull_time:
+                        try:
+                            from datetime import datetime, timedelta
+                            # Handle ISO format with microseconds
+                            if 'T' in last_pull_time:
+                                # Remove microseconds if present: 2025-06-23T10:49:36.900591
+                                if '.' in last_pull_time:
+                                    last_pull_time = last_pull_time.split('.')[0]
+                                gr_last_pull = datetime.strptime(last_pull_time, '%Y-%m-%dT%H:%M:%S')
+                                # Adjust for server timezone offset (server is 3 hours ahead)
+                                gr_last_pull = gr_last_pull - timedelta(hours=3)
+                        except (ValueError, TypeError) as e:
+                            _logger.error(f"Failed to parse last_pull_time '{last_pull_time}': {e}")
+                            gr_last_pull = None
+                    
+                    # Determine status based on last_pull_time
+                    status = 'success' if gr_last_pull else 'pending'
+                    
                     self.write({
                         'gr_external_id': str(external_id),
-                        'gr_status': 'pending'  # Set to pending since it hasn't been synced yet
+                        'gr_status': status,
+                        'gr_last_pull': gr_last_pull
                     })
                     return {
                         'type': 'ir.actions.client',
