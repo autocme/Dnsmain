@@ -55,6 +55,20 @@ class SaasClient(models.Model):
              'including pricing, features, and service specifications'
     )
     
+    sc_environment_id = fields.Many2one(
+        comodel_name='j_portainer.environment',
+        string='Deployment Environment',
+        tracking=True,
+        help='Environment where the client will be deployed'
+    )
+    
+    sc_available_environment_ids = fields.Many2many(
+        comodel_name='j_portainer.environment',
+        compute='_compute_available_environments',
+        string='Available Environments',
+        help='Environments available based on selected package system type'
+    )
+    
     sc_subscription_id = fields.Many2one(
         comodel_name='sale.subscription',
         string='Subscription',
@@ -420,7 +434,7 @@ class SaasClient(models.Model):
         if self.sc_portainer_template_id:
             raise UserError(_('Client is already deployed. Template: %s') % self.sc_portainer_template_id.title)
         
-        # Get environment first using existing logic, then get the server that environment belongs to
+        # Use the pre-selected environment from client creation
         environment = self._get_deployment_environment()
         server = environment.server_id
         
@@ -503,32 +517,40 @@ class SaasClient(models.Model):
             raise UserError(_('Failed to create custom template: %s') % str(template_error))
 
     def _get_deployment_environment(self):
-        """Get the environment to use for deployment (environment-first approach)."""
-        # Get all active environments across all servers
-        environments = self.env['j_portainer.environment'].search([
-            ('active', '=', True),
-            ('status', '=', 'up')
-        ])
+        """Get the environment to use for deployment."""
+        # Use the pre-selected environment from client creation
+        if self.sc_environment_id:
+            # Validate the selected environment is still available
+            if not self.sc_environment_id.active or self.sc_environment_id.status != 'up':
+                raise UserError(_('Selected environment %s is not active or available. Please select a different environment.') % self.sc_environment_id.name)
+            
+            if not self.sc_environment_id.allow_stack_creation:
+                raise UserError(_(
+                    'Selected environment %s has reached its stack capacity (%s/%s stacks).\n\n'
+                    'Please select a different environment or increase the stack limit.'
+                ) % (self.sc_environment_id.name, self.sc_environment_id.active_stack_count, self.sc_environment_id.allowed_stack_number))
+            
+            return self.sc_environment_id
         
-        if not environments:
-            raise UserError(_('No active environments configured. Please configure at least one active environment on any server.'))
-        
-        # Filter environments that allow stack creation
-        available_environments = environments.filtered('allow_stack_creation')
+        # Fallback to old logic if no environment selected (for existing records)
+        available_environments = self.sc_available_environment_ids.filtered('allow_stack_creation')
         
         if not available_environments:
-            # Show detailed error with stack limits info across all servers
-            env_details = []
-            for env in environments:
-                env_details.append(f"- {env.server_id.name}/{env.name}: {env.active_stack_count}/{env.allowed_stack_number} stacks")
-            
-            raise UserError(_(
-                'No environments with available stack capacity found across all servers.\n\n'
-                'Environment stack usage:\n%s\n\n'
-                'Please increase the allowed stack number for an environment or remove unused stacks.'
-            ) % '\n'.join(env_details))
+            if self.sc_available_environment_ids:
+                # Show detailed error with stack limits info
+                env_details = []
+                for env in self.sc_available_environment_ids:
+                    env_details.append(f"- {env.server_id.name}/{env.name}: {env.active_stack_count}/{env.allowed_stack_number} stacks")
+                
+                raise UserError(_(
+                    'No environments with available stack capacity found for this package system type.\n\n'
+                    'Environment stack usage:\n%s\n\n'
+                    'Please increase the allowed stack number for an environment or remove unused stacks.'
+                ) % '\n'.join(env_details))
+            else:
+                raise UserError(_('No environments available for the selected package system type. Please configure environments in the system type or select a different package.'))
         
-        # Return the environment with the most available capacity (regardless of server)
+        # Return the environment with the most available capacity
         return available_environments.sorted(lambda env: env.allowed_stack_number - env.active_stack_count, reverse=True)[0]
     
     # ========================================================================
