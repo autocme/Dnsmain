@@ -165,8 +165,6 @@ class GitHubRepository(models.Model):
                                     if '.' in last_pull_time:
                                         last_pull_time = last_pull_time.split('.')[0]
                                     gr_last_pull = datetime.strptime(last_pull_time, '%Y-%m-%dT%H:%M:%S')
-                                    # Adjust for server timezone offset (server is 3 hours ahead)
-                                    gr_last_pull = gr_last_pull - timedelta(hours=3)
                                     update_vals['gr_last_pull'] = gr_last_pull
                                     _logger.info(f"Updated gr_last_pull from server response: {gr_last_pull}")
                             except (ValueError, TypeError) as e:

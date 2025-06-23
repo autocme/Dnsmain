@@ -480,10 +480,7 @@ class GitHubSyncServer(models.Model):
                             continue
                 
                 if last_pull:
-                    # Adjust for server timezone offset (server is 3 hours ahead)
-                    from datetime import timedelta
-                    last_pull = last_pull - timedelta(hours=3)
-                    _logger.info(f"Successfully parsed and adjusted last_pull: {last_pull}")
+                    _logger.info(f"Successfully parsed last_pull: {last_pull}")
                     
             except (ValueError, TypeError) as e:
                 _logger.error(f"Failed to parse last_pull timestamp '{last_pull_str}': {e}")
