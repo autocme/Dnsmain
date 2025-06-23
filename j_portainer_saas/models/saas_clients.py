@@ -55,18 +55,13 @@ class SaasClient(models.Model):
              'including pricing, features, and service specifications'
     )
     
-    sc_environment_id = fields.Many2one(
+    sc_deployment_environment_id = fields.Many2one(
         comodel_name='j_portainer.environment',
         string='Deployment Environment',
+        compute='_compute_deployment_environment',
+        store=True,
         tracking=True,
-        help='Environment where the client will be deployed'
-    )
-    
-    sc_available_environment_ids = fields.Many2many(
-        comodel_name='j_portainer.environment',
-        compute='_compute_available_environments',
-        string='Available Environments',
-        help='Environments available based on selected package system type'
+        help='Auto-selected environment for deployment based on package system type'
     )
     
     sc_subscription_id = fields.Many2one(
@@ -307,15 +302,7 @@ class SaasClient(models.Model):
             if not self.sc_template_id:
                 self.sc_template_id = self.sc_subscription_id.template_id
     
-    @api.onchange('sc_package_id')
-    def _onchange_sc_package_id(self):
-        """Handle package selection change."""
-        if self.sc_package_id:
-            # Reset environment selection when package changes
-            self.sc_environment_id = False
-        else:
-            # Clear environment when no package selected
-            self.sc_environment_id = False
+
     
 
     # ========================================================================
@@ -324,16 +311,33 @@ class SaasClient(models.Model):
 
 
     @api.depends('sc_package_id', 'sc_package_id.pkg_system_type_id', 'sc_package_id.pkg_system_type_id.st_environment_ids')
-    def _compute_available_environments(self):
-        """Compute available environments based on selected package system type."""
+    def _compute_deployment_environment(self):
+        """Auto-select deployment environment from package system type environments."""
         for record in self:
             if record.sc_package_id and record.sc_package_id.pkg_system_type_id:
                 # Get environments from the system type
-                record.sc_available_environment_ids = record.sc_package_id.pkg_system_type_id.st_environment_ids.filtered(
+                environments = record.sc_package_id.pkg_system_type_id.st_environment_ids.filtered(
                     lambda env: env.active and env.status == 'up'
                 )
+                
+                if environments:
+                    # Filter environments that allow stack creation
+                    available_environments = environments.filtered('allow_stack_creation')
+                    
+                    if available_environments:
+                        # Return the environment with the most available capacity
+                        record.sc_deployment_environment_id = available_environments.sorted(
+                            lambda env: env.allowed_stack_number - env.active_stack_count, reverse=True
+                        )[0]
+                    else:
+                        # No environments with capacity available
+                        record.sc_deployment_environment_id = False
+                else:
+                    # No active environments in system type
+                    record.sc_deployment_environment_id = False
             else:
-                record.sc_available_environment_ids = False
+                # No package or system type selected
+                record.sc_deployment_environment_id = False
 
     @api.depends('sc_sequence', 'sc_partner_id', 'sc_partner_id.name')
     def _compute_sc_complete_name(self):
@@ -456,7 +460,7 @@ class SaasClient(models.Model):
         if self.sc_portainer_template_id:
             raise UserError(_('Client is already deployed. Template: %s') % self.sc_portainer_template_id.title)
         
-        # Use the pre-selected environment from client creation
+        # Use the auto-computed deployment environment
         environment = self._get_deployment_environment()
         server = environment.server_id
         
@@ -540,28 +544,29 @@ class SaasClient(models.Model):
 
     def _get_deployment_environment(self):
         """Get the environment to use for deployment."""
-        # Use the pre-selected environment from client creation
-        if self.sc_environment_id:
-            # Validate the selected environment is still available
-            if not self.sc_environment_id.active or self.sc_environment_id.status != 'up':
-                raise UserError(_('Selected environment %s is not active or available. Please select a different environment.') % self.sc_environment_id.name)
+        # Use the computed deployment environment
+        if self.sc_deployment_environment_id:
+            # Validate the environment is still available
+            if not self.sc_deployment_environment_id.active or self.sc_deployment_environment_id.status != 'up':
+                raise UserError(_('Auto-selected environment %s is not active or available. Please check environment configuration.') % self.sc_deployment_environment_id.name)
             
-            if not self.sc_environment_id.allow_stack_creation:
+            if not self.sc_deployment_environment_id.allow_stack_creation:
                 raise UserError(_(
-                    'Selected environment %s has reached its stack capacity (%s/%s stacks).\n\n'
-                    'Please select a different environment or increase the stack limit.'
-                ) % (self.sc_environment_id.name, self.sc_environment_id.active_stack_count, self.sc_environment_id.allowed_stack_number))
+                    'Auto-selected environment %s has reached its stack capacity (%s/%s stacks).\n\n'
+                    'Please increase the stack limit or remove unused stacks.'
+                ) % (self.sc_deployment_environment_id.name, self.sc_deployment_environment_id.active_stack_count, self.sc_deployment_environment_id.allowed_stack_number))
             
-            return self.sc_environment_id
+            return self.sc_deployment_environment_id
         
-        # Fallback to old logic if no environment selected (for existing records)
-        available_environments = self.sc_available_environment_ids.filtered('allow_stack_creation')
-        
-        if not available_environments:
-            if self.sc_available_environment_ids:
-                # Show detailed error with stack limits info
+        # No environment available
+        if self.sc_package_id and self.sc_package_id.pkg_system_type_id:
+            environments = self.sc_package_id.pkg_system_type_id.st_environment_ids.filtered(
+                lambda env: env.active and env.status == 'up'
+            )
+            
+            if environments:
                 env_details = []
-                for env in self.sc_available_environment_ids:
+                for env in environments:
                     env_details.append(f"- {env.server_id.name}/{env.name}: {env.active_stack_count}/{env.allowed_stack_number} stacks")
                 
                 raise UserError(_(
@@ -570,10 +575,9 @@ class SaasClient(models.Model):
                     'Please increase the allowed stack number for an environment or remove unused stacks.'
                 ) % '\n'.join(env_details))
             else:
-                raise UserError(_('No environments available for the selected package system type. Please configure environments in the system type or select a different package.'))
-        
-        # Return the environment with the most available capacity
-        return available_environments.sorted(lambda env: env.allowed_stack_number - env.active_stack_count, reverse=True)[0]
+                raise UserError(_('No active environments available for the selected package system type. Please configure environments in the system type.'))
+        else:
+            raise UserError(_('No package selected or package has no system type configured.'))
     
     # ========================================================================
     # SMART BUTTON ACTIONS
