@@ -48,12 +48,13 @@ class GitHubRepository(models.Model):
     
     gr_local_path = fields.Char(
         string='Local Path',
+        readonly=True,
         tracking=True,
-        help='Local storage path for the repository'
+        help='Local storage path for the repository (auto-detected by sync server)'
     )
     
     # Track fields that require server update
-    _server_update_fields = ['gr_name', 'gr_url', 'gr_branch', 'gr_local_path']
+    _server_update_fields = ['gr_name', 'gr_url', 'gr_branch']
     
     gr_status = fields.Selection([
         ('success', 'Success'),
@@ -216,7 +217,7 @@ class GitHubRepository(models.Model):
                 'name': self.gr_name,
                 'url': self.gr_url,
                 'branch': self.gr_branch,
-                'local_path': self.gr_local_path,
+                # local_path is auto-detected by server, don't send it in creation
                 'description': self.gr_description or '',
                 'private': self.gr_private,
             }
@@ -321,8 +322,7 @@ class GitHubRepository(models.Model):
                 update_data['url'] = vals['gr_url']
             if 'gr_branch' in vals:
                 update_data['branch'] = vals['gr_branch']
-            if 'gr_local_path' in vals:
-                update_data['local_path'] = vals['gr_local_path']
+            # gr_local_path is readonly and auto-detected by server, so we don't send it in updates
             
             if update_data:
                 _logger.info(f"Sending PUT request to server with data: {update_data}")
@@ -342,15 +342,7 @@ class GitHubRepository(models.Model):
                         # Log server response details
                         _logger.info(f"Server response - success: {success}, message: {message}")
                         
-                        # Verify the update was actually applied by checking returned data
-                        if 'gr_local_path' in vals and 'local_path' in result:
-                            returned_path = result.get('local_path')
-                            expected_path = vals['gr_local_path']
-                            _logger.info(f"Local path verification - Expected: {expected_path}, Returned: {returned_path}")
-                            
-                            if returned_path != expected_path:
-                                _logger.warning(f"Server did not update local_path field. Expected: {expected_path}, Got: {returned_path}")
-                                # Don't block the save, just log the issue - server PUT for local_path seems broken
+                        # No need to verify local_path since it's readonly and auto-managed by server
                         
                         if not success and 'success' not in message.lower():
                             raise UserError(_('Failed to update repository on server: %s') % message)
