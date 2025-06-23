@@ -59,7 +59,7 @@ class SaasClient(models.Model):
         comodel_name='j_portainer.environment',
         string='Deployment Environment',
         compute='_compute_deployment_environment',
-        store=True,
+        store=False,
         tracking=True,
         help='Auto-selected environment for deployment based on package system type'
     )
@@ -121,7 +121,9 @@ class SaasClient(models.Model):
     sc_subdomain_id = fields.Many2one(
         comodel_name='dns.subdomain',
         string='Subdomain',
-        help='Subdomain associated with this SaaS client for web access and services.'
+        compute='_compute_subdomain',
+        store=True,
+        help='Auto-created subdomain for this SaaS client based on deployment environment and package domain'
     )
     
 
@@ -338,6 +340,45 @@ class SaasClient(models.Model):
             else:
                 # No package or system type selected
                 record.sc_deployment_environment_id = False
+    
+    @api.depends('sc_deployment_environment_id', 'sc_package_id.pkg_dns_domain_id')
+    def _compute_subdomain(self):
+        """Auto-create subdomain when deployment environment is available."""
+        for record in self:
+            if record.sc_deployment_environment_id and record.sc_package_id and record.sc_package_id.pkg_dns_domain_id:
+                # Only create if subdomain doesn't exist
+                if not record.sc_subdomain_id:
+                    # Get next available number
+                    existing_subdomains = self.env['dns.subdomain'].search([
+                        ('domain_id', '=', record.sc_package_id.pkg_dns_domain_id.id)
+                    ])
+                    
+                    # Find highest number in existing subdomain names
+                    max_number = 0
+                    for subdomain in existing_subdomains:
+                        try:
+                            number = int(subdomain.name)
+                            if number > max_number:
+                                max_number = number
+                        except ValueError:
+                            continue
+                    
+                    next_number = max_number + 1
+                    
+                    # Get environment IP from URL field
+                    environment_ip = record.sc_deployment_environment_id.url or ''
+                    
+                    # Create subdomain
+                    subdomain_vals = {
+                        'name': str(next_number),
+                        'domain_id': record.sc_package_id.pkg_dns_domain_id.id,
+                        'type': 'a',
+                        'value': environment_ip,
+                        'ttl': 300,
+                    }
+                    
+                    subdomain = self.env['dns.subdomain'].create(subdomain_vals)
+                    record.sc_subdomain_id = subdomain.id
 
     @api.depends('sc_sequence', 'sc_partner_id', 'sc_partner_id.name')
     def _compute_sc_complete_name(self):
