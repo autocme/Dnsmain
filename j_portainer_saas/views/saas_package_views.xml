@@ -55,25 +55,28 @@
                     <group>
                         <group name="package_info" string="Package Information">
                             <field name="pkg_name" placeholder="Package Name"/>
-                            <field name="pkg_system_type_id"
-                                   options="{'no_create': True}"
-                                   placeholder="Select system type..."/>
                             <field name="pkg_subscription_template_id" context="{
                        'from_saas_package': True,
                        'saas_package_id': active_id,
                        'saas_package_price': pkg_price,
                        'saas_package_name': pkg_name,
                        'saas_package_period': pkg_subscription_period,
-                       }"/>
+                        }"/>
+                            <field name="pkg_system_type_id"
+                                   options="{'no_create': True}"
+                                   placeholder="Select system type..."/>
                             <field name="pkg_dns_domain_id"
                                    options="{'no_create': True}"
                                    placeholder="Select domain..."/>
                         </group>
 
                         <group name="pricing" string="Pricing">
-                            <field name="pkg_price" widget="monetary"/>
+                            <label for="pkg_price" string="Price"/>
+                            <div class="o_row oe_inline">
+                                <field name="pkg_price" widget="monetary"/>
+                                <field name="pkg_subscription_period"/>
+                            </div>
                             <field name="pkg_currency_id"/>
-                            <field name="pkg_subscription_period"/>
                         </group>
                     </group>
 
@@ -93,11 +96,13 @@
 
                     <notebook>
                         <page name="pkg_description" string="Package Description">
-                            <field name="pkg_description" placeholder="Detailed description about this SaaS Package..."/>
+                            <field name="pkg_description"
+                                   placeholder="Detailed description about this SaaS Package..."/>
                         </page>
 
                         <page name="deployment_template" string="Deployment Template">
-                            <field name="pkg_docker_compose_template" widget="ace" placeholder="Enter Docker Compose content with variables marked as @VARIABLE_NAME@..."/>
+                            <field name="pkg_docker_compose_template" widget="ace"
+                                   placeholder="Enter Docker Compose content with variables marked as @VARIABLE_NAME@..."/>
                         </page>
 
                         <page name="template_variables" string="Variables">
@@ -105,7 +110,8 @@
                                 <tree editable="bottom">
                                     <field name="id" readonly="1"/>
                                     <field name="tv_variable_name" readonly="1"/>
-                                    <field name="tv_field_domain" widget="domain" options="{'model': 'saas.client'}" placeholder="e.g., [(&quot;sc_partner_id&quot;, &quot;!=&quot;, False)] or sc_client_name"/>
+                                    <field name="tv_field_domain" widget="domain" options="{'model': 'saas.client'}"
+                                           placeholder="e.g., [(&quot;sc_partner_id&quot;, &quot;!=&quot;, False)] or sc_client_name"/>
                                     <field name="tv_field_name" readonly="1"/>
                                 </tree>
                             </field>
@@ -228,7 +234,7 @@
         <field name="arch" type="xml">
             <search string="Search Packages">
                 <field name="pkg_name" string="Package Name"/>
-                <field name="pkg_subscription_template_id" string="Subscription Template" />
+                <field name="pkg_subscription_template_id" string="Subscription Template"/>
                 <field name="pkg_price" string="Price"/>
 
                 <filter string="Active Packages" name="active" domain="[('pkg_active', '=', True)]"/>

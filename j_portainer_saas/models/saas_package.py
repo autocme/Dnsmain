@@ -108,15 +108,6 @@ class SaasPackage(models.Model):
         help='Currency for package pricing'
     )
     
-    pkg_subscription_period = fields.Selection([
-        ('monthly', 'Monthly'),
-        ('yearly', 'Yearly')
-    ], string='Subscription Period', 
-       default='monthly',
-       required=True,
-       tracking=True,
-       help='Billing frequency for this package')
-    
     pkg_subscription_template_id = fields.Many2one(
         comodel_name='sale.subscription.template',
         string='Subscription Template',
@@ -124,12 +115,22 @@ class SaasPackage(models.Model):
         tracking=True,
         help='Associated subscription template for billing and lifecycle management'
     )
+
+    pkg_subscription_period = fields.Selection([
+        ('monthly', 'Monthly'),
+        ('yearly', 'Yearly')
+    ], string='Subscription Period',
+        default='monthly',
+        required=True,
+        tracking=True,
+        help='Billing frequency for this package')
     
     pkg_dns_domain_id = fields.Many2one(
         comodel_name='dns.domain',
         string='Domain',
         required=False,
         tracking=True,
+        related='pkg_system_type_id.st_domain_id',
         help='The domain associated with this SaaS package for client deployments.'
     )
     
@@ -287,26 +288,16 @@ class SaasPackage(models.Model):
         if 'pkg_docker_compose_template' in vals:
             self._extract_template_variables()
 
-        # Sync changes to subscription template and products
-        template_updates = {}
-        product_updates = {}
-        
-        if 'pkg_name' in vals:
-            template_updates['name'] = vals['pkg_name']
-            product_updates['name'] = vals['pkg_name']
-        
-        if 'pkg_subscription_period' in vals:
-            # Update recurring rule type for products
-            recurring_rule_type = 'monthly' if vals['pkg_subscription_period'] == 'monthly' else 'yearly'
-            product_updates['recurring_rule_type'] = recurring_rule_type
-        
-        # Apply updates if any changes
-        if template_updates and self.pkg_subscription_template_id:
+        # Sync name changes
+        if 'pkg_name' in vals and self.pkg_subscription_template_id:
             try:
+                # Update subscription template name (unless coming from template sync)
                 if not self.env.context.get('skip_template_sync'):
-                    self.pkg_subscription_template_id.write(template_updates)
+                    if self.pkg_subscription_template_id.name != vals['pkg_name']:
+                        self.pkg_subscription_template_id.write({'name': vals['pkg_name']})
 
-                if product_updates and not self.env.context.get('skip_product_sync'):
+                # Update products linked to this template (unless coming from product sync)
+                if not self.env.context.get('skip_product_sync'):
                     for product in self.pkg_subscription_template_id.product_ids:
                         if product.name != vals['pkg_name']:
                             product.with_context(skip_saas_sync=True).write({'name': vals['pkg_name']})
@@ -428,11 +419,6 @@ class SaasPackage(models.Model):
         if vals.get('pkg_sequence', 'New') == 'New':
             vals['pkg_sequence'] = self.env['ir.sequence'].next_by_code('saas.package')
         
-        # Create subscription template if not provided
-        if not vals.get('pkg_subscription_template_id'):
-            template = self._create_subscription_template(vals)
-            vals['pkg_subscription_template_id'] = template.id
-        
         package = super().create(vals)
         
         # Extract template variables if docker_compose_template is provided
@@ -449,20 +435,6 @@ class SaasPackage(models.Model):
                     _logger.info(f"Linked SaaS product {product.name} to package {package.pkg_name}")
 
         return package
-
-    def _create_subscription_template(self, vals):
-        """Create subscription template with proper context including subscription period."""
-        template_vals = {
-            'name': vals.get('pkg_name', 'SaaS Package'),
-            'description': f"Subscription template for {vals.get('pkg_name', 'SaaS Package')}",
-        }
-        
-        return self.env['sale.subscription.template'].with_context(
-            from_saas_package=True,
-            saas_package_name=vals.get('pkg_name'),
-            saas_package_price=vals.get('pkg_price', 0.0),
-            saas_package_period=vals.get('pkg_subscription_period', 'monthly')
-        ).create(template_vals)
 
     def action_view_saas_clients(self):
         """Open SaaS clients using this package."""

@@ -48,11 +48,14 @@ class SaleSubscriptionTemplate(models.Model):
         # Check if template created from SaaS package context
         if self.env.context.get('from_saas_package'):
             package_name = self.env.context.get('saas_package_name')
-            package_price = self.env.context.get('saas_package_price', 0.0)
-            
+            package_period = self.env.context.get('saas_package_period', 'monthly')
+            print('package_period ........', package_period)
+            recurring_rule_type = 'monthly' if package_period == 'months' else 'years'
+
             if package_name:
                 vals['name'] = package_name
-            
+            if recurring_rule_type:
+                vals['recurring_rule_type'] = recurring_rule_type
             # Mark as SaaS template
             vals['is_saas_template'] = True
         
@@ -63,12 +66,8 @@ class SaleSubscriptionTemplate(models.Model):
         if self.env.context.get('from_saas_package'):
             package_name = self.env.context.get('saas_package_name')
             package_price = self.env.context.get('saas_package_price', 0.0)
-            package_period = self.env.context.get('saas_package_period', 'monthly')
             
             if package_name:
-                # Set recurring rule based on subscription period
-                recurring_rule_type = 'monthly' if package_period == 'monthly' else 'yearly'
-                
                 product_values = {
                     'name': package_name,
                     'list_price': package_price,
@@ -76,12 +75,10 @@ class SaleSubscriptionTemplate(models.Model):
                     'subscribable': True,
                     'subscription_template_id': template.id,
                     'is_saas_product': True,
-                    'recurring_rule_type': recurring_rule_type,
-                    'recurring_rule_count': 1,
                 }
                 
                 product = self.env['product.template'].create(product_values)
-                _logger.info(f"Created SaaS product {product.name} for template {template.name} with {package_period} billing")
+                _logger.info(f"Created SaaS product {product.name} for template {template.name}")
         
         return template
 
