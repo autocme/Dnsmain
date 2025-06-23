@@ -276,9 +276,21 @@ class GitHubRepository(models.Model):
         try:
             if self.gr_external_id:
                 result = self.gr_server_id._make_request('DELETE', f'repositories/{self.gr_external_id}')
-                if not (result and result.get('success')):
-                    raise UserError(_('Failed to delete repository from server: %s') % result.get('message', 'Unknown error'))
+                
+                # Handle different response formats from server
+                if result:
+                    if isinstance(result, dict):
+                        # Check for success field or success message
+                        success = result.get('success', True)  # Default to True if no success field
+                        message = result.get('message', 'Repository deleted from server')
+                        
+                        if not success and 'success' not in message.lower():
+                            raise UserError(_('Failed to delete repository from server: %s') % message)
+                    # If result is not a dict (e.g., string response), consider it successful
+                else:
+                    raise UserError(_('No response from server when deleting repository'))
             
+            # If we reach here, deletion was successful, remove from Odoo
             self.unlink()
             return {
                 'type': 'ir.actions.client',
