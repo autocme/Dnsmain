@@ -32,7 +32,15 @@
             <field name="padding">5</field>
         </record>
 
-
+        <!-- ========================================================================== -->
+        <!--                     SYSTEM TEMPLATE VARIABLE SEQUENCE                    -->
+        <!-- ========================================================================== -->
+        <record id="seq_system_template_variable" model="ir.sequence">
+            <field name="name">System Template Variable Sequence</field>
+            <field name="code">system.template.variable</field>
+            <field name="prefix">STV</field>
+            <field name="padding">5</field>
+        </record>
 
     </data>
 </odoo>
