@@ -127,6 +127,12 @@
                             <field name="sc_package_id"
                                    options="{'no_create': True}"
                                    placeholder="Select the SaaS package..."/>
+                            <field name="sc_environment_id" 
+                                   domain="[('id', 'in', sc_available_environment_ids)]"
+                                   options="{'no_create': True}"
+                                   invisible="not sc_available_environment_ids"
+                                   placeholder="Select deployment environment..."/>
+                            <field name="sc_available_environment_ids" invisible="1"/>
                             <field name="sc_template_id"
                                    options="{'no_create': True}"
                                    placeholder="Select subscription template..."/>

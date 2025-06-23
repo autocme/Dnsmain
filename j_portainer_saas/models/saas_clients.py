@@ -307,11 +307,33 @@ class SaasClient(models.Model):
             if not self.sc_template_id:
                 self.sc_template_id = self.sc_subscription_id.template_id
     
+    @api.onchange('sc_package_id')
+    def _onchange_sc_package_id(self):
+        """Handle package selection change."""
+        if self.sc_package_id:
+            # Reset environment selection when package changes
+            self.sc_environment_id = False
+        else:
+            # Clear environment when no package selected
+            self.sc_environment_id = False
+    
 
     # ========================================================================
     # COMPUTED METHODS
     # ========================================================================
 
+
+    @api.depends('sc_package_id', 'sc_package_id.pkg_system_type_id', 'sc_package_id.pkg_system_type_id.st_environment_ids')
+    def _compute_available_environments(self):
+        """Compute available environments based on selected package system type."""
+        for record in self:
+            if record.sc_package_id and record.sc_package_id.pkg_system_type_id:
+                # Get environments from the system type
+                record.sc_available_environment_ids = record.sc_package_id.pkg_system_type_id.st_environment_ids.filtered(
+                    lambda env: env.active and env.status == 'up'
+                )
+            else:
+                record.sc_available_environment_ids = False
 
     @api.depends('sc_sequence', 'sc_partner_id', 'sc_partner_id.name')
     def _compute_sc_complete_name(self):
