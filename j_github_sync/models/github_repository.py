@@ -149,11 +149,35 @@ class GitHubRepository(models.Model):
                     message = 'Repository sync response received'
                 
                 if success:
-                    # Update status to success and set current time as last_pull
-                    # Note: Actual last_pull time should come from next repository sync
+                    # Extract last_pull_time from response if available
+                    last_pull_time = None
+                    gr_last_pull = None
+                    
+                    if isinstance(result, dict):
+                        last_pull_time = result.get('last_pull_time')
+                        
+                        if last_pull_time:
+                            try:
+                                from datetime import datetime, timedelta
+                                # Handle ISO format with microseconds
+                                if 'T' in last_pull_time:
+                                    # Remove microseconds if present: 2025-06-23T10:49:36.900591
+                                    if '.' in last_pull_time:
+                                        last_pull_time = last_pull_time.split('.')[0]
+                                    gr_last_pull = datetime.strptime(last_pull_time, '%Y-%m-%dT%H:%M:%S')
+                                    # Adjust for server timezone offset (server is 3 hours ahead)
+                                    gr_last_pull = gr_last_pull - timedelta(hours=3)
+                            except (ValueError, TypeError) as e:
+                                _logger.error(f"Failed to parse last_pull_time '{last_pull_time}': {e}")
+                                gr_last_pull = None
+                    
+                    # If no last_pull_time in response, use current time as fallback
+                    if not gr_last_pull:
+                        gr_last_pull = fields.Datetime.now()
+                    
                     self.write({
                         'gr_status': 'success',
-                        'gr_last_pull': fields.Datetime.now()
+                        'gr_last_pull': gr_last_pull
                     })
                     return {
                         'type': 'ir.actions.client',

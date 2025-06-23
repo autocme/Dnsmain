@@ -428,7 +428,7 @@ class GitHubSyncServer(models.Model):
         
         # Parse last_pull timestamp properly - preserve actual server timestamp
         last_pull = None
-        last_pull_str = repo_data.get('last_pull') or repo_data.get('last_sync') or repo_data.get('updated_at')
+        last_pull_str = repo_data.get('last_pull_time') or repo_data.get('last_pull') or repo_data.get('last_sync') or repo_data.get('updated_at')
         
         if last_pull_str:
             try:
