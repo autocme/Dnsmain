@@ -216,7 +216,7 @@ class GitHubRepository(models.Model):
                 'name': self.gr_name,
                 'url': self.gr_url,
                 'branch': self.gr_branch,
-                'path': self.gr_local_path,
+                'local_path': self.gr_local_path,
                 'description': self.gr_description or '',
                 'private': self.gr_private,
             }
@@ -320,7 +320,7 @@ class GitHubRepository(models.Model):
             if 'gr_branch' in vals:
                 update_data['branch'] = vals['gr_branch']
             if 'gr_local_path' in vals:
-                update_data['path'] = vals['gr_local_path']
+                update_data['local_path'] = vals['gr_local_path']
             
             if update_data:
                 try:
