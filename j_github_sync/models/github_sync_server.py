@@ -428,6 +428,7 @@ class GitHubSyncServer(models.Model):
         
         # Parse last_pull timestamp properly - preserve actual server timestamp
         last_pull = None
+        last_pull_str = None
         
         # Check if last_pull_time key exists in response (API responses should include this)
         if 'last_pull_time' in repo_data:
