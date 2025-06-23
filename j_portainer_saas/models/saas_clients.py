@@ -121,8 +121,6 @@ class SaasClient(models.Model):
     sc_subdomain_id = fields.Many2one(
         comodel_name='dns.subdomain',
         string='Subdomain',
-        compute='_compute_subdomain',
-        store=True,
         help='Auto-created subdomain for this SaaS client based on deployment environment and package domain'
     )
     
@@ -341,44 +339,41 @@ class SaasClient(models.Model):
                 # No package or system type selected
                 record.sc_deployment_environment_id = False
     
-    @api.depends('sc_deployment_environment_id', 'sc_package_id.pkg_dns_domain_id')
-    def _compute_subdomain(self):
-        """Auto-create subdomain when deployment environment is available."""
-        for record in self:
-            if record.sc_deployment_environment_id and record.sc_package_id and record.sc_package_id.pkg_dns_domain_id:
-                # Only create if subdomain doesn't exist
-                if not record.sc_subdomain_id:
-                    # Get next available number
-                    existing_subdomains = self.env['dns.subdomain'].search([
-                        ('domain_id', '=', record.sc_package_id.pkg_dns_domain_id.id)
-                    ])
-                    
-                    # Find highest number in existing subdomain names
-                    max_number = 0
-                    for subdomain in existing_subdomains:
-                        try:
-                            number = int(subdomain.name)
-                            if number > max_number:
-                                max_number = number
-                        except ValueError:
-                            continue
-                    
-                    next_number = max_number + 1
-                    
-                    # Get environment IP from URL field
-                    environment_ip = record.sc_deployment_environment_id.url or ''
-                    
-                    # Create subdomain
-                    subdomain_vals = {
-                        'name': str(next_number),
-                        'domain_id': record.sc_package_id.pkg_dns_domain_id.id,
-                        'type': 'a',
-                        'value': environment_ip,
-                        'ttl': 300,
-                    }
-                    
-                    subdomain = self.env['dns.subdomain'].create(subdomain_vals)
-                    record.sc_subdomain_id = subdomain.id
+    def _create_subdomain(self):
+        """Create subdomain for this SaaS client."""
+        self.ensure_one()
+        if self.sc_deployment_environment_id and self.sc_package_id and self.sc_package_id.pkg_dns_domain_id and not self.sc_subdomain_id:
+            # Get next available number
+            existing_subdomains = self.env['dns.subdomain'].search([
+                ('domain_id', '=', self.sc_package_id.pkg_dns_domain_id.id)
+            ])
+            
+            # Find highest number in existing subdomain names
+            max_number = 0
+            for subdomain in existing_subdomains:
+                try:
+                    number = int(subdomain.name)
+                    if number > max_number:
+                        max_number = number
+                except ValueError:
+                    continue
+            
+            next_number = max_number + 1
+            
+            # Get environment IP from URL field
+            environment_ip = self.sc_deployment_environment_id.url or ''
+            
+            # Create subdomain
+            subdomain_vals = {
+                'name': str(next_number),
+                'domain_id': self.sc_package_id.pkg_dns_domain_id.id,
+                'type': 'a',
+                'value': environment_ip,
+                'ttl': 300,
+            }
+            
+            subdomain = self.env['dns.subdomain'].create(subdomain_vals)
+            self.sc_subdomain_id = subdomain.id
 
     @api.depends('sc_sequence', 'sc_partner_id', 'sc_partner_id.name')
     def _compute_sc_complete_name(self):
@@ -779,6 +774,9 @@ class SaasClient(models.Model):
         
         # Create the SaaS client
         client = super().create(vals)
+        
+        # Create subdomain after record creation
+        client._create_subdomain()
         
         return client
 
