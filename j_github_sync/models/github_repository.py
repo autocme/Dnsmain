@@ -311,6 +311,8 @@ class GitHubRepository(models.Model):
         update_server_fields = set(vals.keys()) & set(self._server_update_fields)
         
         if update_server_fields and self.gr_external_id and self.gr_external_id != '0':
+            _logger.info(f"Repository {self.gr_name} - Server update required for fields: {update_server_fields}")
+            
             # Prepare update data for server
             update_data = {}
             if 'gr_name' in vals:
@@ -323,9 +325,11 @@ class GitHubRepository(models.Model):
                 update_data['local_path'] = vals['gr_local_path']
             
             if update_data:
+                _logger.info(f"Sending PUT request to server with data: {update_data}")
                 try:
                     # Update repository on server using PUT method
                     result = self.gr_server_id._make_request('PUT', f'repositories/{self.gr_external_id}', data=update_data)
+                    _logger.info(f"Server PUT response: {result}")
                     
                     if not result:
                         raise UserError(_('No response from server when updating repository'))
@@ -335,10 +339,23 @@ class GitHubRepository(models.Model):
                         success = result.get('success', True)
                         message = result.get('message', 'Repository updated')
                         
+                        # Log server response details
+                        _logger.info(f"Server response - success: {success}, message: {message}")
+                        
+                        # Verify the update was actually applied by checking returned data
+                        if 'gr_local_path' in vals and 'local_path' in result:
+                            returned_path = result.get('local_path')
+                            expected_path = vals['gr_local_path']
+                            _logger.info(f"Local path verification - Expected: {expected_path}, Returned: {returned_path}")
+                            
+                            if returned_path != expected_path:
+                                raise UserError(_('Server update failed: local_path was not updated. Expected: %s, Got: %s') % (expected_path, returned_path))
+                        
                         if not success and 'success' not in message.lower():
                             raise UserError(_('Failed to update repository on server: %s') % message)
                     
                 except Exception as e:
+                    _logger.error(f"Server update failed: {e}")
                     raise UserError(_('Failed to update repository on server: %s') % str(e))
         
         # If server update successful or no server fields changed, proceed with local update
