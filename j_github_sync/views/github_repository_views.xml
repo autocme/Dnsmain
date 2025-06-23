@@ -36,9 +36,6 @@
                     <button name="action_delete_repository" string="Delete" 
                             type="object" class="btn-secondary"
                             confirm="Are you sure you want to delete this repository?"/>
-                    <button name="action_open_repository" string="Open in GitHub" 
-                            type="object" class="btn-secondary"
-                            invisible="not gr_url"/>
                     <field name="gr_status" widget="statusbar"/>
                 </header>
                 <sheet>

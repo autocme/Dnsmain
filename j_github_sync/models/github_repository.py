@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 
 
 class GitHubRepository(models.Model):
@@ -195,14 +196,3 @@ class GitHubRepository(models.Model):
         except Exception as e:
             raise UserError(_('Delete failed: %s') % str(e))
     
-    def action_open_repository(self):
-        """Open repository in GitHub."""
-        self.ensure_one()
-        if self.gr_url:
-            return {
-                'type': 'ir.actions.act_url',
-                'url': self.gr_url,
-                'target': 'new',
-            }
-        else:
-            raise UserError(_('No URL available for this repository'))
