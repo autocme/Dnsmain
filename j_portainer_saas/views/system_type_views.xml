@@ -112,7 +112,7 @@
                         </page>
                         
                         <page string="Template Variables" name="template_variables">
-                            <field name="st_template_variable_ids" nolabel="1">
+                            <field name="st_template_variable_ids" options="{'delete': False,'create': False}" >
                                 <tree string="Template Variables" editable="bottom">
                                     <field name="stv_variable_name"/>
                                     <field name="stv_field_domain" widget="domain" options="{'model': 'saas.client'}" 
