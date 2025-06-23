@@ -4,6 +4,7 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 import logging
+import re
 
 _logger = logging.getLogger(__name__)
 
@@ -136,6 +137,22 @@ class SystemType(models.Model):
     )
 
     # ========================================================================
+    # DEPLOYMENT TEMPLATE MANAGEMENT
+    # ========================================================================
+    
+    st_docker_compose_template = fields.Text(
+        string='Docker Compose Template',
+        help='Docker Compose content with variables marked as @VARIABLE_NAME@'
+    )
+    
+    st_template_variable_ids = fields.One2many(
+        comodel_name='system.template.variable',
+        inverse_name='stv_system_type_id',
+        string='Template Variables',
+        help='Auto-extracted variables from Docker Compose template'
+    )
+
+    # ========================================================================
     # PACKAGE MANAGEMENT
     # ========================================================================
     
@@ -232,11 +249,19 @@ class SystemType(models.Model):
         # Log creation
         _logger.info(f"Created system type: {result.st_complete_name} (ID: {result.id})")
         
+        # Extract template variables if docker_compose_template exists
+        if result.st_docker_compose_template:
+            result._extract_template_variables()
+        
         return result
 
     def write(self, vals):
         """Override write to add logging for important changes."""
         result = super().write(vals)
+        
+        # Extract template variables if docker_compose_template changed
+        if 'st_docker_compose_template' in vals:
+            self._extract_template_variables()
         
         # Log important field changes
         tracked_fields = ['st_name', 'st_active', 'st_send_email_on_stack_create']
@@ -268,6 +293,86 @@ class SystemType(models.Model):
             _logger.info(f"Deleting system type: {record.st_complete_name} (ID: {record.id})")
         
         return super().unlink()
+
+    # ========================================================================
+    # BUSINESS METHODS
+    # ========================================================================
+    
+    @api.onchange('st_docker_compose_template')
+    def _onchange_docker_compose_template(self):
+        """Extract variables from Docker Compose template when content changes."""
+        
+        if not self.st_docker_compose_template:
+            # Clear all variables if template is empty
+            self.st_template_variable_ids = [(5, 0, 0)]
+            return
+        
+        # Find all @VARIABLE_NAME@ patterns in template
+        variable_pattern = r'@(\w+)@'
+        template_variables = set(re.findall(variable_pattern, self.st_docker_compose_template))
+        
+        # Get existing variable names
+        existing_var_names = set()
+        for var in self.st_template_variable_ids:
+            if hasattr(var, 'stv_variable_name') and var.stv_variable_name:
+                existing_var_names.add(var.stv_variable_name)
+        
+        # Calculate what needs to be added or removed
+        variables_to_add = template_variables - existing_var_names
+        variables_to_remove = existing_var_names - template_variables
+        
+        # Build command list for ONLY the changes needed
+        commands = []
+        
+        # Step 1: Remove ONLY variables no longer in template
+        for var in self.st_template_variable_ids:
+            if hasattr(var, 'stv_variable_name') and var.stv_variable_name in variables_to_remove:
+                # Remove saved variable by ID
+                commands.append((2, var.id, 0))
+        
+        # Step 2: Add ONLY new variables
+        for var_name in variables_to_add:
+            commands.append((0, 0, {
+                'stv_variable_name': var_name,
+                'stv_field_domain': '',
+                'stv_field_name': '',
+            }))
+        
+        # Apply changes only if there are actual additions or removals
+        if commands:
+            self.st_template_variable_ids = commands
+    
+    def _extract_template_variables(self):
+        """Extract @VARIABLE_NAME@ patterns from Docker Compose template."""
+        if not self.st_docker_compose_template:
+            # Clear all variables if template is empty
+            self.st_template_variable_ids.unlink()
+            return
+        
+        # Find all @VARIABLE_NAME@ patterns
+        variable_pattern = r'@(\w+)@'
+        variables = set(re.findall(variable_pattern, self.st_docker_compose_template))
+        
+        # Get existing variables
+        existing_variables = {var.stv_variable_name for var in self.st_template_variable_ids}
+        
+        # Remove variables no longer in template
+        variables_to_remove = existing_variables - variables
+        if variables_to_remove:
+            variables_to_delete = self.st_template_variable_ids.filtered(
+                lambda v: v.stv_variable_name in variables_to_remove
+            )
+            variables_to_delete.unlink()
+        
+        # Add new variables
+        variables_to_add = variables - existing_variables
+        for var_name in variables_to_add:
+            if var_name:  # Ensure variable name is not empty
+                self.env['system.template.variable'].create({
+                    'stv_variable_name': var_name,
+                    'stv_field_domain': '',
+                    'stv_system_type_id': self.id,
+                })
 
     # ========================================================================
     # ACTION METHODS

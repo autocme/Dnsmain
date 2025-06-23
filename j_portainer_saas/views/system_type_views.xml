@@ -104,6 +104,24 @@
                                 </tree>
                             </field>
                         </page>
+                        
+                        <page string="Deployment Template" name="deployment_template">
+                            <group>
+                                <field name="st_docker_compose_template" 
+                                       placeholder="Enter your Docker Compose template with variables marked as @VARIABLE_NAME@..."/>
+                            </group>
+                        </page>
+                        
+                        <page string="Template Variables" name="template_variables">
+                            <field name="st_template_variable_ids" nolabel="1">
+                                <tree string="Template Variables" editable="bottom">
+                                    <field name="stv_variable_name"/>
+                                    <field name="stv_field_domain" 
+                                           placeholder="e.g., sc_client_name, sc_client_subdomain"/>
+                                    <field name="stv_field_name" readonly="1"/>
+                                </tree>
+                            </field>
+                        </page>
 
                     </notebook>
                 </sheet>

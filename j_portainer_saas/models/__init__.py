@@ -8,5 +8,6 @@ from . import system_type
 from . import sale_subscription_template
 from . import product_template
 from . import template_variable
+from . import system_template_variable
 from . import dns_subdomain_inherit
 from . import portainer_environment

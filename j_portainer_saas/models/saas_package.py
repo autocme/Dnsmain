@@ -252,6 +252,33 @@ class SaasPackage(models.Model):
     # BUSINESS METHODS
     # ========================================================================
     
+    @api.onchange('pkg_system_type_id')
+    def _onchange_system_type_id(self):
+        """Populate deployment template and variables from selected system type if they exist."""
+        if self.pkg_system_type_id:
+            # Copy template if it exists in system type
+            if self.pkg_system_type_id.st_docker_compose_template:
+                self.pkg_docker_compose_template = self.pkg_system_type_id.st_docker_compose_template
+                
+                # Copy template variables if they exist
+                if self.pkg_system_type_id.st_template_variable_ids:
+                    variable_commands = []
+                    for st_var in self.pkg_system_type_id.st_template_variable_ids:
+                        variable_commands.append((0, 0, {
+                            'tv_variable_name': st_var.stv_variable_name,
+                            'tv_field_domain': st_var.stv_field_domain,
+                            'tv_field_name': st_var.stv_field_name,
+                        }))
+                    self.pkg_template_variable_ids = variable_commands
+            else:
+                # Clear template and variables if system type has none
+                self.pkg_docker_compose_template = False
+                self.pkg_template_variable_ids = [(5, 0, 0)]
+        else:
+            # Clear template and variables if no system type selected
+            self.pkg_docker_compose_template = False
+            self.pkg_template_variable_ids = [(5, 0, 0)]
+    
     @api.onchange('pkg_docker_compose_template')
     def _onchange_docker_compose_template(self):
         """Extract variables from Docker Compose template when content changes.
