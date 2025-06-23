@@ -428,9 +428,23 @@ class GitHubSyncServer(models.Model):
         
         # Parse last_pull timestamp properly - preserve actual server timestamp
         last_pull = None
-        last_pull_str = repo_data.get('last_pull_time') or repo_data.get('last_pull') or repo_data.get('last_sync') or repo_data.get('updated_at')
         
-        if last_pull_str:
+        # Check if last_pull_time key exists in response (API responses should include this)
+        if 'last_pull_time' in repo_data:
+            # Use last_pull_time from response (None for new repos, timestamp for synced repos)
+            last_pull_time = repo_data['last_pull_time']
+            if last_pull_time is None:
+                # Explicitly None from server means repository has never been synced
+                last_pull = None
+                _logger.info(f"Repository {repo_data.get('name')} has last_pull_time=None (never synced)")
+            else:
+                last_pull_str = last_pull_time
+        else:
+            # Fallback to other timestamp fields only if last_pull_time key doesn't exist
+            last_pull_str = repo_data.get('last_pull') or repo_data.get('last_sync') or repo_data.get('updated_at')
+        
+        # Only parse timestamp if we have a non-None string value
+        if last_pull_str and last_pull is None:
             try:
                 last_pull_str = str(last_pull_str).strip()
                 _logger.info(f"Parsing repository last_pull: '{last_pull_str}'")
@@ -497,8 +511,13 @@ class GitHubSyncServer(models.Model):
         valid_statuses = ['success', 'error', 'warning', 'pending', 'syncing']
         
         if status not in valid_statuses:
-            _logger.warning(f"Unknown repository status '{raw_status}', mapping to 'success'")
-            status = 'success'  # Default to success instead of pending for repositories
+            _logger.warning(f"Unknown repository status '{raw_status}', mapping to 'pending'")
+            status = 'pending'  # Default to pending for unknown statuses
+        
+        # Override status based on last_pull_time for repositories that have never been synced
+        if 'last_pull_time' in repo_data and repo_data['last_pull_time'] is None:
+            status = 'pending'  # Never synced repositories should show as pending
+            _logger.info(f"Repository {repo_data.get('name')} has no sync history, setting status to pending")
         
         _logger.info(f"Final repository status: '{status}'")
         
