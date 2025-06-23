@@ -529,6 +529,11 @@ class GitHubSyncServer(models.Model):
         
         _logger.info(f"Final repository status: '{status}'")
         
+        # Handle error message from sync operations
+        error_message = False
+        if last_pull_success is False or last_pull_error:
+            error_message = last_pull_error or 'Sync operation failed'
+        
         vals = {
             'gr_name': repo_data.get('name', ''),
             'gr_external_id': external_id,
@@ -540,6 +545,7 @@ class GitHubSyncServer(models.Model):
             'gr_last_pull': last_pull,
             'gr_description': repo_data.get('description', ''),
             'gr_private': repo_data.get('private', False),
+            'gr_error_message': error_message,
         }
         
         if repo:

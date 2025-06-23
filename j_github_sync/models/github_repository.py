@@ -71,6 +71,12 @@ class GitHubRepository(models.Model):
         help='Timestamp of the last pull operation'
     )
     
+    gr_error_message = fields.Text(
+        string='Error Message',
+        readonly=True,
+        help='Error message from last sync operation if any'
+    )
+    
     gr_external_id = fields.Char(
         string='External ID',
         help='External repository ID from GitHub Sync Server'
@@ -164,14 +170,17 @@ class GitHubRepository(models.Model):
                         if last_pull_success is False or last_pull_error:
                             # Server indicates sync error
                             update_vals['gr_status'] = 'error'
+                            update_vals['gr_error_message'] = last_pull_error or 'Sync operation failed'
                             _logger.error(f"Repository sync failed on server: {last_pull_error}")
                         elif last_pull_success is True:
                             # Server indicates successful sync
                             update_vals['gr_status'] = 'success'
+                            update_vals['gr_error_message'] = False  # Clear error message on success
                             _logger.info("Repository sync succeeded on server")
                         else:
                             # No clear success/error indication, default to success
                             update_vals['gr_status'] = 'success'
+                            update_vals['gr_error_message'] = False  # Clear error message
                         
                         # Extract last_pull_time from response if available
                         if 'last_pull_time' in result:

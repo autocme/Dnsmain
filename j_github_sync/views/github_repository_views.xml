@@ -58,8 +58,9 @@
                         <group name="basic_info" string="Repository Information">
                             <field name="gr_url" widget="url" required="1"/>
                             <field name="gr_branch" required="1"/>
-                            <field name="gr_local_path" required="1"/>
+                            <field name="gr_local_path"/>
                             <field name="gr_last_pull" readonly="1"/>
+                            <field name="gr_error_message" attrs="{'invisible': [('gr_error_message', '=', False)]}" readonly="1"/>
                         </group>
                         <group name="status_info" string="Status/Settings">
                             <field name="gr_server_id" readonly="gr_external_id"/>
