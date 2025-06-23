@@ -61,7 +61,7 @@
                             <field name="gr_last_pull" readonly="1"/>
                         </group>
                         <group name="status_info" string="Status/Settings">
-                            <field name="gr_server_id" readonly="1"/>
+                            <field name="gr_server_id" readonly="gr_external_id"/>
                             <field name="gr_active"/>
                             <field name="gr_private" readonly="1"/>
                             <field name="gr_company_id" groups="base.group_multi_company" readonly="1"/>
