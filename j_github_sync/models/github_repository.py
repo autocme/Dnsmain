@@ -201,7 +201,7 @@ class GitHubRepository(models.Model):
                 if external_id:
                     self.write({
                         'gr_external_id': str(external_id),
-                        'gr_status': 'success'
+                        'gr_status': 'pending'  # Set to pending since it hasn't been synced yet
                     })
                     return {
                         'type': 'ir.actions.client',
