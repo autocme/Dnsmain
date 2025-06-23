@@ -52,6 +52,9 @@ class GitHubRepository(models.Model):
         help='Local storage path for the repository'
     )
     
+    # Track fields that require server update
+    _server_update_fields = ['gr_name', 'gr_url', 'gr_branch', 'gr_local_path']
+    
     gr_status = fields.Selection([
         ('success', 'Success'),
         ('error', 'Error'),
@@ -301,4 +304,43 @@ class GitHubRepository(models.Model):
             }
         except Exception as e:
             raise UserError(_('Delete failed: %s') % str(e))
+    
+    def write(self, vals):
+        """Override write to update server when specific fields change."""
+        # Check if any server-update fields are being modified
+        update_server_fields = set(vals.keys()) & set(self._server_update_fields)
+        
+        if update_server_fields and self.gr_external_id and self.gr_external_id != '0':
+            # Prepare update data for server
+            update_data = {}
+            if 'gr_name' in vals:
+                update_data['name'] = vals['gr_name']
+            if 'gr_url' in vals:
+                update_data['url'] = vals['gr_url']
+            if 'gr_branch' in vals:
+                update_data['branch'] = vals['gr_branch']
+            if 'gr_local_path' in vals:
+                update_data['local_path'] = vals['gr_local_path']
+            
+            if update_data:
+                try:
+                    # Update repository on server using PUT method
+                    result = self.gr_server_id._make_request('PUT', f'repositories/{self.gr_external_id}', data=update_data)
+                    
+                    if not result:
+                        raise UserError(_('No response from server when updating repository'))
+                    
+                    # Check if update was successful
+                    if isinstance(result, dict):
+                        success = result.get('success', True)
+                        message = result.get('message', 'Repository updated')
+                        
+                        if not success and 'success' not in message.lower():
+                            raise UserError(_('Failed to update repository on server: %s') % message)
+                    
+                except Exception as e:
+                    raise UserError(_('Failed to update repository on server: %s') % str(e))
+        
+        # If server update successful or no server fields changed, proceed with local update
+        return super().write(vals)
     
