@@ -81,16 +81,8 @@
                     </group>
 
                     <group>
-                        <group name="limits" string="Resource Limits">
-                            <field name="pkg_user_limit"/>
-                            <field name="pkg_company_limit"/>
-                            <field name="pkg_database_limit_size"/>
-                        </group>
-
                         <group name="lifecycle" string="Lifecycle Management">
                             <field name="pkg_warning_delay"/>
-                            <field name="pkg_freezing_db_due_balance_days"/>
-                            <field name="pkg_drop_after_days_frozen"/>
                         </group>
                     </group>
 

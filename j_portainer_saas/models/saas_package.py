@@ -44,52 +44,12 @@ class SaasPackage(models.Model):
         help='Display name of the SaaS package'
     )
     
-    pkg_user_limit = fields.Integer(
-        string='User Limit',
-        default=2,
-        required=True,
-        tracking=True,
-        help='Maximum number of users allowed in this package'
-    )
-    
-    pkg_company_limit = fields.Integer(
-        string='Company Limit',
-        default=1,
-        required=True,
-        tracking=True,
-        help='Maximum number of companies allowed in this package'
-    )
-    
     pkg_warning_delay = fields.Integer(
         string='Warning Delay',
         default=7,
         required=True,
         tracking=True,
         help='Number of days before due date to send warning notifications'
-    )
-    
-    pkg_database_limit_size = fields.Float(
-        string='Database Limit Size (GB)',
-        default=2.0,
-        required=True,
-        tracking=True,
-        help='Maximum database storage size allowed in gigabytes'
-    )
-    
-    pkg_drop_after_days_frozen = fields.Integer(
-        string='Drop After Days Frozen',
-        default=30,
-        required=True,
-        tracking=True,
-        help='Number of days after freezing before database is permanently dropped'
-    )
-    
-    pkg_freezing_db_due_balance_days = fields.Integer(
-        string='Freezing DB base on due balance (Days)',
-        default=30,
-        required=True,
-        tracking=True,
-        help='Number of days after due date before database is frozen'
     )
     
     pkg_price = fields.Monetary(
@@ -213,34 +173,9 @@ class SaasPackage(models.Model):
             'Package name must be unique.'
         ),
         (
-            'positive_user_limit',
-            'CHECK(pkg_user_limit > 0)',
-            'User limit must be greater than zero.'
-        ),
-        (
-            'positive_company_limit',
-            'CHECK(pkg_company_limit > 0)',
-            'Company limit must be greater than zero.'
-        ),
-        (
-            'positive_database_size',
-            'CHECK(pkg_database_limit_size > 0)',
-            'Database size limit must be greater than zero.'
-        ),
-        (
             'positive_warning_delay',
             'CHECK(pkg_warning_delay >= 0)',
             'Warning delay must be zero or positive.'
-        ),
-        (
-            'positive_drop_days',
-            'CHECK(pkg_drop_after_days_frozen > 0)',
-            'Drop after days frozen must be greater than zero.'
-        ),
-        (
-            'positive_freezing_days',
-            'CHECK(pkg_freezing_db_due_balance_days > 0)',
-            'Freezing days must be greater than zero.'
         ),
     ]
     
@@ -266,15 +201,7 @@ class SaasPackage(models.Model):
             if record.pkg_price and record.pkg_price < 0:
                 raise ValidationError(_('Package price cannot be negative.'))
     
-    @api.constrains('pkg_drop_after_days_frozen', 'pkg_freezing_db_due_balance_days')
-    def _check_logical_freeze_drop_sequence(self):
-        """Validate that drop days are greater than or equal to freezing days."""
-        for record in self:
-            if record.pkg_drop_after_days_frozen < record.pkg_freezing_db_due_balance_days:
-                raise ValidationError(_(
-                    'Drop after days frozen (%d) should be greater than or equal to '
-                    'freezing days (%d) to ensure logical sequence.'
-                ) % (record.pkg_drop_after_days_frozen, record.pkg_freezing_db_due_balance_days))
+
     
     # ========================================================================
     # OVERRIDE METHODS
