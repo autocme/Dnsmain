@@ -53,6 +53,7 @@ Dependencies:
         'views/system_type_views.xml',
         'views/saas_brand_views.xml',
         'views/portainer_environment_views.xml',
+        'views/dns_subdomain_views.xml',
         'views/menu_views.xml',
     ],
     'demo': [],
