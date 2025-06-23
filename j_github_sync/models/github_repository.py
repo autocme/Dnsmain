@@ -153,32 +153,53 @@ class GitHubRepository(models.Model):
                     message = 'Repository sync response received'
                 
                 if success:
-                    # Extract last_pull_time from response - ONLY update if provided by server
-                    update_vals = {'gr_status': 'success'}
+                    # Check server response for actual sync status
+                    update_vals = {}
                     
-                    if isinstance(result, dict) and 'last_pull_time' in result:
-                        last_pull_time = result['last_pull_time']
+                    if isinstance(result, dict):
+                        # Check last_pull_success to determine actual sync status
+                        last_pull_success = result.get('last_pull_success')
+                        last_pull_error = result.get('last_pull_error')
                         
-                        # Only update gr_last_pull if server provides last_pull_time
-                        if last_pull_time:
-                            try:
-                                from datetime import datetime, timedelta
-                                # Handle ISO format with microseconds
-                                if 'T' in last_pull_time:
-                                    # Remove microseconds if present: 2025-06-23T10:49:36.900591
-                                    if '.' in last_pull_time:
-                                        last_pull_time = last_pull_time.split('.')[0]
-                                    gr_last_pull = datetime.strptime(last_pull_time, '%Y-%m-%dT%H:%M:%S')
-                                    update_vals['gr_last_pull'] = gr_last_pull
-                                    _logger.info(f"Updated gr_last_pull from server response: {gr_last_pull}")
-                            except (ValueError, TypeError) as e:
-                                _logger.error(f"Failed to parse last_pull_time '{last_pull_time}': {e}")
-                        elif last_pull_time is None:
-                            # Server explicitly says no pull time - don't update the field
-                            _logger.info("Server response has last_pull_time=None, keeping existing gr_last_pull")
+                        if last_pull_success is False or last_pull_error:
+                            # Server indicates sync error
+                            update_vals['gr_status'] = 'error'
+                            _logger.error(f"Repository sync failed on server: {last_pull_error}")
+                        elif last_pull_success is True:
+                            # Server indicates successful sync
+                            update_vals['gr_status'] = 'success'
+                            _logger.info("Repository sync succeeded on server")
+                        else:
+                            # No clear success/error indication, default to success
+                            update_vals['gr_status'] = 'success'
+                        
+                        # Extract last_pull_time from response if available
+                        if 'last_pull_time' in result:
+                            last_pull_time = result['last_pull_time']
+                            
+                            # Only update gr_last_pull if server provides last_pull_time
+                            if last_pull_time:
+                                try:
+                                    from datetime import datetime
+                                    # Handle ISO format with microseconds
+                                    if 'T' in last_pull_time:
+                                        # Remove microseconds if present: 2025-06-23T10:49:36.900591
+                                        if '.' in last_pull_time:
+                                            last_pull_time = last_pull_time.split('.')[0]
+                                        gr_last_pull = datetime.strptime(last_pull_time, '%Y-%m-%dT%H:%M:%S')
+                                        update_vals['gr_last_pull'] = gr_last_pull
+                                        _logger.info(f"Updated gr_last_pull from server response: {gr_last_pull}")
+                                except (ValueError, TypeError) as e:
+                                    _logger.error(f"Failed to parse last_pull_time '{last_pull_time}': {e}")
+                            elif last_pull_time is None:
+                                # Server explicitly says no pull time - don't update the field
+                                _logger.info("Server response has last_pull_time=None, keeping existing gr_last_pull")
+                        else:
+                            # No last_pull_time in response - don't update gr_last_pull field
+                            _logger.info("No last_pull_time in server response, keeping existing gr_last_pull")
                     else:
-                        # No last_pull_time in response - don't update gr_last_pull field
-                        _logger.info("No last_pull_time in server response, keeping existing gr_last_pull")
+                        # Non-dict response, assume success
+                        update_vals['gr_status'] = 'success'
                     
                     self.write(update_vals)
                     return {
@@ -198,7 +219,12 @@ class GitHubRepository(models.Model):
                 raise UserError(_('No response from sync server'))
                 
         except Exception as e:
-            self.write({'gr_status': 'error'})
+            # Handle server errors (500, etc.) by setting status to error
+            if 'Server error (500)' in str(e) or '500' in str(e):
+                self.write({'gr_status': 'error'})
+                _logger.error(f"Server error during sync, marked repository as error: {e}")
+            else:
+                self.write({'gr_status': 'error'})
             raise UserError(_('Sync failed: %s') % str(e))
 
     def action_create_repository(self):

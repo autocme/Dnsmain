@@ -486,36 +486,46 @@ class GitHubSyncServer(models.Model):
                 _logger.error(f"Failed to parse last_pull timestamp '{last_pull_str}': {e}")
                 last_pull = None
         
-        # Map and validate repository status - preserve actual server status
+        # Determine status based on actual sync results, not just server status field
         raw_status = repo_data.get('status', '').lower().strip()
-        _logger.info(f"Raw repository status from server: '{raw_status}'")
+        last_pull_success = repo_data.get('last_pull_success')
+        last_pull_error = repo_data.get('last_pull_error')
         
-        # Map server statuses to Odoo repository statuses
-        status_mapping = {
-            'success': 'success',
-            'error': 'error',
-            'warning': 'warning',
-            'pending': 'pending',
-            'syncing': 'syncing',
-            'active': 'success',       # Map active to success
-            'healthy': 'success',      # Map healthy to success
-            'online': 'success',       # Map online to success
-            'ready': 'success',        # Map ready to success
-            'failed': 'error',         # Map failed to error
-            'offline': 'error',        # Map offline to error
-            'inactive': 'warning',     # Map inactive to warning
-            'disabled': 'warning',     # Map disabled to warning
-        }
+        _logger.info(f"Repository sync status - raw_status: '{raw_status}', last_pull_success: {last_pull_success}, last_pull_error: {last_pull_error}")
         
-        status = status_mapping.get(raw_status, raw_status)
+        # Prioritize actual sync results over generic status field
+        if last_pull_success is False or last_pull_error:
+            status = 'error'
+            _logger.info(f"Repository marked as error due to sync failure: {last_pull_error}")
+        elif last_pull_success is True:
+            status = 'success'
+            _logger.info("Repository marked as success due to successful sync")
+        else:
+            # Fall back to status field mapping if no sync status available
+            status_mapping = {
+                'success': 'success',
+                'error': 'error',
+                'warning': 'warning',
+                'pending': 'pending',
+                'syncing': 'syncing',
+                'active': 'success',
+                'healthy': 'success',
+                'online': 'success',
+                'ready': 'success',
+                'failed': 'error',
+                'offline': 'error',
+                'inactive': 'warning',
+                'disabled': 'warning',
+            }
+            
+            status = status_mapping.get(raw_status, 'success')
+            _logger.info(f"Repository status determined from status field: '{status}'")
+        
+        # Validate final status
         valid_statuses = ['success', 'error', 'warning', 'pending', 'syncing']
-        
         if status not in valid_statuses:
-            _logger.warning(f"Unknown repository status '{raw_status}', mapping to 'success'")
-            status = 'success'  # Default to success for unknown statuses
-        
-        # Let the server determine the status - don't override based on last_pull_time
-        # The server should send appropriate status for each repository
+            _logger.warning(f"Invalid status '{status}', defaulting to 'error'")
+            status = 'error'
         
         _logger.info(f"Final repository status: '{status}'")
         
