@@ -171,8 +171,54 @@ class GitHubRepository(models.Model):
         except Exception as e:
             self.write({'gr_status': 'error'})
             raise UserError(_('Sync failed: %s') % str(e))
-    
 
+    def action_create_repository(self):
+        """Create this repository on the GitHub Sync Server."""
+        self.ensure_one()
+        
+        if self.gr_external_id and self.gr_external_id != '0':
+            raise UserError(_('Repository already exists on sync server'))
+        
+        if not self.gr_server_id:
+            raise UserError(_('No sync server selected for this repository'))
+        
+        try:
+            # Prepare repository data for creation
+            repo_data = {
+                'name': self.gr_name,
+                'url': self.gr_url,
+                'branch': self.gr_branch,
+                'local_path': self.gr_local_path,
+                'description': self.gr_description or '',
+                'private': self.gr_private,
+            }
+            
+            result = self.gr_server_id._make_request('POST', 'repositories', repo_data)
+            
+            if result and isinstance(result, dict):
+                # Update repository with returned external ID
+                external_id = result.get('id') or result.get('external_id')
+                if external_id:
+                    self.write({
+                        'gr_external_id': str(external_id),
+                        'gr_status': 'success'
+                    })
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'message': _('Repository created successfully on sync server'),
+                            'type': 'success',
+                            'sticky': False,
+                        }
+                    }
+                else:
+                    raise UserError(_('Repository created but no external ID returned'))
+            else:
+                raise UserError(_('Failed to create repository on sync server'))
+                
+        except Exception as e:
+            raise UserError(_('Error creating repository: %s') % str(e))
     
     def action_delete_repository(self):
         """Delete repository with confirmation."""

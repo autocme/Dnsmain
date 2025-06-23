@@ -31,6 +31,15 @@
         <field name="arch" type="xml">
             <form string="GitHub Repository">
                 <header>
+                    <div class="alert alert-warning" role="alert" 
+                         invisible="gr_external_id and gr_external_id != '0'">
+                        <strong>Repository Not Found:</strong> This repository does not exist on the sync server. 
+                        Click "Create Repository" to create it on the selected sync server.
+                    </div>
+                    <button name="action_create_repository" string="Create Repository" 
+                            type="object" class="btn-success"
+                            invisible="gr_external_id and gr_external_id != '0'"
+                            confirm="Are you sure you want to create this repository on the sync server?"/>
                     <button name="action_sync_repository" string="Sync" 
                             type="object" class="btn-primary"/>
                     <button name="action_delete_repository" string="Delete" 
