@@ -48,13 +48,13 @@
                     <div class="oe_title">
                         <label for="pkg_name" class="oe_edit_only"/>
                         <h1>
-                            <field name="pkg_name" placeholder="Package Name"/>
+                            <field name="pkg_sequence"/>
                         </h1>
                     </div>
 
                     <group>
                         <group name="package_info" string="Package Information">
-                            <field name="pkg_sequence"/>
+                            <field name="pkg_name" placeholder="Package Name"/>
                             <field name="pkg_system_type_id"
                                    options="{'no_create': True}"
                                    placeholder="Select system type..."/>
@@ -63,6 +63,7 @@
                        'saas_package_id': active_id,
                        'saas_package_price': pkg_price,
                        'saas_package_name': pkg_name,
+                       'saas_package_period': pkg_subscription_period,
                        }"/>
                             <field name="pkg_dns_domain_id"
                                    options="{'no_create': True}"
@@ -72,6 +73,7 @@
                         <group name="pricing" string="Pricing">
                             <field name="pkg_price" widget="monetary"/>
                             <field name="pkg_currency_id"/>
+                            <field name="pkg_subscription_period"/>
                         </group>
                     </group>
 
