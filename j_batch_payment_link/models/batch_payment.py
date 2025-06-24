@@ -176,6 +176,59 @@ class BatchPayment(models.Model):
                 ('reference', 'ilike', rec.name)
             ])
             rec.payment_transaction_ids = [(6, 0, transactions.ids)]
+            
+            # Check if any transaction is confirmed and process payment automatically
+            confirmed_transactions = transactions.filtered(lambda t: t.state == 'done')
+            if confirmed_transactions and rec.state != 'paid':
+                for transaction in confirmed_transactions:
+                    # Check if transaction amount matches batch total amount
+                    if transaction.amount == rec.total_amount:
+                        rec._auto_process_confirmed_transaction(transaction)
+
+    def _auto_process_confirmed_transaction(self, transaction):
+        """Auto process payment when transaction is confirmed with matching amount."""
+        self.ensure_one()
+        
+        # Post draft invoices if any exist
+        draft_invoices = self.invoice_ids.filtered(lambda inv: inv.state == 'draft')
+        if draft_invoices:
+            for invoice in draft_invoices:
+                invoice.action_post()
+        
+        # Get the payment from the transaction (payment should already exist)
+        if transaction.payment_id:
+            # Use existing payment from transaction
+            existing_payment = transaction.payment_id
+            
+            # Update batch payment with transaction details
+            self.write({
+                'payment_id': existing_payment.id,
+                'payment_date': fields.Datetime.now(),
+                'payment_method_id': transaction.provider_id.id if transaction.provider_id else False,
+                'state': 'paid'
+            })
+            
+            # Reconcile payment with invoices if not already reconciled
+            self._reconcile_payment_with_invoices(existing_payment)
+            
+            # Log completion message
+            self.message_post(
+                body=_('Batch payment automatically processed from confirmed transaction. Payment amount: %s %s. Provider: %s') % (
+                    transaction.amount, 
+                    self.currency_id.name, 
+                    transaction.provider_id.name if transaction.provider_id else 'Unknown'
+                ),
+                message_type='notification'
+            )
+            
+            # Add message to each invoice
+            for invoice in self.invoice_ids:
+                invoice.message_post(
+                    body=_('Invoice paid through batch payment with %s') % (
+                        transaction.provider_id.name if transaction.provider_id else 'payment provider'
+                    ),
+                    message_type='notification'
+                )
 
     # ========================================================================
     # DEFAULT METHODS

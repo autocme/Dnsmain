@@ -113,6 +113,9 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 
 # Recent Changes
 
+- Added automatic payment processing for batch payments when transactions are confirmed
+- Implemented transaction state tracking with amount validation before processing
+- Auto-posting of draft invoices and payment reconciliation using existing transaction payments
 - Updated batch payment model to store multiple payment transactions using Many2many field
 - Changed payment_transaction_id to payment_transaction_ids with compute method for reference matching
 - Added payment transaction inheritance model with batch_payment_id field
