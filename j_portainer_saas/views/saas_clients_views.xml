@@ -135,6 +135,7 @@
                             <field name="sc_subscription_id"
                                    options="{'no_create': True}"
                                    placeholder="Select active subscription..."/>
+                            <field name="sc_subscription_recurring_next_date"/>
                             
                         </group>
                         <group>
