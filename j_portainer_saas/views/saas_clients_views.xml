@@ -217,6 +217,62 @@
     <!-- SAAS CLIENTS SEARCH VIEW -->
     <!-- ========================================================================== -->
 
+    <record id="view_saas_client_search" model="ir.ui.view">
+        <field name="name">saas.client.search</field>
+        <field name="model">saas.client</field>
+        <field name="arch" type="xml">
+            <search string="Search SaaS Clients">
+                
+                <!-- Search Fields -->
+                <field name="sc_sequence" string="Sequence" filter_domain="[('sc_sequence', 'ilike', self)]"/>
+                <field name="sc_partner_id" string="Partner" filter_domain="[('sc_partner_id', 'ilike', self)]"/>
+                <field name="sc_package_id" string="Package" filter_domain="[('sc_package_id', 'ilike', self)]"/>
+                <field name="sc_template_id" string="Template" filter_domain="[('sc_template_id', 'ilike', self)]"/>
+                <field name="sc_subscription_id" string="Subscription" filter_domain="[('sc_subscription_id', 'ilike', self)]"/>
+                <field name="sc_portainer_template_id" string="Portainer Template" filter_domain="[('sc_portainer_template_id', 'ilike', self)]"/>
+                <field name="sc_stack_id" string="Stack" filter_domain="[('sc_stack_id', 'ilike', self)]"/>
+                <field name="sc_subdomain_id" string="Subdomain" filter_domain="[('sc_subdomain_id', 'ilike', self)]"/>
+                
+                <!-- Filters -->
+                <filter name="filter_active" string="Active" domain="[('sc_active', '=', True)]"/>
+                <filter name="filter_inactive" string="Inactive" domain="[('sc_active', '=', False)]"/>
+                
+                <separator/>
+                
+                <filter name="filter_draft" string="Draft" domain="[('sc_status', '=', 'draft')]"/>
+                <filter name="filter_running" string="Running" domain="[('sc_status', '=', 'running')]"/>
+                <filter name="filter_freezed" string="Freezed" domain="[('sc_status', '=', 'freezed')]"/>
+                <filter name="filter_removed" string="Removed" domain="[('sc_status', '=', 'removed')]"/>
+                
+                <separator/>
+                
+                <filter name="filter_stack_active" string="Stack Active" domain="[('sc_stack_status', '=', '1')]"/>
+                <filter name="filter_stack_inactive" string="Stack Inactive" domain="[('sc_stack_status', '=', '2')]"/>
+                <filter name="filter_stack_unknown" string="Stack Unknown" domain="[('sc_stack_status', '=', '0')]"/>
+                
+                <separator/>
+                
+                <filter name="filter_has_subscription" string="Has Subscription" domain="[('sc_subscription_id', '!=', False)]"/>
+                <filter name="filter_has_stack" string="Has Stack" domain="[('sc_stack_id', '!=', False)]"/>
+                <filter name="filter_has_template" string="Has Template" domain="[('sc_portainer_template_id', '!=', False)]"/>
+                
+                <!-- Group By -->
+                <group expand="0" string="Group By">
+                    <filter name="group_by_partner" string="Partner" context="{'group_by': 'sc_partner_id'}"/>
+                    <filter name="group_by_package" string="Package" context="{'group_by': 'sc_package_id'}"/>
+                    <filter name="group_by_template" string="Template" context="{'group_by': 'sc_template_id'}"/>
+                    <filter name="group_by_status" string="Status" context="{'group_by': 'sc_status'}"/>
+                    <filter name="group_by_stack_status" string="Stack Status" context="{'group_by': 'sc_stack_status'}"/>
+                    <filter name="group_by_active" string="Active Status" context="{'group_by': 'sc_active'}"/>
+                    <separator/>
+                    <filter name="group_by_created_date" string="Created Date" context="{'group_by': 'sc_created_date'}"/>
+                    <filter name="group_by_last_updated" string="Last Updated" context="{'group_by': 'sc_last_updated'}"/>
+                </group>
+                
+            </search>
+        </field>
+    </record>
+
 
     <!-- ========================================================================== -->
     <!-- SAAS CLIENTS KANBAN VIEW -->
