@@ -73,6 +73,14 @@ class SaasClient(models.Model):
              'and service status for this SaaS client'
     )
     
+    sc_subscription_recurring_next_date = fields.Date(
+        string="Next invoice date",
+        related='sc_subscription_id.recurring_next_date',
+        required=False,
+        tracking=True,
+        help='The Next invoice date for the subscription for this SaaS client'
+    )
+    
     sc_stack_id = fields.Many2one(
         comodel_name='j_portainer.stack',
         string='Portainer Stack',
