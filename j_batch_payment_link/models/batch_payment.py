@@ -108,13 +108,13 @@ class BatchPayment(models.Model):
         help='Date and time when payment was made'
     )
 
-    payment_transaction_id = fields.Many2one(
+    payment_transaction_ids = fields.Many2many(
         comodel_name='payment.transaction',
-        string='Payment Transaction',
+        string='Payment Transactions',
         readonly=True,
         tracking=True,
-        compute='_compute_payment_transaction_id',
-        help='Payment transaction generated when customer pays through the link'
+        compute='_compute_payment_transaction_ids',
+        help='Payment transactions that contain this batch payment reference'
     )
 
     payment_method_id = fields.Many2one(
@@ -169,15 +169,13 @@ class BatchPayment(models.Model):
                     total += invoice.amount_residual
             record.total_amount = total
 
-    def _compute_payment_transaction_id(self):
+    def _compute_payment_transaction_ids(self):
+        """Compute payment transactions that contain the batch payment name in their reference."""
         for rec in self:
-            transaction_id = self.env['payment.transaction'].search([
-                ('reference', '=', rec.name),
+            transactions = self.env['payment.transaction'].search([
+                ('reference', 'ilike', rec.name)
             ])
-            if transaction_id:
-                rec.payment_transaction_id = transaction_id.id
-            else:
-                rec.payment_transaction_id = False
+            rec.payment_transaction_ids = [(6, 0, transactions.ids)]
 
     # ========================================================================
     # DEFAULT METHODS
@@ -399,7 +397,7 @@ class BatchPayment(models.Model):
             'state': 'draft',
             'payment_link': False,
             'payment_token': False,
-            'payment_transaction_id': False,
+            'payment_transaction_ids': [(5, 0, 0)],
             'payment_method_id': False,
         })
 
@@ -410,7 +408,7 @@ class BatchPayment(models.Model):
         if transaction_id:
             transaction = self.env['payment.transaction'].browse(transaction_id)
             if transaction.exists():
-                self.payment_transaction_id = transaction.id
+                # This method will be updated as transactions are automatically computed
 
                 # Get payment provider from transaction or parameter
                 if transaction.provider_id:
@@ -450,16 +448,16 @@ class BatchPayment(models.Model):
             'target': 'current',
         }
 
-    def action_view_payment_transaction(self):
-        """Open payment transaction record."""
-        if not self.payment_transaction_id:
-            raise UserError(_('No payment transaction found for this batch.'))
+    def action_view_payment_transactions(self):
+        """Open payment transaction records."""
+        if not self.payment_transaction_ids:
+            raise UserError(_('No payment transactions found for this batch.'))
 
         return {
-            'name': _('Payment Transaction'),
+            'name': _('Payment Transactions'),
             'type': 'ir.actions.act_window',
             'res_model': 'payment.transaction',
-            'res_id': self.payment_transaction_id.id,
-            'view_mode': 'form',
+            'domain': [('id', 'in', self.payment_transaction_ids.ids)],
+            'view_mode': 'tree,form',
             'target': 'current',
         }

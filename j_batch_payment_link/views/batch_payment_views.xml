@@ -43,10 +43,8 @@
                                     <span class="o_stat_text">Payment</span>
                                 </div>
                             </button>
-                            <button name="action_view_payment_transaction" type="object" class="oe_stat_button" icon="fa-credit-card" invisible="not payment_transaction_id">
-                                <div class="o_field_widget o_stat_info">
-                                    <span class="o_stat_text">Transaction</span>
-                                </div>
+                            <button name="action_view_payment_transactions" type="object" class="oe_stat_button" icon="fa-credit-card" invisible="not payment_transaction_ids">
+                                <field name="payment_transaction_ids" widget="statinfo" string="Transactions"/>
                             </button>
                         </div>
                         
@@ -68,7 +66,7 @@
                                 <field name="payment_date" readonly="1"/>
                                 <field name="payment_id" readonly="1" invisible="not payment_id"/>
                                 <field name="payment_method_id" readonly="1" invisible="not payment_method_id"/>
-                                <field name="payment_transaction_id" readonly="1" invisible="not payment_transaction_id"/>
+                                <field name="payment_transaction_ids" readonly="1" invisible="not payment_transaction_ids" widget="many2many_tags"/>
                             </group>
                         </group>
                         
