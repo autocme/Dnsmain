@@ -260,13 +260,11 @@
                 <group expand="0" string="Group By">
                     <filter name="group_by_partner" string="Partner" context="{'group_by': 'sc_partner_id'}"/>
                     <filter name="group_by_package" string="Package" context="{'group_by': 'sc_package_id'}"/>
-                    <filter name="group_by_template" string="Template" context="{'group_by': 'sc_template_id'}"/>
                     <filter name="group_by_status" string="Status" context="{'group_by': 'sc_status'}"/>
                     <filter name="group_by_stack_status" string="Stack Status" context="{'group_by': 'sc_stack_status'}"/>
                     <filter name="group_by_active" string="Active Status" context="{'group_by': 'sc_active'}"/>
                     <separator/>
-                    <filter name="group_by_created_date" string="Created Date" context="{'group_by': 'sc_created_date'}"/>
-                    <filter name="group_by_last_updated" string="Last Updated" context="{'group_by': 'sc_last_updated'}"/>
+                    <filter name="group_by_created_date" string="Created Date" context="{'group_by': 'create_date'}"/>
                 </group>
                 
             </search>
