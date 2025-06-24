@@ -541,16 +541,11 @@ class GitHubSyncServer(models.Model):
         
         for server in servers:
             try:
-                _logger.info(f"Syncing server: {server.gss_name} ({server.gss_url})")
-                
-                # Check connection first
-                if not server.action_test_connection_silent():
-                    _logger.warning(f"Connection test failed for server: {server.gss_name}")
-                    error_count += 1
-                    continue
-                
+                _logger.info(f"Syncing server: {server.gss_name} ({server.gss_server_url})")
+
                 # Sync repositories and logs
-                server.action_sync_repositories()
+                server.sync_repositories()
+                server.sync_logs()
                 success_count += 1
                 
             except Exception as e:
@@ -558,25 +553,6 @@ class GitHubSyncServer(models.Model):
                 error_count += 1
         
         _logger.info(f"Scheduled sync completed. Success: {success_count}, Errors: {error_count}")
-
-    def action_test_connection_silent(self):
-        """Test connection without showing user messages (for cron jobs)"""
-        self.ensure_one()
-        try:
-            response = requests.get(
-                f"{self.gss_url}/api/health",
-                timeout=30,
-                headers={'Accept': 'application/json'}
-            )
-            
-            if response.status_code == 200:
-                return True
-            else:
-                return False
-                
-        except Exception as e:
-            _logger.error(f"Connection test failed for {self.gss_name}: {str(e)}")
-            return False
 
     # ========================================================================
     # ACTION METHODS
