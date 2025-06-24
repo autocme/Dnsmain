@@ -61,6 +61,7 @@
                                 <field name="partner_id" readonly="1"/>
                                 <field name="total_amount" readonly="1"/>
                                 <field name="currency_id" readonly="1"/>
+                                <field name="reference" readonly="1"/>
                                 <field name="company_id" groups="base.group_multi_company"/>
                             </group>
                             <group name="dates">
