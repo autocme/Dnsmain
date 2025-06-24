@@ -123,6 +123,8 @@
                             <field name="sc_partner_id"
                                    options="{'no_create': True}"
                                    placeholder="Select the customer partner..."/>
+                            <field name="sc_partner_email" placeholder="Client email will appear here..."/>
+                            <field name="sc_partner_mobile" placeholder="Client mobile will appear here..."/>
 
                             <field name="sc_package_id"
                                    options="{'no_create': True}"
@@ -152,6 +154,7 @@
                             <field name="sc_subdomain_id"
                                    options="{'no_create': True}"
                                    placeholder="Select subdomain..."/>
+                            <field name="sc_full_domain" widget="url"/>
 
                             <field name="sc_active" widget="boolean_toggle"/>
 

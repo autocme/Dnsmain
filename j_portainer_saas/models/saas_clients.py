@@ -124,6 +124,27 @@ class SaasClient(models.Model):
         help='Auto-created subdomain for this SaaS client based on deployment environment and package domain'
     )
     
+    sc_full_domain = fields.Char(
+        string='Full Domain',
+        related='sc_subdomain_id.full_domain',
+        readonly=True,
+        help='Complete URL for accessing the SaaS client service'
+    )
+    
+    sc_partner_email = fields.Char(
+        string='Client Email',
+        related='sc_partner_id.email',
+        readonly=True,
+        help='Email address of the client'
+    )
+    
+    sc_partner_mobile = fields.Char(
+        string='Client Mobile',
+        related='sc_partner_id.mobile',
+        readonly=True,
+        help='Mobile number of the client'
+    )
+    
 
     
     sc_container_count = fields.Integer(
