@@ -98,7 +98,7 @@
                         <page name="template_variables" string="Variables">
                             <field name="pkg_template_variable_ids" options="{'delete': False,'create': False}">
                                 <tree editable="bottom">
-                                    <field name="id" readonly="1"/>
+                                    <field name="id" readonly="1" invisible="1"/>
                                     <field name="tv_variable_name" readonly="1"/>
                                     <field name="tv_field_domain" widget="domain" options="{'model': 'saas.client'}"
                                            placeholder="e.g., [(&quot;sc_partner_id&quot;, &quot;!=&quot;, False)] or sc_client_name"/>
