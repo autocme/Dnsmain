@@ -145,8 +145,6 @@ class BatchPayment(models.Model):
         help='Company for this batch payment'
     )
 
-    reference = fields.Char(string="Payment Reference", default=lambda self: str(uuid.uuid4()), readonly=True)
-
     # ========================================================================
     # COMPUTE METHODS
     # ========================================================================
@@ -174,7 +172,7 @@ class BatchPayment(models.Model):
     def _compute_payment_transaction_id(self):
         for rec in self:
             transaction_id = self.env['payment.transaction'].search([
-                ('reference', '=', rec.reference),
+                ('reference', '=', rec.name),
             ])
             if transaction_id:
                 rec.payment_transaction_id = transaction_id.id
@@ -247,7 +245,7 @@ class BatchPayment(models.Model):
 
         # Generate payment link using Odoo's payment format
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
-        self.payment_link = f"{base_url}/payment/pay?reference={self.reference}&amount={self.total_amount}&access_token={self.payment_token}"
+        self.payment_link = f"{base_url}/payment/pay?reference={self.name}&amount={self.total_amount}&access_token={self.payment_token}"
 
         self.state = 'link_generated'
 
