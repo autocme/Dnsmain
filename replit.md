@@ -113,6 +113,9 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 
 # Recent Changes
 
+- Modified subdomain creation logic in SaaS client model to prioritize public_url over URL
+- Added IP extraction from server URLs using regex pattern for IPv4 addresses
+- Implemented fallback hierarchy: public_url → server IP extraction → deployment environment URL
 - Added comprehensive search view to SaaS client model with filters for status, stack status, and resource availability
 - Search view includes grouping options by partner, package, template, and dates
 

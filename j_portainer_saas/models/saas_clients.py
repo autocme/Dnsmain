@@ -389,8 +389,25 @@ class SaasClient(models.Model):
             
             next_number = max_number + 1
             
-            # Get environment IP from URL field
-            environment_ip = self.sc_deployment_environment_id.url or ''
+            # Get IP address for subdomain value
+            environment_ip = ''
+            
+            # Try to use public_url first if it exists
+            if hasattr(self.sc_deployment_environment_id, 'public_url') and self.sc_deployment_environment_id.public_url:
+                environment_ip = self.sc_deployment_environment_id.public_url
+            # Fallback to extracting IP from server URL
+            elif self.sc_deployment_environment_id.server_id and self.sc_deployment_environment_id.server_id.url:
+                server_url = self.sc_deployment_environment_id.server_id.url
+                # Extract IP from URL using regex (matches IPv4 pattern)
+                ip_match = re.search(r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})', server_url)
+                if ip_match:
+                    environment_ip = ip_match.group(1)
+                else:
+                    # If no IP found, use the original URL as fallback
+                    environment_ip = self.sc_deployment_environment_id.url or ''
+            else:
+                # Final fallback to deployment environment URL
+                environment_ip = self.sc_deployment_environment_id.url or ''
             
             # Create subdomain
             subdomain_vals = {
