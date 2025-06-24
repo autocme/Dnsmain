@@ -62,12 +62,12 @@ class GitHubRepository(models.Model):
         ('warning', 'Warning'),
         ('pending', 'Pending'),
         ('syncing', 'Syncing')
-    ], string='Status', default='pending', tracking=True,
+    ], string='Status', default='pending', tracking=True, copy=False,
        help='Current status of the repository')
     
     gr_last_pull = fields.Datetime(
         string='Last Pull',
-        tracking=True,
+        tracking=True, copy=False,
         help='Timestamp of the last pull operation'
     )
     
@@ -79,6 +79,7 @@ class GitHubRepository(models.Model):
     
     gr_external_id = fields.Char(
         string='External ID',
+        copy=False,
         help='External repository ID from GitHub Sync Server'
     )
     
