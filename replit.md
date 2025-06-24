@@ -113,6 +113,10 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 
 # Recent Changes
 
+- Updated batch payment model to store multiple payment transactions using Many2many field
+- Changed payment_transaction_id to payment_transaction_ids with compute method for reference matching
+- Added payment transaction inheritance model with batch_payment_id field
+- Updated views and action methods to handle multiple transaction records
 - Modified subdomain creation logic in SaaS client model to prioritize public_url over URL
 - Added IP extraction from server URLs using regex pattern for IPv4 addresses
 - Implemented fallback hierarchy: public_url → server IP extraction → deployment environment URL
