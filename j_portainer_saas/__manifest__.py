@@ -43,6 +43,7 @@ Dependencies:
         'dns_base',
         'web',
         'queue_job',
+        'j_github_sync',
     ],
     'data': [
         'data/sequences.xml',
