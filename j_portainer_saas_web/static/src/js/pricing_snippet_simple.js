@@ -76,11 +76,17 @@
             
             // Handle direct response format
             if (data && data.success) {
+                console.log('Successfully loaded ' + (data.packages ? data.packages.length : 0) + ' packages from ' + endpoint);
                 renderPackages(pricingCards, data.packages || []);
                 return data;
             } else if (data && data.error) {
+                console.log('Server error from ' + endpoint + ':', data.error);
+                if (data.debug) {
+                    console.log('Debug info:', data.debug);
+                }
                 throw new Error('Server error: ' + data.error);
             } else {
+                console.log('Unexpected response format from ' + endpoint + ':', data);
                 throw new Error('No packages found or server error');
             }
         });

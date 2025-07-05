@@ -29,7 +29,8 @@ class SaaSWebController(http.Controller):
             if 'saas.package' not in request.env:
                 response_data = {
                     'success': False,
-                    'error': 'SaaS package model not found. Please ensure j_portainer_saas module is installed.'
+                    'error': 'SaaS package model not found. Please ensure j_portainer_saas module is installed.',
+                    'debug': 'Missing j_portainer_saas module - model saas.package not found'
                 }
                 return request.make_response(
                     json.dumps(response_data),
@@ -40,6 +41,18 @@ class SaaSWebController(http.Controller):
             packages = request.env['saas.package'].sudo().search([
                 ('pkg_active', '=', True)
             ])
+            
+            # If no packages found, return error to force demo fallback
+            if not packages:
+                response_data = {
+                    'success': False,
+                    'error': 'No active packages found in database',
+                    'debug': 'Database query returned 0 packages with pkg_active=True'
+                }
+                return request.make_response(
+                    json.dumps(response_data),
+                    headers=[('Content-Type', 'application/json')]
+                )
             
             # Prepare packages data
             packages_data = []
@@ -65,7 +78,7 @@ class SaaSWebController(http.Controller):
                 'success': True,
                 'packages': packages_data,
                 'free_trial_days': self._get_free_trial_days(),
-                'debug': f'Found {len(packages)} packages'
+                'debug': f'Successfully loaded {len(packages)} real packages from database'
             }
             
             return request.make_response(
