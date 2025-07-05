@@ -38,6 +38,7 @@ conversion-optimized layout similar to Odoo's official pricing structure.
         'web.assets_frontend': [
             'j_portainer_saas_web/static/src/css/pricing_snippet.css',
             'j_portainer_saas_web/static/src/js/pricing_snippet.js',
+            'j_portainer_saas_web/static/src/js/snippet_options.js',
         ],
     },
     'installable': True,
