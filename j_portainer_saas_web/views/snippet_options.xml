@@ -17,28 +17,24 @@
                 <!-- LAYOUT CUSTOMIZATION OPTIONS -->
                 <!-- ========================================================================== -->
                 
-                <div class="o_we_so_color_palette" data-name="layout_options">
+                <div class="o_we_so_color_palette">
                     <div class="o_we_color_preview">Layout</div>
                     <div class="o_we_color_palette_wrapper">
-                        <div class="o_we_color_palette o_we_ui_tiling_preset_btns" data-target=".saas-pricing-section" data-attribute-name="data-columns-per-row" data-no-preview="true">
-                            <we-button data-select-data-attribute="1" class="o_we_ui_tiling_preset_btn">
-                                1
-                            </we-button>
-                            <we-button data-select-data-attribute="2" class="o_we_ui_tiling_preset_btn">
-                                2
-                            </we-button>
-                            <we-button data-select-data-attribute="3" class="o_we_ui_tiling_preset_btn">
-                                3
-                            </we-button>
-                            <we-button data-select-data-attribute="4" class="o_we_ui_tiling_preset_btn">
-                                4
-                            </we-button>
-                            <we-button data-select-data-attribute="6" class="o_we_ui_tiling_preset_btn">
-                                6
+                        <div class="o_we_color_palette o_we_ui_tiling_preset_btns">
+                            <we-button title="Grid" data-select-data-attribute="grid" data-attribute-name="data-layout-type">
+                                Grid
                             </we-button>
                         </div>
                     </div>
                 </div>
+                
+                <we-select string="Cols" data-attribute-name="data-columns-per-row" data-no-preview="true">
+                    <we-button data-select-data-attribute="1">1</we-button>
+                    <we-button data-select-data-attribute="2">2</we-button>
+                    <we-button data-select-data-attribute="3">3</we-button>
+                    <we-button data-select-data-attribute="4">4</we-button>
+                    <we-button data-select-data-attribute="6">6</we-button>
+                </we-select>
 
                 <!-- Package Visibility Controls -->
                 <div class="o_we_so_color_palette" data-name="package_visibility_controls">
