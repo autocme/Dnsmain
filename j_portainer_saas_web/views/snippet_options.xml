@@ -21,14 +21,14 @@
                     <div class="o_we_color_preview">Layout</div>
                     <div class="o_we_color_palette_wrapper">
                         <div class="o_we_color_palette o_we_ui_tiling_preset_btns">
-                            <we-button title="Grid" data-select-data-attribute="grid" data-attribute-name="data-layout_type">
+                            <we-button title="Grid" data-select-data-attribute="grid" data-attribute-name="data-layouttype">
                                 Grid
                             </we-button>
                         </div>
                     </div>
                 </div>
                 
-                <we-select string="Cols" data-attribute-name="data-columns_per_row" data-no-preview="true">
+                <we-select string="Cols" data-attribute-name="data-columnsperrow" data-no-preview="true">
                     <we-button data-select-data-attribute="1">1</we-button>
                     <we-button data-select-data-attribute="2">2</we-button>
                     <we-button data-select-data-attribute="3">3</we-button>

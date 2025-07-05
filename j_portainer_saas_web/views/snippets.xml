@@ -12,8 +12,8 @@
                  data-text-color="#333333"
                  data-border-radius="8"
                  data-shadow-intensity="0.1"
-                 data-columns_per_row="3"
-                 data-layout_type="grid">
+                 data-columnsperrow="3"
+                 data-layouttype="grid">
             
             <!-- Pricing Section Header -->
             <div class="container py-5">
