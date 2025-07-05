@@ -164,7 +164,7 @@
         
         packages.forEach(function(pkg) {
             var cardHtml = `
-                <div class="col-lg-4 col-md-6 mb-4">
+                <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
                     <div class="saas-pricing-card h-100" data-package-id="${pkg.id}">
                         <div class="card-header">
                             <h3 class="package-name">${pkg.name}</h3>

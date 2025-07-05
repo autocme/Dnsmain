@@ -16,21 +16,25 @@ class SaaSWebController(http.Controller):
     - Managing free trial requests
     """
 
-    @http.route('/saas/packages/data', type='json', auth='public', methods=['POST'], csrf=False)
+    @http.route('/saas/packages/data', type='http', auth='public', methods=['POST', 'GET'], csrf=False)
     def get_packages_data(self):
         """
         Fetch all active SaaS packages for the pricing snippet
         
         Returns:
-            dict: JSON response containing package data with pricing info
+            JSON response containing package data with pricing info
         """
         try:
             # Check if saas.package model exists
             if 'saas.package' not in request.env:
-                return {
+                response_data = {
                     'success': False,
                     'error': 'SaaS package model not found. Please ensure j_portainer_saas module is installed.'
                 }
+                return request.make_response(
+                    json.dumps(response_data),
+                    headers=[('Content-Type', 'application/json')]
+                )
             
             # Get all active packages
             packages = request.env['saas.package'].sudo().search([
@@ -57,19 +61,28 @@ class SaaSWebController(http.Controller):
                 }
                 packages_data.append(package_data)
             
-            return {
+            response_data = {
                 'success': True,
                 'packages': packages_data,
                 'free_trial_days': self._get_free_trial_days(),
                 'debug': f'Found {len(packages)} packages'
             }
             
+            return request.make_response(
+                json.dumps(response_data),
+                headers=[('Content-Type', 'application/json')]
+            )
+            
         except Exception as e:
-            return {
+            response_data = {
                 'success': False,
                 'error': str(e),
                 'debug': f'Exception in get_packages_data: {type(e).__name__}'
             }
+            return request.make_response(
+                json.dumps(response_data),
+                headers=[('Content-Type', 'application/json')]
+            )
 
     def _get_package_features(self, package):
         """
