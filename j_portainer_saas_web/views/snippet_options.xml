@@ -13,30 +13,6 @@
                  data-selector=".saas-pricing-section"
                  data-drop-in=".saas-pricing-section">
                 
-                <!-- ========================================================================== -->
-                <!-- LAYOUT CUSTOMIZATION OPTIONS -->
-                <!-- ========================================================================== -->
-                
-                <div class="o_we_so_color_palette">
-                    <div class="o_we_color_preview">Layout</div>
-                    <div class="o_we_color_palette_wrapper d-flex">
-                        <div class="o_we_color_palette o_we_ui_tiling_preset_btns me-2">
-                            <we-button title="Grid" data-select-data-attribute="grid" data-attribute-name="data-layouttype">
-                                Grid
-                            </we-button>
-                        </div>
-                        <div class="o_we_select_wrapper">
-                            <we-select string="Cols" data-attribute-name="data-columnsperrow" data-no-preview="true">
-                                <we-button data-select-data-attribute="1">1</we-button>
-                                <we-button data-select-data-attribute="2">2</we-button>
-                                <we-button data-select-data-attribute="3">3</we-button>
-                                <we-button data-select-data-attribute="4">4</we-button>
-                                <we-button data-select-data-attribute="6">6</we-button>
-                            </we-select>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Package Visibility Controls -->
                 <div class="o_we_so_color_palette" data-name="package_visibility_controls">
                     <div class="o_we_color_preview">Package Visibility</div>

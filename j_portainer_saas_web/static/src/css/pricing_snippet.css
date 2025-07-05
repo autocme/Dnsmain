@@ -178,58 +178,7 @@
     max-width: 33.333333%;
 }
 
-/* 1-column layout */
-.saas-pricing-section[data-columnsperrow="1"] .pricing-card-col {
-    flex: 0 0 100%;
-    max-width: 100%;
-}
 
-/* 2-column layout */
-.saas-pricing-section[data-columnsperrow="2"] .pricing-card-col {
-    flex: 0 0 50%;
-    max-width: 50%;
-}
-
-/* 3-column layout (explicit) */
-.saas-pricing-section[data-columnsperrow="3"] .pricing-card-col {
-    flex: 0 0 33.333333%;
-    max-width: 33.333333%;
-}
-
-/* 4-column layout */
-.saas-pricing-section[data-columnsperrow="4"] .pricing-card-col {
-    flex: 0 0 25%;
-    max-width: 25%;
-}
-
-/* 6-column layout */
-.saas-pricing-section[data-columnsperrow="6"] .pricing-card-col {
-    flex: 0 0 16.666667%;
-    max-width: 16.666667%;
-}
-
-/* Responsive adjustments for smaller layouts */
-@media (max-width: 991px) {
-    .saas-pricing-section[data-columnsperrow="4"] .pricing-card-col,
-    .saas-pricing-section[data-columnsperrow="6"] .pricing-card-col {
-        flex: 0 0 50%;
-        max-width: 50%;
-    }
-}
-
-@media (max-width: 767px) {
-    .saas-pricing-section[data-columnsperrow="6"] .pricing-card-col {
-        flex: 0 0 50%;
-        max-width: 50%;
-    }
-    
-    .saas-pricing-section[data-columnsperrow="4"] .pricing-card-col,
-    .saas-pricing-section[data-columnsperrow="3"] .pricing-card-col,
-    .saas-pricing-section[data-columnsperrow="2"] .pricing-card-col {
-        flex: 0 0 100%;
-        max-width: 100%;
-    }
-}
 
 /* Package visibility controls */
 .saas-pricing-section .pricing-card-col.hidden-package {
