@@ -32,7 +32,6 @@ odoo.define('j_portainer_saas_web.pricing_snippet', function (require) {
             this.packages = [];
             this.currentBilling = 'monthly';
             this.freeTrialDays = 30;
-            this._loadPackages();
         },
 
         /**
@@ -41,7 +40,14 @@ odoo.define('j_portainer_saas_web.pricing_snippet', function (require) {
         start: function () {
             this._super.apply(this, arguments);
             this._applyDynamicStyling();
-            return this._loadPackages();
+            
+            // Delay loading to ensure DOM is ready
+            var self = this;
+            setTimeout(function() {
+                self._loadPackages();
+            }, 100);
+            
+            return Promise.resolve();
         },
 
         /**
@@ -51,16 +57,79 @@ odoo.define('j_portainer_saas_web.pricing_snippet', function (require) {
         _loadPackages: function () {
             var self = this;
             
+            console.log('Loading packages...');
+            
+            // If ajax is not available, try with fetch
+            if (!ajax || !ajax.jsonRpc) {
+                console.warn('ajax.jsonRpc not available, trying with fetch');
+                return self._loadPackagesWithFetch();
+            }
+            
             return ajax.jsonRpc('/saas/packages/data', 'call', {}).then(function (result) {
-                if (result.success) {
-                    self.packages = result.packages;
-                    self.freeTrialDays = result.free_trial_days;
+                console.log('Packages loaded successfully:', result);
+                
+                if (result && result.success) {
+                    self.packages = result.packages || [];
+                    self.freeTrialDays = result.free_trial_days || 30;
                     self._renderPackages();
                 } else {
-                    self._showError(result.error || 'Failed to load packages');
+                    // If result format is different, try to use result directly
+                    if (result && Array.isArray(result)) {
+                        self.packages = result;
+                        self.freeTrialDays = 30;
+                        self._renderPackages();
+                    } else {
+                        console.error('Invalid response format:', result);
+                        self._showError('Failed to load packages. Please check the server response.');
+                    }
                 }
             }).catch(function (error) {
                 console.error('Error loading packages:', error);
+                console.log('Trying fallback method...');
+                self._loadPackagesWithFetch();
+            });
+        },
+
+        /**
+         * Fallback method to load packages using fetch
+         * @private
+         */
+        _loadPackagesWithFetch: function () {
+            var self = this;
+            
+            fetch('/saas/packages/data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    method: 'call',
+                    params: {},
+                    id: new Date().getTime()
+                })
+            })
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('HTTP error! status: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(function(data) {
+                console.log('Fetch response:', data);
+                
+                var result = data.result;
+                if (result && result.success) {
+                    self.packages = result.packages || [];
+                    self.freeTrialDays = result.free_trial_days || 30;
+                    self._renderPackages();
+                } else {
+                    console.error('Invalid response format:', result);
+                    self._showError('Failed to load packages. Please check the server response.');
+                }
+            })
+            .catch(function(error) {
+                console.error('Fetch error:', error);
                 self._showError('Failed to load packages. Please try again.');
             });
         },
@@ -374,6 +443,9 @@ odoo.define('j_portainer_saas_web.pricing_snippet', function (require) {
             // Apply dynamic styling
             applyDynamicStyling(section);
             
+            // Load packages
+            loadPackagesVanilla(section);
+            
             // Initialize toggle
             var toggle = section.querySelector('.toggle-input');
             if (toggle) {
@@ -391,6 +463,110 @@ odoo.define('j_portainer_saas_web.pricing_snippet', function (require) {
                 });
             });
         });
+    }
+    
+    /**
+     * Load packages using vanilla JavaScript
+     */
+    function loadPackagesVanilla(section) {
+        var pricingCards = section.querySelector('#pricingCards');
+        
+        console.log('Loading packages with vanilla JavaScript...');
+        
+        fetch('/saas/packages/data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                jsonrpc: '2.0',
+                method: 'call',
+                params: {},
+                id: new Date().getTime()
+            })
+        })
+        .then(function(response) {
+            if (!response.ok) {
+                throw new Error('HTTP error! status: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(function(data) {
+            console.log('Vanilla fetch response:', data);
+            
+            var result = data.result;
+            if (result && result.success) {
+                renderPackagesVanilla(pricingCards, result.packages || []);
+            } else {
+                showErrorVanilla(pricingCards, 'Failed to load packages');
+            }
+        })
+        .catch(function(error) {
+            console.error('Vanilla fetch error:', error);
+            showErrorVanilla(pricingCards, 'Failed to load packages. Please try again.');
+        });
+    }
+    
+    /**
+     * Render packages in vanilla JavaScript
+     */
+    function renderPackagesVanilla(container, packages) {
+        container.innerHTML = '';
+        
+        if (packages.length === 0) {
+            container.innerHTML = '<div class="col-12 text-center"><p>No packages available at the moment.</p></div>';
+            return;
+        }
+        
+        packages.forEach(function(pkg) {
+            var cardHtml = `
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="saas-pricing-card h-100" data-package-id="${pkg.id}">
+                        <div class="card-header">
+                            <h3 class="package-name">${pkg.name}</h3>
+                            <div class="price-display">
+                                <span class="currency-symbol">${pkg.currency_symbol}</span>
+                                <span class="price-amount" data-monthly="${pkg.monthly_price}" data-yearly="${pkg.yearly_price}">${pkg.monthly_price}</span>
+                                <span class="price-period">/month</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="package-description">${pkg.description}</div>
+                            <ul class="features-list">
+                                ${pkg.features.map(feature => `<li>${feature}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn btn-primary btn-main" data-action="buy">
+                                <span class="btn-text">Buy Now</span>
+                                <i class="fa fa-arrow-right btn-icon"></i>
+                            </button>
+                            ${pkg.has_free_trial ? `
+                                <button class="btn btn-outline-secondary btn-trial" data-action="trial">
+                                    <span class="btn-text">Free Trial</span>
+                                    <i class="fa fa-gift btn-icon"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.innerHTML += cardHtml;
+        });
+    }
+    
+    /**
+     * Show error message in vanilla JavaScript
+     */
+    function showErrorVanilla(container, message) {
+        container.innerHTML = `
+            <div class="col-12 text-center">
+                <div class="alert alert-warning" role="alert">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    ${message}
+                </div>
+            </div>
+        `;
     }
     
     /**
@@ -417,6 +593,10 @@ odoo.define('j_portainer_saas_web.pricing_snippet', function (require) {
      */
     function handleBillingToggle(section, isMonthly) {
         var labels = section.querySelectorAll('.toggle-label');
+        var priceAmounts = section.querySelectorAll('.price-amount');
+        var pricePeriods = section.querySelectorAll('.price-period');
+        
+        // Update labels
         labels.forEach(function(label) {
             label.classList.remove('active');
         });
@@ -425,6 +605,17 @@ odoo.define('j_portainer_saas_web.pricing_snippet', function (require) {
         if (activeLabel) {
             activeLabel.classList.add('active');
         }
+        
+        // Update prices and periods
+        priceAmounts.forEach(function(priceEl) {
+            var monthlyPrice = parseFloat(priceEl.getAttribute('data-monthly'));
+            var yearlyPrice = parseFloat(priceEl.getAttribute('data-yearly'));
+            priceEl.textContent = isMonthly ? monthlyPrice : yearlyPrice;
+        });
+        
+        pricePeriods.forEach(function(periodEl) {
+            periodEl.textContent = isMonthly ? '/month' : '/year';
+        });
     }
     
     /**
