@@ -126,8 +126,12 @@ class SaaSWebController(http.Controller):
         
         # Default features if none found
         if not features:
+            system_type_name = 'System'
+            if package.pkg_system_type_id:
+                system_type_name = package.pkg_system_type_id.st_complete_name or package.pkg_system_type_id.st_name or 'System'
+            
             features = [
-                f"{package.pkg_system_type_id.name or 'System'} Access",
+                f"{system_type_name} Access",
                 "24/7 Support",
                 "Regular Updates",
                 "Secure Hosting"
