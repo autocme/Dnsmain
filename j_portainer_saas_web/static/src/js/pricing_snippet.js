@@ -3,17 +3,24 @@
 /* Interactive functionality for pricing cards and billing toggle */
 /* ========================================================================== */
 
-odoo.define('j_portainer_saas_web.pricing_snippet', [
-    'web.core',
-    'web.ajax', 
-    'web.public.widget'
-], function (require) {
-    'use strict';
+// Check if Odoo framework is available
+if (typeof odoo !== 'undefined' && odoo.define) {
+    // Use Odoo framework if available
+    odoo.define('j_portainer_saas_web.pricing_snippet', function (require) {
+        'use strict';
 
-    var core = require('web.core');
-    var ajax = require('web.ajax');
-    var publicWidget = require('web.public.widget');
-    var _t = core._t;
+        // Try to require modules with fallbacks
+        var core, ajax, publicWidget, _t;
+        
+        try {
+            core = require('web.core');
+            ajax = require('web.ajax');
+            publicWidget = require('web.public.widget');
+            _t = core._t;
+        } catch (e) {
+            console.warn('Odoo modules not available, using vanilla fallback');
+            return null;
+        }
 
     /**
      * SaaS Pricing Snippet Widget
@@ -421,13 +428,16 @@ odoo.define('j_portainer_saas_web.pricing_snippet', [
         },
     });
 
-    /**
-     * Register widget for automatic initialization
-     */
-    publicWidget.registry.saaSPricingSnippet = SaaSPricingSnippet;
+        /**
+         * Register widget for automatic initialization
+         */
+        if (publicWidget && publicWidget.registry) {
+            publicWidget.registry.saaSPricingSnippet = SaaSPricingSnippet;
+        }
 
-    return SaaSPricingSnippet;
-});
+        return SaaSPricingSnippet;
+    });
+}
 
 /* ========================================================================== */
 /* VANILLA JAVASCRIPT FALLBACK */

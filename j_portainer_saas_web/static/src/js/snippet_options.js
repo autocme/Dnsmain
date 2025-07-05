@@ -3,12 +3,21 @@
 /* Website editor options for dynamic styling */
 /* ========================================================================== */
 
-odoo.define('j_portainer_saas_web.snippet_options', [
-    'web_editor.snippets.options'
-], function (require) {
-    'use strict';
-    
-    var options = require('web_editor.snippets.options');
+// Check if Odoo framework is available
+if (typeof odoo !== 'undefined' && odoo.define) {
+    // Try to use Odoo framework if available
+    try {
+        odoo.define('j_portainer_saas_web.snippet_options', function (require) {
+            'use strict';
+            
+            // Try to require modules with fallbacks
+            var options;
+            try {
+                options = require('web_editor.snippets.options');
+            } catch (e) {
+                console.warn('Snippet options not available, skipping');
+                return null;
+            }
     
     /**
      * SaaS Pricing Snippet Options
@@ -180,10 +189,16 @@ odoo.define('j_portainer_saas_web.snippet_options', [
         }
     });
     
-    /**
-     * Register the options class
-     */
-    options.registry.SaaSPricingOptions = SaaSPricingOptions;
-    
-    return SaaSPricingOptions;
-});
+            /**
+             * Register the options class
+             */
+            if (options && options.registry) {
+                options.registry.SaaSPricingOptions = SaaSPricingOptions;
+            }
+            
+            return SaaSPricingOptions;
+        });
+    } catch (e) {
+        console.warn('Failed to define snippet options:', e);
+    }
+}
