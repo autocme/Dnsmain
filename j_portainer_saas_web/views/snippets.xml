@@ -13,7 +13,7 @@
                  data-border-radius="8"
                  data-shadow-intensity="0.1"
                  data-columns-per-row="3"
-                 data-layout-type="grid">
+                 data-layout_type="grid">
             
             <!-- Pricing Section Header -->
             <div class="container py-5">

@@ -21,7 +21,7 @@
                     <div class="o_we_color_preview">Layout</div>
                     <div class="o_we_color_palette_wrapper">
                         <div class="o_we_color_palette o_we_ui_tiling_preset_btns">
-                            <we-button title="Grid" data-select-data-attribute="grid" data-attribute-name="data-layout-type">
+                            <we-button title="Grid" data-select-data-attribute="grid" data-attribute-name="data-layout_type">
                                 Grid
                             </we-button>
                         </div>
