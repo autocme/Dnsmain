@@ -11,3 +11,4 @@ from . import template_variable
 from . import system_template_variable
 from . import dns_subdomain_inherit
 from . import portainer_environment
+from . import res_config_settings

@@ -113,6 +113,10 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 
 # Recent Changes
 
+- Added general settings section for j_portainer_saas module with free trial configuration
+- Created settings model with free_trial_interval_days field (default: 30 days) 
+- Added pkg_has_free_trial checkbox to package model for enabling free trials per package
+- Created settings view interface accessible through Settings > General Settings
 - Added automatic payment processing for batch payments when transactions are confirmed
 - Implemented transaction state tracking with amount validation before processing
 - Auto-posting of draft invoices and payment reconciliation using existing transaction payments

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ========================================================================== -->
+    <!-- SAAS CONFIGURATION SETTINGS -->
+    <!-- ========================================================================== -->
+
+    <record id="res_config_settings_view_form_inherit_saas" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.saas</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="60"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app name="j_portainer_saas" string="SaaS Configuration">
+                    <block title="Free Trial Settings">
+                        <setting>
+                            <label for="saas_free_trial_interval_days" string="Free Trial Period"/>
+                            <div class="text-muted">
+                                Configure the default number of days for free trial packages
+                            </div>
+                            <div class="content-group">
+                                <div class="row mt16">
+                                    <label class="o_light_label col-lg-3" for="saas_free_trial_interval_days"/>
+                                    <field name="saas_free_trial_interval_days" class="col-lg-2"/>
+                                    <span class="col-lg-1 o_light_label">days</span>
+                                </div>
+                            </div>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

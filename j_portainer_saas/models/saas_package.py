@@ -59,6 +59,13 @@ class SaasPackage(models.Model):
         help='Monthly subscription price for this package'
     )
     
+    pkg_has_free_trial = fields.Boolean(
+        string='Has Free Trial',
+        default=False,
+        tracking=True,
+        help='Enable free trial period for this package using configured interval days'
+    )
+    
     pkg_currency_id = fields.Many2one(
         comodel_name='res.currency',
         string='Currency',

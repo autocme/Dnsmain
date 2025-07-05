@@ -75,6 +75,7 @@
                                 <field name="pkg_subscription_period"/>
                             </div>
                             <field name="pkg_currency_id"/>
+                            <field name="pkg_has_free_trial"/>
                         </group>
                     </group>
 
