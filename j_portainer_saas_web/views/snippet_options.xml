@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ========================================================================== -->
+    <!-- SAAS PRICING SNIPPET OPTIONS -->
+    <!-- Dynamic styling options for customization -->
+    <!-- ========================================================================== -->
+    
+    <template id="saas_pricing_snippet_options" inherit_id="website.snippet_options">
+        <xpath expr="." position="inside">
+            
+            <!-- Main Options Container -->
+            <div data-js="SaaSPricingOptions" 
+                 data-selector=".saas-pricing-section"
+                 data-drop-in=".saas-pricing-section">
+                
+                <!-- ========================================================================== -->
+                <!-- COLOR CUSTOMIZATION OPTIONS -->
+                <!-- ========================================================================== -->
+                
+                <we-select string="Color Scheme" data-attribute-name="colorScheme" data-no-preview="true">
+                    <we-button data-select-data-attribute="professional" 
+                               data-primary-color="#875A7B" 
+                               data-accent-color="#0066CC">
+                        Professional
+                    </we-button>
+                    <we-button data-select-data-attribute="modern" 
+                               data-primary-color="#6C5CE7" 
+                               data-accent-color="#A29BFE">
+                        Modern
+                    </we-button>
+                    <we-button data-select-data-attribute="vibrant" 
+                               data-primary-color="#E17055" 
+                               data-accent-color="#FD79A8">
+                        Vibrant
+                    </we-button>
+                    <we-button data-select-data-attribute="corporate" 
+                               data-primary-color="#2D3436" 
+                               data-accent-color="#636E72">
+                        Corporate
+                    </we-button>
+                    <we-button data-select-data-attribute="nature" 
+                               data-primary-color="#00B894" 
+                               data-accent-color="#55A3FF">
+                        Nature
+                    </we-button>
+                    <we-button data-select-data-attribute="custom" 
+                               data-primary-color="#875A7B" 
+                               data-accent-color="#0066CC">
+                        Custom
+                    </we-button>
+                </we-select>
+                
+                <!-- Primary Color Picker -->
+                <we-colorpicker string="Primary Color" 
+                               data-attribute-name="primaryColor" 
+                               data-css-property="primary-color"
+                               data-color-prefix="bg-"/>
+                
+                <!-- Accent Color Picker -->
+                <we-colorpicker string="Accent Color" 
+                               data-attribute-name="accentColor" 
+                               data-css-property="accent-color"
+                               data-color-prefix="bg-"/>
+                
+                <!-- Card Background -->
+                <we-colorpicker string="Card Background" 
+                               data-attribute-name="cardBg" 
+                               data-css-property="card-bg"
+                               data-color-prefix="bg-"/>
+                
+                <!-- Text Color -->
+                <we-colorpicker string="Text Color" 
+                               data-attribute-name="textColor" 
+                               data-css-property="text-color"
+                               data-color-prefix="text-"/>
+                
+                <!-- ========================================================================== -->
+                <!-- LAYOUT OPTIONS -->
+                <!-- ========================================================================== -->
+                
+                <we-select string="Card Layout" data-attribute-name="cardLayout">
+                    <we-button data-select-data-attribute="default">Default</we-button>
+                    <we-button data-select-data-attribute="compact">Compact</we-button>
+                    <we-button data-select-data-attribute="spacious">Spacious</we-button>
+                </we-select>
+                
+                <!-- Border Radius -->
+                <we-range string="Border Radius" 
+                         data-attribute-name="borderRadius" 
+                         data-unit="px"
+                         data-min="0" 
+                         data-max="20" 
+                         data-step="1"/>
+                
+                <!-- Shadow Intensity -->
+                <we-range string="Shadow Intensity" 
+                         data-attribute-name="shadowIntensity" 
+                         data-unit=""
+                         data-min="0" 
+                         data-max="0.5" 
+                         data-step="0.1"/>
+                
+                <!-- ========================================================================== -->
+                <!-- TYPOGRAPHY OPTIONS -->
+                <!-- ========================================================================== -->
+                
+                <we-select string="Title Style" data-attribute-name="titleStyle">
+                    <we-button data-select-data-attribute="default">Default</we-button>
+                    <we-button data-select-data-attribute="bold">Bold</we-button>
+                    <we-button data-select-data-attribute="elegant">Elegant</we-button>
+                    <we-button data-select-data-attribute="modern">Modern</we-button>
+                </we-select>
+                
+                <!-- Price Size -->
+                <we-select string="Price Size" data-attribute-name="priceSize">
+                    <we-button data-select-data-attribute="small">Small</we-button>
+                    <we-button data-select-data-attribute="medium">Medium</we-button>
+                    <we-button data-select-data-attribute="large">Large</we-button>
+                    <we-button data-select-data-attribute="xlarge">Extra Large</we-button>
+                </we-select>
+                
+                <!-- ========================================================================== -->
+                <!-- BUTTON OPTIONS -->
+                <!-- ========================================================================== -->
+                
+                <we-select string="Button Style" data-attribute-name="buttonStyle">
+                    <we-button data-select-data-attribute="default">Default</we-button>
+                    <we-button data-select-data-attribute="rounded">Rounded</we-button>
+                    <we-button data-select-data-attribute="sharp">Sharp</we-button>
+                    <we-button data-select-data-attribute="pill">Pill</we-button>
+                </we-select>
+                
+                <!-- Button Size -->
+                <we-select string="Button Size" data-attribute-name="buttonSize">
+                    <we-button data-select-data-attribute="small">Small</we-button>
+                    <we-button data-select-data-attribute="medium">Medium</we-button>
+                    <we-button data-select-data-attribute="large">Large</we-button>
+                </we-select>
+                
+                <!-- ========================================================================== -->
+                <!-- ANIMATION OPTIONS -->
+                <!-- ========================================================================== -->
+                
+                <we-select string="Hover Effects" data-attribute-name="hoverEffects">
+                    <we-button data-select-data-attribute="default">Default</we-button>
+                    <we-button data-select-data-attribute="lift">Lift</we-button>
+                    <we-button data-select-data-attribute="scale">Scale</we-button>
+                    <we-button data-select-data-attribute="glow">Glow</we-button>
+                    <we-button data-select-data-attribute="none">None</we-button>
+                </we-select>
+                
+                <!-- Animation Speed -->
+                <we-select string="Animation Speed" data-attribute-name="animationSpeed">
+                    <we-button data-select-data-attribute="fast">Fast</we-button>
+                    <we-button data-select-data-attribute="medium">Medium</we-button>
+                    <we-button data-select-data-attribute="slow">Slow</we-button>
+                </we-select>
+                
+                <!-- ========================================================================== -->
+                <!-- CONTENT OPTIONS -->
+                <!-- ========================================================================== -->
+                
+                <we-input string="Section Title" 
+                         data-attribute-name="sectionTitle" 
+                         data-selector="h2.saas-pricing-title"
+                         placeholder="Choose Your Plan"/>
+                
+                <we-input string="Section Subtitle" 
+                         data-attribute-name="sectionSubtitle" 
+                         data-selector="p.saas-pricing-subtitle"
+                         placeholder="Select the perfect package for your needs"/>
+                
+                <!-- ========================================================================== -->
+                <!-- TOGGLE OPTIONS -->
+                <!-- ========================================================================== -->
+                
+                <we-checkbox string="Show Billing Toggle" 
+                            data-attribute-name="showBillingToggle" 
+                            data-selector=".saas-billing-toggle"/>
+                
+                <we-select string="Default Billing" data-attribute-name="defaultBilling">
+                    <we-button data-select-data-attribute="monthly">Monthly</we-button>
+                    <we-button data-select-data-attribute="yearly">Yearly</we-button>
+                </we-select>
+                
+                <!-- ========================================================================== -->
+                <!-- RESPONSIVE OPTIONS -->
+                <!-- ========================================================================== -->
+                
+                <we-select string="Mobile Layout" data-attribute-name="mobileLayout">
+                    <we-button data-select-data-attribute="stack">Stack</we-button>
+                    <we-button data-select-data-attribute="carousel">Carousel</we-button>
+                    <we-button data-select-data-attribute="grid">Grid</we-button>
+                </we-select>
+                
+                <!-- ========================================================================== -->
+                <!-- RESET OPTIONS -->
+                <!-- ========================================================================== -->
+                
+                <we-button string="Reset to Default" 
+                          data-attribute-name="resetToDefault" 
+                          class="btn-warning">
+                    Reset Styling
+                </we-button>
+                
+            </div>
+            
+        </xpath>
+    </template>
+    
+    <!-- ========================================================================== -->
+    <!-- SNIPPET OPTIONS JAVASCRIPT -->
+    <!-- ========================================================================== -->
+    
+    <template id="saas_pricing_options_js" inherit_id="website.assets_wysiwyg">
+        <xpath expr="." position="inside">
+            <script type="text/javascript">
+                odoo.define('j_portainer_saas_web.snippet_options', function (require) {
+                    'use strict';
+                    
+                    var options = require('web_editor.snippets.options');
+                    
+                    /**
+                     * SaaS Pricing Snippet Options
+                     */
+                    var SaaSPricingOptions = options.Class.extend({
+                        
+                        /**
+                         * Handle color scheme selection
+                         */
+                        selectColorScheme: function (previewMode, value, $opt) {
+                            var $section = this.$target;
+                            var scheme = $opt.data('selectDataAttribute');
+                            var primaryColor = $opt.data('primaryColor');
+                            var accentColor = $opt.data('accentColor');
+                            
+                            if (scheme === 'custom') {
+                                // Keep current colors for custom
+                                return;
+                            }
+                            
+                            // Apply predefined color scheme
+                            $section.attr('data-primary-color', primaryColor);
+                            $section.attr('data-accent-color', accentColor);
+                            
+                            this._applyDynamicStyling();
+                        },
+                        
+                        /**
+                         * Handle primary color change
+                         */
+                        setPrimaryColor: function (previewMode, value, $opt) {
+                            this.$target.attr('data-primary-color', value);
+                            this._applyDynamicStyling();
+                        },
+                        
+                        /**
+                         * Handle accent color change
+                         */
+                        setAccentColor: function (previewMode, value, $opt) {
+                            this.$target.attr('data-accent-color', value);
+                            this._applyDynamicStyling();
+                        },
+                        
+                        /**
+                         * Handle card background change
+                         */
+                        setCardBg: function (previewMode, value, $opt) {
+                            this.$target.attr('data-card-bg', value);
+                            this._applyDynamicStyling();
+                        },
+                        
+                        /**
+                         * Handle text color change
+                         */
+                        setTextColor: function (previewMode, value, $opt) {
+                            this.$target.attr('data-text-color', value);
+                            this._applyDynamicStyling();
+                        },
+                        
+                        /**
+                         * Handle border radius change
+                         */
+                        setBorderRadius: function (previewMode, value, $opt) {
+                            this.$target.attr('data-border-radius', value);
+                            this._applyDynamicStyling();
+                        },
+                        
+                        /**
+                         * Handle shadow intensity change
+                         */
+                        setShadowIntensity: function (previewMode, value, $opt) {
+                            this.$target.attr('data-shadow-intensity', value);
+                            this._applyDynamicStyling();
+                        },
+                        
+                        /**
+                         * Handle card layout change
+                         */
+                        setCardLayout: function (previewMode, value, $opt) {
+                            var $section = this.$target;
+                            var layout = $opt.data('selectDataAttribute');
+                            
+                            // Remove existing layout classes
+                            $section.removeClass('layout-default layout-compact layout-spacious');
+                            
+                            // Add new layout class
+                            $section.addClass('layout-' + layout);
+                        },
+                        
+                        /**
+                         * Handle button style change
+                         */
+                        setButtonStyle: function (previewMode, value, $opt) {
+                            var $section = this.$target;
+                            var style = $opt.data('selectDataAttribute');
+                            
+                            // Remove existing button style classes
+                            $section.removeClass('btn-style-default btn-style-rounded btn-style-sharp btn-style-pill');
+                            
+                            // Add new button style class
+                            $section.addClass('btn-style-' + style);
+                        },
+                        
+                        /**
+                         * Handle hover effects change
+                         */
+                        setHoverEffects: function (previewMode, value, $opt) {
+                            var $section = this.$target;
+                            var effect = $opt.data('selectDataAttribute');
+                            
+                            // Remove existing hover effect classes
+                            $section.removeClass('hover-default hover-lift hover-scale hover-glow hover-none');
+                            
+                            // Add new hover effect class
+                            $section.addClass('hover-' + effect);
+                        },
+                        
+                        /**
+                         * Reset to default styling
+                         */
+                        resetToDefault: function (previewMode, value, $opt) {
+                            var $section = this.$target;
+                            
+                            // Reset all data attributes to defaults
+                            $section.attr('data-primary-color', '#875A7B');
+                            $section.attr('data-accent-color', '#0066CC');
+                            $section.attr('data-card-bg', '#FFFFFF');
+                            $section.attr('data-text-color', '#333333');
+                            $section.attr('data-border-radius', '8');
+                            $section.attr('data-shadow-intensity', '0.1');
+                            
+                            // Remove all modifier classes
+                            $section.removeClass(function (index, className) {
+                                return (className.match(/(^|\s)layout-\S+/g) || []).join(' ');
+                            });
+                            $section.removeClass(function (index, className) {
+                                return (className.match(/(^|\s)btn-style-\S+/g) || []).join(' ');
+                            });
+                            $section.removeClass(function (index, className) {
+                                return (className.match(/(^|\s)hover-\S+/g) || []).join(' ');
+                            });
+                            
+                            // Apply default styling
+                            this._applyDynamicStyling();
+                        },
+                        
+                        /**
+                         * Apply dynamic styling based on attributes
+                         */
+                        _applyDynamicStyling: function () {
+                            var $section = this.$target;
+                            var primaryColor = $section.attr('data-primary-color') || '#875A7B';
+                            var accentColor = $section.attr('data-accent-color') || '#0066CC';
+                            var cardBg = $section.attr('data-card-bg') || '#FFFFFF';
+                            var textColor = $section.attr('data-text-color') || '#333333';
+                            var borderRadius = $section.attr('data-border-radius') || '8';
+                            var shadowIntensity = $section.attr('data-shadow-intensity') || '0.1';
+                            
+                            // Apply CSS custom properties
+                            $section.css({
+                                '--primary-color': primaryColor,
+                                '--accent-color': accentColor,
+                                '--card-bg': cardBg,
+                                '--text-color': textColor,
+                                '--border-radius': borderRadius + 'px',
+                                '--shadow-intensity': shadowIntensity
+                            });
+                        }
+                    });
+                    
+                    options.registry.SaaSPricingOptions = SaaSPricingOptions;
+                    
+                    return SaaSPricingOptions;
+                });
+            </script>
+        </xpath>
+    </template>
+    
+</odoo>

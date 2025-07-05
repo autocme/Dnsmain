@@ -113,6 +113,12 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 
 # Recent Changes
 
+- Created comprehensive j_portainer_saas_web module with modern pricing snippet for website integration
+- Implemented Monthly/Yearly billing toggle with dynamic price calculations and smooth animations
+- Added extensive dynamic styling options allowing users to customize colors, layouts, typography, and effects
+- Created controller for package data fetching with automatic yearly discount calculations (10% default)
+- Built responsive pricing cards with conditional free trial button display based on pkg_has_free_trial field
+- Integrated snippet options panel with predefined color schemes and full customization capabilities
 - Added general settings section for j_portainer_saas module with free trial configuration
 - Created settings model with free_trial_interval_days field (default: 30 days) 
 - Added pkg_has_free_trial checkbox to package model for enabling free trials per package

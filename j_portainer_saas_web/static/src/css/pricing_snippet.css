@@ -1,0 +1,640 @@
+/* ========================================================================== */
+/* SAAS PRICING SNIPPET STYLES */
+/* Modern, responsive pricing cards with dynamic styling capabilities */
+/* ========================================================================== */
+
+/* CSS Custom Properties for Dynamic Styling */
+.saas-pricing-section {
+    --primary-color: #875A7B;
+    --accent-color: #0066CC;
+    --card-bg: #FFFFFF;
+    --text-color: #333333;
+    --border-radius: 8px;
+    --shadow-intensity: 0.1;
+    --hover-transform: translateY(-5px);
+    --transition-duration: 0.3s;
+}
+
+/* ========================================================================== */
+/* MAIN SECTION STYLES */
+/* ========================================================================== */
+
+.saas-pricing-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.saas-pricing-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(0,0,0,0.02)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+    opacity: 0.5;
+    z-index: 1;
+}
+
+.saas-pricing-section .container {
+    position: relative;
+    z-index: 2;
+}
+
+/* ========================================================================== */
+/* HEADER STYLES */
+/* ========================================================================== */
+
+.saas-pricing-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.saas-pricing-subtitle {
+    font-size: 1.2rem;
+    color: #666;
+    margin-bottom: 0;
+    font-weight: 400;
+}
+
+/* ========================================================================== */
+/* BILLING TOGGLE STYLES */
+/* ========================================================================== */
+
+.saas-billing-toggle {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 1rem;
+    background: var(--card-bg);
+    border-radius: calc(var(--border-radius) * 3);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, var(--shadow-intensity));
+    border: 2px solid transparent;
+    transition: all var(--transition-duration) ease;
+}
+
+.saas-billing-toggle:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, calc(var(--shadow-intensity) * 2));
+    border-color: var(--primary-color);
+}
+
+.toggle-label {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: color var(--transition-duration) ease;
+    user-select: none;
+}
+
+.toggle-label.active {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 60px;
+    height: 32px;
+}
+
+.toggle-input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ccc;
+    border-radius: 32px;
+    transition: all var(--transition-duration) ease;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 24px;
+    width: 24px;
+    left: 4px;
+    bottom: 4px;
+    background: white;
+    border-radius: 50%;
+    transition: all var(--transition-duration) ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-input:checked + .toggle-slider {
+    background: var(--primary-color);
+}
+
+.toggle-input:checked + .toggle-slider:before {
+    transform: translateX(28px);
+}
+
+.toggle-slider:hover {
+    box-shadow: 0 0 0 4px rgba(135, 90, 123, 0.1);
+}
+
+/* ========================================================================== */
+/* PRICING CARD STYLES */
+/* ========================================================================== */
+
+.saas-pricing-card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, var(--shadow-intensity));
+    transition: all var(--transition-duration) ease;
+    border: 2px solid transparent;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.saas-pricing-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    opacity: 0;
+    transition: opacity var(--transition-duration) ease;
+}
+
+.saas-pricing-card:hover {
+    transform: var(--hover-transform);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, calc(var(--shadow-intensity) * 2));
+    border-color: var(--primary-color);
+}
+
+.saas-pricing-card:hover::before {
+    opacity: 1;
+}
+
+/* Featured/Popular Card Styling */
+.saas-pricing-card.featured {
+    border-color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.saas-pricing-card.featured::before {
+    opacity: 1;
+}
+
+.saas-pricing-card.featured .card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    color: white;
+}
+
+/* ========================================================================== */
+/* CARD HEADER STYLES */
+/* ========================================================================== */
+
+.saas-pricing-card .card-header {
+    padding: 2rem 1.5rem;
+    text-align: center;
+    background: transparent;
+    border: none;
+    transition: all var(--transition-duration) ease;
+}
+
+.saas-pricing-card .package-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.saas-pricing-card.featured .package-name {
+    color: white;
+}
+
+.price-display {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.currency-symbol {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.price-amount {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    line-height: 1;
+}
+
+.price-period {
+    font-size: 1rem;
+    color: #666;
+    font-weight: 400;
+    margin-left: 0.5rem;
+}
+
+.saas-pricing-card.featured .currency-symbol,
+.saas-pricing-card.featured .price-amount {
+    color: white;
+}
+
+/* ========================================================================== */
+/* CARD BODY STYLES */
+/* ========================================================================== */
+
+.saas-pricing-card .card-body {
+    padding: 1.5rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.package-description {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.features-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+}
+
+.features-list li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+    color: var(--text-color);
+}
+
+.features-list li::before {
+    content: '✓';
+    color: var(--primary-color);
+    font-weight: bold;
+    font-size: 1.1rem;
+    background: var(--primary-color);
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.features-list li:last-child {
+    border-bottom: none;
+}
+
+/* ========================================================================== */
+/* CARD FOOTER STYLES */
+/* ========================================================================== */
+
+.saas-pricing-card .card-footer {
+    padding: 1.5rem;
+    background: transparent;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.saas-pricing-card .btn {
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    border-radius: calc(var(--border-radius) / 2);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all var(--transition-duration) ease;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 2px solid transparent;
+}
+
+.btn-main {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    color: white;
+    border: none;
+    box-shadow: 0 4px 10px rgba(135, 90, 123, 0.3);
+}
+
+.btn-main:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(135, 90, 123, 0.4);
+    background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+}
+
+.btn-trial {
+    background: transparent;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-trial:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(135, 90, 123, 0.3);
+}
+
+.btn-icon {
+    font-size: 0.9rem;
+    transition: transform var(--transition-duration) ease;
+}
+
+.btn:hover .btn-icon {
+    transform: translateX(2px);
+}
+
+/* ========================================================================== */
+/* LOADING STATES */
+/* ========================================================================== */
+
+.saas-loading-spinner {
+    padding: 3rem;
+    text-align: center;
+    color: #666;
+}
+
+.saas-loading-spinner .spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.25rem;
+}
+
+/* ========================================================================== */
+/* RESPONSIVE DESIGN */
+/* ========================================================================== */
+
+@media (max-width: 1199px) {
+    .saas-pricing-card.featured {
+        transform: none;
+    }
+    
+    .saas-pricing-card:hover {
+        transform: translateY(-3px);
+    }
+}
+
+@media (max-width: 991px) {
+    .saas-pricing-title {
+        font-size: 2rem;
+    }
+    
+    .saas-pricing-subtitle {
+        font-size: 1.1rem;
+    }
+    
+    .price-amount {
+        font-size: 2.5rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .saas-billing-toggle {
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 1rem;
+    }
+    
+    .toggle-switch {
+        order: -1;
+    }
+    
+    .saas-pricing-title {
+        font-size: 1.8rem;
+    }
+    
+    .saas-pricing-card {
+        margin-bottom: 1.5rem;
+    }
+    
+    .saas-pricing-card:hover {
+        transform: none;
+    }
+}
+
+@media (max-width: 575px) {
+    .saas-pricing-section {
+        padding: 2rem 0;
+    }
+    
+    .saas-pricing-card .card-header {
+        padding: 1.5rem 1rem;
+    }
+    
+    .saas-pricing-card .card-body {
+        padding: 1rem;
+    }
+    
+    .saas-pricing-card .card-footer {
+        padding: 1rem;
+    }
+    
+    .price-amount {
+        font-size: 2rem;
+    }
+}
+
+/* ========================================================================== */
+/* ANIMATION KEYFRAMES */
+/* ========================================================================== */
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.saas-pricing-card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.saas-pricing-card:nth-child(1) { animation-delay: 0.1s; }
+.saas-pricing-card:nth-child(2) { animation-delay: 0.2s; }
+.saas-pricing-card:nth-child(3) { animation-delay: 0.3s; }
+.saas-pricing-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* ========================================================================== */
+/* DYNAMIC STYLING CLASSES */
+/* Classes for various snippet options */
+/* ========================================================================== */
+
+/* Layout Options */
+.layout-compact .saas-pricing-card .card-header {
+    padding: 1rem 1.5rem;
+}
+
+.layout-compact .saas-pricing-card .card-body {
+    padding: 1rem;
+}
+
+.layout-spacious .saas-pricing-card .card-header {
+    padding: 3rem 2rem;
+}
+
+.layout-spacious .saas-pricing-card .card-body {
+    padding: 2rem;
+}
+
+/* Button Style Options */
+.btn-style-rounded .btn {
+    border-radius: 25px;
+}
+
+.btn-style-sharp .btn {
+    border-radius: 0;
+}
+
+.btn-style-pill .btn {
+    border-radius: 50px;
+}
+
+/* Hover Effect Options */
+.hover-lift .saas-pricing-card:hover {
+    transform: translateY(-10px);
+}
+
+.hover-scale .saas-pricing-card:hover {
+    transform: scale(1.05);
+}
+
+.hover-glow .saas-pricing-card:hover {
+    box-shadow: 0 0 30px rgba(135, 90, 123, 0.3);
+}
+
+.hover-none .saas-pricing-card:hover {
+    transform: none;
+}
+
+/* Price Size Options */
+.price-size-small .price-amount {
+    font-size: 2rem;
+}
+
+.price-size-medium .price-amount {
+    font-size: 2.5rem;
+}
+
+.price-size-large .price-amount {
+    font-size: 3rem;
+}
+
+.price-size-xlarge .price-amount {
+    font-size: 4rem;
+}
+
+/* Title Style Options */
+.title-style-bold .saas-pricing-title {
+    font-weight: 900;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.title-style-elegant .saas-pricing-title {
+    font-family: 'Georgia', serif;
+    font-weight: 400;
+    letter-spacing: 1px;
+}
+
+.title-style-modern .saas-pricing-title {
+    font-family: 'Arial', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* Button Size Options */
+.btn-size-small .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-size-medium .btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+}
+
+.btn-size-large .btn {
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+}
+
+/* Mobile Layout Options */
+@media (max-width: 767px) {
+    .mobile-layout-carousel .saas-pricing-card {
+        min-width: 280px;
+        margin-right: 1rem;
+    }
+    
+    .mobile-layout-carousel #pricingCards {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding-bottom: 1rem;
+    }
+    
+    .mobile-layout-carousel .saas-pricing-card {
+        scroll-snap-align: start;
+        flex: 0 0 auto;
+    }
+}
+
+/* ========================================================================== */
+/* PRINT STYLES */
+/* ========================================================================== */
+
+@media print {
+    .saas-pricing-section {
+        background: white !important;
+        box-shadow: none !important;
+    }
+    
+    .saas-pricing-card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        break-inside: avoid;
+    }
+    
+    .btn {
+        display: none !important;
+    }
+}
