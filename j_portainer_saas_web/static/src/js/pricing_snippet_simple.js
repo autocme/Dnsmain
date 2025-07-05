@@ -238,6 +238,27 @@
         return hiddenPackagesAttr ? hiddenPackagesAttr.split(',') : [];
     }
     
+    /**
+     * Update column layout based on section settings
+     */
+    function updateColumnLayout(section) {
+        var columnsPerRow = section.getAttribute('data-columns-per-row') || '3';
+        section.setAttribute('data-columns-per-row', columnsPerRow);
+        
+        // Update CSS classes on all pricing card columns
+        var cardCols = section.querySelectorAll('.pricing-card-col');
+        cardCols.forEach(function(col) {
+            // Remove old Bootstrap classes
+            col.classList.remove('col-lg-4', 'col-lg-6', 'col-md-6', 'col-sm-12');
+            
+            // Add new classes based on layout preference
+            if (columnsPerRow === '2') {
+                col.classList.add('col-lg-6', 'col-md-6', 'col-sm-12');
+            } else {
+                col.classList.add('col-lg-4', 'col-md-6', 'col-sm-12');
+            }
+        });
+    }
     
     /**
      * Toggle package visibility
