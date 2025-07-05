@@ -168,9 +168,17 @@
             return;
         }
         
-        packages.forEach(function(pkg) {
+        // Store packages globally for visibility controls
+        window.allPackages = packages;
+        
+        // Get section to check for layout preferences
+        var section = container.closest('.saas-pricing-section');
+        var hiddenPackages = getHiddenPackages(section);
+        
+        packages.forEach(function(pkg, index) {
+            var isHidden = hiddenPackages.includes(pkg.id.toString());
             var cardHtml = `
-                <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+                <div class="pricing-card-col mb-4 ${isHidden ? 'hidden-package' : ''}" data-package-id="${pkg.id}">
                     <div class="saas-pricing-card h-100" data-package-id="${pkg.id}">
                         <div class="card-header">
                             <h3 class="package-name">${pkg.name}</h3>
@@ -198,14 +206,207 @@
                                 </button>
                             ` : ''}
                         </div>
+                        
+                        <!-- Package visibility control for editors -->
+                        <div class="package-editor-controls" style="display: none;">
+                            <button class="btn btn-sm btn-danger hide-package-btn" onclick="togglePackageVisibility(${pkg.id})">
+                                <i class="fa fa-eye-slash"></i> Hide Package
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
             container.innerHTML += cardHtml;
         });
         
+        // Apply column layout
+        updateColumnLayout(section);
+        
+        // Populate package controls in snippet options if available
+        setTimeout(function() {
+            populatePackageCheckboxes(packages);
+        }, 100);
+        
         console.log('Rendered', packages.length, 'packages');
     }
+    
+    /**
+     * Get hidden packages from section data
+     */
+    function getHiddenPackages(section) {
+        var hiddenPackagesAttr = section.getAttribute('data-hidden-packages');
+        return hiddenPackagesAttr ? hiddenPackagesAttr.split(',') : [];
+    }
+    
+    /**
+     * Update column layout based on section settings
+     */
+    function updateColumnLayout(section) {
+        var columnsPerRow = section.getAttribute('data-columns-per-row') || '3';
+        section.setAttribute('data-columns-per-row', columnsPerRow);
+        
+        // Update CSS classes on all pricing card columns
+        var cardCols = section.querySelectorAll('.pricing-card-col');
+        cardCols.forEach(function(col) {
+            // Remove old Bootstrap classes
+            col.classList.remove('col-lg-4', 'col-lg-6', 'col-md-6', 'col-sm-12');
+            
+            // Add new classes based on layout preference
+            if (columnsPerRow === '2') {
+                col.classList.add('col-lg-6', 'col-md-6', 'col-sm-12');
+            } else {
+                col.classList.add('col-lg-4', 'col-md-6', 'col-sm-12');
+            }
+        });
+    }
+    
+    /**
+     * Toggle package visibility
+     */
+    function togglePackageVisibility(packageId) {
+        var section = document.querySelector('.saas-pricing-section');
+        var hiddenPackages = getHiddenPackages(section);
+        var packageIdStr = packageId.toString();
+        
+        if (hiddenPackages.includes(packageIdStr)) {
+            // Show package
+            hiddenPackages = hiddenPackages.filter(function(id) { return id !== packageIdStr; });
+        } else {
+            // Hide package
+            hiddenPackages.push(packageIdStr);
+        }
+        
+        // Update section attribute
+        section.setAttribute('data-hidden-packages', hiddenPackages.join(','));
+        
+        // Update display
+        var packageCol = section.querySelector('.pricing-card-col[data-package-id="' + packageId + '"]');
+        if (packageCol) {
+            if (hiddenPackages.includes(packageIdStr)) {
+                packageCol.classList.add('hidden-package');
+            } else {
+                packageCol.classList.remove('hidden-package');
+            }
+        }
+        
+        console.log('Toggled visibility for package', packageId, 'Hidden packages:', hiddenPackages);
+    }
+    
+    /**
+     * Show package editor controls (for website builder mode)
+     */
+    function showPackageEditorControls() {
+        var controls = document.querySelectorAll('.package-editor-controls');
+        controls.forEach(function(control) {
+            control.style.display = 'block';
+        });
+    }
+    
+    /**
+     * Hide package editor controls
+     */
+    function hidePackageEditorControls() {
+        var controls = document.querySelectorAll('.package-editor-controls');
+        controls.forEach(function(control) {
+            control.style.display = 'none';
+        });
+    }
+    
+    /**
+     * Refresh package controls in snippet options
+     */
+    function refreshPackageControls() {
+        if (window.allPackages && window.allPackages.length > 0) {
+            populatePackageCheckboxes(window.allPackages);
+        } else {
+            console.log('No packages available to refresh controls');
+        }
+    }
+    
+    /**
+     * Populate package checkboxes in snippet options
+     */
+    function populatePackageCheckboxes(packages) {
+        var checkboxContainer = document.getElementById('packageCheckboxes');
+        if (!checkboxContainer) return;
+        
+        var section = document.querySelector('.saas-pricing-section');
+        var hiddenPackages = getHiddenPackages(section);
+        
+        checkboxContainer.innerHTML = '';
+        
+        packages.forEach(function(pkg) {
+            var isVisible = !hiddenPackages.includes(pkg.id.toString());
+            var checkboxHtml = `
+                <div class="form-check mb-1">
+                    <input class="form-check-input" type="checkbox" 
+                           id="package_${pkg.id}" 
+                           ${isVisible ? 'checked' : ''}
+                           onchange="handlePackageCheckboxChange(${pkg.id}, this.checked)">
+                    <label class="form-check-label small" for="package_${pkg.id}">
+                        ${pkg.name}
+                    </label>
+                </div>
+            `;
+            checkboxContainer.innerHTML += checkboxHtml;
+        });
+    }
+    
+    /**
+     * Handle package checkbox changes
+     */
+    function handlePackageCheckboxChange(packageId, isChecked) {
+        if (isChecked) {
+            // Show package
+            showPackage(packageId);
+        } else {
+            // Hide package
+            hidePackage(packageId);
+        }
+    }
+    
+    /**
+     * Show a specific package
+     */
+    function showPackage(packageId) {
+        var section = document.querySelector('.saas-pricing-section');
+        var hiddenPackages = getHiddenPackages(section);
+        var packageIdStr = packageId.toString();
+        
+        hiddenPackages = hiddenPackages.filter(function(id) { return id !== packageIdStr; });
+        section.setAttribute('data-hidden-packages', hiddenPackages.join(','));
+        
+        var packageCol = section.querySelector('.pricing-card-col[data-package-id="' + packageId + '"]');
+        if (packageCol) {
+            packageCol.classList.remove('hidden-package');
+        }
+    }
+    
+    /**
+     * Hide a specific package
+     */
+    function hidePackage(packageId) {
+        var section = document.querySelector('.saas-pricing-section');
+        var hiddenPackages = getHiddenPackages(section);
+        var packageIdStr = packageId.toString();
+        
+        if (!hiddenPackages.includes(packageIdStr)) {
+            hiddenPackages.push(packageIdStr);
+        }
+        section.setAttribute('data-hidden-packages', hiddenPackages.join(','));
+        
+        var packageCol = section.querySelector('.pricing-card-col[data-package-id="' + packageId + '"]');
+        if (packageCol) {
+            packageCol.classList.add('hidden-package');
+        }
+    }
+    
+    // Make functions globally available for editor controls
+    window.togglePackageVisibility = togglePackageVisibility;
+    window.showPackageEditorControls = showPackageEditorControls;
+    window.hidePackageEditorControls = hidePackageEditorControls;
+    window.refreshPackageControls = refreshPackageControls;
+    window.handlePackageCheckboxChange = handlePackageCheckboxChange;
     
     /**
      * Setup billing toggle functionality
@@ -303,6 +504,9 @@
         section.style.setProperty('--text-color', textColor);
         section.style.setProperty('--border-radius', borderRadius + 'px');
         section.style.setProperty('--shadow-intensity', shadowIntensity);
+        
+        // Apply column layout if already rendered
+        updateColumnLayout(section);
     }
     
     /**
