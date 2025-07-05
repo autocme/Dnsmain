@@ -248,14 +248,28 @@
         // Update CSS classes on all pricing card columns
         var cardCols = section.querySelectorAll('.pricing-card-col');
         cardCols.forEach(function(col) {
-            // Remove old Bootstrap classes
-            col.classList.remove('col-lg-4', 'col-lg-6', 'col-md-6', 'col-sm-12');
+            // Remove all existing layout classes
+            col.classList.remove('col-12', 'col-lg-6', 'col-lg-4', 'col-lg-3', 'col-lg-2', 'col-md-6', 'col-md-4', 'col-md-3', 'col-sm-12', 'col-sm-6');
             
             // Add new classes based on layout preference
-            if (columnsPerRow === '2') {
-                col.classList.add('col-lg-6', 'col-md-6', 'col-sm-12');
-            } else {
-                col.classList.add('col-lg-4', 'col-md-6', 'col-sm-12');
+            switch(columnsPerRow) {
+                case '1':
+                    col.classList.add('col-12');
+                    break;
+                case '2':
+                    col.classList.add('col-lg-6', 'col-md-6', 'col-sm-12');
+                    break;
+                case '3':
+                    col.classList.add('col-lg-4', 'col-md-6', 'col-sm-12');
+                    break;
+                case '4':
+                    col.classList.add('col-lg-3', 'col-md-6', 'col-sm-12');
+                    break;
+                case '6':
+                    col.classList.add('col-lg-2', 'col-md-4', 'col-sm-6');
+                    break;
+                default:
+                    col.classList.add('col-lg-4', 'col-md-6', 'col-sm-12');
             }
         });
     }

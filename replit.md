@@ -135,6 +135,10 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - Implemented fallback hierarchy: public_url → server IP extraction → deployment environment URL
 - Added comprehensive search view to SaaS client model with filters for status, stack status, and resource availability
 - Search view includes grouping options by partner, package, template, and dates
+- Replaced column options with Layout option similar to Comparisons snippet (1, 2, 3, 4, 6 columns)
+- Added comprehensive layout system with responsive breakpoints and proper Bootstrap classes
+- Set default layout to 3 columns per row for optimal pricing display
+- Enhanced package visibility controls with real-time checkbox interface in snippet options
 
 # Changelog
 

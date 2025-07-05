@@ -11,7 +11,8 @@
                  data-card-bg="#FFFFFF"
                  data-text-color="#333333"
                  data-border-radius="8"
-                 data-shadow-intensity="0.1">
+                 data-shadow-intensity="0.1"
+                 data-columns-per-row="3">
             
             <!-- Pricing Section Header -->
             <div class="container py-5">

@@ -17,14 +17,28 @@
                 <!-- LAYOUT CUSTOMIZATION OPTIONS -->
                 <!-- ========================================================================== -->
                 
-                <we-select string="Columns per Row" data-attribute-name="data-columns-per-row" data-no-preview="true">
-                    <we-button data-select-data-attribute="2">
-                        2 Columns
-                    </we-button>
-                    <we-button data-select-data-attribute="3">
-                        3 Columns
-                    </we-button>
-                </we-select>
+                <div class="o_we_so_color_palette" data-name="layout_options">
+                    <div class="o_we_color_preview">Layout</div>
+                    <div class="o_we_color_palette_wrapper">
+                        <div class="o_we_color_palette o_we_ui_tiling_preset_btns" data-target=".saas-pricing-section" data-attribute-name="data-columns-per-row" data-no-preview="true">
+                            <we-button data-select-data-attribute="1" class="o_we_ui_tiling_preset_btn">
+                                1
+                            </we-button>
+                            <we-button data-select-data-attribute="2" class="o_we_ui_tiling_preset_btn">
+                                2
+                            </we-button>
+                            <we-button data-select-data-attribute="3" class="o_we_ui_tiling_preset_btn">
+                                3
+                            </we-button>
+                            <we-button data-select-data-attribute="4" class="o_we_ui_tiling_preset_btn">
+                                4
+                            </we-button>
+                            <we-button data-select-data-attribute="6" class="o_we_ui_tiling_preset_btn">
+                                6
+                            </we-button>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Package Visibility Controls -->
                 <div class="o_we_so_color_palette" data-name="package_visibility_controls">
