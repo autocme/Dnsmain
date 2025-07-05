@@ -105,19 +105,12 @@
         </xpath>
     </template>
     
-    <!-- Register snippet in Dynamic Content -->
+    <!-- Register snippet in existing Dynamic Content section -->
     <template id="saas_pricing_snippet_register" inherit_id="website.snippets">
-        <xpath expr="//div[@id='snippet_content']" position="inside">
-            <div class="o_panel">
-                <div class="o_panel_header">
-                    <i class="fa fa-credit-card"></i>
-                    Dynamic Content
-                </div>
-                <div class="o_panel_body">
-                    <t t-snippet="j_portainer_saas_web.saas_pricing_snippet" 
-                       t-thumbnail="/j_portainer_saas_web/static/description/pricing_snippet_thumbnail.png"/>
-                </div>
-            </div>
+        <xpath expr="//div[@id='snippet_content']//div[@class='o_panel_body']" position="inside">
+            <t t-snippet="j_portainer_saas_web.saas_pricing_snippet" 
+               t-thumbnail="/j_portainer_saas_web/static/description/icon.png"
+               data-name="SaaS Pricing"/>
         </xpath>
     </template>
     
