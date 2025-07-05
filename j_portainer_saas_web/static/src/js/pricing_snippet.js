@@ -3,7 +3,11 @@
 /* Interactive functionality for pricing cards and billing toggle */
 /* ========================================================================== */
 
-odoo.define('j_portainer_saas_web.pricing_snippet', function (require) {
+odoo.define('j_portainer_saas_web.pricing_snippet', [
+    'web.core',
+    'web.ajax', 
+    'web.public.widget'
+], function (require) {
     'use strict';
 
     var core = require('web.core');

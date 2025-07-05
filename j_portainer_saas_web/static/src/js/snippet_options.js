@@ -3,7 +3,9 @@
 /* Website editor options for dynamic styling */
 /* ========================================================================== */
 
-odoo.define('j_portainer_saas_web.snippet_options', function (require) {
+odoo.define('j_portainer_saas_web.snippet_options', [
+    'web_editor.snippets.options'
+], function (require) {
     'use strict';
     
     var options = require('web_editor.snippets.options');
