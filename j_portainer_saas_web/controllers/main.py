@@ -25,6 +25,13 @@ class SaaSWebController(http.Controller):
             dict: JSON response containing package data with pricing info
         """
         try:
+            # Check if saas.package model exists
+            if 'saas.package' not in request.env:
+                return {
+                    'success': False,
+                    'error': 'SaaS package model not found. Please ensure j_portainer_saas module is installed.'
+                }
+            
             # Get all active packages
             packages = request.env['saas.package'].sudo().search([
                 ('pkg_active', '=', True)
@@ -43,7 +50,7 @@ class SaaSWebController(http.Controller):
                     'description': package.pkg_description or '',
                     'monthly_price': monthly_price,
                     'yearly_price': yearly_price,
-                    'currency_symbol': package.pkg_currency_id.symbol or '$',
+                    'currency_symbol': package.pkg_currency_id.symbol if package.pkg_currency_id else '$',
                     'has_free_trial': package.pkg_has_free_trial,
                     'subscription_period': package.pkg_subscription_period,
                     'features': self._get_package_features(package),
@@ -54,12 +61,14 @@ class SaaSWebController(http.Controller):
                 'success': True,
                 'packages': packages_data,
                 'free_trial_days': self._get_free_trial_days(),
+                'debug': f'Found {len(packages)} packages'
             }
             
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': str(e),
+                'debug': f'Exception in get_packages_data: {type(e).__name__}'
             }
 
     def _get_package_features(self, package):
@@ -132,4 +141,70 @@ class SaaSWebController(http.Controller):
             'package_id': package_id,
             'billing_period': billing_period,
             'free_trial': free_trial,
+        }
+
+    @http.route('/saas/packages/demo', type='json', auth='public', methods=['POST'], csrf=False)
+    def get_demo_packages(self):
+        """
+        Return demo packages for testing the snippet functionality
+        
+        Returns:
+            dict: JSON response containing demo package data
+        """
+        demo_packages = [
+            {
+                'id': 1,
+                'name': 'Starter',
+                'description': 'Perfect for small teams getting started',
+                'monthly_price': 29.0,
+                'yearly_price': 261.0,  # 10% discount
+                'currency_symbol': '$',
+                'has_free_trial': True,
+                'subscription_period': 'monthly',
+                'features': [
+                    '5 Projects',
+                    '10GB Storage',
+                    'Email Support',
+                    'Basic Analytics'
+                ]
+            },
+            {
+                'id': 2,
+                'name': 'Professional',
+                'description': 'For growing businesses with advanced needs',
+                'monthly_price': 79.0,
+                'yearly_price': 711.0,  # 10% discount
+                'currency_symbol': '$',
+                'has_free_trial': True,
+                'subscription_period': 'monthly',
+                'features': [
+                    '25 Projects',
+                    '100GB Storage',
+                    'Priority Support',
+                    'Advanced Analytics'
+                ]
+            },
+            {
+                'id': 3,
+                'name': 'Enterprise',
+                'description': 'For large organizations with complex requirements',
+                'monthly_price': 199.0,
+                'yearly_price': 1791.0,  # 10% discount
+                'currency_symbol': '$',
+                'has_free_trial': False,
+                'subscription_period': 'monthly',
+                'features': [
+                    'Unlimited Projects',
+                    '1TB Storage',
+                    'Dedicated Support',
+                    'Custom Analytics'
+                ]
+            }
+        ]
+        
+        return {
+            'success': True,
+            'packages': demo_packages,
+            'free_trial_days': 30,
+            'debug': 'Demo data returned'
         }

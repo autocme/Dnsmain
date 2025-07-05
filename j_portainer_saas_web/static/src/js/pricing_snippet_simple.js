@@ -37,37 +37,48 @@
         
         console.log('Loading packages...');
         
-        fetch('/saas/packages/data', {
+        // Try main endpoint first, fallback to demo
+        loadFromEndpoint('/saas/packages/data', pricingCards)
+            .catch(function(error) {
+                console.log('Main endpoint failed, trying demo endpoint...', error);
+                return loadFromEndpoint('/saas/packages/demo', pricingCards);
+            })
+            .catch(function(error) {
+                console.error('Both endpoints failed:', error);
+                showError(pricingCards, 'Failed to load packages. Please check your connection.');
+            });
+    }
+    
+    /**
+     * Load packages from a specific endpoint
+     */
+    function loadFromEndpoint(endpoint, pricingCards) {
+        return fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                jsonrpc: '2.0',
-                method: 'call',
-                params: {},
-                id: new Date().getTime()
-            })
+            body: JSON.stringify({})
         })
         .then(function(response) {
+            console.log('Response from ' + endpoint + ':', response);
             if (!response.ok) {
                 throw new Error('HTTP error! status: ' + response.status);
             }
             return response.json();
         })
         .then(function(data) {
-            console.log('Server response:', data);
+            console.log('Server response from ' + endpoint + ':', data);
             
-            var result = data.result;
-            if (result && result.success) {
-                renderPackages(pricingCards, result.packages || []);
+            // Handle direct response format
+            if (data && data.success) {
+                renderPackages(pricingCards, data.packages || []);
+                return data;
+            } else if (data && data.error) {
+                throw new Error('Server error: ' + data.error);
             } else {
-                showError(pricingCards, 'Failed to load packages');
+                throw new Error('No packages found or server error');
             }
-        })
-        .catch(function(error) {
-            console.error('Error loading packages:', error);
-            showError(pricingCards, 'Failed to load packages. Please try again.');
         });
     }
     
