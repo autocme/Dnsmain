@@ -143,13 +143,13 @@ class SaaSWebController(http.Controller):
             'free_trial': free_trial,
         }
 
-    @http.route('/saas/packages/demo', type='json', auth='public', methods=['POST'], csrf=False)
+    @http.route('/saas/packages/demo', type='http', auth='public', methods=['POST', 'GET'], csrf=False)
     def get_demo_packages(self):
         """
         Return demo packages for testing the snippet functionality
         
         Returns:
-            dict: JSON response containing demo package data
+            JSON response containing demo package data
         """
         demo_packages = [
             {
@@ -202,9 +202,14 @@ class SaaSWebController(http.Controller):
             }
         ]
         
-        return {
+        response_data = {
             'success': True,
             'packages': demo_packages,
             'free_trial_days': 30,
             'debug': 'Demo data returned'
         }
+        
+        return request.make_response(
+            json.dumps(response_data),
+            headers=[('Content-Type', 'application/json')]
+        )

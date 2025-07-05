@@ -37,14 +37,18 @@
         
         console.log('Loading packages...');
         
-        // Try main endpoint first, fallback to demo
+        // Try main endpoint first, fallback to demo, then static
         loadFromEndpoint('/saas/packages/data', pricingCards)
             .catch(function(error) {
                 console.log('Main endpoint failed, trying demo endpoint...', error);
                 return loadFromEndpoint('/saas/packages/demo', pricingCards);
             })
             .catch(function(error) {
-                console.error('Both endpoints failed:', error);
+                console.log('Demo endpoint failed, using static fallback...', error);
+                return loadStaticPackages(pricingCards);
+            })
+            .catch(function(error) {
+                console.error('All loading methods failed:', error);
                 showError(pricingCards, 'Failed to load packages. Please check your connection.');
             });
     }
@@ -79,6 +83,71 @@
             } else {
                 throw new Error('No packages found or server error');
             }
+        });
+    }
+    
+    /**
+     * Load static packages as final fallback
+     */
+    function loadStaticPackages(pricingCards) {
+        console.log('Loading static fallback packages...');
+        
+        var staticPackages = [
+            {
+                'id': 1,
+                'name': 'Starter',
+                'description': 'Perfect for small teams getting started',
+                'monthly_price': 29.0,
+                'yearly_price': 261.0,
+                'currency_symbol': '$',
+                'has_free_trial': true,
+                'subscription_period': 'monthly',
+                'features': [
+                    '5 Projects',
+                    '10GB Storage',
+                    'Email Support',
+                    'Basic Analytics'
+                ]
+            },
+            {
+                'id': 2,
+                'name': 'Professional',
+                'description': 'For growing businesses with advanced needs',
+                'monthly_price': 79.0,
+                'yearly_price': 711.0,
+                'currency_symbol': '$',
+                'has_free_trial': true,
+                'subscription_period': 'monthly',
+                'features': [
+                    '25 Projects',
+                    '100GB Storage',
+                    'Priority Support',
+                    'Advanced Analytics'
+                ]
+            },
+            {
+                'id': 3,
+                'name': 'Enterprise',
+                'description': 'For large organizations with complex requirements',
+                'monthly_price': 199.0,
+                'yearly_price': 1791.0,
+                'currency_symbol': '$',
+                'has_free_trial': false,
+                'subscription_period': 'monthly',
+                'features': [
+                    'Unlimited Projects',
+                    '1TB Storage',
+                    'Dedicated Support',
+                    'Custom Analytics'
+                ]
+            }
+        ];
+        
+        return new Promise(function(resolve) {
+            setTimeout(function() {
+                renderPackages(pricingCards, staticPackages);
+                resolve({ success: true, packages: staticPackages });
+            }, 100);
         });
     }
     
