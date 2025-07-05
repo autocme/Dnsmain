@@ -28,7 +28,7 @@
                     </div>
                 </div>
                 
-                <we-select string="Cols" data-attribute-name="data-columns-per-row" data-no-preview="true">
+                <we-select string="Cols" data-attribute-name="data-columns_per_row" data-no-preview="true">
                     <we-button data-select-data-attribute="1">1</we-button>
                     <we-button data-select-data-attribute="2">2</we-button>
                     <we-button data-select-data-attribute="3">3</we-button>

@@ -242,8 +242,8 @@
      * Update column layout based on section settings
      */
     function updateColumnLayout(section) {
-        var columnsPerRow = section.getAttribute('data-columns-per-row') || '3';
-        section.setAttribute('data-columns-per-row', columnsPerRow);
+        var columnsPerRow = section.getAttribute('data-columns_per_row') || '3';
+        section.setAttribute('data-columns_per_row', columnsPerRow);
         
         // Update CSS classes on all pricing card columns
         var cardCols = section.querySelectorAll('.pricing-card-col');
