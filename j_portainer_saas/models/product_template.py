@@ -59,27 +59,49 @@ class ProductTemplate(models.Model):
             # Sync price changes back to SaaS package if this is a SaaS product
             if 'list_price' in vals:
                 for record in self:
-                    if record.is_saas_product and record.saas_package_id:
+                    if record.is_saas_product and record.subscription_template_id:
                         try:
-                            # Determine which price field to update based on context or template type
-                            package = record.saas_package_id
+                            # Get the subscription template to determine billing period
+                            template = record.subscription_template_id
                             new_price = vals['list_price']
                             
-                            # Check if this product belongs to monthly or yearly template
-                            context_period = self.env.context.get('saas_package_period', 'monthly')
+                            # Find the package that uses this template
+                            package = None
+                            price_field = None
                             
-                            if context_period == 'yearly':
-                                if package.pkg_yea_price != new_price:
+                            # Check if this template is used for monthly billing
+                            if template.recurring_rule_type == 'months':
+                                # Find package that has this template as monthly template
+                                monthly_packages = self.env['saas.package'].search([
+                                    ('pkg_mon_subs_template_id', '=', template.id)
+                                ])
+                                if monthly_packages:
+                                    package = monthly_packages[0]
+                                    price_field = 'pkg_mon_price'
+                                    billing_type = 'monthly'
+                            
+                            # Check if this template is used for yearly billing
+                            elif template.recurring_rule_type == 'years':
+                                # Find package that has this template as yearly template
+                                yearly_packages = self.env['saas.package'].search([
+                                    ('pkg_yea_subs_template_id', '=', template.id)
+                                ])
+                                if yearly_packages:
+                                    package = yearly_packages[0]
+                                    price_field = 'pkg_yea_price'
+                                    billing_type = 'yearly'
+                            
+                            # Update the package price if we found the right package and field
+                            if package and price_field:
+                                current_price = getattr(package, price_field, 0.0)
+                                if current_price != new_price:
                                     package.with_context(skip_product_sync=True).write({
-                                        'pkg_yea_price': new_price
+                                        price_field: new_price
                                     })
-                                    _logger.info(f"Synced yearly price change from product {record.name} to SaaS package {package.pkg_name}")
+                                    _logger.info(f"Synced {billing_type} price change from product {record.name} (template: {template.name}) to SaaS package {package.pkg_name}.{price_field}")
                             else:
-                                if package.pkg_mon_price != new_price:
-                                    package.with_context(skip_product_sync=True).write({
-                                        'pkg_mon_price': new_price
-                                    })
-                                    _logger.info(f"Synced monthly price change from product {record.name} to SaaS package {package.pkg_name}")
+                                _logger.warning(f"Could not determine package or price field for product {record.name} with template {template.name} (rule_type: {template.recurring_rule_type})")
+                                
                         except Exception as e:
                             _logger.warning(f"Failed to sync price change to SaaS package: {str(e)}")
             

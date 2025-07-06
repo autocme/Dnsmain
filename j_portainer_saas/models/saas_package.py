@@ -262,12 +262,14 @@ class SaasPackage(models.Model):
                         for product in self.pkg_mon_subs_template_id.product_ids:
                             if product.list_price != (vals['pkg_mon_price'] or 0.0):
                                 product.with_context(skip_saas_sync=True).write({'list_price': vals['pkg_mon_price'] or 0.0})
+                                _logger.info(f"Synced monthly price from package {self.pkg_name} to product {product.name}: {vals['pkg_mon_price']}")
                     
                     # Yearly price sync
                     if 'pkg_yea_price' in vals and self.pkg_yea_subs_template_id:
                         for product in self.pkg_yea_subs_template_id.product_ids:
                             if product.list_price != (vals['pkg_yea_price'] or 0.0):
                                 product.with_context(skip_saas_sync=True).write({'list_price': vals['pkg_yea_price'] or 0.0})
+                                _logger.info(f"Synced yearly price from package {self.pkg_name} to product {product.name}: {vals['pkg_yea_price']}")
 
                 _logger.info(f"Synced price changes from package {self.pkg_name} to products")
             except Exception as e:

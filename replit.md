@@ -137,6 +137,9 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Template synchronization**: Enhanced product-to-template name synchronization with proper context flags to prevent loops
 - **Client template computation**: Added automatic template creation trigger in client compute method to ensure templates exist
 - **Debug logging**: Added comprehensive logging for template selection and creation to troubleshoot selection issues
+- **Smart price synchronization**: Redesigned product-to-package price sync to use subscription template relationships for accurate billing period detection
+- **Template-based price routing**: Product price changes now check template's recurring_rule_type to determine correct package price field (monthly/yearly)
+- **Conflict resolution**: Eliminated price sync conflicts by using subscription template as the authoritative source for billing period determination
 
 ## Previous Features (Pre-July 6, 2025)
 
