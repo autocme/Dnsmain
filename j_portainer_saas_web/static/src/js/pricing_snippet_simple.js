@@ -335,14 +335,26 @@
             } else if (data.result && data.result.redirect_login) {
                 handleLoginRequired();
             } else {
-                var errorMsg = (data.result && data.result.error) || 'Purchase failed. Please try again.';
+                var errorMsg = 'Purchase failed. Please try again.';
+                if (data.result && data.result.error) {
+                    errorMsg = typeof data.result.error === 'string' ? data.result.error : 'Purchase failed. Please try again.';
+                }
                 showError(errorMsg);
             }
         })
         .catch(function(error) {
             hideLoadingState(button);
             console.error('Purchase request failed:', error);
-            showError('Network error. Please check your connection and try again.');
+            
+            // Ensure we pass a string to showError
+            var errorMessage = 'Network error. Please check your connection and try again.';
+            if (error && typeof error === 'object' && error.message) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            }
+            
+            showError(errorMessage);
         });
     }
     
@@ -350,13 +362,8 @@
      * Handle successful purchase
      */
     function handlePurchaseSuccess(result) {
-        // Show success message
-        showSuccess(result.message || 'SaaS instance created successfully!');
-        
-        // Redirect after a short delay
-        setTimeout(function() {
-            window.location.href = result.redirect_url;
-        }, 2000);
+        // Redirect immediately without showing success message
+        window.location.href = result.redirect_url;
     }
     
     /**
@@ -665,22 +672,9 @@
      * Handle button clicks
      */
     function handleButtonClick(button) {
-        var card = button.closest('.saas-pricing-card');
-        var packageId = card.getAttribute('data-package-id');
-        var isFreeTrial = button.classList.contains('btn-trial');
-        
-        console.log('Package selected:', packageId, 'Free trial:', isFreeTrial);
-        
-        // Show feedback
-        var originalText = button.textContent;
-        button.textContent = 'Processing...';
-        button.disabled = true;
-        
-        setTimeout(function() {
-            button.textContent = originalText;
-            button.disabled = false;
-            alert('Package selection functionality will be implemented soon!');
-        }, 1000);
+        // This function is now handled by setupPurchaseHandlers
+        // Remove old alert functionality as purchase logic is implemented
+        console.log('Button click delegated to purchase handler');
     }
     
     /**
