@@ -192,11 +192,9 @@ class SaaSWebController(http.Controller):
             
             # Create SaaS client with draft status
             saas_client = request.env['saas.client'].sudo().create({
-                'name': f"{package.pkg_name} - {partner.name}",
-                'partner_id': partner.id,
-                'package_id': package.id,
-                'state': 'draft',
-                'billing_cycle': billing_cycle,
+                'sc_partner_id': partner.id,
+                'sc_package_id': package.id,
+                'sc_status': 'draft',
             })
             
             # For now, redirect to Google (test URL)

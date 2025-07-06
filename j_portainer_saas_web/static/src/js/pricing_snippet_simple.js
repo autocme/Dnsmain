@@ -413,6 +413,11 @@
      * Show message to user
      */
     function showMessage(message, type) {
+        // Ensure message is a string
+        if (typeof message !== 'string') {
+            message = String(message);
+        }
+        
         // Remove existing messages
         var existingMessages = document.querySelectorAll('.saas-purchase-message');
         existingMessages.forEach(function(msg) {
@@ -422,14 +427,23 @@
         // Create message element
         var messageDiv = document.createElement('div');
         messageDiv.className = 'saas-purchase-message alert alert-' + (type === 'success' ? 'success' : 'danger');
-        messageDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
-        messageDiv.innerHTML = message + '<button type="button" class="btn-close" style="float: right; margin-left: 10px;">&times;</button>';
+        messageDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px; padding: 15px; border-radius: 5px;';
         
-        // Add close functionality
-        var closeBtn = messageDiv.querySelector('.btn-close');
+        // Create message content
+        var messageContent = document.createElement('span');
+        messageContent.textContent = message;
+        messageDiv.appendChild(messageContent);
+        
+        // Create close button
+        var closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'btn-close';
+        closeBtn.style.cssText = 'float: right; margin-left: 10px; background: none; border: none; font-size: 18px; cursor: pointer;';
+        closeBtn.innerHTML = '&times;';
         closeBtn.addEventListener('click', function() {
             messageDiv.remove();
         });
+        messageDiv.appendChild(closeBtn);
         
         // Add to page
         document.body.appendChild(messageDiv);
