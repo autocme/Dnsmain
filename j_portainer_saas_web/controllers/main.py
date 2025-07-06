@@ -69,7 +69,6 @@ class SaaSWebController(http.Controller):
                     'yearly_price': yearly_price,
                     'currency_symbol': package.pkg_currency_id.symbol if package.pkg_currency_id else '$',
                     'has_free_trial': package.pkg_has_free_trial,
-                    'subscription_period': package.pkg_subscription_period,
                     'features': self._get_package_features(package),
                 }
                 packages_data.append(package_data)

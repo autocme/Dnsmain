@@ -141,9 +141,9 @@
         <field name="arch" type="xml">
             <kanban class="o_kanban_mobile">
                 <field name="pkg_name"/>
-                <field name="pkg_price"/>
+                <field name="pkg_mon_price"/>
+                <field name="pkg_yea_price"/>
                 <field name="pkg_currency_id"/>
-                <field name="pkg_subscription_period"/>
                 <field name="pkg_active"/>
                 <templates>
                     <t t-name="kanban-box">
@@ -154,9 +154,14 @@
                                         <field name="pkg_name"/>
                                     </div>
                                     <div class="o_secondary">
-                                        <span t-if="record.pkg_price.value">
+                                        <span t-if="record.pkg_mon_price.value or record.pkg_yea_price.value">
                                             <field name="pkg_currency_id" invisible="1"/>
-                                            <field name="pkg_price" widget="monetary"/>
+                                            <span t-if="record.pkg_mon_price.value">
+                                                M: <field name="pkg_mon_price" widget="monetary"/>
+                                            </span>
+                                            <span t-if="record.pkg_yea_price.value">
+                                                Y: <field name="pkg_yea_price" widget="monetary"/>
+                                            </span>
                                         </span>
                                     </div>
                                 </div>
@@ -187,12 +192,7 @@
                                 </div>
                                 <hr/>
                                 <div class="row">
-                                    <div class="col-6">
-                                        <strong>Period:</strong>
-                                        <br/>
-                                        <field name="pkg_subscription_period"/>
-                                    </div>
-                                    <div class="col-6">
+                                    <div class="col-12">
                                         <strong>Warning Days:</strong>
                                         <br/>
                                         <field name="pkg_warning_delay"/>
@@ -216,18 +216,22 @@
         <field name="arch" type="xml">
             <search string="Search Packages">
                 <field name="pkg_name" string="Package Name"/>
-                <field name="pkg_subscription_template_id" string="Subscription Template"/>
-                <field name="pkg_price" string="Price"/>
+                <field name="pkg_mon_subs_template_id" string="Monthly Template"/>
+                <field name="pkg_yea_subs_template_id" string="Yearly Template"/>
+                <field name="pkg_mon_price" string="Monthly Price"/>
+                <field name="pkg_yea_price" string="Yearly Price"/>
 
                 <filter string="Active Packages" name="active" domain="[('pkg_active', '=', True)]"/>
                 <filter string="Inactive Packages" name="inactive" domain="[('pkg_active', '=', False)]"/>
+                <filter string="Has Monthly Pricing" name="has_monthly" domain="[('pkg_mon_price', '>', 0)]"/>
+                <filter string="Has Yearly Pricing" name="has_yearly" domain="[('pkg_yea_price', '>', 0)]"/>
 
                 <separator/>
 
                 <group expand="0" string="Group By">
                     <filter string="Active Status" name="group_active" context="{'group_by': 'pkg_active'}"/>
-                    <filter string="Subscription Template" name="group_template"
-                            context="{'group_by': 'pkg_subscription_template_id'}"/>
+                    <filter string="System Type" name="group_system_type" context="{'group_by': 'pkg_system_type_id'}"/>
+                    <filter string="Currency" name="group_currency" context="{'group_by': 'pkg_currency_id'}"/>
                 </group>
             </search>
         </field>

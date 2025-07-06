@@ -73,10 +73,11 @@ class SaleSubscriptionTemplate(models.Model):
         if self.env.context.get('from_saas_package'):
             package_name = self.env.context.get('saas_package_name')
             package_price = self.env.context.get('saas_package_price', 0.0)
+            package_period = self.env.context.get('saas_package_period', 'monthly')
             
             if package_name:
                 product_values = {
-                    'name': package_name,
+                    'name': f"{package_name} ({package_period.title()})",
                     'list_price': package_price,
                     'detailed_type': 'service',
                     'subscribable': True,
@@ -84,7 +85,9 @@ class SaleSubscriptionTemplate(models.Model):
                     'is_saas_product': True,
                 }
                 
-                product = self.env['product.template'].create(product_values)
+                product = self.env['product.template'].with_context(
+                    saas_package_period=package_period
+                ).create(product_values)
                 _logger.info(f"Created SaaS product {product.name} for template {template.name}")
         
         return template
@@ -127,9 +130,22 @@ class SaleSubscriptionTemplate(models.Model):
     def unlink(self):
         """Override unlink to check SaaS package dependencies."""
         for record in self:
-            if record.is_saas_template and record.saas_package_ids:
-                # Update linked packages to remove template reference
-                record.saas_package_ids.write({'pkg_subscription_template_id': False})
-                _logger.info(f"Removed template reference from {len(record.saas_package_ids)} SaaS packages")
+            if record.is_saas_template:
+                # Get all packages using this template (monthly or yearly)
+                all_packages = record.saas_monthly_package_ids + record.saas_yearly_package_ids
+                
+                if all_packages:
+                    # Update linked packages to remove template reference
+                    for package in all_packages:
+                        update_vals = {}
+                        if package.pkg_mon_subs_template_id == record:
+                            update_vals['pkg_mon_subs_template_id'] = False
+                        if package.pkg_yea_subs_template_id == record:
+                            update_vals['pkg_yea_subs_template_id'] = False
+                        
+                        if update_vals:
+                            package.write(update_vals)
+                    
+                    _logger.info(f"Removed template reference from {len(all_packages)} SaaS packages")
         
         return super().unlink()

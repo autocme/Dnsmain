@@ -61,12 +61,25 @@ class ProductTemplate(models.Model):
                 for record in self:
                     if record.is_saas_product and record.saas_package_id:
                         try:
-                            # Only update if price differs to avoid infinite loops
-                            if record.saas_package_id.pkg_price != vals['list_price']:
-                                record.saas_package_id.with_context(skip_product_sync=True).write({
-                                    'pkg_price': vals['list_price']
-                                })
-                                _logger.info(f"Synced price change from product {record.name} to SaaS package {record.saas_package_id.pkg_name}")
+                            # Determine which price field to update based on context or template type
+                            package = record.saas_package_id
+                            new_price = vals['list_price']
+                            
+                            # Check if this product belongs to monthly or yearly template
+                            context_period = self.env.context.get('saas_package_period', 'monthly')
+                            
+                            if context_period == 'yearly':
+                                if package.pkg_yea_price != new_price:
+                                    package.with_context(skip_product_sync=True).write({
+                                        'pkg_yea_price': new_price
+                                    })
+                                    _logger.info(f"Synced yearly price change from product {record.name} to SaaS package {package.pkg_name}")
+                            else:
+                                if package.pkg_mon_price != new_price:
+                                    package.with_context(skip_product_sync=True).write({
+                                        'pkg_mon_price': new_price
+                                    })
+                                    _logger.info(f"Synced monthly price change from product {record.name} to SaaS package {package.pkg_name}")
                         except Exception as e:
                             _logger.warning(f"Failed to sync price change to SaaS package: {str(e)}")
             

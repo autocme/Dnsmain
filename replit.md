@@ -125,6 +125,10 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Controller updates**: Modified web controller to use new price fields (`pkg_mon_price`, `pkg_yea_price`) instead of calculated discounts
 - **JavaScript enhancements**: Updated pricing snippets to handle null pricing values gracefully
 - **Template inheritance**: Updated sale subscription template inheritance to track both monthly and yearly package relationships
+- **Field cleanup**: Removed all references to deprecated fields (`pkg_price`, `pkg_subscription_period`, `pkg_subscription_template_id`)
+- **View updates**: Updated tree, form, kanban, and search views to use new dual-pricing structure
+- **Product synchronization**: Enhanced product template inheritance to work with new dual pricing system
+- **Template cleanup**: Updated subscription template unlink method to properly handle new package relationships
 
 ## Previous Features (Pre-July 6, 2025)
 
