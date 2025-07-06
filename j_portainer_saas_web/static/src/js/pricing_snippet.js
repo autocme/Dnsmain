@@ -278,7 +278,7 @@ if (typeof odoo !== 'undefined' && odoo.define) {
          */
         _onBillingToggle: function (ev) {
             var isChecked = $(ev.currentTarget).prop('checked');
-            this.currentBilling = isChecked ? 'monthly' : 'yearly';
+            this.currentBilling = isChecked ? 'yearly' : 'monthly';
             this._updatePricingDisplay();
         },
 
@@ -336,22 +336,41 @@ if (typeof odoo !== 'undefined' && odoo.define) {
                 return;
             }
             
+            // Log the selection for debugging
+            console.log('Package Selection:', {
+                packageId: packageId,
+                currentBilling: this.currentBilling,
+                freeTrial: freeTrial
+            });
+            
             // Show loading state
             this._showLoading();
             
-            // Call server endpoint
-            ajax.jsonRpc('/saas/package/select', 'call', {
+            // Call server endpoint for package purchase
+            ajax.jsonRpc('/saas/package/purchase', 'call', {
                 package_id: packageId,
-                billing_period: this.currentBilling,
-                free_trial: freeTrial
+                billing_cycle: this.currentBilling
             }).then(function (result) {
                 self._hideLoading();
                 
                 if (result.success) {
                     self._showSuccess(result.message);
-                    // Future: Redirect to checkout or signup page
+                    // Redirect to the provided URL if available
+                    if (result.redirect_url) {
+                        setTimeout(function() {
+                            window.location.href = result.redirect_url;
+                        }, 2000); // 2 second delay to show success message
+                    }
                 } else {
-                    self._showError(result.message || 'Failed to select package');
+                    if (result.redirect_login) {
+                        // User needs to login first
+                        self._showError('Please login to purchase a package');
+                        setTimeout(function() {
+                            window.location.href = '/web/login';
+                        }, 2000);
+                    } else {
+                        self._showError(result.error || 'Failed to purchase package');
+                    }
                 }
             }).catch(function (error) {
                 self._hideLoading();

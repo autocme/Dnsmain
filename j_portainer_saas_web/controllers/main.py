@@ -164,6 +164,16 @@ class SaaSWebController(http.Controller):
             dict: Response with creation status and redirect URL
         """
         try:
+            # Log the incoming request for debugging
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.info(f"Website Purchase Request: package_id={package_id}, billing_cycle='{billing_cycle}', kwargs={kwargs}")
+            
+            # Validate billing cycle parameter
+            if billing_cycle not in ['monthly', 'yearly']:
+                _logger.warning(f"Invalid billing_cycle '{billing_cycle}', defaulting to 'monthly'")
+                billing_cycle = 'monthly'
+            
             # Check if user is logged in
             if not request.env.user or request.env.user._is_public():
                 return {
@@ -196,6 +206,11 @@ class SaaSWebController(http.Controller):
                 'sc_status': 'draft',
                 'sc_subscription_period': billing_cycle,
             })
+            
+            # Log the purchase details for debugging
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.info(f"Website Purchase: Created SaaS client {saas_client.id} with billing_cycle='{billing_cycle}' and sc_subscription_period='{saas_client.sc_subscription_period}'")
             
             # For now, redirect to Google (test URL)
             test_redirect_url = "https://google.com"

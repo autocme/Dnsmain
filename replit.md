@@ -140,6 +140,11 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Smart price synchronization**: Redesigned product-to-package price sync to use subscription template relationships for accurate billing period detection
 - **Template-based price routing**: Product price changes now check template's recurring_rule_type to determine correct package price field (monthly/yearly)
 - **Conflict resolution**: Eliminated price sync conflicts by using subscription template as the authoritative source for billing period determination
+- **Website billing toggle fix**: Corrected inverted billing toggle logic where checked state now properly maps to yearly (was incorrectly mapping to monthly)
+- **Purchase endpoint correction**: Updated JavaScript to call correct /saas/package/purchase endpoint instead of placeholder /saas/package/select
+- **Enhanced purchase flow**: Added proper login redirect handling and success/error messaging for website purchases
+- **Purchase request validation**: Added billing cycle parameter validation and comprehensive logging for debugging website purchases
+- **Template selection debugging**: Added detailed logging throughout purchase flow to track billing cycle selection and SaaS client creation
 
 ## Previous Features (Pre-July 6, 2025)
 
