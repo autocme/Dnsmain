@@ -409,7 +409,8 @@ class SaasPackage(models.Model):
                     from_saas_package=True,
                     saas_package_id=record.id,
                     saas_package_name=record.pkg_name,
-                    saas_package_price=record.pkg_mon_price
+                    saas_package_price=record.pkg_mon_price,
+                    saas_package_period='monthly'
                 ).create({
                     'name': f"{record.pkg_name} (Monthly)",
                     'code': f"{record.pkg_sequence}-M",
@@ -419,18 +420,22 @@ class SaasPackage(models.Model):
                 })
                 record.pkg_mon_subs_template_id = monthly_template.id
                 
-                # Create monthly product
-                self.env['product.template'].with_context(
+                # Create monthly product with proper name and properties
+                monthly_product = self.env['product.template'].with_context(
                     from_saas_package=True,
-                    saas_package_id=record.id
+                    saas_package_id=record.id,
+                    saas_package_period='monthly'
                 ).create({
-                    'name': record.pkg_name,
+                    'name': f"{record.pkg_name} (Monthly)",
                     'list_price': record.pkg_mon_price,
-                    'type': 'service',
+                    'detailed_type': 'service',
                     'is_saas_product': True,
-                    'recurring_invoice': True,
+                    'subscribable': True,
                     'subscription_template_id': monthly_template.id,
                 })
+                
+                # Link product to template
+                monthly_template.write({'product_ids': [(4, monthly_product.id)]})
             
             # Create yearly template if price is set but template doesn't exist
             if record.pkg_yea_price and not record.pkg_yea_subs_template_id:
@@ -438,7 +443,8 @@ class SaasPackage(models.Model):
                     from_saas_package=True,
                     saas_package_id=record.id,
                     saas_package_name=record.pkg_name,
-                    saas_package_price=record.pkg_yea_price
+                    saas_package_price=record.pkg_yea_price,
+                    saas_package_period='yearly'
                 ).create({
                     'name': f"{record.pkg_name} (Yearly)",
                     'code': f"{record.pkg_sequence}-Y",
@@ -448,18 +454,22 @@ class SaasPackage(models.Model):
                 })
                 record.pkg_yea_subs_template_id = yearly_template.id
                 
-                # Create yearly product
-                self.env['product.template'].with_context(
+                # Create yearly product with proper name and properties
+                yearly_product = self.env['product.template'].with_context(
                     from_saas_package=True,
-                    saas_package_id=record.id
+                    saas_package_id=record.id,
+                    saas_package_period='yearly'
                 ).create({
-                    'name': record.pkg_name,
+                    'name': f"{record.pkg_name} (Yearly)",
                     'list_price': record.pkg_yea_price,
-                    'type': 'service',
+                    'detailed_type': 'service',
                     'is_saas_product': True,
-                    'recurring_invoice': True,
+                    'subscribable': True,
                     'subscription_template_id': yearly_template.id,
                 })
+                
+                # Link product to template
+                yearly_template.write({'product_ids': [(4, yearly_product.id)]})
 
     def name_get(self):
         """Return package name with pricing information."""

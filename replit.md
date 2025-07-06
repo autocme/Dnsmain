@@ -129,6 +129,10 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **View updates**: Updated tree, form, kanban, and search views to use new dual-pricing structure
 - **Product synchronization**: Enhanced product template inheritance to work with new dual pricing system
 - **Template cleanup**: Updated subscription template unlink method to properly handle new package relationships
+- **Subscription template fixes**: Fixed template creation to use correct billing types (monthly vs yearly)
+- **Product creation enhancement**: Updated product creation to include billing period in names and proper field mapping
+- **Client view enhancements**: Added sc_subscription_period field to all client views (tree, form, kanban, search)
+- **Template linking**: Improved product-template linking process with proper field validation
 
 ## Previous Features (Pre-July 6, 2025)
 

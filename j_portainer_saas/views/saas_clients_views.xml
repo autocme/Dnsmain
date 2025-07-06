@@ -17,6 +17,7 @@
                 <field name="sc_sequence" string="Sequence"/>
                 <field name="sc_partner_id" string="Partner"/>
                 <field name="sc_package_id"/>
+                <field name="sc_subscription_period" string="Billing"/>
                 <field name="sc_subscription_id"/>
                 <field name="sc_status" widget="badge"
                        decoration-success="sc_status == 'running'"
@@ -129,6 +130,7 @@
                             <field name="sc_package_id"
                                    options="{'no_create': True}"
                                    placeholder="Select the SaaS package..."/>
+                            <field name="sc_subscription_period"/>
                             <field name="sc_template_id"
                                    options="{'no_create': True}"
                                    placeholder="Select subscription template..."/>
@@ -256,10 +258,16 @@
                 <filter name="filter_has_stack" string="Has Stack" domain="[('sc_stack_id', '!=', False)]"/>
                 <filter name="filter_has_template" string="Has Template" domain="[('sc_portainer_template_id', '!=', False)]"/>
                 
+                <separator/>
+                
+                <filter name="filter_monthly" string="Monthly Billing" domain="[('sc_subscription_period', '=', 'monthly')]"/>
+                <filter name="filter_yearly" string="Yearly Billing" domain="[('sc_subscription_period', '=', 'yearly')]"/>
+                
                 <!-- Group By -->
                 <group expand="0" string="Group By">
                     <filter name="group_by_partner" string="Partner" context="{'group_by': 'sc_partner_id'}"/>
                     <filter name="group_by_package" string="Package" context="{'group_by': 'sc_package_id'}"/>
+                    <filter name="group_by_subscription_period" string="Billing Period" context="{'group_by': 'sc_subscription_period'}"/>
                     <filter name="group_by_status" string="Status" context="{'group_by': 'sc_status'}"/>
                     <filter name="group_by_stack_status" string="Stack Status" context="{'group_by': 'sc_stack_status'}"/>
                     <filter name="group_by_active" string="Active Status" context="{'group_by': 'sc_active'}"/>
@@ -284,6 +292,7 @@
                     class="o_kanban_small_column">
 
                 <field name="sc_partner_id"/>
+                <field name="sc_subscription_period"/>
                 <field name="sc_template_id"/>
                 <field name="sc_stack_id"/>
                 <field name="sc_stack_status"/>
@@ -303,6 +312,7 @@
                                     </div>
                                     <div class="o_kanban_record_subtitle">
                                         <field name="sc_template_id"/>
+                                        <span class="text-muted"> - <field name="sc_subscription_period"/></span>
                                     </div>
                                 </div>
 
