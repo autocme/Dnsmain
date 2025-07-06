@@ -178,7 +178,17 @@
     max-width: 33.333333%;
 }
 
+/* 2-column layout */
+.saas-pricing-section[ColumnsPerRow="2"] .pricing-card-col {
+    flex: 0 0 50%;
+    max-width: 50%;
+}
 
+/* 3-column layout (explicit) */
+.saas-pricing-section[ColumnsPerRow="3"] .pricing-card-col {
+    flex: 0 0 33.333333%;
+    max-width: 33.333333%;
+}
 
 /* Package visibility controls */
 .saas-pricing-section .pricing-card-col.hidden-package {
@@ -207,7 +217,7 @@
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
-    .saas-pricing-section[data-columns-per-row="3"] .pricing-card-col {
+    .saas-pricing-section[ColumnsPerRow="3"] .pricing-card-col {
         flex: 0 0 50%;
         max-width: 50%;
     }
