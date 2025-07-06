@@ -12,33 +12,6 @@
             <div data-js="SaaSPricingOptions" 
                  data-selector=".saas-pricing-section"
                  data-drop-in=".saas-pricing-section">
-                
-                <!-- ========================================================================== -->
-                <!-- LAYOUT CUSTOMIZATION OPTIONS -->
-                <!-- ========================================================================== -->
-                
-<!--                <we-select string="Columns per Row" data-attribute-name="data-columns-per-row" data-no-preview="true">-->
-<!--                    <we-button data-select-data-attribute="2">-->
-<!--                        2 Columns-->
-<!--                    </we-button>-->
-<!--                    <we-button data-select-data-attribute="3">-->
-<!--                        3 Columns-->
-<!--                    </we-button>-->
-<!--                </we-select>-->
-
-                <!-- Package Visibility Controls -->
-<!--                <div class="o_we_so_color_palette" data-name="package_visibility_controls">-->
-<!--                    <div class="o_we_color_preview">Package Visibility</div>-->
-<!--                    <div id="packageVisibilityControls" class="mt-2">-->
-<!--                        <div class="text-muted small">Select packages to display on your website</div>-->
-<!--                        <div id="packageCheckboxes" class="mt-2">-->
-<!--                            &lt;!&ndash; Dynamically populated with package checkboxes &ndash;&gt;-->
-<!--                        </div>-->
-<!--                        <button class="btn btn-sm btn-secondary mt-2" onclick="refreshPackageControls()">-->
-<!--                            Refresh Packages-->
-<!--                        </button>-->
-<!--                    </div>-->
-<!--                </div>-->
 
                 <!-- ========================================================================== -->
                 <!-- COLOR CUSTOMIZATION OPTIONS -->
