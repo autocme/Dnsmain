@@ -152,6 +152,69 @@ class SaaSWebController(http.Controller):
         except:
             return 30
 
+    @http.route('/saas/package/purchase', type='json', auth='user', methods=['POST'], csrf=False)
+    def purchase_package(self, package_id, billing_cycle='monthly', **kwargs):
+        """
+        Purchase a SaaS package and create a SaaS client
+        
+        Args:
+            package_id (int): Selected package ID
+            billing_cycle (str): 'monthly' or 'yearly'
+            
+        Returns:
+            dict: Response with creation status and redirect URL
+        """
+        try:
+            # Check if user is logged in
+            if not request.env.user or request.env.user._is_public():
+                return {
+                    'success': False,
+                    'error': 'User must be logged in to purchase a package',
+                    'redirect_login': True
+                }
+            
+            # Get the package
+            package = request.env['saas.package'].sudo().browse(int(package_id))
+            if not package.exists():
+                return {
+                    'success': False,
+                    'error': 'Package not found'
+                }
+            
+            if not package.pkg_active:
+                return {
+                    'success': False,
+                    'error': 'Package is not available for purchase'
+                }
+            
+            # Get user's partner
+            partner = request.env.user.partner_id
+            
+            # Create SaaS client with draft status
+            saas_client = request.env['saas.client'].sudo().create({
+                'name': f"{package.pkg_name} - {partner.name}",
+                'partner_id': partner.id,
+                'package_id': package.id,
+                'state': 'draft',
+                'billing_cycle': billing_cycle,
+            })
+            
+            # For now, redirect to Google (test URL)
+            test_redirect_url = "https://google.com"
+            
+            return {
+                'success': True,
+                'client_id': saas_client.id,
+                'redirect_url': test_redirect_url,
+                'message': f'Successfully created SaaS instance for {package.pkg_name}'
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Failed to create SaaS instance: {str(e)}'
+            }
+
     @http.route('/saas/package/select', type='json', auth='public', methods=['POST'], csrf=False)
     def select_package(self, package_id, billing_period='monthly', free_trial=False):
         """

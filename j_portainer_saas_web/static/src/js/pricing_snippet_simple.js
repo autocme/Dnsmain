@@ -24,8 +24,9 @@
             // Initialize toggle
             setupBillingToggle(section);
             
-            // Initialize button clicks
+            // Initialize button clicks and purchase handlers
             setupButtonClicks(section);
+            setupPurchaseHandlers(section);
         });
     }
     
@@ -258,6 +259,187 @@
                 col.classList.add('col-lg-4', 'col-md-6', 'col-sm-12');
             }
         });
+    }
+    
+    /**
+     * Setup purchase handlers for all buttons
+     */
+    function setupPurchaseHandlers(section) {
+        // Use event delegation to handle dynamically created buttons
+        section.addEventListener('click', function(e) {
+            var target = e.target;
+            
+            // Check if clicked element is a purchase button
+            if (target.classList.contains('btn-main') || target.classList.contains('btn-trial')) {
+                e.preventDefault();
+                handlePurchaseClick(target, section);
+            }
+        });
+    }
+    
+    /**
+     * Handle purchase button clicks
+     */
+    function handlePurchaseClick(button, section) {
+        // Get package information
+        var card = button.closest('.saas-pricing-card');
+        if (!card) return;
+        
+        var packageId = card.getAttribute('data-package-id');
+        var isFreeTrial = button.classList.contains('btn-trial');
+        
+        // Get current billing cycle
+        var toggle = section.querySelector('.toggle-input');
+        var billingCycle = (toggle && toggle.checked) ? 'yearly' : 'monthly';
+        
+        if (!packageId) {
+            showError('Package information not found');
+            return;
+        }
+        
+        // Show loading state
+        showLoadingState(button);
+        
+        // Make purchase request
+        makePurchaseRequest(packageId, billingCycle, isFreeTrial, button);
+    }
+    
+    /**
+     * Make purchase request to server
+     */
+    function makePurchaseRequest(packageId, billingCycle, isFreeTrial, button) {
+        fetch('/saas/package/purchase', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                jsonrpc: '2.0',
+                method: 'call',
+                params: {
+                    package_id: packageId,
+                    billing_cycle: billingCycle,
+                    free_trial: isFreeTrial
+                }
+            })
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            hideLoadingState(button);
+            
+            if (data.result && data.result.success) {
+                handlePurchaseSuccess(data.result);
+            } else if (data.result && data.result.redirect_login) {
+                handleLoginRequired();
+            } else {
+                var errorMsg = (data.result && data.result.error) || 'Purchase failed. Please try again.';
+                showError(errorMsg);
+            }
+        })
+        .catch(function(error) {
+            hideLoadingState(button);
+            console.error('Purchase request failed:', error);
+            showError('Network error. Please check your connection and try again.');
+        });
+    }
+    
+    /**
+     * Handle successful purchase
+     */
+    function handlePurchaseSuccess(result) {
+        // Show success message
+        showSuccess(result.message || 'SaaS instance created successfully!');
+        
+        // Redirect after a short delay
+        setTimeout(function() {
+            window.location.href = result.redirect_url;
+        }, 2000);
+    }
+    
+    /**
+     * Handle login required scenario
+     */
+    function handleLoginRequired() {
+        showError('Please log in to purchase a package');
+        
+        // Redirect to login page after delay
+        setTimeout(function() {
+            window.location.href = '/web/login';
+        }, 2000);
+    }
+    
+    /**
+     * Show loading state on button
+     */
+    function showLoadingState(button) {
+        if (button._originalText) return; // Already in loading state
+        
+        button._originalText = button.textContent;
+        button.textContent = 'Creating instance...';
+        button.disabled = true;
+        button.style.opacity = '0.7';
+    }
+    
+    /**
+     * Hide loading state on button
+     */
+    function hideLoadingState(button) {
+        if (button._originalText) {
+            button.textContent = button._originalText;
+            delete button._originalText;
+        }
+        button.disabled = false;
+        button.style.opacity = '1';
+    }
+    
+    /**
+     * Show success message
+     */
+    function showSuccess(message) {
+        showMessage(message, 'success');
+    }
+    
+    /**
+     * Show error message
+     */
+    function showError(message) {
+        showMessage(message, 'error');
+    }
+    
+    /**
+     * Show message to user
+     */
+    function showMessage(message, type) {
+        // Remove existing messages
+        var existingMessages = document.querySelectorAll('.saas-purchase-message');
+        existingMessages.forEach(function(msg) {
+            msg.remove();
+        });
+        
+        // Create message element
+        var messageDiv = document.createElement('div');
+        messageDiv.className = 'saas-purchase-message alert alert-' + (type === 'success' ? 'success' : 'danger');
+        messageDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+        messageDiv.innerHTML = message + '<button type="button" class="btn-close" style="float: right; margin-left: 10px;">&times;</button>';
+        
+        // Add close functionality
+        var closeBtn = messageDiv.querySelector('.btn-close');
+        closeBtn.addEventListener('click', function() {
+            messageDiv.remove();
+        });
+        
+        // Add to page
+        document.body.appendChild(messageDiv);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(function() {
+            if (messageDiv.parentNode) {
+                messageDiv.remove();
+            }
+        }, 5000);
     }
     
     /**
