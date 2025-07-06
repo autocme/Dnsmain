@@ -83,19 +83,20 @@ class ProductTemplate(models.Model):
                         except Exception as e:
                             _logger.warning(f"Failed to sync price change to SaaS package: {str(e)}")
             
-            # Sync name changes back to SaaS package if this is a SaaS product
+            # Sync name changes to related subscription template if this is a SaaS product
             if 'name' in vals:
                 for record in self:
-                    if record.is_saas_product and record.saas_package_id:
+                    if record.is_saas_product and record.subscription_template_id:
                         try:
-                            # Only update if name differs to avoid infinite loops
-                            if record.saas_package_id.pkg_name != vals['name']:
-                                record.saas_package_id.with_context(skip_product_sync=True).write({
-                                    'pkg_name': vals['name']
+                            # Update the subscription template name to match the product name
+                            # This maintains consistency between product and template naming
+                            if record.subscription_template_id.name != vals['name']:
+                                record.subscription_template_id.with_context(skip_product_sync=True).write({
+                                    'name': vals['name']
                                 })
-                                _logger.info(f"Synced name change from product {record.name} to SaaS package {record.saas_package_id.pkg_name}")
+                                _logger.info(f"Synced name change from product {record.name} to subscription template {record.subscription_template_id.name}")
                         except Exception as e:
-                            _logger.warning(f"Failed to sync name change to SaaS package: {str(e)}")
+                            _logger.warning(f"Failed to sync name change to subscription template: {str(e)}")
         
         return result
 

@@ -354,10 +354,18 @@ class SaasClient(models.Model):
         """Compute subscription template based on subscription period and package."""
         for record in self:
             if record.sc_package_id:
+                # Ensure templates exist on the package - create if needed
+                if not record.sc_package_id.pkg_mon_subs_template_id or not record.sc_package_id.pkg_yea_subs_template_id:
+                    record.sc_package_id._create_subscription_templates()
+                
                 if record.sc_subscription_period == 'monthly':
-                    record.sc_template_id = record.sc_package_id.pkg_mon_subs_template_id
+                    template = record.sc_package_id.pkg_mon_subs_template_id
+                    record.sc_template_id = template
+                    _logger.info(f"SaaS Client {record.id}: Selected MONTHLY template {template.id} with rule_type {template.recurring_rule_type if template else 'None'}")
                 elif record.sc_subscription_period == 'yearly':
-                    record.sc_template_id = record.sc_package_id.pkg_yea_subs_template_id
+                    template = record.sc_package_id.pkg_yea_subs_template_id
+                    record.sc_template_id = template
+                    _logger.info(f"SaaS Client {record.id}: Selected YEARLY template {template.id} with rule_type {template.recurring_rule_type if template else 'None'}")
                 else:
                     record.sc_template_id = False
             else:

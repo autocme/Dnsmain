@@ -414,11 +414,12 @@ class SaasPackage(models.Model):
                 ).create({
                     'name': f"{record.pkg_name} (Monthly)",
                     'code': f"{record.pkg_sequence}-M",
-                    'recurring_rule_type': 'monthly',
+                    'recurring_rule_type': 'months',
                     'recurring_interval': 1,
                     'is_saas_template': True,
                 })
                 record.pkg_mon_subs_template_id = monthly_template.id
+                _logger.info(f"Package {record.pkg_name}: Created MONTHLY template {monthly_template.id} with rule_type '{monthly_template.recurring_rule_type}' assigned to pkg_mon_subs_template_id")
                 
                 # Create monthly product with proper name and properties
                 monthly_product = self.env['product.template'].with_context(
@@ -448,11 +449,12 @@ class SaasPackage(models.Model):
                 ).create({
                     'name': f"{record.pkg_name} (Yearly)",
                     'code': f"{record.pkg_sequence}-Y",
-                    'recurring_rule_type': 'yearly',
+                    'recurring_rule_type': 'years',
                     'recurring_interval': 1,
                     'is_saas_template': True,
                 })
                 record.pkg_yea_subs_template_id = yearly_template.id
+                _logger.info(f"Package {record.pkg_name}: Created YEARLY template {yearly_template.id} with rule_type '{yearly_template.recurring_rule_type}' assigned to pkg_yea_subs_template_id")
                 
                 # Create yearly product with proper name and properties
                 yearly_product = self.env['product.template'].with_context(

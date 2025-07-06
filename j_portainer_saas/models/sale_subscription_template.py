@@ -49,74 +49,70 @@ class SaleSubscriptionTemplate(models.Model):
         for record in self:
             record.saas_package_count = len(record.saas_monthly_package_ids) + len(record.saas_yearly_package_ids)
 
-    @api.model
-    def create(self, vals):
-        """Override create to handle SaaS package-triggered template creation."""
-        # Check if template created from SaaS package context
-        if self.env.context.get('from_saas_package'):
-            package_name = self.env.context.get('saas_package_name')
-            package_period = self.env.context.get('saas_package_period', 'monthly')
-            print('package_period ........', package_period)
-            recurring_rule_type = 'monthly' if package_period == 'months' else 'years'
+    # @api.model
+    # def create(self, vals):
+    #     """Override create to handle SaaS package-triggered template creation."""
+    #     # Check if template created from SaaS package context
+    #     if self.env.context.get('from_saas_package'):
+    #         package_name = self.env.context.get('saas_package_name')
+    #         package_period = self.env.context.get('saas_package_period', 'monthly')
+    #         print('package_period ........', package_period)
+    #         recurring_rule_type = 'monthly' if package_period == 'months' else 'years'
 
-            if package_name:
-                vals['name'] = package_name
-            if recurring_rule_type:
-                vals['recurring_rule_type'] = recurring_rule_type
-            # Mark as SaaS template
-            vals['is_saas_template'] = True
+    #         if package_name:
+    #             vals['name'] = package_name
+    #         if recurring_rule_type:
+    #             vals['recurring_rule_type'] = recurring_rule_type
+    #         # Mark as SaaS template
+    #         vals['is_saas_template'] = True
         
-        # Create the template first
-        template = super().create(vals)
+    #     # Create the template first
+    #     template = super().create(vals)
         
-        # Create product after template is created (if from SaaS context)
-        if self.env.context.get('from_saas_package'):
-            package_name = self.env.context.get('saas_package_name')
-            package_price = self.env.context.get('saas_package_price', 0.0)
-            package_period = self.env.context.get('saas_package_period', 'monthly')
+    #     # Create product after template is created (if from SaaS context)
+    #     if self.env.context.get('from_saas_package'):
+    #         package_name = self.env.context.get('saas_package_name')
+    #         package_price = self.env.context.get('saas_package_price', 0.0)
+    #         package_period = self.env.context.get('saas_package_period', 'monthly')
             
-            if package_name:
-                product_values = {
-                    'name': f"{package_name} ({package_period.title()})",
-                    'list_price': package_price,
-                    'detailed_type': 'service',
-                    'subscribable': True,
-                    'subscription_template_id': template.id,
-                    'is_saas_product': True,
-                }
+    #         if package_name:
+    #             product_values = {
+    #                 'name': f"{package_name} ({package_period.title()})",
+    #                 'list_price': package_price,
+    #                 'detailed_type': 'service',
+    #                 'subscribable': True,
+    #                 'subscription_template_id': template.id,
+    #                 'is_saas_product': True,
+    #             }
                 
-                product = self.env['product.template'].with_context(
-                    saas_package_period=package_period
-                ).create(product_values)
-                _logger.info(f"Created SaaS product {product.name} for template {template.name}")
+    #             product = self.env['product.template'].with_context(
+    #                 saas_package_period=package_period
+    #             ).create(product_values)
+    #             _logger.info(f"Created SaaS product {product.name} for template {template.name}")
         
-        return template
+    #     return template
 
     def write(self, vals):
-        """Override write to sync changes with SaaS packages."""
+        """Override write to sync changes with SaaS products only."""
         result = super().write(vals)
         
-        # Sync name changes to linked SaaS packages
-        if 'name' in vals:
-            for record in self:
-                if record.is_saas_template:
-                    try:
-                        # Get all packages using this template (monthly or yearly)
-                        all_packages = record.saas_monthly_package_ids + record.saas_yearly_package_ids
-                        
-                        # Update SaaS package names if needed
-                        for package in all_packages:
-                            base_name = vals['name'].replace(' (Monthly)', '').replace(' (Yearly)', '')
-                            if package.pkg_name != base_name:
-                                package.write({'pkg_name': base_name})
-                        
-                        # Update product names
-                        for product in record.product_ids:
-                            if product.name != vals['name']:
-                                product.write({'name': vals['name']})
-                                
-                    except Exception as e:
-                        _logger.warning(f"Failed to sync name changes for SaaS template {record.id}: {str(e)}")
+        # Only sync if not coming from product sync to avoid infinite loops
+        if not self.env.context.get('skip_product_sync'):
+            # Sync name changes to linked products only (not packages)
+            if 'name' in vals:
+                for record in self:
+                    if record.is_saas_template:
+                        try:
+                            # Update product names to match template name
+                            for product in record.product_ids:
+                                if product.name != vals['name']:
+                                    product.with_context(skip_saas_sync=True).write({
+                                        'name': vals['name']
+                                    })
+                                    _logger.info(f"Synced template name change to product {product.name}")
+                                    
+                        except Exception as e:
+                            _logger.warning(f"Failed to sync name changes for SaaS template {record.id}: {str(e)}")
         
         return result
 

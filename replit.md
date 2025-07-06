@@ -133,6 +133,10 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Product creation enhancement**: Updated product creation to include billing period in names and proper field mapping
 - **Client view enhancements**: Added sc_subscription_period field to all client views (tree, form, kanban, search)
 - **Template linking**: Improved product-template linking process with proper field validation
+- **Infinite loop fix**: Removed product-to-package name synchronization to prevent infinite loops during product name changes
+- **Template synchronization**: Enhanced product-to-template name synchronization with proper context flags to prevent loops
+- **Client template computation**: Added automatic template creation trigger in client compute method to ensure templates exist
+- **Debug logging**: Added comprehensive logging for template selection and creation to troubleshoot selection issues
 
 ## Previous Features (Pre-July 6, 2025)
 
