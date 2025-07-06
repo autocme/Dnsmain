@@ -13,10 +13,11 @@
                 <field name="pkg_sequence"/>
                 <field name="pkg_name"/>
                 <field name="pkg_system_type_id" optional="show"/>
-                <field name="pkg_price" widget="monetary"/>
+                <field name="pkg_mon_price" widget="monetary"/>
+                <field name="pkg_yea_price" widget="monetary"/>
                 <field name="pkg_currency_id" invisible="1"/>
-                <field name="pkg_subscription_period"/>
-                <field name="pkg_subscription_template_id"/>
+                <field name="pkg_mon_subs_template_id"/>
+                <field name="pkg_yea_subs_template_id"/>
                 <field name="pkg_active"/>
             </tree>
         </field>
@@ -53,13 +54,6 @@
                     <group>
                         <group name="package_info" string="Package Information">
                             <field name="pkg_name" placeholder="Package Name"/>
-                            <field name="pkg_subscription_template_id" context="{
-                       'from_saas_package': True,
-                       'saas_package_id': active_id,
-                       'saas_package_price': pkg_price,
-                       'saas_package_name': pkg_name,
-                       'saas_package_period': pkg_subscription_period,
-                        }"/>
                             <field name="pkg_system_type_id"
                                    options="{'no_create': True}"
                                    placeholder="Select system type..."/>
@@ -69,10 +63,15 @@
                         </group>
 
                         <group name="pricing" string="Pricing">
-                            <label for="pkg_price" string="Price"/>
+                            <label for="pkg_mon_price" string="Monthly Price"/>
                             <div class="o_row oe_inline">
-                                <field name="pkg_price" widget="monetary"/>
-                                <field name="pkg_subscription_period"/>
+                                <field name="pkg_mon_price" widget="monetary"/>
+                                <field name="pkg_mon_subs_template_id" placeholder="Monthly Template"/>
+                            </div>
+                            <label for="pkg_yea_price" string="Yearly Price"/>
+                            <div class="o_row oe_inline">
+                                <field name="pkg_yea_price" widget="monetary"/>
+                                <field name="pkg_yea_subs_template_id" placeholder="Yearly Template"/>
                             </div>
                             <field name="pkg_currency_id"/>
                             <field name="pkg_has_free_trial"/>

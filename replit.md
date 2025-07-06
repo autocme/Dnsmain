@@ -113,6 +113,21 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 
 # Recent Changes
 
+## July 6, 2025 - Package Model Architectural Refactoring
+
+- **MAJOR ARCHITECTURE CHANGE**: Removed single `pkg_price` field from package model
+- **Added separate pricing fields**: `pkg_mon_price` and `pkg_yea_price` for dedicated monthly/yearly pricing
+- **Dual subscription template system**: Added `pkg_mon_subs_template_id` and `pkg_yea_subs_template_id` fields
+- **Enhanced SaaS client model**: Added `sc_subscription_period` selection field (monthly/yearly) to determine which template to use
+- **Automatic template creation**: Updated package creation process to auto-generate both monthly and yearly subscription templates
+- **Smart template selection**: Client subscription creation now selects appropriate template based on subscription period
+- **Updated form views**: Modified package form to display monthly/yearly pricing in organized rows with clear labeling
+- **Controller updates**: Modified web controller to use new price fields (`pkg_mon_price`, `pkg_yea_price`) instead of calculated discounts
+- **JavaScript enhancements**: Updated pricing snippets to handle null pricing values gracefully
+- **Template inheritance**: Updated sale subscription template inheritance to track both monthly and yearly package relationships
+
+## Previous Features (Pre-July 6, 2025)
+
 - Created comprehensive j_portainer_saas_web module with modern pricing snippet for website integration
 - Implemented Monthly/Yearly billing toggle with dynamic price calculations and smooth animations
 - Added extensive dynamic styling options allowing users to customize colors, layouts, typography, and effects

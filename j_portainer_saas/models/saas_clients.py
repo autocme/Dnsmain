@@ -50,9 +50,10 @@ class SaasClient(models.Model):
         comodel_name='sale.subscription.template',
         string='Subscription Template',
         required=False,
-        tracking=True, related='sc_package_id.pkg_subscription_template_id',
+        tracking=True, 
+        compute='_compute_template_id',
         help='The subscription template that defines the SaaS service offering, '
-             'including pricing, features, and service specifications'
+             'including pricing, features, and service specifications based on subscription period'
     )
     
     sc_deployment_environment_id = fields.Many2one(
@@ -108,6 +109,15 @@ class SaasClient(models.Model):
         help='The SaaS package that defines resource limits, pricing, and features '
              'for this client subscription.'
     )
+    
+    sc_subscription_period = fields.Selection([
+        ('monthly', 'Monthly'),
+        ('yearly', 'Yearly')
+    ], string='Subscription Period',
+        default='monthly',
+        required=True,
+        tracking=True,
+        help='Billing frequency determining which subscription template to use from the package')
     
     sc_portainer_template_id = fields.Many2one(
         comodel_name='j_portainer.customtemplate',
@@ -338,6 +348,20 @@ class SaasClient(models.Model):
     # COMPUTED METHODS
     # ========================================================================
 
+
+    @api.depends('sc_package_id', 'sc_subscription_period', 'sc_package_id.pkg_mon_subs_template_id', 'sc_package_id.pkg_yea_subs_template_id')
+    def _compute_template_id(self):
+        """Compute subscription template based on subscription period and package."""
+        for record in self:
+            if record.sc_package_id:
+                if record.sc_subscription_period == 'monthly':
+                    record.sc_template_id = record.sc_package_id.pkg_mon_subs_template_id
+                elif record.sc_subscription_period == 'yearly':
+                    record.sc_template_id = record.sc_package_id.pkg_yea_subs_template_id
+                else:
+                    record.sc_template_id = False
+            else:
+                record.sc_template_id = False
 
     @api.depends('sc_package_id', 'sc_package_id.pkg_system_type_id', 'sc_package_id.pkg_system_type_id.st_environment_ids')
     def _compute_deployment_environment(self):
@@ -782,23 +806,38 @@ class SaasClient(models.Model):
         package_id = vals.get('sc_package_id')
         
         if not base_subscription_id and partner_id and package_id:
-            # Get the package and its template
+            # Get the package and determine correct template based on subscription period
             package = self.env['saas.package'].browse(package_id)
-            if package.exists() and package.pkg_subscription_template_id:
-                template = package.pkg_subscription_template_id
+            subscription_period = vals.get('sc_subscription_period', 'monthly')
+            
+            # Select the appropriate template based on subscription period
+            template = None
+            if subscription_period == 'monthly' and package.pkg_mon_subs_template_id:
+                template = package.pkg_mon_subs_template_id
+            elif subscription_period == 'yearly' and package.pkg_yea_subs_template_id:
+                template = package.pkg_yea_subs_template_id
+            
+            if package.exists() and template:
                 partner = self.env['res.partner'].browse(partner_id)
                 
                 # Create subscription values
                 subscription_vals = {
                     'partner_id': partner_id,
                     'template_id': template.id,
-                    'name': f"{partner.name} - {package.pkg_name}",
-                    'description': f'SaaS subscription for {partner.name} using {package.pkg_name} package',
+                    'name': f"{partner.name} - {package.pkg_name} ({subscription_period.title()})",
+                    'description': f'SaaS subscription for {partner.name} using {package.pkg_name} package ({subscription_period} billing)',
                     'pricelist_id': partner.property_product_pricelist.id,
                 }
                 
                 # Create the subscription
                 subscription = self.env['sale.subscription'].create(subscription_vals)
+                
+                # Find and set subscription stage to "in progress" type
+                in_progress_stage = self.env['sale.subscription.stage'].search([
+                    ('type', '=', 'in_progress')
+                ], limit=1)
+                if in_progress_stage:
+                    subscription.stage_id = in_progress_stage.id
                 
                 # Add subscription lines from template products
                 for product_template in template.product_ids:
@@ -817,7 +856,7 @@ class SaasClient(models.Model):
                 # Set the subscription ID in vals
                 vals['sc_subscription_id'] = subscription.id
                 
-                _logger.info(f"Auto-created subscription {subscription.name} for SaaS client")
+                _logger.info(f"Auto-created {subscription_period} subscription {subscription.name} for SaaS client")
         
         # Create the SaaS client
         client = super().create(vals)

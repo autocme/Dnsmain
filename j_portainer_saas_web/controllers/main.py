@@ -57,9 +57,9 @@ class SaaSWebController(http.Controller):
             # Prepare packages data
             packages_data = []
             for package in packages:
-                # Calculate yearly price (assume 10% discount for yearly billing)
-                monthly_price = package.pkg_price or 0
-                yearly_price = monthly_price * 12 * 0.9  # 10% discount
+                # Use the new monthly and yearly price fields
+                monthly_price = package.pkg_mon_price or 0
+                yearly_price = package.pkg_yea_price or 0
                 
                 package_data = {
                     'id': package.id,
@@ -195,6 +195,7 @@ class SaaSWebController(http.Controller):
                 'sc_partner_id': partner.id,
                 'sc_package_id': package.id,
                 'sc_status': 'draft',
+                'sc_subscription_period': billing_cycle,
             })
             
             # For now, redirect to Google (test URL)

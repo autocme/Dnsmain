@@ -185,7 +185,7 @@
                             <h3 class="package-name">${pkg.name}</h3>
                             <div class="price-display">
                                 <span class="currency-symbol">${pkg.currency_symbol}</span>
-                                <span class="price-amount" data-monthly="${pkg.monthly_price}" data-yearly="${pkg.yearly_price}">${pkg.monthly_price}</span>
+                                <span class="price-amount" data-monthly="${pkg.monthly_price || 0}" data-yearly="${pkg.yearly_price || 0}">${pkg.monthly_price || 0}</span>
                                 <span class="price-period">/month</span>
                             </div>
                         </div>

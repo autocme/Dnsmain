@@ -52,11 +52,18 @@ class SaasPackage(models.Model):
         help='Number of days before due date to send warning notifications'
     )
     
-    pkg_price = fields.Monetary(
-        string='Price',
+    pkg_mon_price = fields.Monetary(
+        string='Monthly Price',
         currency_field='pkg_currency_id',
         tracking=True,
         help='Monthly subscription price for this package'
+    )
+    
+    pkg_yea_price = fields.Monetary(
+        string='Yearly Price',
+        currency_field='pkg_currency_id',
+        tracking=True,
+        help='Yearly subscription price for this package'
     )
     
     pkg_has_free_trial = fields.Boolean(
@@ -75,22 +82,19 @@ class SaasPackage(models.Model):
         help='Currency for package pricing'
     )
     
-    pkg_subscription_template_id = fields.Many2one(
+    pkg_mon_subs_template_id = fields.Many2one(
         comodel_name='sale.subscription.template',
-        string='Subscription Template',
-        required=True,
+        string='Monthly Subscription Template',
         tracking=True,
-        help='Associated subscription template for billing and lifecycle management'
+        help='Associated monthly subscription template for billing and lifecycle management'
     )
-
-    pkg_subscription_period = fields.Selection([
-        ('monthly', 'Monthly'),
-        ('yearly', 'Yearly')
-    ], string='Subscription Period',
-        default='monthly',
-        required=True,
+    
+    pkg_yea_subs_template_id = fields.Many2one(
+        comodel_name='sale.subscription.template',
+        string='Yearly Subscription Template',
         tracking=True,
-        help='Billing frequency for this package')
+        help='Associated yearly subscription template for billing and lifecycle management'
+    )
     
     pkg_dns_domain_id = fields.Many2one(
         comodel_name='dns.domain',
@@ -201,12 +205,14 @@ class SaasPackage(models.Model):
     # VALIDATION METHODS
     # ========================================================================
     
-    @api.constrains('pkg_price')
+    @api.constrains('pkg_mon_price', 'pkg_yea_price')
     def _check_price_positive(self):
-        """Validate that package price is not negative."""
+        """Validate that package prices are not negative."""
         for record in self:
-            if record.pkg_price and record.pkg_price < 0:
-                raise ValidationError(_('Package price cannot be negative.'))
+            if record.pkg_mon_price and record.pkg_mon_price < 0:
+                raise ValidationError(_('Monthly package price cannot be negative.'))
+            if record.pkg_yea_price and record.pkg_yea_price < 0:
+                raise ValidationError(_('Yearly package price cannot be negative.'))
     
 
     
@@ -222,36 +228,54 @@ class SaasPackage(models.Model):
         if 'pkg_docker_compose_template' in vals:
             self._extract_template_variables()
 
-        # Sync name changes
-        if 'pkg_name' in vals and self.pkg_subscription_template_id:
+        # Sync name changes to both templates
+        if 'pkg_name' in vals:
             try:
-                # Update subscription template name (unless coming from template sync)
+                # Update subscription template names (unless coming from template sync)
                 if not self.env.context.get('skip_template_sync'):
-                    if self.pkg_subscription_template_id.name != vals['pkg_name']:
-                        self.pkg_subscription_template_id.write({'name': vals['pkg_name']})
+                    for template_field in ['pkg_mon_subs_template_id', 'pkg_yea_subs_template_id']:
+                        template = getattr(self, template_field, None)
+                        if template and template.name != vals['pkg_name']:
+                            template_suffix = 'Monthly' if 'mon' in template_field else 'Yearly'
+                            template.write({'name': f"{vals['pkg_name']} ({template_suffix})"})
 
-                # Update products linked to this template (unless coming from product sync)
+                # Update products linked to templates (unless coming from product sync)
                 if not self.env.context.get('skip_product_sync'):
-                    for product in self.pkg_subscription_template_id.product_ids:
-                        if product.name != vals['pkg_name']:
-                            product.with_context(skip_saas_sync=True).write({'name': vals['pkg_name']})
+                    for template_field in ['pkg_mon_subs_template_id', 'pkg_yea_subs_template_id']:
+                        template = getattr(self, template_field, None)
+                        if template:
+                            for product in template.product_ids:
+                                if product.name != vals['pkg_name']:
+                                    product.with_context(skip_saas_sync=True).write({'name': vals['pkg_name']})
 
-                _logger.info(f"Synced name change from package {self.pkg_name} to template and products")
+                _logger.info(f"Synced name change from package {self.pkg_name} to templates and products")
             except Exception as e:
                 _logger.warning(f"Failed to sync name changes for package {self.id}: {str(e)}")
 
-        # Sync price changes
-        if 'pkg_price' in vals and self.pkg_subscription_template_id:
+        # Sync price changes to respective templates
+        if any(field in vals for field in ['pkg_mon_price', 'pkg_yea_price']):
             try:
-                # Update all products linked to this template (unless coming from product sync)
+                # Update products linked to templates (unless coming from product sync)
                 if not self.env.context.get('skip_product_sync'):
-                    for product in self.pkg_subscription_template_id.product_ids:
-                        if product.list_price != (vals['pkg_price'] or 0.0):
-                            product.with_context(skip_saas_sync=True).write({'list_price': vals['pkg_price'] or 0.0})
+                    # Monthly price sync
+                    if 'pkg_mon_price' in vals and self.pkg_mon_subs_template_id:
+                        for product in self.pkg_mon_subs_template_id.product_ids:
+                            if product.list_price != (vals['pkg_mon_price'] or 0.0):
+                                product.with_context(skip_saas_sync=True).write({'list_price': vals['pkg_mon_price'] or 0.0})
+                    
+                    # Yearly price sync
+                    if 'pkg_yea_price' in vals and self.pkg_yea_subs_template_id:
+                        for product in self.pkg_yea_subs_template_id.product_ids:
+                            if product.list_price != (vals['pkg_yea_price'] or 0.0):
+                                product.with_context(skip_saas_sync=True).write({'list_price': vals['pkg_yea_price'] or 0.0})
 
-                _logger.info(f"Synced price change from package {self.pkg_name} to products")
+                _logger.info(f"Synced price changes from package {self.pkg_name} to products")
             except Exception as e:
                 _logger.warning(f"Failed to sync price changes for package {self.id}: {str(e)}")
+        
+        # Create subscription templates if prices are set but templates don't exist
+        if any(field in vals for field in ['pkg_mon_price', 'pkg_yea_price']):
+            self._create_subscription_templates()
 
         return result
 
@@ -376,13 +400,80 @@ class SaasPackage(models.Model):
                     'tv_package_id': self.id,
                 })
 
+    def _create_subscription_templates(self):
+        """Create monthly and yearly subscription templates if they don't exist."""
+        for record in self:
+            # Create monthly template if price is set but template doesn't exist
+            if record.pkg_mon_price and not record.pkg_mon_subs_template_id:
+                monthly_template = self.env['sale.subscription.template'].with_context(
+                    from_saas_package=True,
+                    saas_package_id=record.id,
+                    saas_package_name=record.pkg_name,
+                    saas_package_price=record.pkg_mon_price
+                ).create({
+                    'name': f"{record.pkg_name} (Monthly)",
+                    'code': f"{record.pkg_sequence}-M",
+                    'recurring_rule_type': 'monthly',
+                    'recurring_interval': 1,
+                    'is_saas_template': True,
+                })
+                record.pkg_mon_subs_template_id = monthly_template.id
+                
+                # Create monthly product
+                self.env['product.template'].with_context(
+                    from_saas_package=True,
+                    saas_package_id=record.id
+                ).create({
+                    'name': record.pkg_name,
+                    'list_price': record.pkg_mon_price,
+                    'type': 'service',
+                    'is_saas_product': True,
+                    'recurring_invoice': True,
+                    'subscription_template_id': monthly_template.id,
+                })
+            
+            # Create yearly template if price is set but template doesn't exist
+            if record.pkg_yea_price and not record.pkg_yea_subs_template_id:
+                yearly_template = self.env['sale.subscription.template'].with_context(
+                    from_saas_package=True,
+                    saas_package_id=record.id,
+                    saas_package_name=record.pkg_name,
+                    saas_package_price=record.pkg_yea_price
+                ).create({
+                    'name': f"{record.pkg_name} (Yearly)",
+                    'code': f"{record.pkg_sequence}-Y",
+                    'recurring_rule_type': 'yearly',
+                    'recurring_interval': 1,
+                    'is_saas_template': True,
+                })
+                record.pkg_yea_subs_template_id = yearly_template.id
+                
+                # Create yearly product
+                self.env['product.template'].with_context(
+                    from_saas_package=True,
+                    saas_package_id=record.id
+                ).create({
+                    'name': record.pkg_name,
+                    'list_price': record.pkg_yea_price,
+                    'type': 'service',
+                    'is_saas_product': True,
+                    'recurring_invoice': True,
+                    'subscription_template_id': yearly_template.id,
+                })
+
     def name_get(self):
         """Return package name with pricing information."""
         result = []
         for record in self:
             name = record.pkg_name
-            if record.pkg_price and record.pkg_currency_id:
-                name = f"{name} ({record.pkg_currency_id.symbol}{record.pkg_price:.2f})"
+            if record.pkg_currency_id:
+                prices = []
+                if record.pkg_mon_price:
+                    prices.append(f"M:{record.pkg_currency_id.symbol}{record.pkg_mon_price:.2f}")
+                if record.pkg_yea_price:
+                    prices.append(f"Y:{record.pkg_currency_id.symbol}{record.pkg_yea_price:.2f}")
+                if prices:
+                    name = f"{name} ({', '.join(prices)})"
             result.append((record.id, name))
         return result
     
@@ -398,14 +489,9 @@ class SaasPackage(models.Model):
         if vals.get('docker_compose_template'):
             package._extract_template_variables()
         
-        # Link SaaS products to this package if template has products
-        if package.pkg_subscription_template_id and package.pkg_subscription_template_id.product_ids:
-            template = package.pkg_subscription_template_id
-            # Update SaaS products to link back to this package
-            for product in template.product_ids:
-                if product.is_saas_product and not product.saas_package_id:
-                    product.write({'saas_package_id': package.id})
-                    _logger.info(f"Linked SaaS product {product.name} to package {package.pkg_name}")
+        # Create subscription templates if prices are provided
+        if vals.get('pkg_mon_price') or vals.get('pkg_yea_price'):
+            package._create_subscription_templates()
 
         return package
 

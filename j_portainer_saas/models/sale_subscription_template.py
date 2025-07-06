@@ -18,11 +18,18 @@ class SaleSubscriptionTemplate(models.Model):
     _inherit = 'sale.subscription.template'
 
     # Add SaaS-specific fields
-    saas_package_ids = fields.One2many(
+    saas_monthly_package_ids = fields.One2many(
         comodel_name='saas.package',
-        inverse_name='pkg_subscription_template_id',
-        string='SaaS Packages',
-        help='SaaS packages that use this subscription template'
+        inverse_name='pkg_mon_subs_template_id',
+        string='SaaS Packages (Monthly)',
+        help='SaaS packages that use this template for monthly billing'
+    )
+    
+    saas_yearly_package_ids = fields.One2many(
+        comodel_name='saas.package',
+        inverse_name='pkg_yea_subs_template_id',
+        string='SaaS Packages (Yearly)',
+        help='SaaS packages that use this template for yearly billing'
     )
     
     is_saas_template = fields.Boolean(
@@ -36,11 +43,11 @@ class SaleSubscriptionTemplate(models.Model):
         string='SaaS Package Count'
     )
 
-    @api.depends('saas_package_ids')
+    @api.depends('saas_monthly_package_ids', 'saas_yearly_package_ids')
     def _compute_saas_package_count(self):
         """Compute the number of SaaS packages using this template."""
         for record in self:
-            record.saas_package_count = len(record.saas_package_ids)
+            record.saas_package_count = len(record.saas_monthly_package_ids) + len(record.saas_yearly_package_ids)
 
     @api.model
     def create(self, vals):
@@ -89,12 +96,16 @@ class SaleSubscriptionTemplate(models.Model):
         # Sync name changes to linked SaaS packages
         if 'name' in vals:
             for record in self:
-                if record.is_saas_template and record.saas_package_ids:
+                if record.is_saas_template:
                     try:
+                        # Get all packages using this template (monthly or yearly)
+                        all_packages = record.saas_monthly_package_ids + record.saas_yearly_package_ids
+                        
                         # Update SaaS package names if needed
-                        for package in record.saas_package_ids:
-                            if package.pkg_name != vals['name']:
-                                package.write({'pkg_name': vals['name']})
+                        for package in all_packages:
+                            base_name = vals['name'].replace(' (Monthly)', '').replace(' (Yearly)', '')
+                            if package.pkg_name != base_name:
+                                package.write({'pkg_name': base_name})
                         
                         # Update product names
                         for product in record.product_ids:
@@ -109,8 +120,8 @@ class SaleSubscriptionTemplate(models.Model):
     def action_view_saas_packages(self):
         """Action to view SaaS packages using this template."""
         action = self.env.ref('j_portainer_saas.action_saas_package').read()[0]
-        action['domain'] = [('pkg_subscription_template_id', '=', self.id)]
-        action['context'] = {'default_pkg_subscription_template_id': self.id}
+        action['domain'] = ['|', ('pkg_mon_subs_template_id', '=', self.id), ('pkg_yea_subs_template_id', '=', self.id)]
+        action['context'] = {}
         return action
 
     def unlink(self):

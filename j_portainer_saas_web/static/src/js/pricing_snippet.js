@@ -258,10 +258,10 @@ if (typeof odoo !== 'undefined' && odoo.define) {
                 var yearlyPrice = parseFloat($priceAmount.attr('data-yearly')) || 0;
                 
                 if (isYearly) {
-                    $priceAmount.text(Math.round(yearlyPrice));
+                    $priceAmount.text(yearlyPrice > 0 ? Math.round(yearlyPrice) : 0);
                     $pricePeriod.text('/ year');
                 } else {
-                    $priceAmount.text(Math.round(monthlyPrice));
+                    $priceAmount.text(monthlyPrice > 0 ? Math.round(monthlyPrice) : 0);
                     $pricePeriod.text('/ month');
                 }
             });
