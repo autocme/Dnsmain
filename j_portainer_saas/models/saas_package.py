@@ -142,6 +142,20 @@ class SaasPackage(models.Model):
         help='Detailed description of package features and limitations'
     )
     
+    pkg_publish_website = fields.Boolean(
+        string='Publish on Website',
+        default=False,
+        tracking=True,
+        help='Indicates if this package should be displayed on the website'
+    )
+    
+    pkg_feature_ids = fields.One2many(
+        'saas.package.features',
+        'pf_package_id',
+        string='Package Features',
+        help='List of features included in this package'
+    )
+    
     pkg_created_date = fields.Datetime(
         string='Created Date',
         default=fields.Datetime.now,

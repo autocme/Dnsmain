@@ -149,6 +149,13 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Removed unused pricing_snippet.js**: Eliminated unused JavaScript file to prevent confusion and focus on pricing_snippet_simple.js
 - **Enhanced purchase request format**: Removed free_trial parameter from purchase request to match controller expectations
 - **Added client-side debugging**: Added console logging to track billing cycle selection during purchase flow
+- **Package Features Model**: Added new saas.package.features model with one2many relation to packages for managing feature lists
+- **Website Publishing Control**: Added pkg_publish_website boolean field to control which packages appear on website
+- **Dynamic Package Features**: Updated website controller to use actual package features instead of static hardcoded values
+- **Enhanced Package Form**: Added Package Features as first page in form view with inline editable tree for feature management
+- **Feature Priority System**: Implemented feature retrieval hierarchy (Package Features > Description > Template Variables > Default)
+- **Security Access Rules**: Added proper access control for package features model
+- **Model Integration**: Complete integration of package features with existing package model and website display
 
 ## Previous Features (Pre-July 6, 2025)
 

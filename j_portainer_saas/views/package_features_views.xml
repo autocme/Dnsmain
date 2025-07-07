@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ========================================================================== -->
+    <!--                        PACKAGE FEATURES TREE VIEW                         -->
+    <!-- ========================================================================== -->
+
+    <record id="view_package_features_tree" model="ir.ui.view">
+        <field name="name">saas.package.features.tree</field>
+        <field name="model">saas.package.features</field>
+        <field name="arch" type="xml">
+            <tree string="Package Features" editable="bottom" default_order="pf_sequence">
+                <field name="pf_sequence" widget="handle"/>
+                <field name="pf_package_id" readonly="1"/>
+                <field name="pf_feature_text" string="Feature Description"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ========================================================================== -->
+    <!--                        PACKAGE FEATURES FORM VIEW                         -->
+    <!-- ========================================================================== -->
+
+    <record id="view_package_features_form" model="ir.ui.view">
+        <field name="name">saas.package.features.form</field>
+        <field name="model">saas.package.features</field>
+        <field name="arch" type="xml">
+            <form string="Package Feature">
+                <sheet>
+                    <group>
+                        <field name="pf_package_id"/>
+                        <field name="pf_sequence"/>
+                    </group>
+                    <group>
+                        <field name="pf_feature_text" string="Feature Description"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ========================================================================== -->
+    <!--                        PACKAGE FEATURES ACTION                            -->
+    <!-- ========================================================================== -->
+
+    <record id="action_package_features" model="ir.actions.act_window">
+        <field name="name">Package Features</field>
+        <field name="res_model">saas.package.features</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create the first package feature!
+            </p>
+            <p>
+                Package features define the capabilities and benefits included in each SaaS package.
+                They are displayed on the website pricing snippet to help customers understand what they get.
+            </p>
+        </field>
+    </record>
+
+</odoo>

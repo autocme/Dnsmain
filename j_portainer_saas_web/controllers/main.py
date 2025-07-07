@@ -37,17 +37,18 @@ class SaaSWebController(http.Controller):
                     headers=[('Content-Type', 'application/json')]
                 )
             
-            # Get all active packages
+            # Get all packages published on website
             packages = request.env['saas.package'].sudo().search([
-                ('pkg_active', '=', True)
+                ('pkg_active', '=', True),
+                ('pkg_publish_website', '=', True)
             ])
             
             # If no packages found, return error to force demo fallback
             if not packages:
                 response_data = {
                     'success': False,
-                    'error': 'No active packages found in database',
-                    'debug': 'Database query returned 0 packages with pkg_active=True'
+                    'error': 'No published packages found in database',
+                    'debug': 'Database query returned 0 packages with pkg_active=True and pkg_publish_website=True'
                 }
                 return request.make_response(
                     json.dumps(response_data),
@@ -98,7 +99,7 @@ class SaaSWebController(http.Controller):
 
     def _get_package_features(self, package):
         """
-        Extract package features from description or template variables
+        Extract package features from package features model, description or template variables
         
         Args:
             package: SaaS package record
@@ -108,8 +109,14 @@ class SaaSWebController(http.Controller):
         """
         features = []
         
-        # Extract features from description if available
-        if package.pkg_description:
+        # Get features from package features model (priority 1)
+        if package.pkg_feature_ids:
+            for feature in package.pkg_feature_ids:
+                if feature.pf_feature_text:
+                    features.append(feature.pf_feature_text)
+        
+        # Extract features from description if no features model data (priority 2)
+        if not features and package.pkg_description:
             # Simple feature extraction - split by newlines and clean up
             lines = package.pkg_description.split('\n')
             for line in lines:
@@ -117,13 +124,13 @@ class SaaSWebController(http.Controller):
                 if line and not line.startswith('#'):
                     features.append(line)
         
-        # Add template variables as features
-        if package.pkg_template_variable_ids:
+        # Add template variables as features if still no features (priority 3)
+        if not features and package.pkg_template_variable_ids:
             for var in package.pkg_template_variable_ids:
                 if var.tv_variable_name:
                     features.append(f"Configurable {var.tv_variable_name}")
         
-        # Default features if none found
+        # Default features if none found (priority 4)
         if not features:
             system_type_name = 'System'
             if package.pkg_system_type_id:
@@ -136,7 +143,7 @@ class SaaSWebController(http.Controller):
                 "Secure Hosting"
             ]
         
-        return features[:4]  # Limit to 4 features for clean display
+        return features  # Return all features without limiting
 
     def _get_free_trial_days(self):
         """

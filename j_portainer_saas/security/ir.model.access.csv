@@ -11,3 +11,5 @@ access_saas_brand_user,saas.brand.user,model_saas_brand,base.group_user,1,0,0,0
 access_saas_brand_manager,saas.brand.manager,model_saas_brand,base.group_system,1,1,1,1
 access_system_template_variable_user,system.template.variable.user,model_system_template_variable,base.group_user,1,0,0,0
 access_system_template_variable_manager,system.template.variable.manager,model_system_template_variable,base.group_system,1,1,1,1
+access_saas_package_features_user,saas.package.features.user,model_saas_package_features,base.group_user,1,0,0,0
+access_saas_package_features_manager,saas.package.features.manager,model_saas_package_features,base.group_system,1,1,1,1

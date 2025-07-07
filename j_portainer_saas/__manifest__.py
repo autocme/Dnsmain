@@ -56,6 +56,7 @@ Dependencies:
         'views/portainer_environment_views.xml',
         'views/dns_subdomain_views.xml',
         'views/res_config_settings_views.xml',
+        'views/package_features_views.xml',
         'views/menu_views.xml',
     ],
     'demo': [],
