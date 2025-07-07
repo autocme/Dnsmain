@@ -12,7 +12,7 @@
             <tree string="Package Features" editable="bottom" default_order="pf_sequence">
                 <field name="pf_sequence" widget="handle"/>
                 <field name="pf_package_id" readonly="1"/>
-                <field name="pf_feature_text" string="Feature Description"/>
+                <field name="pf_name" string="Feature Description"/>
             </tree>
         </field>
     </record>
@@ -32,7 +32,7 @@
                         <field name="pf_sequence"/>
                     </group>
                     <group>
-                        <field name="pf_feature_text" string="Feature Description"/>
+                        <field name="pf_name" string="Feature Description"/>
                     </group>
                 </sheet>
             </form>

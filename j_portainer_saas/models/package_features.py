@@ -14,7 +14,7 @@ class PackageFeatures(models.Model):
         required=True,
         ondelete='cascade'
     )
-    pf_feature_text = fields.Text(
+    pf_name = fields.Text(
         string='Feature Description',
         required=True,
         help='Description of the package feature'

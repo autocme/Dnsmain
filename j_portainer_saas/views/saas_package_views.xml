@@ -98,7 +98,7 @@
                             <field name="pkg_feature_ids">
                                 <tree editable="bottom">
                                     <field name="pf_sequence" widget="handle"/>
-                                    <field name="pf_feature_text" string="Feature Description"/>
+                                    <field name="pf_name" string="Feature Description"/>
                                 </tree>
                             </field>
                         </page>

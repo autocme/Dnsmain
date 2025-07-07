@@ -112,8 +112,8 @@ class SaaSWebController(http.Controller):
         # Get features from package features model (priority 1)
         if package.pkg_feature_ids:
             for feature in package.pkg_feature_ids:
-                if feature.pf_feature_text:
-                    features.append(feature.pf_feature_text)
+                if feature.pf_name:
+                    features.append(feature.pf_name)
         
         # Extract features from description if no features model data (priority 2)
         if not features and package.pkg_description:
