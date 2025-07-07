@@ -290,7 +290,10 @@
         
         // Get current billing cycle
         var toggle = section.querySelector('.toggle-input');
-        var billingCycle = (toggle && toggle.checked) ? 'yearly' : 'monthly';
+        var billingCycle = (toggle && toggle.checked) ? 'monthly' : 'yearly';
+        
+        // Debug billing cycle selection
+        console.log('Purchase Request - Toggle checked:', toggle ? toggle.checked : 'null', 'Billing cycle:', billingCycle);
         
         if (!packageId) {
             showError('Package information not found');
@@ -318,9 +321,8 @@
                 jsonrpc: '2.0',
                 method: 'call',
                 params: {
-                    package_id: packageId,
-                    billing_cycle: billingCycle,
-                    free_trial: isFreeTrial
+                    package_id: parseInt(packageId),
+                    billing_cycle: billingCycle
                 }
             })
         })

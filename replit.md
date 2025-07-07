@@ -145,6 +145,10 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Enhanced purchase flow**: Added proper login redirect handling and success/error messaging for website purchases
 - **Purchase request validation**: Added billing cycle parameter validation and comprehensive logging for debugging website purchases
 - **Template selection debugging**: Added detailed logging throughout purchase flow to track billing cycle selection and SaaS client creation
+- **pricing_snippet_simple.js billing fix**: Fixed inconsistent billing toggle logic where setupBillingToggle used checked=monthly but purchase used checked=yearly
+- **Removed unused pricing_snippet.js**: Eliminated unused JavaScript file to prevent confusion and focus on pricing_snippet_simple.js
+- **Enhanced purchase request format**: Removed free_trial parameter from purchase request to match controller expectations
+- **Added client-side debugging**: Added console logging to track billing cycle selection during purchase flow
 
 ## Previous Features (Pre-July 6, 2025)
 
