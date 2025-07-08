@@ -18,6 +18,8 @@
                 <field name="pkg_currency_id" invisible="1"/>
                 <field name="pkg_mon_subs_template_id"/>
                 <field name="pkg_yea_subs_template_id"/>
+                <field name="pkg_monthly_active"/>
+                <field name="pkg_yearly_active"/>
                 <field name="pkg_publish_website"/>
                 <field name="pkg_active"/>
             </tree>
@@ -67,11 +69,13 @@
                             <label for="pkg_mon_price" string="Monthly Price"/>
                             <div class="o_row oe_inline">
                                 <field name="pkg_mon_price" widget="monetary"/>
+                                <field name="pkg_monthly_active"/>
                                 <field name="pkg_mon_subs_template_id" placeholder="Monthly Template"/>
                             </div>
                             <label for="pkg_yea_price" string="Yearly Price"/>
                             <div class="o_row oe_inline">
                                 <field name="pkg_yea_price" widget="monetary"/>
+                                <field name="pkg_yearly_active"/>
                                 <field name="pkg_yea_subs_template_id" placeholder="Yearly Template"/>
                             </div>
                             <field name="pkg_currency_id"/>

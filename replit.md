@@ -157,6 +157,10 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Feature Priority System**: Implemented feature retrieval hierarchy (Package Features > Description > Template Variables > Default)
 - **Security Access Rules**: Added proper access control for package features model
 - **Model Integration**: Complete integration of package features with existing package model and website display
+- **Subscription Template Activation Control**: Added pkg_monthly_active and pkg_yearly_active boolean fields to control template generation
+- **Strict Website Filtering**: Website only displays packages with both monthly and yearly subscription templates active
+- **Template Generation Logic**: Updated template creation to respect activation flags - templates only created when corresponding activation field is True
+- **Enhanced Package Form Layout**: Added activation checkboxes inline with pricing fields in form view for easy template control
 
 ## Previous Features (Pre-July 6, 2025)
 

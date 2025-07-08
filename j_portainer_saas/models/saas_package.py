@@ -66,6 +66,20 @@ class SaasPackage(models.Model):
         help='Yearly subscription price for this package'
     )
     
+    pkg_monthly_active = fields.Boolean(
+        string='Monthly Active',
+        default=True,
+        tracking=True,
+        help='Enable monthly subscription template generation'
+    )
+    
+    pkg_yearly_active = fields.Boolean(
+        string='Yearly Active',
+        default=True,
+        tracking=True,
+        help='Enable yearly subscription template generation'
+    )
+    
     pkg_has_free_trial = fields.Boolean(
         string='Has Free Trial',
         default=False,
@@ -419,8 +433,8 @@ class SaasPackage(models.Model):
     def _create_subscription_templates(self):
         """Create monthly and yearly subscription templates if they don't exist."""
         for record in self:
-            # Create monthly template if price is set but template doesn't exist
-            if record.pkg_mon_price and not record.pkg_mon_subs_template_id:
+            # Create monthly template if price is set, monthly is active, but template doesn't exist
+            if record.pkg_mon_price and record.pkg_monthly_active and not record.pkg_mon_subs_template_id:
                 monthly_template = self.env['sale.subscription.template'].with_context(
                     from_saas_package=True,
                     saas_package_id=record.id,
@@ -454,8 +468,8 @@ class SaasPackage(models.Model):
                 # Link product to template
                 monthly_template.write({'product_ids': [(4, monthly_product.id)]})
             
-            # Create yearly template if price is set but template doesn't exist
-            if record.pkg_yea_price and not record.pkg_yea_subs_template_id:
+            # Create yearly template if price is set, yearly is active, but template doesn't exist
+            if record.pkg_yea_price and record.pkg_yearly_active and not record.pkg_yea_subs_template_id:
                 yearly_template = self.env['sale.subscription.template'].with_context(
                     from_saas_package=True,
                     saas_package_id=record.id,

@@ -37,10 +37,12 @@ class SaaSWebController(http.Controller):
                     headers=[('Content-Type', 'application/json')]
                 )
             
-            # Get all packages published on website
+            # Get all packages published on website with both monthly and yearly active
             packages = request.env['saas.package'].sudo().search([
                 ('pkg_active', '=', True),
-                ('pkg_publish_website', '=', True)
+                ('pkg_publish_website', '=', True),
+                ('pkg_monthly_active', '=', True),
+                ('pkg_yearly_active', '=', True)
             ])
             
             # If no packages found, return error to force demo fallback
@@ -48,7 +50,7 @@ class SaaSWebController(http.Controller):
                 response_data = {
                     'success': False,
                     'error': 'No published packages found in database',
-                    'debug': 'Database query returned 0 packages with pkg_active=True and pkg_publish_website=True'
+                    'debug': 'Database query returned 0 packages with pkg_active=True, pkg_publish_website=True, pkg_monthly_active=True, and pkg_yearly_active=True'
                 }
                 return request.make_response(
                     json.dumps(response_data),
