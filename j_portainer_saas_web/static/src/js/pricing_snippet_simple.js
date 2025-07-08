@@ -12,6 +12,9 @@
     function initPricingSnippet() {
         console.log('Initializing SaaS pricing snippet...');
         
+        // Check for pending purchase from login redirect
+        checkPendingPurchase();
+        
         var sections = document.querySelectorAll('.saas-pricing-section');
         
         sections.forEach(function(section) {
@@ -333,12 +336,16 @@
             // Check for authentication errors (Odoo returns error code 100 for authentication failures)
             if (data.error && (data.error.code === 100 || data.error.message.includes('authentication') || data.error.message.includes('login'))) {
                 hideLoadingState(button);
-                showError('Please log in to purchase packages');
                 
-                // Redirect to login page after short delay
-                setTimeout(function() {
-                    window.location.href = '/web/login';
-                }, 1500);
+                // Store purchase details to resume after login
+                sessionStorage.setItem('pendingPurchase', JSON.stringify({
+                    packageId: packageId,
+                    billingCycle: billingCycle,
+                    isFreeTrial: isFreeTrial
+                }));
+                
+                // Redirect to login page immediately
+                window.location.href = '/web/login';
                 return;
             }
             
@@ -346,7 +353,11 @@
             if (data.error) {
                 hideLoadingState(button);
                 var errorMessage = data.error.message || 'Purchase failed. Please try again.';
-                showError(errorMessage);
+                try {
+                    showError(errorMessage);
+                } catch (e) {
+                    console.error('Error showing error message:', e);
+                }
                 return;
             }
             
@@ -361,7 +372,11 @@
                 if (data.result && data.result.error) {
                     errorMsg = typeof data.result.error === 'string' ? data.result.error : 'Purchase failed. Please try again.';
                 }
-                showError(errorMsg);
+                try {
+                    showError(errorMsg);
+                } catch (e) {
+                    console.error('Error showing error message:', e);
+                }
             }
         })
         .catch(function(error) {
@@ -370,10 +385,15 @@
             
             // Check if it's a network error that might indicate authentication issues
             if (error.message && (error.message.includes('401') || error.message.includes('403'))) {
-                showError('Please log in to purchase packages');
-                setTimeout(function() {
-                    window.location.href = '/web/login';
-                }, 1500);
+                // Store purchase details to resume after login
+                sessionStorage.setItem('pendingPurchase', JSON.stringify({
+                    packageId: packageId,
+                    billingCycle: billingCycle,
+                    isFreeTrial: isFreeTrial
+                }));
+                
+                // Redirect to login page immediately
+                window.location.href = '/web/login';
                 return;
             }
             
@@ -385,8 +405,52 @@
                 errorMessage = error;
             }
             
-            showError(errorMessage);
+            try {
+                showError(errorMessage);
+            } catch (e) {
+                console.error('Error showing error message:', e);
+            }
         });
+    }
+    
+    /**
+     * Check for pending purchase after login redirect
+     */
+    function checkPendingPurchase() {
+        var pendingPurchase = sessionStorage.getItem('pendingPurchase');
+        if (pendingPurchase) {
+            try {
+                var purchaseData = JSON.parse(pendingPurchase);
+                console.log('Found pending purchase after login, resuming...', purchaseData);
+                
+                // Clear the pending purchase
+                sessionStorage.removeItem('pendingPurchase');
+                
+                // Wait for DOM to be ready and then complete the purchase
+                setTimeout(function() {
+                    completePendingPurchase(purchaseData);
+                }, 1000);
+                
+            } catch (e) {
+                console.error('Error parsing pending purchase data:', e);
+                sessionStorage.removeItem('pendingPurchase');
+            }
+        }
+    }
+    
+    /**
+     * Complete pending purchase after login
+     */
+    function completePendingPurchase(purchaseData) {
+        console.log('Completing pending purchase...', purchaseData);
+        
+        // Create a temporary button for loading state management
+        var tempButton = document.createElement('button');
+        tempButton.textContent = 'Processing...';
+        tempButton.disabled = true;
+        
+        // Make the purchase request
+        makePurchaseRequest(purchaseData.packageId, purchaseData.billingCycle, purchaseData.isFreeTrial, tempButton);
     }
     
     /**
