@@ -330,6 +330,26 @@
             return response.json();
         })
         .then(function(data) {
+            // Check for authentication errors (Odoo returns error code 100 for authentication failures)
+            if (data.error && (data.error.code === 100 || data.error.message.includes('authentication') || data.error.message.includes('login'))) {
+                hideLoadingState(button);
+                showError('Please log in to purchase packages');
+                
+                // Redirect to login page after short delay
+                setTimeout(function() {
+                    window.location.href = '/web/login';
+                }, 1500);
+                return;
+            }
+            
+            // Check for other JSON-RPC errors
+            if (data.error) {
+                hideLoadingState(button);
+                var errorMessage = data.error.message || 'Purchase failed. Please try again.';
+                showError(errorMessage);
+                return;
+            }
+            
             hideLoadingState(button);
             
             if (data.result && data.result.success) {
@@ -347,6 +367,15 @@
         .catch(function(error) {
             hideLoadingState(button);
             console.error('Purchase request failed:', error);
+            
+            // Check if it's a network error that might indicate authentication issues
+            if (error.message && (error.message.includes('401') || error.message.includes('403'))) {
+                showError('Please log in to purchase packages');
+                setTimeout(function() {
+                    window.location.href = '/web/login';
+                }, 1500);
+                return;
+            }
             
             // Ensure we pass a string to showError
             var errorMessage = 'Network error. Please check your connection and try again.';

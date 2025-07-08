@@ -161,6 +161,9 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Strict Website Filtering**: Website only displays packages with both monthly and yearly subscription templates active
 - **Template Generation Logic**: Updated template creation to respect activation flags - templates only created when corresponding activation field is True
 - **Enhanced Package Form Layout**: Added activation checkboxes inline with pricing fields in form view for easy template control
+- **Authentication Error Handling**: Fixed JavaScript purchase flow to properly handle authentication errors for public users
+- **Login Redirect Enhancement**: Added proper authentication failure detection with automatic redirect to /web/login for non-authenticated users
+- **DOM Error Prevention**: Enhanced error handling to prevent JavaScript DOM manipulation errors when users aren't logged in
 
 ## Previous Features (Pre-July 6, 2025)
 
