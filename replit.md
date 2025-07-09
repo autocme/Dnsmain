@@ -170,6 +170,8 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Dynamic Package Filtering**: Implemented toggle-based package visibility using activation fields (pkg_monthly_active/pkg_yearly_active)
 - **Flexible Website Display**: Website now shows packages based on toggle state - monthly toggle shows monthly-active packages, yearly toggle shows yearly-active packages
 - **Backend Filter Optimization**: Removed strict monthly AND yearly requirement, now shows all published packages with frontend filtering
+- **Toggle Logic Fix**: Corrected inverted toggle logic - checked state now properly represents monthly, unchecked represents yearly
+- **Price Display Correction**: Fixed price display to show correct monthly/yearly prices and periods based on toggle state
 
 ## Previous Features (Pre-July 6, 2025)
 

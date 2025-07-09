@@ -184,6 +184,13 @@
         
         filteredPackages.forEach(function(pkg, index) {
             var isHidden = hiddenPackages.includes(pkg.id.toString());
+            
+            // Get current toggle state to display correct price
+            var toggle = section.querySelector('.toggle-input');
+            var isMonthly = toggle ? toggle.checked : false;
+            var currentPrice = isMonthly ? (pkg.monthly_price || 0) : (pkg.yearly_price || 0);
+            var currentPeriod = isMonthly ? '/month' : '/year';
+            
             var cardHtml = `
                 <div class="pricing-card-col mb-4 ${isHidden ? 'hidden-package' : ''}" data-package-id="${pkg.id}">
                     <div class="saas-pricing-card h-100" data-package-id="${pkg.id}">
@@ -191,8 +198,8 @@
                             <h3 class="package-name">${pkg.name}</h3>
                             <div class="price-display">
                                 <span class="currency-symbol">${pkg.currency_symbol}</span>
-                                <span class="price-amount" data-monthly="${pkg.monthly_price || 0}" data-yearly="${pkg.yearly_price || 0}">${pkg.monthly_price || 0}</span>
-                                <span class="price-period">/month</span>
+                                <span class="price-amount" data-monthly="${pkg.monthly_price || 0}" data-yearly="${pkg.yearly_price || 0}">${currentPrice}</span>
+                                <span class="price-period">${currentPeriod}</span>
                             </div>
                         </div>
                         <div class="card-body">
@@ -241,17 +248,17 @@
      * Filter packages based on toggle state and activation fields
      */
     function filterPackagesByToggle(packages, section) {
-        // Get toggle state - checked = yearly, unchecked = monthly
+        // Get toggle state - checked = monthly, unchecked = yearly
         var toggle = section.querySelector('.toggle-input');
-        var isYearly = toggle ? toggle.checked : false;
+        var isMonthly = toggle ? toggle.checked : false;
         
         return packages.filter(function(pkg) {
-            if (isYearly) {
-                // Show packages that have yearly active
-                return pkg.yearly_active;
-            } else {
+            if (isMonthly) {
                 // Show packages that have monthly active
                 return pkg.monthly_active;
+            } else {
+                // Show packages that have yearly active
+                return pkg.yearly_active;
             }
         });
     }
