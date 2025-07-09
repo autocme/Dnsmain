@@ -172,6 +172,7 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Backend Filter Optimization**: Removed strict monthly AND yearly requirement, now shows all published packages with frontend filtering
 - **Toggle Logic Fix**: Corrected inverted toggle logic - checked state now properly represents monthly, unchecked represents yearly
 - **Price Display Correction**: Fixed price display to show correct monthly/yearly prices and periods based on toggle state
+- **Toggle Style Enhancement**: Updated toggle styling to match Odoo official website - toggle now appears "checked" for both yearly and monthly states
 
 ## Previous Features (Pre-July 6, 2025)
 
