@@ -161,13 +161,14 @@ class SaaSWebController(http.Controller):
             return 30
 
     @http.route('/saas/package/purchase', type='json', auth='user', methods=['POST'], csrf=False)
-    def purchase_package(self, package_id, billing_cycle='monthly', **kwargs):
+    def purchase_package(self, package_id, billing_cycle='monthly', is_free_trial=False, **kwargs):
         """
         Purchase a SaaS package and create a SaaS client
         
         Args:
             package_id (int): Selected package ID
             billing_cycle (str): 'monthly' or 'yearly'
+            is_free_trial (bool): Whether this is a free trial request
             
         Returns:
             dict: Response with creation status and redirect URL
@@ -176,7 +177,7 @@ class SaaSWebController(http.Controller):
             # Log the incoming request for debugging
             import logging
             _logger = logging.getLogger(__name__)
-            _logger.info(f"Website Purchase Request: package_id={package_id}, billing_cycle='{billing_cycle}', kwargs={kwargs}")
+            _logger.info(f"Website Purchase Request: package_id={package_id}, billing_cycle='{billing_cycle}', is_free_trial={is_free_trial}, kwargs={kwargs}")
             
             # Validate billing cycle parameter
             if billing_cycle not in ['monthly', 'yearly']:
@@ -208,27 +209,42 @@ class SaaSWebController(http.Controller):
             # Get user's partner
             partner = request.env.user.partner_id
             
+            # Validate free trial request
+            if is_free_trial and not package.pkg_has_free_trial:
+                return {
+                    'success': False,
+                    'error': 'Free trial is not available for this package'
+                }
+            
             # Create SaaS client with draft status
             saas_client = request.env['saas.client'].sudo().create({
                 'sc_partner_id': partner.id,
                 'sc_package_id': package.id,
                 'sc_status': 'draft',
                 'sc_subscription_period': billing_cycle,
+                'sc_is_free_trial': is_free_trial,
             })
             
             # Log the purchase details for debugging
             import logging
             _logger = logging.getLogger(__name__)
-            _logger.info(f"Website Purchase: Created SaaS client {saas_client.id} with billing_cycle='{billing_cycle}' and sc_subscription_period='{saas_client.sc_subscription_period}'")
+            _logger.info(f"Website Purchase: Created SaaS client {saas_client.id} with billing_cycle='{billing_cycle}', sc_subscription_period='{saas_client.sc_subscription_period}', is_free_trial={is_free_trial}")
             
             # For now, redirect to Google (test URL)
             test_redirect_url = "https://google.com"
+            
+            # Create appropriate success message
+            if is_free_trial:
+                message = f'Successfully started free trial for {package.pkg_name}'
+            else:
+                message = f'Successfully created SaaS instance for {package.pkg_name}'
             
             return {
                 'success': True,
                 'client_id': saas_client.id,
                 'redirect_url': test_redirect_url,
-                'message': f'Successfully created SaaS instance for {package.pkg_name}'
+                'message': message,
+                'is_free_trial': is_free_trial
             }
             
         except Exception as e:

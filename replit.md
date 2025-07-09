@@ -187,6 +187,9 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Package Form Field Repositioning**: Repositioned pkg_monthly_active and pkg_yearly_active fields to appear first in pricing rows
 - **Conditional Field Visibility**: Updated to Odoo 17.0 syntax using invisible attribute instead of attrs for field visibility control
 - **Smart Button Integration**: Added invoices smart button to client form view with proper visibility and navigation
+- **Website Free Trial Integration**: Updated website purchase flow to detect free trial button clicks and pass is_free_trial parameter to SaaS client creation
+- **Free Trial Validation**: Added server-side validation to ensure free trial requests are only processed for packages with pkg_has_free_trial enabled
+- **Purchase Flow Enhancement**: Modified JavaScript to distinguish between regular purchase and free trial button clicks, passing appropriate parameters to backend
 
 ## Previous Features (Pre-July 6, 2025)
 

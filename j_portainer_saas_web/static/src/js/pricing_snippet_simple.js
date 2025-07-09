@@ -354,7 +354,8 @@
                 method: 'call',
                 params: {
                     package_id: parseInt(packageId),
-                    billing_cycle: billingCycle
+                    billing_cycle: billingCycle,
+                    is_free_trial: isFreeTrial
                 }
             })
         })
