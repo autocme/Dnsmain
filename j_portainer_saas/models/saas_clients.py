@@ -895,7 +895,7 @@ class SaasClient(models.Model):
                     'name': f"{partner.name} - {package.pkg_name} ({subscription_period.title()})",
                     'description': f'SaaS subscription for {partner.name} using {package.pkg_name} package ({subscription_period} billing)',
                     'pricelist_id': partner.property_product_pricelist.id,
-                    'date_start': date.today(),  # Start with today, will be updated after starting
+                    
                 }
                 
                 # Create the subscription
