@@ -301,10 +301,20 @@
         section.addEventListener('click', function(e) {
             var target = e.target;
             
-            // Check if clicked element is a purchase button
-            if (target.classList.contains('btn-main') || target.classList.contains('btn-trial')) {
+            // Check if clicked element is a purchase button or inside one
+            var button = target.closest('.btn-main, .btn-trial');
+            
+            if (button) {
                 e.preventDefault();
-                handlePurchaseClick(target, section);
+                console.log('Button clicked:', {
+                    type: button.classList.contains('btn-trial') ? 'Free Trial' : 'Buy Now',
+                    classes: button.className,
+                    target: target,
+                    button: button
+                });
+                handlePurchaseClick(button, section);
+            } else {
+                console.log('Click not on button:', target);
             }
         });
     }
@@ -313,12 +323,23 @@
      * Handle purchase button clicks
      */
     function handlePurchaseClick(button, section) {
+        console.log('handlePurchaseClick called with button:', button);
+        
         // Get package information
         var card = button.closest('.saas-pricing-card');
-        if (!card) return;
+        if (!card) {
+            console.error('No saas-pricing-card found for button:', button);
+            return;
+        }
         
         var packageId = card.getAttribute('data-package-id');
         var isFreeTrial = button.classList.contains('btn-trial');
+        
+        console.log('Purchase details:', {
+            packageId: packageId,
+            isFreeTrial: isFreeTrial,
+            buttonClasses: button.className
+        });
         
         // Get current billing cycle
         var toggle = section.querySelector('.toggle-input');
@@ -328,6 +349,7 @@
         console.log('Purchase Request - Toggle checked:', toggle ? toggle.checked : 'null', 'Billing cycle:', billingCycle);
         
         if (!packageId) {
+            console.error('Package ID not found on card:', card);
             showError('Package information not found');
             return;
         }
@@ -343,6 +365,13 @@
      * Make purchase request to server
      */
     function makePurchaseRequest(packageId, billingCycle, isFreeTrial, button) {
+        console.log('makePurchaseRequest called with:', {
+            packageId: packageId,
+            billingCycle: billingCycle,
+            isFreeTrial: isFreeTrial,
+            button: button
+        });
+        
         fetch('/saas/package/purchase', {
             method: 'POST',
             headers: {
@@ -507,10 +536,10 @@
      * Show loading state on button
      */
     function showLoadingState(button) {
-        if (button._originalText) return; // Already in loading state
+        if (button._originalHTML) return; // Already in loading state
         
-        button._originalText = button.textContent;
-        button.textContent = 'Creating instance...';
+        button._originalHTML = button.innerHTML;
+        button.innerHTML = '<span class="btn-text">Processing...</span><i class="fa fa-spinner fa-spin btn-icon"></i>';
         button.disabled = true;
         button.style.opacity = '0.7';
     }
@@ -519,9 +548,9 @@
      * Hide loading state on button
      */
     function hideLoadingState(button) {
-        if (button._originalText) {
-            button.textContent = button._originalText;
-            delete button._originalText;
+        if (button._originalHTML) {
+            button.innerHTML = button._originalHTML;
+            delete button._originalHTML;
         }
         button.disabled = false;
         button.style.opacity = '1';

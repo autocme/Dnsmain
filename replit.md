@@ -190,6 +190,9 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Website Free Trial Integration**: Updated website purchase flow to detect free trial button clicks and pass is_free_trial parameter to SaaS client creation
 - **Free Trial Validation**: Added server-side validation to ensure free trial requests are only processed for packages with pkg_has_free_trial enabled
 - **Purchase Flow Enhancement**: Modified JavaScript to distinguish between regular purchase and free trial button clicks, passing appropriate parameters to backend
+- **Button Click Debugging**: Enhanced event delegation to properly handle buttons with complex HTML structure (icons, spans) using closest() method
+- **Loading State Fix**: Updated loading state functions to preserve button HTML structure instead of stripping it with textContent
+- **Enhanced Debugging**: Added comprehensive console logging for button clicks, purchase requests, and error handling
 
 ## Previous Features (Pre-July 6, 2025)
 
