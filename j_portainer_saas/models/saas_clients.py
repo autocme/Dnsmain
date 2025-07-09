@@ -922,11 +922,8 @@ class SaasClient(models.Model):
                 if not is_free_trial:
                     try:
                         subscription.action_start_subscription()
-                        # Create first invoice
-                        if hasattr(subscription, 'action_create_invoice'):
-                            subscription.action_create_invoice()
-                        elif hasattr(subscription, 'generate_invoice'):
-                            subscription.generate_invoice()
+                        # Create first invoice using manual_invoice method
+                        subscription.manual_invoice()
                         _logger.info(f"First invoice generated for paid subscription {subscription.name}")
                     except Exception as e:
                         _logger.warning(f"Failed to generate first invoice for subscription {subscription.name}: {e}")
