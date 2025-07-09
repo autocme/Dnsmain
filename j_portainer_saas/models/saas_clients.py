@@ -888,14 +888,14 @@ class SaasClient(models.Model):
                     free_trial_days = int(config.get_param('j_portainer_saas.free_trial_interval_days', 30))
                     start_date = date.today() + timedelta(days=free_trial_days)
                 
-                # Create subscription values
+                # Create subscription values (start with today's date initially)
                 subscription_vals = {
                     'partner_id': partner_id,
                     'template_id': template.id,
                     'name': f"{partner.name} - {package.pkg_name} ({subscription_period.title()})",
                     'description': f'SaaS subscription for {partner.name} using {package.pkg_name} package ({subscription_period} billing)',
                     'pricelist_id': partner.property_product_pricelist.id,
-                    'date_start': start_date,
+                    'date_start': date.today(),  # Start with today, will be updated after starting
                 }
                 
                 # Create the subscription
@@ -916,8 +916,13 @@ class SaasClient(models.Model):
                             }
                             self.env['sale.subscription.line'].create(line_vals)
                 
-                # Start the subscription (sets proper stage and status)
+                # Start the subscription first (sets proper stage and status)
                 subscription.action_start_subscription()
+                
+                # Now apply the custom start date after subscription is started
+                if start_date != date.today():
+                    subscription.write({'date_start': start_date})
+                    _logger.info(f"Updated subscription {subscription.name} start date to {start_date} for free trial")
                 
                 # Set the subscription ID in vals
                 vals['sc_subscription_id'] = subscription.id

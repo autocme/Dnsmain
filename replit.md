@@ -181,6 +181,7 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Free Trial Boolean Field**: Added sc_is_free_trial field to SaaS client model with conditional visibility based on package free trial settings
 - **Package Free Trial Related Field**: Added sc_package_has_free_trial related field to properly access package free trial status in views
 - **Free Trial Subscription Logic**: Modified subscription creation to calculate start date based on free trial status and settings interval
+- **Subscription Start Date Fix**: Fixed subscription creation workflow to start subscription first, then apply custom start date to prevent base code from resetting start date to today
 - **Subscription Activation**: Moved action_start_subscription call to handle stage setting automatically instead of manual stage assignment
 - **First Invoice Generation**: Added automatic first invoice generation for paid subscriptions (non-free trial) during client creation using manual_invoice method
 - **Package Form Field Repositioning**: Repositioned pkg_monthly_active and pkg_yearly_active fields to appear first in pricing rows
