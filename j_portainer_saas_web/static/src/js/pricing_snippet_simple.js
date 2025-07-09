@@ -179,7 +179,10 @@
         var section = container.closest('.saas-pricing-section');
         var hiddenPackages = getHiddenPackages(section);
         
-        packages.forEach(function(pkg, index) {
+        // Filter packages based on toggle state
+        var filteredPackages = filterPackagesByToggle(packages, section);
+        
+        filteredPackages.forEach(function(pkg, index) {
             var isHidden = hiddenPackages.includes(pkg.id.toString());
             var cardHtml = `
                 <div class="pricing-card-col mb-4 ${isHidden ? 'hidden-package' : ''}" data-package-id="${pkg.id}">
@@ -232,6 +235,25 @@
         }, 100);
         
         console.log('Rendered', packages.length, 'packages');
+    }
+    
+    /**
+     * Filter packages based on toggle state and activation fields
+     */
+    function filterPackagesByToggle(packages, section) {
+        // Get toggle state - checked = yearly, unchecked = monthly
+        var toggle = section.querySelector('.toggle-input');
+        var isYearly = toggle ? toggle.checked : false;
+        
+        return packages.filter(function(pkg) {
+            if (isYearly) {
+                // Show packages that have yearly active
+                return pkg.yearly_active;
+            } else {
+                // Show packages that have monthly active
+                return pkg.monthly_active;
+            }
+        });
     }
     
     /**
@@ -726,6 +748,12 @@
         var labels = section.querySelectorAll('.toggle-label');
         var priceAmounts = section.querySelectorAll('.price-amount');
         var pricePeriods = section.querySelectorAll('.price-period');
+        
+        // Re-render packages with new filter
+        if (window.allPackages) {
+            var pricingCards = section.querySelector('#pricingCards');
+            renderPackages(pricingCards, window.allPackages);
+        }
         
         // Update labels
         labels.forEach(function(label) {

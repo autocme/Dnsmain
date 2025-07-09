@@ -167,6 +167,9 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Seamless Purchase Flow**: Added session storage to preserve purchase details during login redirect
 - **Automatic Purchase Completion**: Implemented automatic purchase completion after user logs in, eliminating need to re-click purchase button
 - **Error Message Protection**: Added try-catch blocks around error display functions to prevent recursive innerHTML errors
+- **Dynamic Package Filtering**: Implemented toggle-based package visibility using activation fields (pkg_monthly_active/pkg_yearly_active)
+- **Flexible Website Display**: Website now shows packages based on toggle state - monthly toggle shows monthly-active packages, yearly toggle shows yearly-active packages
+- **Backend Filter Optimization**: Removed strict monthly AND yearly requirement, now shows all published packages with frontend filtering
 
 ## Previous Features (Pre-July 6, 2025)
 
