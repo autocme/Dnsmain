@@ -129,7 +129,7 @@
     content: "";
     height: 24px;
     width: 24px;
-    right: 4px;
+    left: 4px;
     bottom: 4px;
     background: white;
     border-radius: 50%;
@@ -142,7 +142,7 @@
 }
 
 .toggle-input:checked + .toggle-slider:before {
-    transform: translateX(-28px);
+    transform: translateX(28px);
 }
 
 .toggle-slider:hover {
