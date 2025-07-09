@@ -126,6 +126,13 @@ class SaasClient(models.Model):
         help='Indicates whether this client is using the free trial period for their package'
     )
     
+    sc_package_has_free_trial = fields.Boolean(
+        string='Package Has Free Trial',
+        related='sc_package_id.pkg_has_free_trial',
+        readonly=True,
+        help='Indicates whether the selected package offers free trial option'
+    )
+    
     sc_portainer_template_id = fields.Many2one(
         comodel_name='j_portainer.customtemplate',
         string='Portainer Template',
