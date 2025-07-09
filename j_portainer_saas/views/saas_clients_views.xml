@@ -109,6 +109,14 @@
                                 invisible="not sc_stack_id">
                             <field name="sc_network_count" widget="statinfo" string="Networks"/>
                         </button>
+                        
+                        <button name="action_view_invoices"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-file-text-o"
+                                invisible="not sc_subscription_id">
+                            <field name="sc_invoice_count" widget="statinfo" string="Invoices"/>
+                        </button>
                     </div>
 
                     <div class="oe_title">
@@ -131,6 +139,7 @@
                                    options="{'no_create': True}"
                                    placeholder="Select the SaaS package..."/>
                             <field name="sc_subscription_period"/>
+                            <field name="sc_is_free_trial" attrs="{'invisible': ['|', ('sc_package_id', '=', False), ('sc_package_id.pkg_has_free_trial', '=', False)]}"/>
                             <field name="sc_template_id"
                                    options="{'no_create': True}"
                                    placeholder="Select subscription template..."/>

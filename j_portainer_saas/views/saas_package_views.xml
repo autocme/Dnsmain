@@ -68,15 +68,15 @@
                         <group name="pricing" string="Pricing">
                             <label for="pkg_mon_price" string="Monthly Price"/>
                             <div class="o_row oe_inline">
-                                <field name="pkg_mon_price" widget="monetary"/>
                                 <field name="pkg_monthly_active"/>
-                                <field name="pkg_mon_subs_template_id" placeholder="Monthly Template"/>
+                                <field name="pkg_mon_price" widget="monetary" attrs="{'invisible': [('pkg_monthly_active', '=', False)]}"/>
+                                <field name="pkg_mon_subs_template_id" placeholder="Monthly Template" attrs="{'invisible': [('pkg_monthly_active', '=', False)]}"/>
                             </div>
                             <label for="pkg_yea_price" string="Yearly Price"/>
                             <div class="o_row oe_inline">
-                                <field name="pkg_yea_price" widget="monetary"/>
                                 <field name="pkg_yearly_active"/>
-                                <field name="pkg_yea_subs_template_id" placeholder="Yearly Template"/>
+                                <field name="pkg_yea_price" widget="monetary" attrs="{'invisible': [('pkg_yearly_active', '=', False)]}"/>
+                                <field name="pkg_yea_subs_template_id" placeholder="Yearly Template" attrs="{'invisible': [('pkg_yearly_active', '=', False)]}"/>
                             </div>
                             <field name="pkg_currency_id"/>
                             <field name="pkg_has_free_trial"/>

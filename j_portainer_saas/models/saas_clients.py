@@ -119,6 +119,13 @@ class SaasClient(models.Model):
         tracking=True,
         help='Billing frequency determining which subscription template to use from the package')
     
+    sc_is_free_trial = fields.Boolean(
+        string='Is Free Trial',
+        default=False,
+        tracking=True,
+        help='Indicates whether this client is using the free trial period for their package'
+    )
+    
     sc_portainer_template_id = fields.Many2one(
         comodel_name='j_portainer.customtemplate',
         string='Portainer Template',
@@ -181,6 +188,12 @@ class SaasClient(models.Model):
         string='Network Count',
         compute='_compute_deployment_stats',
         help='Number of networks used by this client'
+    )
+    
+    sc_invoice_count = fields.Integer(
+        string='Invoice Count',
+        compute='_compute_invoice_count',
+        help='Number of invoices related to this client subscription'
     )
     
     # ========================================================================
@@ -515,6 +528,15 @@ class SaasClient(models.Model):
                 record.sc_container_count = 0
                 record.sc_volume_count = 0
                 record.sc_network_count = 0
+    
+    @api.depends('sc_subscription_id', 'sc_subscription_id.invoice_ids')
+    def _compute_invoice_count(self):
+        """Compute the number of invoices related to this client's subscription."""
+        for record in self:
+            if record.sc_subscription_id:
+                record.sc_invoice_count = len(record.sc_subscription_id.invoice_ids)
+            else:
+                record.sc_invoice_count = 0
 
     def name_get(self):
         """Return client display name as sequence/client name."""
@@ -796,6 +818,25 @@ class SaasClient(models.Model):
             'target': 'current',
         }
     
+    def action_view_invoices(self):
+        """Open invoices list view for this client's subscription."""
+        self.ensure_one()
+        if not self.sc_subscription_id:
+            raise UserError(_('No subscription linked to this client.'))
+            
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Client Invoices'),
+            'res_model': 'account.move',
+            'view_mode': 'tree,form',
+            'domain': [('id', 'in', self.sc_subscription_id.invoice_ids.ids)],
+            'context': {
+                'default_partner_id': self.sc_partner_id.id,
+                'default_subscription_id': self.sc_subscription_id.id,
+            },
+            'target': 'current',
+        }
+    
     # ========================================================================
     # BUSINESS METHODS
     # ========================================================================
@@ -828,6 +869,18 @@ class SaasClient(models.Model):
             if package.exists() and template:
                 partner = self.env['res.partner'].browse(partner_id)
                 
+                # Get free trial setting
+                is_free_trial = vals.get('sc_is_free_trial', False)
+                
+                # Calculate start date based on free trial
+                from datetime import date, timedelta
+                start_date = date.today()
+                if is_free_trial and package.pkg_has_free_trial:
+                    # Get free trial interval from settings
+                    config = self.env['ir.config_parameter'].sudo()
+                    free_trial_days = int(config.get_param('j_portainer_saas.free_trial_interval_days', 30))
+                    start_date = date.today() + timedelta(days=free_trial_days)
+                
                 # Create subscription values
                 subscription_vals = {
                     'partner_id': partner_id,
@@ -835,6 +888,7 @@ class SaasClient(models.Model):
                     'name': f"{partner.name} - {package.pkg_name} ({subscription_period.title()})",
                     'description': f'SaaS subscription for {partner.name} using {package.pkg_name} package ({subscription_period} billing)',
                     'pricelist_id': partner.property_product_pricelist.id,
+                    'date_start': start_date,
                 }
                 
                 # Create the subscription
@@ -864,7 +918,20 @@ class SaasClient(models.Model):
                 # Set the subscription ID in vals
                 vals['sc_subscription_id'] = subscription.id
                 
-                _logger.info(f"Auto-created {subscription_period} subscription {subscription.name} for SaaS client")
+                # Generate first invoice for paid subscriptions (not free trial)
+                if not is_free_trial:
+                    try:
+                        subscription.action_start_subscription()
+                        # Create first invoice
+                        if hasattr(subscription, 'action_create_invoice'):
+                            subscription.action_create_invoice()
+                        elif hasattr(subscription, 'generate_invoice'):
+                            subscription.generate_invoice()
+                        _logger.info(f"First invoice generated for paid subscription {subscription.name}")
+                    except Exception as e:
+                        _logger.warning(f"Failed to generate first invoice for subscription {subscription.name}: {e}")
+                
+                _logger.info(f"Auto-created {subscription_period} subscription {subscription.name} for SaaS client (Free Trial: {is_free_trial})")
         
         # Create the SaaS client
         client = super().create(vals)

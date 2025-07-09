@@ -175,6 +175,16 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Toggle Style Enhancement**: Updated toggle styling to match Odoo official website - toggle now appears "checked" for both yearly and monthly states
 - **Toggle Position Adjustment**: Configured toggle circle positioning - yearly shows circle on left, monthly shows circle on right
 
+## July 9, 2025 - SaaS Client Enhancements
+
+- **Smart Button for Invoices**: Added sc_invoice_count computed field and action_view_invoices method to display subscription-related invoices
+- **Free Trial Boolean Field**: Added sc_is_free_trial field to SaaS client model with conditional visibility based on package free trial settings
+- **Free Trial Subscription Logic**: Modified subscription creation to calculate start date based on free trial status and settings interval
+- **First Invoice Generation**: Added automatic first invoice generation for paid subscriptions (non-free trial) during client creation
+- **Package Form Field Repositioning**: Repositioned pkg_monthly_active and pkg_yearly_active fields to appear first in pricing rows
+- **Conditional Field Visibility**: Added attrs to hide monthly/yearly price and template fields when corresponding active flags are False
+- **Smart Button Integration**: Added invoices smart button to client form view with proper visibility and navigation
+
 ## Previous Features (Pre-July 6, 2025)
 
 - Created comprehensive j_portainer_saas_web module with modern pricing snippet for website integration
