@@ -894,13 +894,6 @@ class SaasClient(models.Model):
                 # Create the subscription
                 subscription = self.env['sale.subscription'].create(subscription_vals)
                 
-                # Find and set subscription stage to "in progress" type
-                in_progress_stage = self.env['sale.subscription.stage'].search([
-                    ('type', '=', 'in_progress')
-                ], limit=1)
-                if in_progress_stage:
-                    subscription.stage_id = in_progress_stage.id
-                
                 # Add subscription lines from template products
                 for product_template in template.product_ids:
                     if product_template.is_saas_product:
@@ -915,13 +908,16 @@ class SaasClient(models.Model):
                                 'product_uom_qty': 1,
                             }
                             self.env['sale.subscription.line'].create(line_vals)
+                
+                # Start the subscription (sets proper stage and status)
+                subscription.action_start_subscription()
+                
                 # Set the subscription ID in vals
                 vals['sc_subscription_id'] = subscription.id
                 
                 # Generate first invoice for paid subscriptions (not free trial)
                 if not is_free_trial:
                     try:
-                        subscription.action_start_subscription()
                         # Create first invoice using manual_invoice method
                         subscription.manual_invoice()
                         _logger.info(f"First invoice generated for paid subscription {subscription.name}")
