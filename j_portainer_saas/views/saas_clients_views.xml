@@ -139,7 +139,7 @@
                                    options="{'no_create': True}"
                                    placeholder="Select the SaaS package..."/>
                             <field name="sc_subscription_period"/>
-                            <field name="sc_is_free_trial" attrs="{'invisible': ['|', ('sc_package_id', '=', False), ('sc_package_id.pkg_has_free_trial', '=', False)]}"/>
+                            <field name="sc_is_free_trial" invisible="not sc_package_id or not sc_package_id.pkg_has_free_trial"/>
                             <field name="sc_template_id"
                                    options="{'no_create': True}"
                                    placeholder="Select subscription template..."/>

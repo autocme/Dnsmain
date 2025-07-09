@@ -183,7 +183,7 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Subscription Activation**: Moved action_start_subscription call to handle stage setting automatically instead of manual stage assignment
 - **First Invoice Generation**: Added automatic first invoice generation for paid subscriptions (non-free trial) during client creation using manual_invoice method
 - **Package Form Field Repositioning**: Repositioned pkg_monthly_active and pkg_yearly_active fields to appear first in pricing rows
-- **Conditional Field Visibility**: Added attrs to hide monthly/yearly price and template fields when corresponding active flags are False
+- **Conditional Field Visibility**: Updated to Odoo 17.0 syntax using invisible attribute instead of attrs for field visibility control
 - **Smart Button Integration**: Added invoices smart button to client form view with proper visibility and navigation
 
 ## Previous Features (Pre-July 6, 2025)
