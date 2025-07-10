@@ -160,7 +160,7 @@ class SaaSWebController(http.Controller):
         except:
             return 30
 
-    @http.route('/saas/purchase/confirm', type='http', auth='user', methods=['GET'], csrf=False)
+    @http.route('/saas/purchase/confirm', type='http', website=True, auth='user', methods=['GET'], csrf=False)
     def purchase_confirm(self, package_id, billing_cycle='monthly', is_free_trial='false', **kwargs):
         """
         Display purchase confirmation page with package details and legal agreement
