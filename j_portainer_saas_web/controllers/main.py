@@ -195,6 +195,10 @@ class SaaSWebController(http.Controller):
             price = package.pkg_mon_price if billing_cycle == 'monthly' else package.pkg_yea_price
             currency_symbol = package.pkg_currency_id.symbol if package.pkg_currency_id else '$'
             
+            # Handle None price values
+            if price is None:
+                price = 0.0
+            
             # Prepare template data
             template_data = {
                 'package': package,
@@ -205,6 +209,11 @@ class SaaSWebController(http.Controller):
                 'period_text': 'month' if billing_cycle == 'monthly' else 'year',
                 'free_trial_days': self._get_free_trial_days(),
             }
+            
+            # Log template data for debugging
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.info(f"Purchase Confirm Template Data: package_id={package.id}, billing_cycle='{billing_cycle}', is_free_trial={is_free_trial}, price={price}")
             
             return request.render('j_portainer_saas_web.purchase_confirm', template_data)
             
@@ -232,6 +241,14 @@ class SaaSWebController(http.Controller):
             _logger = logging.getLogger(__name__)
             _logger.info(f"Website Purchase Request: package_id={package_id}, billing_cycle='{billing_cycle}', is_free_trial={is_free_trial}, kwargs={kwargs}")
             
+            # Validate package_id parameter
+            if package_id is None:
+                _logger.error("Package ID is None")
+                return {
+                    'success': False,
+                    'error': 'Package ID is required'
+                }
+            
             # Validate billing cycle parameter
             if billing_cycle not in ['monthly', 'yearly']:
                 _logger.warning(f"Invalid billing_cycle '{billing_cycle}', defaulting to 'monthly'")
@@ -246,7 +263,16 @@ class SaaSWebController(http.Controller):
                 }
             
             # Get the package
-            package = request.env['saas.package'].sudo().browse(int(package_id))
+            try:
+                package_id_int = int(package_id)
+            except (ValueError, TypeError) as e:
+                _logger.error(f"Invalid package_id format: {package_id}, error: {e}")
+                return {
+                    'success': False,
+                    'error': f'Invalid package ID format: {package_id}'
+                }
+            
+            package = request.env['saas.package'].sudo().browse(package_id_int)
             if not package.exists():
                 return {
                     'success': False,

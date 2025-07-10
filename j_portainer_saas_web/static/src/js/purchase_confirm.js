@@ -30,7 +30,13 @@
     function handleStartClick(e) {
         e.preventDefault();
         
-        var button = e.target;
+        // Find the actual button element (in case click was on child element)
+        var button = e.target.closest('.saas_start_btn');
+        if (!button) {
+            console.error('Could not find button element');
+            return;
+        }
+        
         var packageId = button.getAttribute('data-package-id');
         var billingCycle = button.getAttribute('data-billing-cycle');
         var isFreeTrial = button.getAttribute('data-is-free-trial') === 'true';
@@ -40,6 +46,16 @@
             billingCycle: billingCycle,
             isFreeTrial: isFreeTrial
         });
+        
+        // Validate required parameters
+        if (!packageId || !billingCycle) {
+            console.error('Missing required parameters:', {
+                packageId: packageId,
+                billingCycle: billingCycle
+            });
+            showErrorMessage('Missing required information. Please refresh the page and try again.');
+            return;
+        }
         
         // Show loading screen
         showLoadingScreen();
@@ -116,6 +132,14 @@
             isFreeTrial: isFreeTrial
         });
         
+        // Convert packageId to integer and validate
+        var packageIdInt = parseInt(packageId);
+        if (isNaN(packageIdInt) || packageIdInt <= 0) {
+            console.error('Invalid package ID:', packageId);
+            handlePurchaseError('Invalid package ID. Please refresh the page and try again.');
+            return;
+        }
+        
         fetch('/saas/package/purchase', {
             method: 'POST',
             headers: {
@@ -126,7 +150,7 @@
                 jsonrpc: '2.0',
                 method: 'call',
                 params: {
-                    package_id: parseInt(packageId),
+                    package_id: packageIdInt,
                     billing_cycle: billingCycle,
                     is_free_trial: isFreeTrial
                 }
