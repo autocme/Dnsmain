@@ -93,7 +93,7 @@
                                     <button type="button" class="saas_start_btn" id="saasStartBtn"
                                             t-att-data-package-id="package.id"
                                             t-att-data-billing-cycle="billing_cycle"
-                                            t-att-data-is-free-trial="is_free_trial">
+                                            t-att-data-is-free-trial="'true' if is_free_trial else 'false'">
                                         <span class="saas_btn_text">Start Now</span>
                                         <i class="fa fa-arrow-right saas_btn_icon"></i>
                                     </button>

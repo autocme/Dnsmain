@@ -176,7 +176,10 @@ class SaaSWebController(http.Controller):
         try:
             # Convert string parameters to appropriate types
             package_id = int(package_id)
-            is_free_trial = is_free_trial.lower() == 'true'
+            is_free_trial = str(is_free_trial).lower() == 'true'
+            
+            # Debug logging for parameter conversion
+            _logger.info(f"Purchase Confirm: package_id={package_id}, billing_cycle='{billing_cycle}', is_free_trial_param='{is_free_trial}' (original), is_free_trial_converted={is_free_trial}")
             
             # Get the package
             package = request.env['saas.package'].sudo().browse(package_id)

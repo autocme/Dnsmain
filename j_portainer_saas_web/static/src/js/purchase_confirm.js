@@ -39,7 +39,16 @@
         
         var packageId = button.getAttribute('data-package-id');
         var billingCycle = button.getAttribute('data-billing-cycle');
-        var isFreeTrial = button.getAttribute('data-is-free-trial') === 'true';
+        var isFreeTrialAttr = button.getAttribute('data-is-free-trial');
+        var isFreeTrial = isFreeTrialAttr === 'true' || isFreeTrialAttr === 'True';
+        
+        // Debug logging to track the attribute value
+        console.log('Button attributes:', {
+            'data-package-id': packageId,
+            'data-billing-cycle': billingCycle,
+            'data-is-free-trial': isFreeTrialAttr,
+            'isFreeTrial (converted)': isFreeTrial
+        });
         
         console.log('Starting purchase process:', {
             packageId: packageId,
