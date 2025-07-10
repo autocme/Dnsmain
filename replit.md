@@ -206,6 +206,12 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Auto-Deployment for Paid Clients**: Added automatic deployment trigger when subscription invoices are paid
 - **Subdomain Redirect**: Success screen now redirects to client's full domain instead of dashboard
 - **Account Move Extension**: Added invoice payment monitoring to trigger client deployment automatically
+- **Fixed Free Trial Parameter Flow**: Enhanced debug logging and parameter validation to ensure `sc_is_free_trial` field is properly set during client creation
+- **URL Redirection Fix**: Corrected success screen redirect to use clean domain URLs without server prefix (e.g., `https://33.jaah.it` instead of `http://192.168.1.54:8070/saas/purchase/33.jaah.it`)
+- **Removed Duplicate Invoice Creation**: Eliminated duplicate invoice generation in controller, letting base module handle all invoice creation automatically
+- **Enhanced Invoice Portal Integration**: Controller now retrieves existing invoices from subscriptions instead of creating new ones
+- **Clean Domain URL Handling**: Added proper URL parsing and cleaning for client domain redirects in both controller and JavaScript
+- **Debug Logging Enhancement**: Added comprehensive logging throughout purchase flow to track parameter passing and client creation
 
 ## Previous Features (Pre-July 6, 2025)
 

@@ -296,18 +296,21 @@ class SaaSWebController(http.Controller):
                 }
             
             # Create SaaS client with draft status
-            saas_client = request.env['saas.client'].sudo().create({
+            client_vals = {
                 'sc_partner_id': partner.id,
                 'sc_package_id': package.id,
                 'sc_status': 'draft',
                 'sc_subscription_period': billing_cycle,
                 'sc_is_free_trial': is_free_trial,
-            })
+            }
+            
+            # Debug logging for client creation
+            _logger.info(f"Creating SaaS client with values: {client_vals}")
+            
+            saas_client = request.env['saas.client'].sudo().create(client_vals)
             
             # Log the purchase details for debugging
-            import logging
-            _logger = logging.getLogger(__name__)
-            _logger.info(f"Website Purchase: Created SaaS client {saas_client.id} with billing_cycle='{billing_cycle}', sc_subscription_period='{saas_client.sc_subscription_period}', is_free_trial={is_free_trial}")
+            _logger.info(f"Website Purchase: Created SaaS client {saas_client.id} with billing_cycle='{billing_cycle}', sc_subscription_period='{saas_client.sc_subscription_period}', is_free_trial={is_free_trial}, sc_is_free_trial={saas_client.sc_is_free_trial}")
             
             # Deploy the client ONLY if it's a free trial
             if is_free_trial:
@@ -318,22 +321,32 @@ class SaaSWebController(http.Controller):
                 except Exception as e:
                     _logger.warning(f"Failed to deploy free trial client {saas_client.id}: {e}")
             
-            # Generate invoice for paid packages
+            # Get invoice portal URL for paid packages (invoice already created by base module)
             invoice_portal_url = None
-            if not is_free_trial:
+            if not is_free_trial and saas_client.sc_subscription_id:
                 try:
-                    # Generate subscription invoice
-                    if saas_client.sc_subscription_id:
-                        invoice = saas_client.sc_subscription_id.manual_invoice()
-                        if invoice:
-                            # Get the invoice portal URL
-                            invoice_portal_url = f"/my/invoices/{invoice.id}"
-                            _logger.info(f"Generated invoice {invoice.id} for paid client {saas_client.id}")
+                    # Get the latest invoice from the subscription
+                    invoices = saas_client.sc_subscription_id.invoice_ids
+                    if invoices:
+                        latest_invoice = invoices[-1]  # Get the most recent invoice
+                        invoice_portal_url = f"/my/invoices/{latest_invoice.id}"
+                        _logger.info(f"Found invoice {latest_invoice.id} for paid client {saas_client.id}")
                 except Exception as e:
-                    _logger.warning(f"Failed to generate invoice for paid client {saas_client.id}: {e}")
+                    _logger.warning(f"Failed to get invoice for paid client {saas_client.id}: {e}")
             
-            # Get client full domain for redirect
-            client_domain = saas_client.sc_full_domain if saas_client.sc_full_domain else '/web'
+            # Get client full domain for redirect (clean domain without server prefix)
+            client_domain = '/web'
+            if saas_client.sc_full_domain:
+                # Extract clean domain from full domain (remove any server prefix)
+                full_domain = saas_client.sc_full_domain
+                if full_domain.startswith('http://') or full_domain.startswith('https://'):
+                    # Extract domain from URL
+                    from urllib.parse import urlparse
+                    parsed = urlparse(full_domain)
+                    client_domain = f"https://{parsed.netloc}"
+                else:
+                    # Use domain as-is, add https if needed
+                    client_domain = f"https://{full_domain}" if not full_domain.startswith('http') else full_domain
             
             # Create appropriate success message
             if is_free_trial:

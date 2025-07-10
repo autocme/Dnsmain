@@ -899,6 +899,7 @@ class SaasClient(models.Model):
                 
                 # Get free trial setting
                 is_free_trial = vals.get('sc_is_free_trial', False)
+                _logger.info(f"SaaS Client Creation: is_free_trial={is_free_trial}, package has free trial={package.pkg_has_free_trial}")
                 
                 # Calculate start date based on free trial
                 from datetime import date, timedelta

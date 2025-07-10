@@ -76,9 +76,17 @@
         // Redirect to client domain if available, otherwise to dashboard
         var redirectUrl = '/web';
         if (window.saasClientResult && window.saasClientResult.client_domain) {
-            redirectUrl = window.saasClientResult.client_domain;
+            var clientDomain = window.saasClientResult.client_domain;
+            // Check if client_domain is already a clean URL
+            if (clientDomain.startsWith('http://') || clientDomain.startsWith('https://')) {
+                redirectUrl = clientDomain;
+            } else if (clientDomain !== '/web') {
+                // Add https if it's a domain without protocol
+                redirectUrl = clientDomain.startsWith('http') ? clientDomain : `https://${clientDomain}`;
+            }
         }
         
+        console.log('Redirecting to:', redirectUrl);
         window.location.href = redirectUrl;
     }
     
