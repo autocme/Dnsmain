@@ -74,10 +74,17 @@
                                 
                                 <!-- Legal Agreement -->
                                 <div class="saas_legal_agreement">
-                                    <p>
+                                    <p t-if="is_free_trial">
                                         By clicking on <strong>Start Now</strong>, you accept our 
                                         <a href="#" class="saas_legal_link">Subscription Agreement</a> and 
                                         <a href="#" class="saas_legal_link">Privacy Policy</a>
+                                    </p>
+                                    <p t-else="">
+                                        By clicking on <strong>Start Now</strong>, you accept our 
+                                        <a href="#" class="saas_legal_link">Subscription Agreement</a> and 
+                                        <a href="#" class="saas_legal_link">Privacy Policy</a>. 
+                                        <br/><br/>
+                                        <strong>Note:</strong> A subscription will be created and an invoice will be generated for your account. You will be able to review and pay the invoice after confirmation.
                                     </p>
                                 </div>
                                 
@@ -126,11 +133,18 @@
                                             </div>
                                             <div class="saas_check_item" t-if="not is_free_trial">
                                                 <i class="fa fa-check"></i>
-                                                <span>Payment processed successfully</span>
+                                                <span>Invoice generated and ready for payment</span>
+                                            </div>
+                                            <div class="saas_payment_link" t-if="not is_free_trial" id="saasPaymentLink" style="display: none;">
+                                                <a href="#" class="saas_invoice_link" id="saasInvoiceLink" target="_blank">
+                                                    <i class="fa fa-external-link"></i>
+                                                    View Invoice &amp; Make Payment
+                                                </a>
                                             </div>
                                         </div>
                                         <button type="button" class="saas_continue_btn" id="saasContinueBtn">
-                                            Continue to Dashboard
+                                            <span t-if="is_free_trial">Go to My Instance</span>
+                                            <span t-else="">Continue to Dashboard</span>
                                         </button>
                                     </div>
                                 </div>

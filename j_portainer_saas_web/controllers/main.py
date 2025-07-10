@@ -318,19 +318,34 @@ class SaaSWebController(http.Controller):
                 except Exception as e:
                     _logger.warning(f"Failed to deploy free trial client {saas_client.id}: {e}")
             
-            # For now, redirect to Google (test URL)
-            test_redirect_url = "https://google.com"
+            # Generate invoice for paid packages
+            invoice_portal_url = None
+            if not is_free_trial:
+                try:
+                    # Generate subscription invoice
+                    if saas_client.sc_subscription_id:
+                        invoice = saas_client.sc_subscription_id.manual_invoice()
+                        if invoice:
+                            # Get the invoice portal URL
+                            invoice_portal_url = f"/my/invoices/{invoice.id}"
+                            _logger.info(f"Generated invoice {invoice.id} for paid client {saas_client.id}")
+                except Exception as e:
+                    _logger.warning(f"Failed to generate invoice for paid client {saas_client.id}: {e}")
+            
+            # Get client full domain for redirect
+            client_domain = saas_client.sc_full_domain if saas_client.sc_full_domain else '/web'
             
             # Create appropriate success message
             if is_free_trial:
                 message = f'Successfully started free trial for {package.pkg_name} and initiated deployment'
             else:
-                message = f'Successfully created SaaS instance for {package.pkg_name}'
+                message = f'Successfully created SaaS instance for {package.pkg_name} and generated invoice'
             
             return {
                 'success': True,
                 'client_id': saas_client.id,
-                'redirect_url': test_redirect_url,
+                'client_domain': client_domain,
+                'invoice_portal_url': invoice_portal_url,
                 'message': message,
                 'is_free_trial': is_free_trial
             }

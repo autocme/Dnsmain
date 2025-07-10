@@ -200,6 +200,12 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Success Screen**: Professional completion page with checklist and "All done!" message
 - **Responsive Confirmation Page**: Modern, classy design with unique CSS classes to avoid conflicts
 - **Free Trial Auto-Deployment**: Free trial clients are automatically deployed after creation, paid clients require manual deployment
+- **Fixed Free Trial Parameter Flow**: Resolved issue where is_free_trial parameter wasn't being passed correctly to client creation
+- **Enhanced Paid Package Flow**: Added subscription creation notice and invoice generation for paid packages
+- **Invoice Portal Integration**: Paid packages now show invoice portal link for payment processing
+- **Auto-Deployment for Paid Clients**: Added automatic deployment trigger when subscription invoices are paid
+- **Subdomain Redirect**: Success screen now redirects to client's full domain instead of dashboard
+- **Account Move Extension**: Added invoice payment monitoring to trigger client deployment automatically
 
 ## Previous Features (Pre-July 6, 2025)
 

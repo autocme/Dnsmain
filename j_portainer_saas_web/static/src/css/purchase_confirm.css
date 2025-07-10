@@ -367,6 +367,33 @@
     box-shadow: 0 4px 12px rgba(135, 90, 123, 0.3);
 }
 
+/* Payment Link Styling */
+.saas_payment_link {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.saas_invoice_link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #875a7b;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.saas_invoice_link:hover {
+    background-color: #6b4c66;
+    color: white;
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(135, 90, 123, 0.3);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .saas_steps_progress {

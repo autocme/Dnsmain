@@ -73,8 +73,13 @@
     function handleContinueClick(e) {
         e.preventDefault();
         
-        // Redirect to dashboard or home
-        window.location.href = '/web';
+        // Redirect to client domain if available, otherwise to dashboard
+        var redirectUrl = '/web';
+        if (window.saasClientResult && window.saasClientResult.client_domain) {
+            redirectUrl = window.saasClientResult.client_domain;
+        }
+        
+        window.location.href = redirectUrl;
     }
     
     /**
@@ -195,6 +200,19 @@
         
         // Hide loading screen
         hideLoadingScreen();
+        
+        // Store result data for success screen
+        window.saasClientResult = result;
+        
+        // Show invoice link for paid packages
+        if (!result.is_free_trial && result.invoice_portal_url) {
+            var paymentLink = document.getElementById('saasPaymentLink');
+            var invoiceLink = document.getElementById('saasInvoiceLink');
+            if (paymentLink && invoiceLink) {
+                invoiceLink.href = result.invoice_portal_url;
+                paymentLink.style.display = 'block';
+            }
+        }
         
         // Show success screen after a short delay
         setTimeout(function() {

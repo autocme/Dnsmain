@@ -844,6 +844,27 @@ class SaasClient(models.Model):
             'target': 'current',
         }
     
+    def check_and_deploy_if_invoice_paid(self):
+        """Check if subscription invoice is paid and deploy client if needed."""
+        self.ensure_one()
+        if not self.sc_subscription_id:
+            return False
+            
+        # Check if there are any paid invoices for this subscription
+        paid_invoices = self.sc_subscription_id.invoice_ids.filtered(lambda inv: inv.payment_state == 'paid')
+        
+        if paid_invoices and self.sc_status == 'draft':
+            try:
+                # Deploy the client
+                self.action_deploy_client()
+                _logger.info(f"Auto-deployed client {self.id} after invoice payment")
+                return True
+            except Exception as e:
+                _logger.warning(f"Failed to auto-deploy client {self.id} after invoice payment: {e}")
+                return False
+        
+        return False
+    
     # ========================================================================
     # BUSINESS METHODS
     # ========================================================================
