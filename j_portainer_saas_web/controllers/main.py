@@ -160,6 +160,59 @@ class SaaSWebController(http.Controller):
         except:
             return 30
 
+    @http.route('/saas/purchase/confirm', type='http', auth='user', methods=['GET'], csrf=False)
+    def purchase_confirm(self, package_id, billing_cycle='monthly', is_free_trial='false', **kwargs):
+        """
+        Display purchase confirmation page with package details and legal agreement
+        
+        Args:
+            package_id (str): Selected package ID
+            billing_cycle (str): 'monthly' or 'yearly'
+            is_free_trial (str): 'true' or 'false'
+            
+        Returns:
+            Rendered confirmation template
+        """
+        try:
+            # Convert string parameters to appropriate types
+            package_id = int(package_id)
+            is_free_trial = is_free_trial.lower() == 'true'
+            
+            # Get the package
+            package = request.env['saas.package'].sudo().browse(package_id)
+            if not package.exists() or not package.pkg_active:
+                return request.render('j_portainer_saas_web.purchase_error', {
+                    'error_message': 'Package not found or not available'
+                })
+            
+            # Validate free trial request
+            if is_free_trial and not package.pkg_has_free_trial:
+                return request.render('j_portainer_saas_web.purchase_error', {
+                    'error_message': 'Free trial is not available for this package'
+                })
+            
+            # Get pricing information
+            price = package.pkg_mon_price if billing_cycle == 'monthly' else package.pkg_yea_price
+            currency_symbol = package.pkg_currency_id.symbol if package.pkg_currency_id else '$'
+            
+            # Prepare template data
+            template_data = {
+                'package': package,
+                'billing_cycle': billing_cycle,
+                'is_free_trial': is_free_trial,
+                'price': price,
+                'currency_symbol': currency_symbol,
+                'period_text': 'month' if billing_cycle == 'monthly' else 'year',
+                'free_trial_days': self._get_free_trial_days(),
+            }
+            
+            return request.render('j_portainer_saas_web.purchase_confirm', template_data)
+            
+        except Exception as e:
+            return request.render('j_portainer_saas_web.purchase_error', {
+                'error_message': f'Error loading confirmation page: {str(e)}'
+            })
+
     @http.route('/saas/package/purchase', type='json', auth='user', methods=['POST'], csrf=False)
     def purchase_package(self, package_id, billing_cycle='monthly', is_free_trial=False, **kwargs):
         """
@@ -230,12 +283,21 @@ class SaaSWebController(http.Controller):
             _logger = logging.getLogger(__name__)
             _logger.info(f"Website Purchase: Created SaaS client {saas_client.id} with billing_cycle='{billing_cycle}', sc_subscription_period='{saas_client.sc_subscription_period}', is_free_trial={is_free_trial}")
             
+            # Deploy the client ONLY if it's a free trial
+            if is_free_trial:
+                try:
+                    # Deploy the free trial client
+                    saas_client.action_deploy_client()
+                    _logger.info(f"Free trial client {saas_client.id} deployment started")
+                except Exception as e:
+                    _logger.warning(f"Failed to deploy free trial client {saas_client.id}: {e}")
+            
             # For now, redirect to Google (test URL)
             test_redirect_url = "https://google.com"
             
             # Create appropriate success message
             if is_free_trial:
-                message = f'Successfully started free trial for {package.pkg_name}'
+                message = f'Successfully started free trial for {package.pkg_name} and initiated deployment'
             else:
                 message = f'Successfully created SaaS instance for {package.pkg_name}'
             

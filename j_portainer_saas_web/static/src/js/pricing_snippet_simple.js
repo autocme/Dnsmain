@@ -357,8 +357,9 @@
         // Show loading state
         showLoadingState(button);
         
-        // Make purchase request
-        makePurchaseRequest(packageId, billingCycle, isFreeTrial, button);
+        // Redirect to confirmation page instead of direct purchase
+        var confirmUrl = `/saas/purchase/confirm?package_id=${packageId}&billing_cycle=${billingCycle}&is_free_trial=${isFreeTrial}`;
+        window.location.href = confirmUrl;
     }
     
     /**
