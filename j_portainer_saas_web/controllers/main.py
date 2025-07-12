@@ -177,6 +177,9 @@ class SaaSWebController(http.Controller):
             # Convert string parameters to appropriate types
             package_id = int(package_id)
             is_free_trial = str(is_free_trial).lower() == 'true'
+
+            import logging
+            _logger = logging.getLogger(__name__)
             
             # Debug logging for parameter conversion
             _logger.info(f"Purchase Confirm: package_id={package_id}, billing_cycle='{billing_cycle}', is_free_trial_param='{is_free_trial}' (original), is_free_trial_converted={is_free_trial}")
