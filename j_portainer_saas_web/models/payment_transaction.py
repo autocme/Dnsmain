@@ -10,8 +10,16 @@ _logger = logging.getLogger(__name__)
 class PaymentTransaction(models.Model):
     """
     Extension of payment.transaction model to support SaaS-specific fields
+    Only loads if payment module is available
     """
     _inherit = 'payment.transaction'
+    
+    def __init__(self, pool, cr):
+        # Only initialize if payment module is available
+        if 'payment.transaction' in pool:
+            super().__init__(pool, cr)
+        else:
+            _logger.warning("Payment module not available, skipping payment.transaction extension")
     
     # SaaS-specific fields for tracking package and billing information
     x_saas_package_id = fields.Integer(

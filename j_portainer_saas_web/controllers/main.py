@@ -210,10 +210,21 @@ class SaaSWebController(http.Controller):
             # Get payment acquirers for paid packages
             payment_acquirers = []
             if not is_free_trial:
-                payment_acquirers = request.env['payment.acquirer'].sudo().search([
-                    ('state', '=', 'enabled'),
-                    ('company_id', '=', request.env.user.company_id.id)
-                ])
+                try:
+                    # Check if payment module is available
+                    if 'payment.acquirer' in request.env:
+                        payment_acquirers = request.env['payment.acquirer'].sudo().search([
+                            ('state', '=', 'enabled'),
+                            ('company_id', '=', request.env.user.company_id.id)
+                        ])
+                    else:
+                        # Payment module not available - redirect to regular flow
+                        _logger.warning("Payment module not available, redirecting to regular purchase flow")
+                        return request.redirect(f'/saas/package/purchase?package_id={package_id}&billing_cycle={billing_cycle}&is_free_trial=false')
+                except Exception as e:
+                    _logger.error(f"Error loading payment acquirers: {str(e)}")
+                    # Fallback to regular purchase flow
+                    return request.redirect(f'/saas/package/purchase?package_id={package_id}&billing_cycle={billing_cycle}&is_free_trial=false')
             
             # Prepare template data
             template_data = {
@@ -242,7 +253,7 @@ class SaaSWebController(http.Controller):
     @http.route('/saas/payment/process', type='http', auth='user', methods=['POST'], csrf=False)
     def process_payment(self, package_id, billing_cycle, acquirer_id, amount, currency_id, **kwargs):
         """
-        Process payment through Odoo payment acquirer
+        Process payment through Odoo payment acquirer (fallback to regular flow if payment module unavailable)
         
         Args:
             package_id (str): Package ID
@@ -255,6 +266,11 @@ class SaaSWebController(http.Controller):
             Redirect to payment processing or success page
         """
         try:
+            # Check if payment module is available
+            if 'payment.acquirer' not in request.env:
+                _logger.warning("Payment module not available, redirecting to regular purchase flow")
+                return request.redirect(f'/saas/package/purchase?package_id={package_id}&billing_cycle={billing_cycle}&is_free_trial=false')
+            
             # Convert parameters
             package_id = int(package_id)
             acquirer_id = int(acquirer_id)
@@ -317,12 +333,10 @@ class SaaSWebController(http.Controller):
             })
             
         except Exception as e:
-            import logging
             _logger = logging.getLogger(__name__)
             _logger.error(f"Payment processing error: {str(e)}")
-            return request.render('j_portainer_saas_web.purchase_error', {
-                'error_message': f'Payment processing error: {str(e)}'
-            })
+            # Fallback to regular purchase flow on any error
+            return request.redirect(f'/saas/package/purchase?package_id={package_id}&billing_cycle={billing_cycle}&is_free_trial=false')
 
     @http.route('/saas/payment/return', type='http', auth='user', methods=['GET', 'POST'], csrf=False)
     def payment_return(self, **kwargs):

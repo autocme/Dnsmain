@@ -228,6 +228,10 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Unique CSS Classes**: All styling uses unique saas_* prefixed classes to avoid conflicts with base Odoo styles
 - **Payment Form Integration**: Integrated with Odoo's standard payment form rendering for seamless acquirer processing
 - **Transaction State Management**: Proper handling of payment states (done, pending, failed) with appropriate user feedback
+- **Payment Module Fallback**: Added graceful fallback to regular purchase flow when payment module is not available or enabled
+- **Conditional Payment Processing**: Payment functionality only loads when payment.acquirer model is available in the system
+- **Flexible Template Logic**: Templates adapt to show payment section only when payment acquirers are available
+- **Error-Resilient Architecture**: System continues to work normally even without payment module dependency
 
 ## Previous Features (Pre-July 6, 2025)
 

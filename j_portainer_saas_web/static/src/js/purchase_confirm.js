@@ -94,11 +94,12 @@
             return;
         }
         
-        // Validate payment method selection
+        // Check if payment form exists (fallback to regular purchase if not)
         var paymentForm = document.getElementById('saasPaymentForm');
         if (!paymentForm) {
-            console.error('Payment form not found');
-            showErrorMessage('Payment form not found. Please refresh the page.');
+            console.log('Payment form not found, falling back to regular purchase flow');
+            // Fallback to regular purchase request
+            makePurchaseRequest(packageId, billingCycle, false);
             return;
         }
         

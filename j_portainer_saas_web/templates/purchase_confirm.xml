@@ -67,7 +67,7 @@
                                 </div>
                                 
                                 <!-- Payment Section (Only for Paid Packages) -->
-                                <div class="saas_payment_section" t-if="not is_free_trial">
+                                <div class="saas_payment_section" t-if="not is_free_trial and payment_acquirers">
                                     <h4 class="saas_payment_title">Payment Method</h4>
                                     <div class="saas_payment_form">
                                         <form id="saasPaymentForm" method="post" action="/saas/payment/process">
@@ -136,12 +136,19 @@
                                         <span class="saas_btn_text">Start Now</span>
                                         <i class="fa fa-arrow-right saas_btn_icon"></i>
                                     </button>
-                                    <button t-else="" type="button" class="saas_pay_btn" id="saasPayBtn"
+                                    <button t-elif="not is_free_trial and payment_acquirers" type="button" class="saas_pay_btn" id="saasPayBtn"
                                             t-att-data-package-id="package.id"
                                             t-att-data-billing-cycle="billing_cycle"
                                             t-att-data-is-free-trial="'false'">
                                         <span class="saas_btn_text">Pay Now</span>
                                         <i class="fa fa-credit-card saas_btn_icon"></i>
+                                    </button>
+                                    <button t-else="" type="button" class="saas_start_btn" id="saasStartBtn"
+                                            t-att-data-package-id="package.id"
+                                            t-att-data-billing-cycle="billing_cycle"
+                                            t-att-data-is-free-trial="'false'">
+                                        <span class="saas_btn_text">Start Now</span>
+                                        <i class="fa fa-arrow-right saas_btn_icon"></i>
                                     </button>
                                 </div>
                                 
