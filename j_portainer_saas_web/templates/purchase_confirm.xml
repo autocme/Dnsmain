@@ -63,6 +63,21 @@
                                         <p t-esc="package.pkg_description"/>
                                     </div>
                                     
+                                    <!-- Debug: Show all template variables -->
+                                    <div class="saas_debug_vars" style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                                        <h6>Debug Variables:</h6>
+                                        <ul style="font-size: 12px; margin: 0;">
+                                            <li>Package ID: <span t-esc="package.id"/></li>
+                                            <li>Package Name: <span t-esc="package.pkg_name"/></li>
+                                            <li>Billing Cycle: <span t-esc="billing_cycle"/></li>
+                                            <li>is_free_trial: <span t-esc="is_free_trial"/></li>
+                                            <li>Price: <span t-esc="price"/></li>
+                                            <li>Currency Symbol: <span t-esc="currency_symbol"/></li>
+                                            <li>Period Text: <span t-esc="period_text"/></li>
+                                            <li>Payment Acquirers Count: <span t-esc="len(payment_acquirers or [])"/></li>
+                                            <li>Package Has Free Trial: <span t-esc="package.pkg_has_free_trial"/></li>
+                                        </ul>
+                                    </div>
 
                                 </div>
                                 
@@ -110,6 +125,19 @@
                                                 </div>
                                             </div>
                                         </form>
+                                    </div>
+                                </div>
+                                
+                                <!-- Debug: Show when payment section is hidden -->
+                                <div class="saas_debug_section" t-if="not is_free_trial and not payment_acquirers">
+                                    <div class="alert alert-info">
+                                        <h5>Debug Info:</h5>
+                                        <p>Payment section hidden because:</p>
+                                        <ul>
+                                            <li>is_free_trial: <span t-esc="is_free_trial"/></li>
+                                            <li>payment_acquirers count: <span t-esc="len(payment_acquirers or [])"/></li>
+                                            <li>Package has free trial: <span t-esc="package.pkg_has_free_trial"/></li>
+                                        </ul>
                                     </div>
                                 </div>
                                 
