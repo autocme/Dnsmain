@@ -147,15 +147,23 @@ class PaymentTransaction(models.Model):
                 'partner_id': self.partner_id.id,
                 'amount': self.amount,
                 'currency_id': self.currency_id.id,
-                'journal_id': self.acquirer_id.journal_id.id,
                 'payment_transaction_id': self.id,
                 'ref': f'Payment for {client.sc_package_id.pkg_name} - {self.reference}',
             }
             
-            # Get payment method
-            payment_methods = self.acquirer_id.journal_id.inbound_payment_method_ids
-            if payment_methods:
-                payment_vals['payment_method_id'] = payment_methods[0].id
+            # Get journal from provider (Odoo 17) or acquirer (older versions)
+            journal = None
+            if hasattr(self, 'provider_id') and self.provider_id:
+                journal = self.provider_id.journal_id
+            elif hasattr(self, 'acquirer_id') and self.acquirer_id:
+                journal = self.acquirer_id.journal_id
+            
+            if journal:
+                payment_vals['journal_id'] = journal.id
+                # Get payment method
+                payment_methods = journal.inbound_payment_method_ids
+                if payment_methods:
+                    payment_vals['payment_method_id'] = payment_methods[0].id
             
             payment = self.env['account.payment'].sudo().create(payment_vals)
             payment.post()

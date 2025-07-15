@@ -101,7 +101,7 @@
                                                                    name="acquirer_id" t-att-value="acquirer.id" 
                                                                    class="saas_acquirer_radio" required="required"/>
                                                             <label t-att-for="'acquirer_' + str(acquirer.id)" class="saas_acquirer_label">
-                                                                <img t-if="acquirer.image" t-att-src="'/web/image/payment.acquirer/' + str(acquirer.id) + '/image'" 
+                                                                <img t-if="acquirer.image" t-att-src="'/web/image/payment.provider/' + str(acquirer.id) + '/image'" 
                                                                      t-att-alt="acquirer.name" class="saas_acquirer_image"/>
                                                                 <span t-else="" class="saas_acquirer_name" t-esc="acquirer.name"/>
                                                             </label>

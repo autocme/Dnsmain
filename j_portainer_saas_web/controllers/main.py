@@ -211,8 +211,14 @@ class SaaSWebController(http.Controller):
             payment_acquirers = []
             if not is_free_trial:
                 try:
-                    # Check if payment module is available
-                    if 'payment.acquirer' in request.env:
+                    # Check if payment module is available (Odoo 17 uses payment.provider)
+                    if 'payment.provider' in request.env:
+                        payment_acquirers = request.env['payment.provider'].sudo().search([
+                            ('state', '=', 'enabled'),
+                            ('company_id', '=', request.env.user.company_id.id)
+                        ])
+                    elif 'payment.acquirer' in request.env:
+                        # Fallback for older Odoo versions
                         payment_acquirers = request.env['payment.acquirer'].sudo().search([
                             ('state', '=', 'enabled'),
                             ('company_id', '=', request.env.user.company_id.id)
@@ -222,7 +228,7 @@ class SaaSWebController(http.Controller):
                         _logger.warning("Payment module not available, redirecting to regular purchase flow")
                         return request.redirect(f'/saas/package/purchase?package_id={package_id}&billing_cycle={billing_cycle}&is_free_trial=false')
                 except Exception as e:
-                    _logger.error(f"Error loading payment acquirers: {str(e)}")
+                    _logger.error(f"Error loading payment providers: {str(e)}")
                     # Fallback to regular purchase flow
                     return request.redirect(f'/saas/package/purchase?package_id={package_id}&billing_cycle={billing_cycle}&is_free_trial=false')
             
@@ -266,8 +272,8 @@ class SaaSWebController(http.Controller):
             Redirect to payment processing or success page
         """
         try:
-            # Check if payment module is available
-            if 'payment.acquirer' not in request.env:
+            # Check if payment module is available (Odoo 17 uses payment.provider)
+            if 'payment.provider' not in request.env and 'payment.acquirer' not in request.env:
                 _logger.warning("Payment module not available, redirecting to regular purchase flow")
                 return request.redirect(f'/saas/package/purchase?package_id={package_id}&billing_cycle={billing_cycle}&is_free_trial=false')
             
@@ -284,9 +290,14 @@ class SaaSWebController(http.Controller):
                     'error_message': 'Package not found'
                 })
             
-            # Get payment acquirer
-            acquirer = request.env['payment.acquirer'].sudo().browse(acquirer_id)
-            if not acquirer.exists():
+            # Get payment provider (Odoo 17) or acquirer (older versions)
+            provider = None
+            if 'payment.provider' in request.env:
+                provider = request.env['payment.provider'].sudo().browse(acquirer_id)
+            elif 'payment.acquirer' in request.env:
+                provider = request.env['payment.acquirer'].sudo().browse(acquirer_id)
+            
+            if not provider or not provider.exists():
                 return request.render('j_portainer_saas_web.purchase_error', {
                     'error_message': 'Payment method not found'
                 })
@@ -300,7 +311,6 @@ class SaaSWebController(http.Controller):
                 'amount': amount,
                 'currency_id': currency_id,
                 'partner_id': request.env.user.partner_id.id,
-                'acquirer_id': acquirer_id,
                 'return_url': '/saas/payment/return',
                 'landing_route': '/saas/payment/return',
                 'x_saas_package_id': package_id,
@@ -308,14 +318,20 @@ class SaaSWebController(http.Controller):
                 'x_saas_user_id': request.env.user.id,
             }
             
+            # Add provider_id or acquirer_id based on Odoo version
+            if 'payment.provider' in request.env:
+                transaction_vals['provider_id'] = acquirer_id
+            else:
+                transaction_vals['acquirer_id'] = acquirer_id
+            
             transaction = request.env['payment.transaction'].sudo().create(transaction_vals)
             
             # Log the transaction creation
             _logger = logging.getLogger(__name__)
             _logger.info(f"Payment transaction created: {transaction.reference} for package {package.pkg_name}")
             
-            # Get payment form from acquirer
-            acquirer_form = acquirer.sudo().render(
+            # Get payment form from provider
+            provider_form = provider.sudo().render(
                 reference, 
                 amount, 
                 currency_id, 
@@ -325,7 +341,7 @@ class SaaSWebController(http.Controller):
             
             # Return the payment form for processing
             return request.render('j_portainer_saas_web.payment_form', {
-                'payment_form': acquirer_form,
+                'payment_form': provider_form,
                 'transaction': transaction,
                 'package': package,
                 'amount': amount,
