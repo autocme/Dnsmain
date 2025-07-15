@@ -28,12 +28,14 @@ conversion-optimized layout similar to Odoo's official pricing structure.
     'depends': [
         'base',
         'website',
+        'payment',
         'j_portainer_saas',
     ],
     'data': [
         'views/snippets.xml',
         'views/snippet_options.xml',
         'templates/purchase_confirm.xml',
+        'templates/purchase_error.xml',
     ],
     'assets': {
         'web.assets_frontend': [

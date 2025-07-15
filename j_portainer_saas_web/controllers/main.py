@@ -4,6 +4,8 @@
 from odoo import http
 from odoo.http import request
 import json
+import time
+import logging
 
 
 class SaaSWebController(http.Controller):
@@ -205,6 +207,14 @@ class SaaSWebController(http.Controller):
             if price is None:
                 price = 0.0
             
+            # Get payment acquirers for paid packages
+            payment_acquirers = []
+            if not is_free_trial:
+                payment_acquirers = request.env['payment.acquirer'].sudo().search([
+                    ('state', '=', 'enabled'),
+                    ('company_id', '=', request.env.user.company_id.id)
+                ])
+            
             # Prepare template data
             template_data = {
                 'package': package,
@@ -214,6 +224,7 @@ class SaaSWebController(http.Controller):
                 'currency_symbol': currency_symbol,
                 'period_text': 'month' if billing_cycle == 'monthly' else 'year',
                 'free_trial_days': self._get_free_trial_days(),
+                'payment_acquirers': payment_acquirers,
             }
             
             # Log template data for debugging
@@ -226,6 +237,247 @@ class SaaSWebController(http.Controller):
         except Exception as e:
             return request.render('j_portainer_saas_web.purchase_error', {
                 'error_message': f'Error loading confirmation page: {str(e)}'
+            })
+
+    @http.route('/saas/payment/process', type='http', auth='user', methods=['POST'], csrf=False)
+    def process_payment(self, package_id, billing_cycle, acquirer_id, amount, currency_id, **kwargs):
+        """
+        Process payment through Odoo payment acquirer
+        
+        Args:
+            package_id (str): Package ID
+            billing_cycle (str): Billing cycle
+            acquirer_id (str): Payment acquirer ID
+            amount (str): Payment amount
+            currency_id (str): Currency ID
+            
+        Returns:
+            Redirect to payment processing or success page
+        """
+        try:
+            # Convert parameters
+            package_id = int(package_id)
+            acquirer_id = int(acquirer_id)
+            amount = float(amount)
+            currency_id = int(currency_id)
+            
+            # Get package and validate
+            package = request.env['saas.package'].sudo().browse(package_id)
+            if not package.exists():
+                return request.render('j_portainer_saas_web.purchase_error', {
+                    'error_message': 'Package not found'
+                })
+            
+            # Get payment acquirer
+            acquirer = request.env['payment.acquirer'].sudo().browse(acquirer_id)
+            if not acquirer.exists():
+                return request.render('j_portainer_saas_web.purchase_error', {
+                    'error_message': 'Payment method not found'
+                })
+            
+            # Create payment transaction using Odoo's standard method
+            reference = f'SAAS-{package.pkg_name}-{request.env.user.id}-{int(time.time())}'
+            
+            # Create transaction with proper Odoo payment flow
+            transaction_vals = {
+                'reference': reference,
+                'amount': amount,
+                'currency_id': currency_id,
+                'partner_id': request.env.user.partner_id.id,
+                'acquirer_id': acquirer_id,
+                'return_url': '/saas/payment/return',
+                'landing_route': '/saas/payment/return',
+                'x_saas_package_id': package_id,
+                'x_saas_billing_cycle': billing_cycle,
+                'x_saas_user_id': request.env.user.id,
+            }
+            
+            transaction = request.env['payment.transaction'].sudo().create(transaction_vals)
+            
+            # Log the transaction creation
+            _logger = logging.getLogger(__name__)
+            _logger.info(f"Payment transaction created: {transaction.reference} for package {package.pkg_name}")
+            
+            # Get payment form from acquirer
+            acquirer_form = acquirer.sudo().render(
+                reference, 
+                amount, 
+                currency_id, 
+                partner_id=request.env.user.partner_id.id,
+                tx_values=transaction_vals
+            )
+            
+            # Return the payment form for processing
+            return request.render('j_portainer_saas_web.payment_form', {
+                'payment_form': acquirer_form,
+                'transaction': transaction,
+                'package': package,
+                'amount': amount,
+                'currency_symbol': package.pkg_currency_id.symbol if package.pkg_currency_id else '$',
+            })
+            
+        except Exception as e:
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.error(f"Payment processing error: {str(e)}")
+            return request.render('j_portainer_saas_web.purchase_error', {
+                'error_message': f'Payment processing error: {str(e)}'
+            })
+
+    @http.route('/saas/payment/return', type='http', auth='user', methods=['GET', 'POST'], csrf=False)
+    def payment_return(self, **kwargs):
+        """
+        Handle payment return from payment acquirer
+        
+        Returns:
+            Redirect to success page or error page
+        """
+        try:
+            # Get transaction reference from parameters
+            reference = kwargs.get('reference') or kwargs.get('tx_ref')
+            
+            if not reference:
+                return request.render('j_portainer_saas_web.purchase_error', {
+                    'error_message': 'Payment reference not found'
+                })
+            
+            # Find transaction
+            transaction = request.env['payment.transaction'].sudo().search([
+                ('reference', '=', reference)
+            ], limit=1)
+            
+            if not transaction:
+                return request.render('j_portainer_saas_web.purchase_error', {
+                    'error_message': 'Payment transaction not found'
+                })
+            
+            # Check transaction state
+            if transaction.state == 'done':
+                # Payment successful - create SaaS client
+                return self._create_saas_client_from_payment(transaction)
+            elif transaction.state == 'pending':
+                # Payment pending
+                return request.render('j_portainer_saas_web.payment_pending', {
+                    'transaction': transaction
+                })
+            else:
+                # Payment failed
+                return request.render('j_portainer_saas_web.purchase_error', {
+                    'error_message': 'Payment failed. Please try again.'
+                })
+                
+        except Exception as e:
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.error(f"Payment return error: {str(e)}")
+            return request.render('j_portainer_saas_web.purchase_error', {
+                'error_message': f'Payment return error: {str(e)}'
+            })
+
+    def _create_saas_client_from_payment(self, transaction):
+        """
+        Create SaaS client after successful payment
+        
+        Args:
+            transaction: Payment transaction record
+            
+        Returns:
+            Redirect to success page or error page
+        """
+        try:
+            # Get package and user information
+            package_id = transaction.x_saas_package_id
+            billing_cycle = transaction.x_saas_billing_cycle
+            user_id = transaction.x_saas_user_id
+            
+            package = request.env['saas.package'].sudo().browse(package_id)
+            user = request.env['res.users'].sudo().browse(user_id)
+            
+            if not package.exists() or not user.exists():
+                return request.render('j_portainer_saas_web.purchase_error', {
+                    'error_message': 'Package or user not found'
+                })
+            
+            # Create SaaS client
+            client_vals = {
+                'sc_partner_id': user.partner_id.id,
+                'sc_package_id': package.id,
+                'sc_subscription_period': billing_cycle,
+                'sc_is_free_trial': False,
+                'sc_status': 'draft',
+            }
+            
+            client = request.env['saas.client'].sudo().create(client_vals)
+            
+            # Log client creation
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.info(f"SaaS client created from payment: {client.id} for package {package.pkg_name}")
+            
+            # Create subscription and link to payment
+            subscription = client.sc_subscription_id
+            if subscription:
+                # Link payment transaction to subscription invoice
+                invoices = subscription.recurring_invoice_line_ids.mapped('invoice_id')
+                if invoices:
+                    invoice = invoices[0]
+                    # Create payment from transaction
+                    payment_vals = {
+                        'payment_type': 'inbound',
+                        'partner_type': 'customer',
+                        'partner_id': user.partner_id.id,
+                        'amount': transaction.amount,
+                        'currency_id': transaction.currency_id.id,
+                        'journal_id': transaction.acquirer_id.journal_id.id,
+                        'payment_method_id': transaction.acquirer_id.journal_id.inbound_payment_method_ids[0].id,
+                        'payment_transaction_id': transaction.id,
+                        'ref': f'Payment for {package.pkg_name} - {transaction.reference}',
+                    }
+                    
+                    payment = request.env['account.payment'].sudo().create(payment_vals)
+                    payment.post()
+                    
+                    # Reconcile with invoice
+                    invoice.js_assign_outstanding_line(payment.move_line_ids.filtered(lambda r: r.account_id.internal_type == 'receivable').id)
+                    
+                    _logger.info(f"Payment linked to invoice: {invoice.id} for transaction {transaction.reference}")
+            
+            # Deploy client automatically after successful payment
+            try:
+                client.action_deploy()
+                _logger.info(f"SaaS client deployed automatically: {client.id}")
+            except Exception as e:
+                _logger.warning(f"Auto-deployment failed for client {client.id}: {str(e)}")
+            
+            # Prepare success data
+            success_data = {
+                'success': True,
+                'client_id': client.id,
+                'client_domain': client.sc_full_domain,
+                'package_name': package.pkg_name,
+                'transaction_reference': transaction.reference,
+                'message': f'Successfully created SaaS instance for {package.pkg_name} and processed payment'
+            }
+            
+            # Redirect directly to client domain
+            if client.sc_full_domain:
+                domain = client.sc_full_domain
+                # Clean domain URL
+                if domain.startswith('http'):
+                    clean_domain = domain
+                else:
+                    clean_domain = f'https://{domain}'
+                
+                return request.redirect(clean_domain)
+            else:
+                return request.redirect('/web')
+                
+        except Exception as e:
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.error(f"SaaS client creation from payment failed: {str(e)}")
+            return request.render('j_portainer_saas_web.purchase_error', {
+                'error_message': f'Failed to create SaaS instance: {str(e)}'
             })
 
     @http.route('/saas/package/purchase', type='json', auth='user', methods=['POST'], csrf=False)

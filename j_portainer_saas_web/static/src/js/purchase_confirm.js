@@ -13,10 +13,15 @@
         console.log('Initializing SaaS purchase confirmation page...');
         
         var startBtn = document.getElementById('saasStartBtn');
+        var payBtn = document.getElementById('saasPayBtn');
         var continueBtn = document.getElementById('saasContinueBtn');
         
         if (startBtn) {
             startBtn.addEventListener('click', handleStartClick);
+        }
+        
+        if (payBtn) {
+            payBtn.addEventListener('click', handlePayClick);
         }
         
         if (continueBtn) {
@@ -77,6 +82,62 @@
     }
     
     /**
+     * Handle "Pay Now" button click
+     */
+    function handlePayClick(e) {
+        e.preventDefault();
+        
+        // Find the actual button element
+        var button = e.target.closest('.saas_pay_btn');
+        if (!button) {
+            console.error('Could not find pay button element');
+            return;
+        }
+        
+        // Validate payment method selection
+        var paymentForm = document.getElementById('saasPaymentForm');
+        if (!paymentForm) {
+            console.error('Payment form not found');
+            showErrorMessage('Payment form not found. Please refresh the page.');
+            return;
+        }
+        
+        var selectedAcquirer = paymentForm.querySelector('input[name="acquirer_id"]:checked');
+        if (!selectedAcquirer) {
+            showErrorMessage('Please select a payment method to continue.');
+            return;
+        }
+        
+        var packageId = button.getAttribute('data-package-id');
+        var billingCycle = button.getAttribute('data-billing-cycle');
+        
+        console.log('Starting payment process:', {
+            packageId: packageId,
+            billingCycle: billingCycle,
+            acquirerId: selectedAcquirer.value
+        });
+        
+        // Validate required parameters
+        if (!packageId || !billingCycle) {
+            console.error('Missing required parameters:', {
+                packageId: packageId,
+                billingCycle: billingCycle
+            });
+            showErrorMessage('Missing required information. Please refresh the page and try again.');
+            return;
+        }
+        
+        // Show loading screen
+        showLoadingScreen();
+        
+        // Disable the button
+        button.disabled = true;
+        
+        // Process payment
+        processPayment(packageId, billingCycle, selectedAcquirer.value);
+    }
+    
+    /**
      * Handle "Continue to Dashboard" button click
      */
     function handleContinueClick(e) {
@@ -97,6 +158,39 @@
         
         console.log('Redirecting to:', redirectUrl);
         window.location.href = redirectUrl;
+    }
+    
+    /**
+     * Process payment through Odoo payment acquirer
+     */
+    function processPayment(packageId, billingCycle, acquirerId) {
+        console.log('Processing payment...', {
+            packageId: packageId,
+            billingCycle: billingCycle,
+            acquirerId: acquirerId
+        });
+        
+        // Submit payment form to Odoo payment processing
+        var paymentForm = document.getElementById('saasPaymentForm');
+        if (paymentForm) {
+            // Add acquirer_id to form if not already present
+            var acquirerInput = paymentForm.querySelector('input[name="acquirer_id"]:checked');
+            if (acquirerInput) {
+                paymentForm.submit();
+            } else {
+                console.error('No payment method selected');
+                showErrorMessage('Please select a payment method.');
+                hideLoadingScreen();
+                var payBtn = document.getElementById('saasPayBtn');
+                if (payBtn) payBtn.disabled = false;
+            }
+        } else {
+            console.error('Payment form not found');
+            showErrorMessage('Payment form not found. Please refresh the page.');
+            hideLoadingScreen();
+            var payBtn = document.getElementById('saasPayBtn');
+            if (payBtn) payBtn.disabled = false;
+        }
     }
     
     /**
