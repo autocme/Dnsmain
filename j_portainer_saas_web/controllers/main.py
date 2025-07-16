@@ -248,6 +248,7 @@ class SaaSWebController(http.Controller):
             import logging
             _logger = logging.getLogger(__name__)
             _logger.info(f"Purchase Confirm Template Data: package_id={package.id}, billing_cycle='{billing_cycle}', is_free_trial={is_free_trial}, price={price}")
+            _logger.info(f"Template data types: is_free_trial={type(is_free_trial)}, payment_acquirers={type(payment_acquirers)}, count={len(payment_acquirers)}")
             
             return request.render('j_portainer_saas_web.purchase_confirm', template_data)
             

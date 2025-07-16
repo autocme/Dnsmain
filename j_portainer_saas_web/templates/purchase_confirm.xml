@@ -70,7 +70,8 @@
                                             <li>Package ID: <span t-esc="package.id"/></li>
                                             <li>Package Name: <span t-esc="package.pkg_name"/></li>
                                             <li>Billing Cycle: <span t-esc="billing_cycle"/></li>
-                                            <li>is_free_trial: <span t-esc="is_free_trial"/></li>
+                                            <li>is_free_trial: '<span t-esc="is_free_trial"/>' (type: <span t-esc="type(is_free_trial).__name__"/>)</li>
+                                            <li>is_free_trial bool check: <span t-esc="bool(is_free_trial)"/></li>
                                             <li>Price: <span t-esc="price"/></li>
                                             <li>Currency Symbol: <span t-esc="currency_symbol"/></li>
                                             <li>Period Text: <span t-esc="period_text"/></li>
@@ -143,13 +144,8 @@
                                 
                                 <!-- Legal Agreement -->
                                 <div class="saas_legal_agreement">
-                                    <p t-if="is_free_trial">
+                                    <p>
                                         By clicking on <strong>Start Now</strong>, you accept our 
-                                        <a href="#" class="saas_legal_link">Subscription Agreement</a> and 
-                                        <a href="#" class="saas_legal_link">Privacy Policy</a>
-                                    </p>
-                                    <p t-else="">
-                                        By clicking on <strong>Pay Now</strong>, you accept our 
                                         <a href="#" class="saas_legal_link">Subscription Agreement</a> and 
                                         <a href="#" class="saas_legal_link">Privacy Policy</a>.
                                     </p>
@@ -157,24 +153,11 @@
                                 
                                 <!-- Action Button -->
                                 <div class="saas_action_section">
-                                    <button t-if="is_free_trial" type="button" class="saas_start_btn" id="saasStartBtn"
+                                    <!-- Always show a button regardless of conditions -->
+                                    <button type="button" class="saas_start_btn" id="saasStartBtn"
                                             t-att-data-package-id="package.id"
                                             t-att-data-billing-cycle="billing_cycle"
-                                            t-att-data-is-free-trial="'true'">
-                                        <span class="saas_btn_text">Start Now</span>
-                                        <i class="fa fa-arrow-right saas_btn_icon"></i>
-                                    </button>
-                                    <button t-elif="not is_free_trial and payment_acquirers" type="button" class="saas_pay_btn" id="saasPayBtn"
-                                            t-att-data-package-id="package.id"
-                                            t-att-data-billing-cycle="billing_cycle"
-                                            t-att-data-is-free-trial="'false'">
-                                        <span class="saas_btn_text">Pay Now</span>
-                                        <i class="fa fa-credit-card saas_btn_icon"></i>
-                                    </button>
-                                    <button t-else="" type="button" class="saas_start_btn" id="saasStartBtn"
-                                            t-att-data-package-id="package.id"
-                                            t-att-data-billing-cycle="billing_cycle"
-                                            t-att-data-is-free-trial="'false'">
+                                            t-att-data-is-free-trial="is_free_trial and 'true' or 'false'">
                                         <span class="saas_btn_text">Start Now</span>
                                         <i class="fa fa-arrow-right saas_btn_icon"></i>
                                     </button>
