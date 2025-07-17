@@ -39,43 +39,18 @@
                                     </t>
                                     <t t-else="">
                                         <t t-if="payment_acquirers">
-                                            <form id="saasPaymentForm" action="/payment/process" method="post">
-                                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                                <input type="hidden" name="package_id" t-att-value="package.id"/>
-                                                <input type="hidden" name="billing_cycle" t-att-value="billing_cycle"/>
-                                                <input type="hidden" name="amount" t-att-value="price"/>
-                                                <input type="hidden" name="currency_id" t-att-value="request.env.company.currency_id.id"/>
-                                                <input type="hidden" name="partner_id" t-att-value="request.env.user.partner_id.id"/>
-                                                <input type="hidden" name="reference" t-att-value="'SAAS-' + str(package.id) + '-' + billing_cycle"/>
-                                                
-                                                <div class="payment-methods">
-                                                    <t t-foreach="payment_acquirers" t-as="acquirer">
-                                                        <div class="form-check payment-method-item mb-3 p-3 border rounded">
-                                                            <input class="form-check-input" type="radio" name="acquirer_id" 
-                                                                   t-att-id="'acquirer_' + str(acquirer.id)" 
-                                                                   t-att-value="acquirer.id"
-                                                                   t-att-checked="acquirer_index == 0"/>
-                                                            <label class="form-check-label d-flex align-items-center w-100" 
-                                                                   t-att-for="'acquirer_' + str(acquirer.id)">
-                                                                <div class="d-flex align-items-center justify-content-between w-100">
-                                                                    <span class="payment-method-name" t-esc="acquirer.name"/>
-                                                                    <t t-if="acquirer.image">
-                                                                        <img t-att-src="'/web/image/payment.provider/' + str(acquirer.id) + '/image'" 
-                                                                             t-att-alt="acquirer.name" 
-                                                                             class="payment-method-logo"
-                                                                             style="max-height: 30px; max-width: 60px;"/>
-                                                                    </t>
-                                                                    <t t-else="">
-                                                                        <span class="badge bg-secondary">
-                                                                            <i class="fa fa-credit-card"></i>
-                                                                        </span>
-                                                                    </t>
-                                                                </div>
-                                                            </label>
-                                                        </div>
-                                                    </t>
-                                                </div>
-                                            </form>
+                                            <!-- Use Odoo's existing payment form template -->
+                                            <t t-call="payment.form">
+                                                <t t-set="providers" t-value="payment_acquirers"/>
+                                                <t t-set="reference" t-value="'SAAS-' + str(package.id) + '-' + billing_cycle"/>
+                                                <t t-set="amount" t-value="price"/>
+                                                <t t-set="currency" t-value="request.env.company.currency_id"/>
+                                                <t t-set="partner_id" t-value="request.env.user.partner_id.id"/>
+                                                <t t-set="access_token" t-value="False"/>
+                                                <t t-set="transaction_route" t-value="'/payment/transaction'"/>
+                                                <t t-set="landing_route" t-value="'/saas/payment/success'"/>
+                                                <t t-set="submit_button_label" t-value="'Pay now'"/>
+                                            </t>
                                         </t>
                                         <t t-else="">
                                             <div class="alert alert-warning">

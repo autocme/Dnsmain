@@ -13,32 +13,34 @@
         console.log('Initializing SaaS purchase confirmation page...');
         
         var startBtn = document.getElementById('saasStartBtn');
-        var payBtn = document.getElementById('saasPayBtn');
+        var payNowBtn = document.getElementById('saasPayNowBtn');
         var continueBtn = document.getElementById('saasContinueBtn');
         
         if (startBtn) {
             startBtn.addEventListener('click', handleStartClick);
         }
         
-        if (payBtn) {
-            payBtn.addEventListener('click', handlePayClick);
+        if (payNowBtn) {
+            payNowBtn.addEventListener('click', handlePayNowClick);
         }
         
         if (continueBtn) {
             continueBtn.addEventListener('click', handleContinueClick);
         }
+        
+        // For paid packages, the payment form is handled by Odoo's payment module
+        // We just need to handle the free trial flow
     }
     
     /**
-     * Handle "Start Now" button click
+     * Handle "Start Now" button click (Free Trial)
      */
     function handleStartClick(e) {
         e.preventDefault();
         
-        // Find the actual button element (in case click was on child element)
-        var button = e.target.closest('.saas_start_btn');
+        var button = e.target.closest('#saasStartBtn');
         if (!button) {
-            console.error('Could not find button element');
+            console.error('Could not find start button element');
             return;
         }
         
@@ -47,15 +49,7 @@
         var isFreeTrialAttr = button.getAttribute('data-is-free-trial');
         var isFreeTrial = isFreeTrialAttr === 'true' || isFreeTrialAttr === 'True';
         
-        // Debug logging to track the attribute value
-        console.log('Button attributes:', {
-            'data-package-id': packageId,
-            'data-billing-cycle': billingCycle,
-            'data-is-free-trial': isFreeTrialAttr,
-            'isFreeTrial (converted)': isFreeTrial
-        });
-        
-        console.log('Starting purchase process:', {
+        console.log('Starting free trial process:', {
             packageId: packageId,
             billingCycle: billingCycle,
             isFreeTrial: isFreeTrial
@@ -82,40 +76,26 @@
     }
     
     /**
-     * Handle "Pay Now" button click
+     * Handle "Pay Now" button click (For Free Trial - redirects to purchase endpoint)
      */
-    function handlePayClick(e) {
+    function handlePayNowClick(e) {
         e.preventDefault();
         
-        // Find the actual button element
-        var button = e.target.closest('.saas_pay_btn');
+        var button = e.target.closest('#saasPayNowBtn');
         if (!button) {
-            console.error('Could not find pay button element');
-            return;
-        }
-        
-        // Check if payment form exists (fallback to regular purchase if not)
-        var paymentForm = document.getElementById('saasPaymentForm');
-        if (!paymentForm) {
-            console.log('Payment form not found, falling back to regular purchase flow');
-            // Fallback to regular purchase request
-            makePurchaseRequest(packageId, billingCycle, false);
-            return;
-        }
-        
-        var selectedAcquirer = paymentForm.querySelector('input[name="acquirer_id"]:checked');
-        if (!selectedAcquirer) {
-            showErrorMessage('Please select a payment method to continue.');
+            console.error('Could not find pay now button element');
             return;
         }
         
         var packageId = button.getAttribute('data-package-id');
         var billingCycle = button.getAttribute('data-billing-cycle');
+        var isFreeTrialAttr = button.getAttribute('data-is-free-trial');
+        var isFreeTrial = isFreeTrialAttr === 'true' || isFreeTrialAttr === 'True';
         
-        console.log('Starting payment process:', {
+        console.log('Pay Now button clicked (should only be for free trial):', {
             packageId: packageId,
             billingCycle: billingCycle,
-            acquirerId: selectedAcquirer.value
+            isFreeTrial: isFreeTrial
         });
         
         // Validate required parameters
@@ -134,8 +114,8 @@
         // Disable the button
         button.disabled = true;
         
-        // Process payment
-        processPayment(packageId, billingCycle, selectedAcquirer.value);
+        // Make purchase request for free trial
+        makePurchaseRequest(packageId, billingCycle, isFreeTrial);
     }
     
     /**
@@ -162,36 +142,13 @@
     }
     
     /**
-     * Process payment through Odoo payment acquirer
+     * Process payment through Odoo payment acquirer (Not needed - handled by payment.form)
+     * This function is kept for backward compatibility but should not be used
      */
     function processPayment(packageId, billingCycle, acquirerId) {
-        console.log('Processing payment...', {
-            packageId: packageId,
-            billingCycle: billingCycle,
-            acquirerId: acquirerId
-        });
-        
-        // Submit payment form to Odoo payment processing
-        var paymentForm = document.getElementById('saasPaymentForm');
-        if (paymentForm) {
-            // Add acquirer_id to form if not already present
-            var acquirerInput = paymentForm.querySelector('input[name="acquirer_id"]:checked');
-            if (acquirerInput) {
-                paymentForm.submit();
-            } else {
-                console.error('No payment method selected');
-                showErrorMessage('Please select a payment method.');
-                hideLoadingScreen();
-                var payBtn = document.getElementById('saasPayBtn');
-                if (payBtn) payBtn.disabled = false;
-            }
-        } else {
-            console.error('Payment form not found');
-            showErrorMessage('Payment form not found. Please refresh the page.');
-            hideLoadingScreen();
-            var payBtn = document.getElementById('saasPayBtn');
-            if (payBtn) payBtn.disabled = false;
-        }
+        console.log('Payment processing is now handled by Odoo payment module');
+        // Payment processing is handled by Odoo's payment.form template
+        // This function is kept for backward compatibility but not used
     }
     
     /**
