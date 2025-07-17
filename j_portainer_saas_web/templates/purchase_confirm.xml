@@ -1,204 +1,224 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="purchase_confirm" name="Purchase Confirmation">
-        <t t-call="website.layout">
+    <template id="purchase_confirm" name="SaaS Package Purchase Confirmation">
+        <t t-set="head_website">
+            <t t-call-assets="web.assets_frontend"/>
+            <link href="/j_portainer_saas_web/static/src/css/purchase_confirm.css" rel="stylesheet"/>
+            <script src="/j_portainer_saas_web/static/src/js/purchase_confirm.js"></script>
+        </t>
+        <main>
             <div id="wrap" class="oe_structure oe_empty">
-                <div class="saas_purchase_confirm_page">
-                    <div class="container">
-                        <div class="row justify-content-center">
-                            <div class="col-lg-8 col-md-10">
-                                
-                                <!-- Step Progress Bar -->
-                                <div class="saas_steps_progress">
-                                    <div class="saas_step saas_step_completed">
-                                        <div class="saas_step_circle">
-                                            <i class="fa fa-check"></i>
-                                        </div>
-                                        <div class="saas_step_content">
-                                            <h6>Package Selection</h6>
-                                            <p t-esc="package.pkg_name"/>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="saas_step_line saas_step_line_completed"></div>
-                                    
-                                    <div class="saas_step saas_step_current">
-                                        <div class="saas_step_circle">
-                                            <span>2</span>
-                                        </div>
-                                        <div class="saas_step_content">
-                                            <h6 t-if="is_free_trial">Free Trial</h6>
-                                            <h6 t-else="">Payment</h6>
-                                            <p t-if="is_free_trial" t-esc="f'{free_trial_days} days free trial'"/>
-                                            <p t-else="" t-esc="f'{currency_symbol}{price}/{period_text}'"/>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="saas_step_line"></div>
-                                    
-                                    <div class="saas_step">
-                                        <div class="saas_step_circle">
-                                            <span>3</span>
-                                        </div>
-                                        <div class="saas_step_content">
-                                            <h6>Setup</h6>
-                                            <p>Create your instance</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Package Details Card -->
-                                <div class="saas_package_details_card">
-                                    <div class="saas_package_header">
-                                        <h3 t-esc="package.pkg_name"/>
-                                        <div class="saas_package_price">
-                                            <span t-if="is_free_trial" class="saas_trial_badge">Free Trial</span>
-                                            <span t-else="" class="saas_price_text">
-                                                <span t-esc="currency_symbol"/><span t-esc="price"/>/<span t-esc="period_text"/>
-                                            </span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="saas_package_description">
-                                        <p t-esc="package.pkg_description"/>
-                                    </div>
-                                    
+                <div class="container mt-4">
+                    <div class="row">
+                        <div class="col-lg-8">
+                            
+                            <!-- Breadcrumb Navigation -->
+                            <nav aria-label="breadcrumb" class="mb-4">
+                                <ol class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="#" class="text-muted">Review Order</a></li>
+                                    <li class="breadcrumb-item"><a href="#" class="text-muted">Shipping</a></li>
+                                    <li class="breadcrumb-item active" aria-current="page">Payment</li>
+                                </ol>
+                            </nav>
+                            
+                            <!-- Main Title -->
+                            <h1 class="mb-4">Confirm order</h1>
+                            
 
-
-                                </div>
-                                
-                                <!-- Package Features Section -->
-                                <div class="saas_package_features">
-                                    <h4>What's included:</h4>
-                                    <div class="saas_features_list">
-                                        <t t-foreach="package.pkg_features_ids" t-as="feature">
-                                            <div class="saas_feature_item">
-                                                <i class="fa fa-check text-success"></i>
-                                                <span t-esc="feature.pf_name"/>
+                            
+                            <!-- Payment Methods Section -->
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="card-title mb-4">CHOOSE A PAYMENT METHOD</h5>
+                                    
+                                    <t t-if="is_free_trial == 'true'">
+                                        <div class="alert alert-info">
+                                            <i class="fa fa-info-circle me-2"></i>
+                                            This is a free trial. No payment required.
+                                        </div>
+                                    </t>
+                                    <t t-else="">
+                                        <t t-if="payment_acquirers">
+                                            <form id="saasPaymentForm" action="/payment/process" method="post">
+                                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                                <input type="hidden" name="package_id" t-att-value="package.id"/>
+                                                <input type="hidden" name="billing_cycle" t-att-value="billing_cycle"/>
+                                                <input type="hidden" name="amount" t-att-value="price"/>
+                                                <input type="hidden" name="currency_id" t-att-value="request.env.company.currency_id.id"/>
+                                                <input type="hidden" name="partner_id" t-att-value="request.env.user.partner_id.id"/>
+                                                <input type="hidden" name="reference" t-att-value="'SAAS-' + str(package.id) + '-' + billing_cycle"/>
+                                                
+                                                <div class="payment-methods">
+                                                    <t t-foreach="payment_acquirers" t-as="acquirer">
+                                                        <div class="form-check payment-method-item mb-3 p-3 border rounded">
+                                                            <input class="form-check-input" type="radio" name="acquirer_id" 
+                                                                   t-att-id="'acquirer_' + str(acquirer.id)" 
+                                                                   t-att-value="acquirer.id"
+                                                                   t-att-checked="acquirer_index == 0"/>
+                                                            <label class="form-check-label d-flex align-items-center w-100" 
+                                                                   t-att-for="'acquirer_' + str(acquirer.id)">
+                                                                <div class="d-flex align-items-center justify-content-between w-100">
+                                                                    <span class="payment-method-name" t-esc="acquirer.name"/>
+                                                                    <t t-if="acquirer.image">
+                                                                        <img t-att-src="'/web/image/payment.provider/' + str(acquirer.id) + '/image'" 
+                                                                             t-att-alt="acquirer.name" 
+                                                                             class="payment-method-logo"
+                                                                             style="max-height: 30px; max-width: 60px;"/>
+                                                                    </t>
+                                                                    <t t-else="">
+                                                                        <span class="badge bg-secondary">
+                                                                            <i class="fa fa-credit-card"></i>
+                                                                        </span>
+                                                                    </t>
+                                                                </div>
+                                                            </label>
+                                                        </div>
+                                                    </t>
+                                                </div>
+                                            </form>
+                                        </t>
+                                        <t t-else="">
+                                            <div class="alert alert-warning">
+                                                <i class="fa fa-exclamation-triangle me-2"></i>
+                                                No payment methods available. Please contact support.
                                             </div>
                                         </t>
-                                        <t t-if="not package.pkg_features_ids">
-                                            <div class="saas_feature_item">
-                                                <i class="fa fa-check text-success"></i>
-                                                <span>Full SaaS platform access</span>
-                                            </div>
-                                            <div class="saas_feature_item">
-                                                <i class="fa fa-check text-success"></i>
-                                                <span>24/7 support</span>
-                                            </div>
-                                            <div class="saas_feature_item">
-                                                <i class="fa fa-check text-success"></i>
-                                                <span>Regular updates</span>
-                                            </div>
-                                        </t>
+                                    </t>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        
+                        <!-- Order Summary Sidebar -->
+                        <div class="col-lg-4">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">Order summary</h6>
+                                    <small class="text-muted">1 item(s) - <span t-esc="currency_symbol"/><span t-esc="price"/></small>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Package Item -->
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h6 class="mb-1" t-esc="package.pkg_name"/>
+                                            <small class="text-muted"><span t-esc="billing_cycle.title()"/> billing</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <div><span t-esc="currency_symbol"/><span t-esc="price"/></div>
+                                        </div>
                                     </div>
-                                </div>
-                                
-                                <!-- Legal Agreement -->
-                                <div class="saas_legal_agreement">
-                                    <p>
-                                        By clicking on <strong>Start Now</strong>, you accept our 
-                                        <a href="#" class="saas_legal_link">Subscription Agreement</a> and 
-                                        <a href="#" class="saas_legal_link">Privacy Policy</a>.
-                                    </p>
-                                </div>
-                                
-                                <!-- Action Button -->
-                                <div class="saas_action_section">
-                                    <!-- Free Trial Button -->
-                                    <button t-if="is_free_trial" type="button" class="saas_start_btn" id="saasStartBtn"
-                                            t-att-data-package-id="package.id"
-                                            t-att-data-billing-cycle="billing_cycle"
-                                            t-att-data-is-free-trial="'true'">
-                                        <span class="saas_btn_text">Start Free Trial</span>
-                                        <i class="fa fa-arrow-right saas_btn_icon"></i>
-                                    </button>
                                     
-                                    <!-- Paid Package - Proceed to Checkout -->
-                                    <button t-else="" type="button" class="saas_checkout_btn" id="saasCheckoutBtn"
-                                            t-att-data-package-id="package.id"
-                                            t-att-data-billing-cycle="billing_cycle"
-                                            t-att-data-price="price"
-                                            t-att-data-currency-symbol="currency_symbol"
-                                            t-att-data-period-text="period_text">
-                                        <span class="saas_btn_text">Proceed to Checkout</span>
-                                        <i class="fa fa-credit-card saas_btn_icon"></i>
-                                    </button>
-                                </div>
-                                
-                                <!-- Loading Screen (Hidden initially) -->
-                                <div class="saas_loading_screen" id="saasLoadingScreen" style="display: none;">
-                                    <div class="saas_loading_content">
-                                        <div class="saas_loading_spinner">
-                                            <div class="saas_spinner"></div>
+                                    <hr/>
+                                    
+                                    <!-- Pricing Breakdown -->
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Subtotal</span>
+                                        <span><span t-esc="currency_symbol"/> <span t-esc="price"/></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Taxes</span>
+                                        <span><span t-esc="currency_symbol"/> 0.00</span>
+                                    </div>
+                                    
+                                    <hr/>
+                                    
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <strong>Total</strong>
+                                        <strong><span t-esc="currency_symbol"/> <span t-esc="price"/></strong>
+                                    </div>
+                                    
+                                    <!-- Discount Code -->
+                                    <div class="input-group mb-3">
+                                        <input type="text" class="form-control" placeholder="Discount code..."/>
+                                        <button class="btn btn-outline-secondary" type="button">Apply</button>
+                                    </div>
+                                    
+                                    <!-- Action Buttons -->
+                                    <div class="d-grid gap-2">
+                                        <t t-if="is_free_trial == 'true'">
+                                            <button type="button" class="btn btn-primary btn-lg" id="saasStartBtn" 
+                                                    t-att-data-package-id="package.id" 
+                                                    t-att-data-billing-cycle="billing_cycle" 
+                                                    t-att-data-is-free-trial="is_free_trial">
+                                                Start Free Trial
+                                            </button>
+                                        </t>
+                                        <t t-else="">
+                                            <button type="button" class="btn btn-primary btn-lg" id="saasPayNowBtn" 
+                                                    t-att-data-package-id="package.id" 
+                                                    t-att-data-billing-cycle="billing_cycle" 
+                                                    t-att-data-is-free-trial="is_free_trial">
+                                                Pay now
+                                            </button>
+                                        </t>
+                                        
+                                        <div class="text-center mt-2">
+                                            <small class="text-muted">or</small>
                                         </div>
-                                        <h4 class="saas_loading_title">Setting up your instance...</h4>
-                                        <p class="saas_loading_subtitle">This may take a few moments</p>
-                                        <div class="saas_loading_progress">
-                                            <div class="saas_progress_bar">
-                                                <div class="saas_progress_fill"></div>
-                                            </div>
-                                        </div>
+                                        <a href="/saas/packages" class="btn btn-link text-muted">
+                                            <i class="fa fa-arrow-left me-1"></i>Back to packages
+                                        </a>
                                     </div>
                                 </div>
-                                
-                                <!-- Success Screen (Hidden initially) -->
-                                <div class="saas_success_screen" id="saasSuccessScreen" style="display: none;">
-                                    <div class="saas_success_content">
-                                        <div class="saas_success_icon">
-                                            <i class="fa fa-check-circle"></i>
-                                        </div>
-                                        <h3 class="saas_success_title">All done!</h3>
-                                        <div class="saas_success_checklist">
-                                            <div class="saas_check_item">
-                                                <i class="fa fa-check"></i>
-                                                <span>Your subscription has been created</span>
-                                            </div>
-                                            <div class="saas_check_item" t-if="is_free_trial">
-                                                <i class="fa fa-check"></i>
-                                                <span>Your instance has been deployed</span>
-                                            </div>
-                                            <div class="saas_check_item" t-if="not is_free_trial">
-                                                <i class="fa fa-check"></i>
-                                                <span>Invoice generated and ready for payment</span>
-                                            </div>
-                                            <div class="saas_payment_link" t-if="not is_free_trial" id="saasPaymentLink" style="display: none;">
-                                                <a href="#" class="saas_invoice_link" id="saasInvoiceLink" target="_blank">
-                                                    <i class="fa fa-external-link"></i>
-                                                    View Invoice &amp; Make Payment
-                                                </a>
-                                            </div>
-                                        </div>
-                                        <button type="button" class="saas_continue_btn" id="saasContinueBtn">
-                                            <span t-if="is_free_trial">Go to My Instance</span>
-                                            <span t-else="">Continue to Dashboard</span>
-                                        </button>
-                                    </div>
-                                </div>
-                                
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </t>
-    </template>
-    
-    <template id="purchase_error" name="Purchase Error">
-        <t t-call="website.layout">
-            <div id="wrap" class="oe_structure oe_empty">
-                <div class="container">
-                    <div class="row justify-content-center">
-                        <div class="col-lg-6 col-md-8 text-center">
-                            <div class="alert alert-danger mt-5">
-                                <h4>Purchase Error</h4>
-                                <p t-esc="error_message"/>
-                                <a href="/web" class="btn btn-primary">Back to Home</a>
-                            </div>
-                        </div>
+        </main>
+
+        <!-- Loading Screen -->
+        <div id="saasLoadingScreen" class="saas_loading_screen" style="display: none;">
+            <div class="saas_loading_content">
+                <div class="saas_loading_spinner">
+                    <div class="saas_spinner"></div>
+                </div>
+                <h4 class="saas_loading_title">Creating your SaaS instance...</h4>
+                <p class="saas_loading_subtitle">Please wait while we set up your environment</p>
+                <div class="saas_loading_progress">
+                    <div class="saas_progress_bar">
+                        <div class="saas_progress_fill"></div>
                     </div>
                 </div>
             </div>
-        </t>
+        </div>
+
+        <!-- Success Screen -->
+        <div id="saasSuccessScreen" class="saas_success_screen" style="display: none;">
+            <div class="saas_success_content">
+                <div class="saas_success_icon">
+                    <i class="fa fa-check-circle"></i>
+                </div>
+                <h2 class="saas_success_title">All done!</h2>
+                <div class="saas_success_checklist">
+                    <div class="saas_checklist_item">
+                        <i class="fa fa-check"></i>
+                        <span>SaaS instance created</span>
+                    </div>
+                    <div class="saas_checklist_item">
+                        <i class="fa fa-check"></i>
+                        <span>Environment configured</span>
+                    </div>
+                    <div class="saas_checklist_item">
+                        <i class="fa fa-check"></i>
+                        <span>Ready to use</span>
+                    </div>
+                </div>
+                <div class="saas_success_actions">
+                    <button type="button" class="saas_continue_btn" id="saasContinueBtn">
+                        Continue to Dashboard
+                    </button>
+                </div>
+                
+                <!-- Payment Link for Paid Packages -->
+                <div id="saasPaymentLink" class="saas_payment_link" style="display: none;">
+                    <p class="text-muted">Complete your payment to activate your subscription:</p>
+                    <a href="#" id="saasInvoiceLink" class="saas_invoice_link">
+                        <i class="fa fa-credit-card"></i>
+                        Pay Invoice
+                    </a>
+                </div>
+            </div>
+        </div>
     </template>
 </odoo>

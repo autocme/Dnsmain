@@ -412,6 +412,37 @@
     }
     
     /**
+     * Handle pay now button click (ecommerce-style payment)
+     */
+    function handlePayNowClick() {
+        var payNowBtn = document.getElementById('saasPayNowBtn');
+        if (!payNowBtn) {
+            console.error('Pay now button not found');
+            return;
+        }
+        
+        // Disable button to prevent double clicks
+        payNowBtn.disabled = true;
+        
+        // Get package data from button attributes
+        var packageId = payNowBtn.getAttribute('data-package-id');
+        var billingCycle = payNowBtn.getAttribute('data-billing-cycle');
+        var isFreeTrial = payNowBtn.getAttribute('data-is-free-trial');
+        
+        console.log('Pay now button clicked:', {
+            packageId: packageId,
+            billingCycle: billingCycle,
+            isFreeTrial: isFreeTrial
+        });
+        
+        // Show loading screen
+        showLoadingScreen();
+        
+        // Make purchase request
+        makePurchaseRequest(packageId, billingCycle, false);
+    }
+    
+    /**
      * Initialize purchase confirmation page
      */
     function initPurchaseConfirm() {
@@ -431,6 +462,12 @@
         var checkoutBtn = document.getElementById('saasCheckoutBtn');
         if (checkoutBtn) {
             checkoutBtn.addEventListener('click', handleCheckoutClick);
+        }
+        
+        // Pay now button for paid packages (ecommerce style)
+        var payNowBtn = document.getElementById('saasPayNowBtn');
+        if (payNowBtn) {
+            payNowBtn.addEventListener('click', handlePayNowClick);
         }
         
         // Continue button (success screen)
