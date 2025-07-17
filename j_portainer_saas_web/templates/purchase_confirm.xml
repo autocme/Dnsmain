@@ -7,7 +7,7 @@
                     <div class="container">
                         <div class="row justify-content-center">
                             <div class="col-lg-8 col-md-10">
-                                
+
                                 <!-- Step Progress Bar -->
                                 <div class="saas_steps_progress">
                                     <div class="saas_step saas_step_completed">
@@ -19,9 +19,9 @@
                                             <p t-esc="package.pkg_name"/>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="saas_step_line saas_step_line_completed"></div>
-                                    
+
                                     <div class="saas_step saas_step_current">
                                         <div class="saas_step_circle">
                                             <span>2</span>
@@ -33,9 +33,9 @@
                                             <p t-else="" t-esc="f'{currency_symbol}{price}/{period_text}'"/>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="saas_step_line"></div>
-                                    
+
                                     <div class="saas_step">
                                         <div class="saas_step_circle">
                                             <span>3</span>
@@ -46,7 +46,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Package Details Card -->
                                 <div class="saas_package_details_card">
                                     <div class="saas_package_header">
@@ -54,106 +54,114 @@
                                         <div class="saas_package_price">
                                             <span t-if="is_free_trial" class="saas_trial_badge">Free Trial</span>
                                             <span t-else="" class="saas_price_text">
-                                                <span t-esc="currency_symbol"/><span t-esc="price"/>/<span t-esc="period_text"/>
+                                                <span t-esc="currency_symbol"/>
+                                                <span t-esc="price"/>/
+                                                <span t-esc="period_text"/>
                                             </span>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="saas_package_description">
                                         <p t-esc="package.pkg_description"/>
                                     </div>
-                                    
-                                    <!-- Debug: Show all template variables -->
-                                    <div class="saas_debug_vars" style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 20px;">
-                                        <h6>Debug Variables:</h6>
-                                        <ul style="font-size: 12px; margin: 0;">
-                                            <li>Package ID: <span t-esc="package.id"/></li>
-                                            <li>Package Name: <span t-esc="package.pkg_name"/></li>
-                                            <li>Billing Cycle: <span t-esc="billing_cycle"/></li>
-                                            <li>is_free_trial: '<span t-esc="is_free_trial"/>'</li>
-                                            <li>is_free_trial bool check: <span t-esc="bool(is_free_trial)"/></li>
-                                            <li>Price: <span t-esc="price"/></li>
-                                            <li>Currency Symbol: <span t-esc="currency_symbol"/></li>
-                                            <li>Period Text: <span t-esc="period_text"/></li>
-                                            <li>Payment Acquirers Count: <span t-esc="len(payment_acquirers or [])"/></li>
-                                            <li>Package Has Free Trial: <span t-esc="package.pkg_has_free_trial"/></li>
-                                        </ul>
+
+                                    <div>
+                                        <t t-call="payment.form">
+                                            <t t-set="providers_sudo" t-value="payment_acquirers"/>
+                                            <t t-set="payment_methods_sudo"
+                                               t-value="request.env['payment.method'].sudo().browse()"/>
+                                            <t t-set="tokens_sudo"
+                                               t-value="request.env['payment.token'].sudo().browse()"/>
+                                            <t t-set="selected_token_id" t-value="False"/>
+                                            <t t-set="reference"
+                                               t-value="'SAAS-' + str(package.id) + '-' + billing_cycle"/>
+                                            <t t-set="amount" t-value="price"/>
+                                            <t t-set="currency" t-value="request.env.company.currency_id"/>
+                                            <t t-set="partner_id" t-value="request.env.user.partner_id.id"/>
+                                            <t t-set="access_token" t-value="False"/>
+                                            <t t-set="transaction_route" t-value="'/payment/transaction'"/>
+                                            <t t-set="landing_route" t-value="'/saas/payment/success'"/>
+                                            <t t-set="submit_button_label" t-value="'Pay now'"/>
+                                            <t t-set="inline_form" t-value="True"/>
+                                        </t>
+
                                     </div>
+                                    <!-- Debug: Show all template variables -->
+                                    <!--                                    <div class="saas_debug_vars" style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 20px;">-->
+                                    <!--                                        <h6>Debug Variables:</h6>-->
+                                    <!--                                        <ul style="font-size: 12px; margin: 0;">-->
+                                    <!--                                            <li>Package ID: <span t-esc="package.id"/></li>-->
+                                    <!--                                            <li>Package Name: <span t-esc="package.pkg_name"/></li>-->
+                                    <!--                                            <li>Billing Cycle: <span t-esc="billing_cycle"/></li>-->
+                                    <!--                                            <li>is_free_trial: '<span t-esc="is_free_trial"/>'</li>-->
+                                    <!--                                            <li>is_free_trial bool check: <span t-esc="bool(is_free_trial)"/></li>-->
+                                    <!--                                            <li>Price: <span t-esc="price"/></li>-->
+                                    <!--                                            <li>Currency Symbol: <span t-esc="currency_symbol"/></li>-->
+                                    <!--                                            <li>Period Text: <span t-esc="period_text"/></li>-->
+                                    <!--                                            <li>Payment Acquirers Count: <span t-esc="len(payment_acquirers or [])"/></li>-->
+                                    <!--                                            <li>Package Has Free Trial: <span t-esc="package.pkg_has_free_trial"/></li>-->
+                                    <!--                                        </ul>-->
+                                    <!--                                    </div>-->
 
                                 </div>
-                                
+
                                 <!-- Payment Section (Only for Paid Packages) -->
-                                <div class="saas_payment_section" t-if="not is_free_trial and payment_acquirers">
-                                    <t t-call="payment.form">
-                                        <t t-set="providers_sudo" t-value="payment_acquirers"/>
-                                        <t t-set="payment_methods_sudo"
-                                           t-value="request.env['payment.method'].sudo().browse()"/>
-                                        <t t-set="tokens_sudo" t-value="request.env['payment.token'].sudo().browse()"/>
-                                        <t t-set="selected_token_id" t-value="False"/>
-                                        <t t-set="reference" t-value="'SAAS-' + str(package.id) + '-' + billing_cycle"/>
-                                        <t t-set="amount" t-value="price"/>
-                                        <t t-set="currency" t-value="request.env.company.currency_id"/>
-                                        <t t-set="partner_id" t-value="request.env.user.partner_id.id"/>
-                                        <t t-set="access_token" t-value="False"/>
-                                        <t t-set="transaction_route" t-value="'/payment/transaction'"/>
-                                        <t t-set="landing_route" t-value="'/saas/payment/success'"/>
-                                        <t t-set="submit_button_label" t-value="'Pay now'"/>
-                                        <t t-set="inline_form" t-value="True"/>
-                                    </t>
+                                <!--                                <div class="saas_payment_section" t-if="not is_free_trial and payment_acquirers">-->
 
 
-<!--                                    <h4 class="saas_payment_title">Payment Method</h4>-->
-<!--                                    <div class="saas_payment_form">-->
-<!--                                        <form id="saasPaymentForm" method="post" action="/saas/payment/process">-->
-<!--                                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>-->
-<!--                                            <input type="hidden" name="package_id" t-att-value="package.id"/>-->
-<!--                                            <input type="hidden" name="billing_cycle" t-att-value="billing_cycle"/>-->
-<!--                                            <input type="hidden" name="amount" t-att-value="price"/>-->
-<!--                                            <input type="hidden" name="currency_id" t-att-value="package.pkg_currency_id.id"/>-->
-<!--                                            -->
-<!--                                            <div class="saas_payment_summary">-->
-<!--                                                <div class="saas_payment_item">-->
-<!--                                                    <span class="saas_payment_label" t-esc="package.pkg_name"/>-->
-<!--                                                    <span class="saas_payment_amount">-->
-<!--                                                        <span t-esc="currency_symbol"/><span t-esc="price"/>/<span t-esc="period_text"/>-->
-<!--                                                    </span>-->
-<!--                                                </div>-->
-<!--                                                <div class="saas_payment_total">-->
-<!--                                                    <span class="saas_payment_label">Total</span>-->
-<!--                                                    <span class="saas_payment_amount">-->
-<!--                                                        <span t-esc="currency_symbol"/><span t-esc="price"/>-->
-<!--                                                    </span>-->
-<!--                                                </div>-->
-<!--                                            </div>-->
-<!--                                            -->
-<!--                                            <div class="saas_payment_methods">-->
-<!--                                                <h5>Choose a payment method:</h5>-->
-<!--                                                <div class="saas_acquirer_list">-->
-<!--                                                    <t t-foreach="payment_acquirers" t-as="acquirer">-->
-<!--                                                        <div class="saas_acquirer_option">-->
-<!--                                                            <input type="radio" t-att-id="'acquirer_' + str(acquirer.id)" -->
-<!--                                                                   name="acquirer_id" t-att-value="acquirer.id" -->
-<!--                                                                   class="saas_acquirer_radio" required="required"/>-->
-<!--                                                            <label t-att-for="'acquirer_' + str(acquirer.id)" class="saas_acquirer_label">-->
-<!--                                                                <span class="saas_acquirer_name" t-esc="acquirer.name"/>-->
-<!--                                                            </label>-->
-<!--                                                        </div>-->
-<!--                                                    </t>-->
-<!--                                                </div>-->
-<!--                                            </div>-->
-<!--                                        </form>-->
-<!--                                    </div>-->
-                                </div>
+                                <!--                                    <h4 class="saas_payment_title">Payment Method</h4>-->
+                                <!--                                    <div class="saas_payment_form">-->
+                                <!--                                        <form id="saasPaymentForm" method="post" action="/saas/payment/process">-->
+                                <!--                                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>-->
+                                <!--                                            <input type="hidden" name="package_id" t-att-value="package.id"/>-->
+                                <!--                                            <input type="hidden" name="billing_cycle" t-att-value="billing_cycle"/>-->
+                                <!--                                            <input type="hidden" name="amount" t-att-value="price"/>-->
+                                <!--                                            <input type="hidden" name="currency_id" t-att-value="package.pkg_currency_id.id"/>-->
+                                <!--                                            -->
+                                <!--                                            <div class="saas_payment_summary">-->
+                                <!--                                                <div class="saas_payment_item">-->
+                                <!--                                                    <span class="saas_payment_label" t-esc="package.pkg_name"/>-->
+                                <!--                                                    <span class="saas_payment_amount">-->
+                                <!--                                                        <span t-esc="currency_symbol"/><span t-esc="price"/>/<span t-esc="period_text"/>-->
+                                <!--                                                    </span>-->
+                                <!--                                                </div>-->
+                                <!--                                                <div class="saas_payment_total">-->
+                                <!--                                                    <span class="saas_payment_label">Total</span>-->
+                                <!--                                                    <span class="saas_payment_amount">-->
+                                <!--                                                        <span t-esc="currency_symbol"/><span t-esc="price"/>-->
+                                <!--                                                    </span>-->
+                                <!--                                                </div>-->
+                                <!--                                            </div>-->
+                                <!--                                            -->
+                                <!--                                            <div class="saas_payment_methods">-->
+                                <!--                                                <h5>Choose a payment method:</h5>-->
+                                <!--                                                <div class="saas_acquirer_list">-->
+                                <!--                                                    <t t-foreach="payment_acquirers" t-as="acquirer">-->
+                                <!--                                                        <div class="saas_acquirer_option">-->
+                                <!--                                                            <input type="radio" t-att-id="'acquirer_' + str(acquirer.id)" -->
+                                <!--                                                                   name="acquirer_id" t-att-value="acquirer.id" -->
+                                <!--                                                                   class="saas_acquirer_radio" required="required"/>-->
+                                <!--                                                            <label t-att-for="'acquirer_' + str(acquirer.id)" class="saas_acquirer_label">-->
+                                <!--                                                                <span class="saas_acquirer_name" t-esc="acquirer.name"/>-->
+                                <!--                                                            </label>-->
+                                <!--                                                        </div>-->
+                                <!--                                                    </t>-->
+                                <!--                                                </div>-->
+                                <!--                                            </div>-->
+                                <!--                                        </form>-->
+                                <!--                                    </div>-->
+                                <!--                                </div>-->
 
                                 <!-- Legal Agreement -->
                                 <div class="saas_legal_agreement">
                                     <p>
-                                        By clicking on <strong>Start Now</strong>, you accept our 
-                                        <a href="#" class="saas_legal_link">Subscription Agreement</a> and 
+                                        By clicking on <strong>Start Now</strong>, you accept our
+                                        <a href="#" class="saas_legal_link">Subscription Agreement</a>
+                                        and
                                         <a href="#" class="saas_legal_link">Privacy Policy</a>.
                                     </p>
                                 </div>
-                                
+
                                 <!-- Action Button -->
                                 <div class="saas_action_section">
                                     <!-- Always show a button regardless of conditions -->
@@ -165,7 +173,7 @@
                                         <i class="fa fa-arrow-right saas_btn_icon"></i>
                                     </button>
                                 </div>
-                                
+
                                 <!-- Loading Screen (Hidden initially) -->
                                 <div class="saas_loading_screen" id="saasLoadingScreen" style="display: none;">
                                     <div class="saas_loading_content">
@@ -181,7 +189,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Success Screen (Hidden initially) -->
                                 <div class="saas_success_screen" id="saasSuccessScreen" style="display: none;">
                                     <div class="saas_success_content">
@@ -202,8 +210,10 @@
                                                 <i class="fa fa-check"></i>
                                                 <span>Invoice generated and ready for payment</span>
                                             </div>
-                                            <div class="saas_payment_link" t-if="not is_free_trial" id="saasPaymentLink" style="display: none;">
-                                                <a href="#" class="saas_invoice_link" id="saasInvoiceLink" target="_blank">
+                                            <div class="saas_payment_link" t-if="not is_free_trial" id="saasPaymentLink"
+                                                 style="display: none;">
+                                                <a href="#" class="saas_invoice_link" id="saasInvoiceLink"
+                                                   target="_blank">
                                                     <i class="fa fa-external-link"></i>
                                                     View Invoice &amp; Make Payment
                                                 </a>
@@ -215,7 +225,7 @@
                                         </button>
                                     </div>
                                 </div>
-                                
+
                             </div>
                         </div>
                     </div>
@@ -223,7 +233,7 @@
             </div>
         </t>
     </template>
-    
+
     <template id="purchase_error" name="Purchase Error">
         <t t-call="website.layout">
             <div id="wrap" class="oe_structure oe_empty">
