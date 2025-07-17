@@ -244,8 +244,8 @@ class SaaSWebController(http.Controller):
                 'payment_acquirers': payment_acquirers,
                 # Payment form specific variables
                 'providers_sudo': payment_acquirers,
-                'payment_methods_sudo': [],
-                'tokens_sudo': [],
+                'payment_methods_sudo': request.env['payment.method'].sudo().browse(),
+                'tokens_sudo': request.env['payment.token'].sudo().browse(),
                 'selected_token_id': False,
                 'reference': f'SAAS-{package.id}-{billing_cycle}',
                 'amount': price,
