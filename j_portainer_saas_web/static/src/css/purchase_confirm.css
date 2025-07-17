@@ -1,672 +1,323 @@
 /* ========================================================================== */
-/* SAAS PURCHASE CONFIRMATION PAGE STYLES */
-/* Modern, elegant design with unique class names */
+/* SAAS PURCHASE CONFIRMATION PAGE STYLES - ECOMMERCE STYLE */
+/* Bootstrap-based styling matching Odoo ecommerce checkout */
 /* ========================================================================== */
 
-.saas_purchase_confirm_page {
-    background-color: #f8f9fa;
-    min-height: 100vh;
-    padding: 60px 0;
+/* Base Bootstrap Grid System */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
 }
 
-/* Step Progress Bar */
-.saas_steps_progress {
+.row {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 40px;
-    padding: 0 20px;
+    flex-wrap: wrap;
+    margin-right: -15px;
+    margin-left: -15px;
 }
 
-.saas_step {
+.col-lg-8 {
+    flex: 0 0 66.666667%;
+    max-width: 66.666667%;
+    padding-right: 15px;
+    padding-left: 15px;
+}
+
+.col-lg-4 {
+    flex: 0 0 33.333333%;
+    max-width: 33.333333%;
+    padding-right: 15px;
+    padding-left: 15px;
+}
+
+/* Mobile responsive */
+@media (max-width: 991.98px) {
+    .col-lg-8, .col-lg-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+/* Bootstrap Card Styling */
+.card {
+    position: relative;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
-    flex: 0 0 auto;
+    min-width: 0;
+    word-wrap: break-word;
+    background-color: #fff;
+    background-clip: border-box;
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: 0.25rem;
+    margin-bottom: 1.5rem;
 }
 
-.saas_step_circle {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background-color: #e9ecef;
-    border: 2px solid #dee2e6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    color: #6c757d;
-    margin-bottom: 10px;
-    transition: all 0.3s ease;
+.card-body {
+    flex: 1 1 auto;
+    padding: 1.25rem;
 }
 
-.saas_step_completed .saas_step_circle {
-    background-color: #28a745;
-    border-color: #28a745;
-    color: white;
-}
-
-.saas_step_current .saas_step_circle {
-    background-color: #875a7b;
-    border-color: #875a7b;
-    color: white;
-}
-
-.saas_step_content h6 {
-    font-weight: 600;
-    color: #2c3e50;
-    margin-bottom: 5px;
-    font-size: 0.9rem;
-}
-
-.saas_step_content p {
-    color: #6c757d;
-    font-size: 0.8rem;
+.card-header {
+    padding: 0.75rem 1.25rem;
     margin-bottom: 0;
+    background-color: rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
 }
 
-.saas_step_line {
-    height: 2px;
-    width: 100px;
-    background-color: #dee2e6;
-    margin: 0 20px;
-    margin-top: -15px;
-}
-
-.saas_step_line_completed {
-    background-color: #28a745;
-}
-
-/* Package Details Card */
-.saas_package_details_card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
-    padding: 30px;
-    margin-bottom: 30px;
-    border: 1px solid #e9ecef;
-}
-
-.saas_package_header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.saas_package_header h3 {
-    color: #2c3e50;
-    font-weight: 600;
-    margin-bottom: 0;
-}
-
-.saas_trial_badge {
-    background-color: #28a745;
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 0.9rem;
+.card-title {
+    margin-bottom: 0.75rem;
+    font-size: 1.25rem;
     font-weight: 500;
 }
 
-.saas_price_text {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #875a7b;
-}
+/* Bootstrap Utilities */
+.mt-4 { margin-top: 1.5rem !important; }
+.mb-4 { margin-bottom: 1.5rem !important; }
+.mb-3 { margin-bottom: 1rem !important; }
+.mb-2 { margin-bottom: 0.5rem !important; }
+.mt-2 { margin-top: 0.5rem !important; }
+.text-muted { color: #6c757d !important; }
+.text-primary { color: #007bff !important; }
+.text-end { text-align: right !important; }
+.text-center { text-align: center !important; }
+.d-flex { display: flex !important; }
+.justify-content-between { justify-content: space-between !important; }
+.align-items-center { align-items: center !important; }
+.align-items-start { align-items: flex-start !important; }
+.w-100 { width: 100% !important; }
+.border-0 { border: 0 !important; }
+.bg-white { background-color: #fff !important; }
+.shadow-sm { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important; }
+.text-decoration-none { text-decoration: none !important; }
+.me-1 { margin-right: 0.25rem !important; }
+.me-2 { margin-right: 0.5rem !important; }
 
-.saas_package_description {
-    margin-bottom: 25px;
-}
-
-.saas_package_description p {
-    color: #6c757d;
-    line-height: 1.6;
-    margin-bottom: 0;
-}
-
-.saas_package_features h5 {
-    color: #2c3e50;
-    font-weight: 600;
-    margin-bottom: 15px;
-}
-
-.saas_package_features ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.saas_package_features li {
-    padding: 8px 0;
-    color: #495057;
-    position: relative;
-    padding-left: 25px;
-}
-
-.saas_package_features li:before {
-    content: "✓";
-    position: absolute;
-    left: 0;
-    color: #28a745;
-    font-weight: bold;
-}
-
-/* Legal Agreement */
-.saas_legal_agreement {
-    background-color: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 30px;
+/* Button Styling */
+.btn {
+    display: inline-block;
+    font-weight: 400;
     text-align: center;
-}
-
-.saas_legal_agreement p {
-    color: #6c757d;
-    margin-bottom: 0;
-    font-size: 0.9rem;
-}
-
-.saas_legal_link {
-    color: #875a7b;
+    white-space: nowrap;
+    vertical-align: middle;
+    user-select: none;
+    border: 1px solid transparent;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    border-radius: 0.25rem;
+    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    cursor: pointer;
     text-decoration: none;
-    font-weight: 500;
 }
 
-.saas_legal_link:hover {
-    color: #6b4c66;
+.btn-primary {
+    color: #fff;
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    color: #fff;
+    background-color: #0069d9;
+    border-color: #0062cc;
+}
+
+.btn-lg {
+    padding: 0.5rem 1rem;
+    font-size: 1.125rem;
+    line-height: 1.5;
+    border-radius: 0.3rem;
+}
+
+.btn-link {
+    font-weight: 400;
+    color: #007bff;
+    background-color: transparent;
+    border-color: transparent;
+}
+
+.btn-link:hover {
+    color: #0056b3;
+    text-decoration: underline;
+    background-color: transparent;
+    border-color: transparent;
+}
+
+.btn-outline-secondary {
+    color: #6c757d;
+    background-color: transparent;
+    background-image: none;
+    border-color: #6c757d;
+}
+
+.btn-outline-secondary:hover {
+    color: #fff;
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.d-grid { display: grid !important; }
+.gap-2 { gap: 0.5rem !important; }
+
+/* Form Styling */
+.form-control {
+    display: block;
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #495057;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.input-group {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    width: 100%;
+}
+
+.input-group .form-control {
+    position: relative;
+    flex: 1 1 auto;
+    width: 1%;
+    margin-bottom: 0;
+}
+
+.input-group .btn {
+    position: relative;
+    z-index: 2;
+}
+
+.form-check {
+    position: relative;
+    display: block;
+    padding-left: 1.25rem;
+}
+
+.form-check-input {
+    position: absolute;
+    margin-top: 0.3rem;
+    margin-left: -1.25rem;
+}
+
+.form-check-label {
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+/* Alert Styling */
+.alert {
+    position: relative;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+}
+
+.alert-info {
+    color: #0c5460;
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+}
+
+.alert-warning {
+    color: #856404;
+    background-color: #fff3cd;
+    border-color: #ffeaa7;
+}
+
+/* Breadcrumb Styling */
+.breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    list-style: none;
+    background-color: transparent;
+    border-radius: 0.25rem;
+}
+
+.breadcrumb-item {
+    display: flex;
+}
+
+.breadcrumb-item + .breadcrumb-item {
+    padding-left: 0.5rem;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    display: inline-block;
+    padding-right: 0.5rem;
+    color: #6c757d;
+    content: ">";
+}
+
+.breadcrumb-item.active {
+    color: #6c757d;
+}
+
+.breadcrumb-item a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+    color: #0056b3;
     text-decoration: underline;
 }
 
-/* Payment Section */
-.saas_payment_section {
-    background: #f8f9fa;
-    border-radius: 12px;
-    padding: 30px;
-    margin: 30px 0;
-    border: 1px solid #e9ecef;
-}
-
-.saas_payment_title {
-    color: #2c3e50;
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.saas_payment_title::before {
-    content: "💳";
-    font-size: 18px;
-}
-
-.saas_payment_summary {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 25px;
-    border: 1px solid #e9ecef;
-}
-
-.saas_payment_item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid #f1f3f4;
-}
-
-.saas_payment_item:last-child {
-    border-bottom: none;
-}
-
-.saas_payment_total {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 0 10px 0;
-    border-top: 2px solid #e9ecef;
-    margin-top: 15px;
-    font-weight: 600;
-    font-size: 18px;
-}
-
-.saas_payment_label {
-    color: #495057;
-    font-size: 14px;
-}
-
-.saas_payment_total .saas_payment_label {
-    color: #2c3e50;
-    font-size: 16px;
-}
-
-.saas_payment_amount {
-    color: #28a745;
-    font-weight: 600;
-    font-size: 16px;
-}
-
-.saas_payment_total .saas_payment_amount {
-    color: #875a7b;
-    font-size: 18px;
-}
-
-.saas_payment_methods h5 {
-    color: #2c3e50;
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 15px;
-}
-
-.saas_acquirer_list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-}
-
-.saas_acquirer_option {
-    background: white;
-    border: 2px solid #e9ecef;
-    border-radius: 8px;
-    padding: 0;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    overflow: hidden;
-}
-
-.saas_acquirer_option:hover {
-    border-color: #875a7b;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(135, 90, 123, 0.15);
-}
-
-.saas_acquirer_radio {
-    display: none;
-}
-
-.saas_acquirer_radio:checked + .saas_acquirer_label {
-    background: linear-gradient(135deg, #875a7b 0%, #6b4c66 100%);
-    color: white;
-}
-
-.saas_acquirer_label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    margin: 0;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    height: 80px;
-    background: white;
-}
-
-.saas_acquirer_image {
-    max-width: 60px;
-    max-height: 30px;
-    object-fit: contain;
-}
-
-.saas_acquirer_name {
-    font-size: 14px;
-    font-weight: 600;
-    color: #495057;
-}
-
-.saas_acquirer_radio:checked + .saas_acquirer_label .saas_acquirer_name {
-    color: white;
-}
-
-/* Error Page Styles */
-.saas_error_container {
-    text-align: center;
-    padding: 60px 20px;
-    background: #f8f9fa;
-    border-radius: 12px;
-    margin-top: 50px;
-}
-
-.saas_error_icon {
-    font-size: 60px;
-    color: #dc3545;
-    margin-bottom: 30px;
-}
-
-.saas_error_title {
-    color: #2c3e50;
-    font-size: 32px;
-    font-weight: 700;
-    margin-bottom: 20px;
-}
-
-.saas_error_message {
-    color: #6c757d;
-    font-size: 16px;
-    margin-bottom: 40px;
-    line-height: 1.6;
-}
-
-.saas_error_actions {
-    margin-top: 30px;
-}
-
-.saas_error_btn {
-    background: linear-gradient(135deg, #875a7b 0%, #6b4c66 100%);
-    color: white;
-    padding: 12px 30px;
-    border-radius: 8px;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.saas_error_btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(135, 90, 123, 0.3);
-    color: white;
-    text-decoration: none;
-}
-
-/* Action Button */
-.saas_action_section {
-    text-align: center;
-    margin-bottom: 30px;
-}
-
-.saas_start_btn,
-.saas_pay_btn {
-    background-color: #875a7b;
-    color: white;
-    border: none;
-    padding: 15px 40px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.saas_pay_btn {
-    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
-    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-}
-
-.saas_start_btn:hover,
-.saas_pay_btn:hover {
-    transform: translateY(-2px);
-}
-
-.saas_start_btn:hover {
-    background-color: #6b4c66;
-    box-shadow: 0 4px 12px rgba(135, 90, 123, 0.3);
-}
-
-.saas_pay_btn:hover {
-    background: linear-gradient(135deg, #218838 0%, #1a6e2e 100%);
-    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
-}
-
-.saas_start_btn:active,
-.saas_pay_btn:active {
-    transform: translateY(0);
-}
-
-.saas_start_btn:disabled,
-.saas_pay_btn:disabled {
-    background-color: #6c757d;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-/* Loading Screen */
-.saas_loading_screen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(255, 255, 255, 0.95);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.saas_loading_content {
-    text-align: center;
-    max-width: 400px;
-    padding: 40px;
-}
-
-.saas_loading_spinner {
-    margin-bottom: 30px;
-}
-
-.saas_spinner {
-    width: 60px;
-    height: 60px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #875a7b;
-    border-radius: 50%;
-    animation: saas_spin 1s linear infinite;
-    margin: 0 auto;
-}
-
-@keyframes saas_spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.saas_loading_title {
-    color: #2c3e50;
-    font-weight: 600;
-    margin-bottom: 10px;
-}
-
-.saas_loading_subtitle {
-    color: #6c757d;
-    margin-bottom: 30px;
-}
-
-.saas_loading_progress {
-    width: 100%;
-}
-
-.saas_progress_bar {
-    width: 100%;
-    height: 4px;
-    background-color: #e9ecef;
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.saas_progress_fill {
-    height: 100%;
-    background-color: #875a7b;
-    width: 0%;
-    transition: width 0.3s ease;
-    animation: saas_progress 3s ease-in-out infinite;
-}
-
-@keyframes saas_progress {
-    0% { width: 0%; }
-    50% { width: 70%; }
-    100% { width: 100%; }
-}
-
-/* Success Screen */
-.saas_success_screen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(255, 255, 255, 0.95);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.saas_success_content {
-    text-align: center;
-    max-width: 400px;
-    padding: 40px;
-}
-
-.saas_success_icon {
-    margin-bottom: 30px;
-}
-
-.saas_success_icon i {
-    font-size: 4rem;
-    color: #28a745;
-}
-
-.saas_success_title {
-    color: #2c3e50;
-    font-weight: 600;
-    margin-bottom: 30px;
-}
-
-.saas_success_checklist {
-    text-align: left;
-    margin-bottom: 30px;
-}
-
-.saas_check_item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-    color: #495057;
-}
-
-.saas_check_item i {
-    color: #28a745;
-    margin-right: 10px;
-    font-size: 1.1rem;
-}
-
-.saas_continue_btn {
-    background-color: #875a7b;
-    color: white;
-    border: none;
-    padding: 12px 30px;
-    font-size: 1rem;
-    font-weight: 600;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.saas_continue_btn:hover {
-    background-color: #6b4c66;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(135, 90, 123, 0.3);
-}
-
-/* Payment Link Styling */
-.saas_payment_link {
-    margin-top: 20px;
-    text-align: center;
-}
-
-.saas_invoice_link {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background-color: #875a7b;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 6px;
-    text-decoration: none;
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
     font-weight: 500;
-    transition: all 0.3s ease;
+    line-height: 1.2;
 }
 
-.saas_invoice_link:hover {
-    background-color: #6b4c66;
-    color: white;
-    text-decoration: none;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(135, 90, 123, 0.3);
+h1 { font-size: 2.5rem; }
+h5 { font-size: 1.25rem; }
+h6 { font-size: 1rem; }
+small { font-size: 0.875em; }
+
+/* HR Styling */
+hr {
+    margin: 1rem 0;
+    color: inherit;
+    background-color: currentColor;
+    border: 0;
+    opacity: 0.25;
+    height: 1px;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    .saas_steps_progress {
-        flex-direction: column;
-        gap: 20px;
-    }
-    
-    .saas_step_line {
-        height: 50px;
-        width: 2px;
-        margin: 0;
-    }
-    
-    .saas_step_line_completed {
-        background-color: #28a745;
-    }
-    
-    .saas_package_header {
-        flex-direction: column;
-        gap: 15px;
-        text-align: center;
-    }
-    
-    .saas_package_details_card {
-        padding: 20px;
-    }
-    
-    .saas_purchase_confirm_page {
-        padding: 30px 0;
-    }
-}
-
-@media (max-width: 576px) {
-    .saas_loading_content,
-    .saas_success_content {
-        padding: 20px;
-    }
-    
-    .saas_start_btn {
-        padding: 12px 30px;
-        font-size: 1rem;
-    }
-}
-
-/* Ecommerce Style Payment Methods */
+/* Payment Method Styling */
 .payment-methods {
     margin-bottom: 20px;
 }
 
 .payment-method-item {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.2s ease;
     cursor: pointer;
-    transition: all 0.3s ease;
 }
 
 .payment-method-item:hover {
-    background-color: #f8f9fa;
+    border-color: #007bff;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 123, 255, 0.1);
 }
 
-.payment-method-item.selected {
-    background-color: #e3f2fd;
-    border-color: #2196f3;
+.payment-method-item input:checked ~ label {
+    color: #007bff;
+    font-weight: 500;
 }
 
 .payment-method-name {
@@ -680,63 +331,85 @@
     object-fit: contain;
 }
 
-/* Order Summary Styling */
-.card-header {
-    background-color: #f8f9fa !important;
-    border-bottom: 1px solid #e9ecef;
-    padding: 1rem 1.25rem;
+/* Loading and Success Screens */
+.saas_loading_screen,
+.saas_success_screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.95);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.card-header h6 {
-    font-weight: 600;
-    color: #333;
+.saas_loading_content,
+.saas_success_content {
+    text-align: center;
+    max-width: 400px;
+    padding: 40px;
 }
 
-/* Breadcrumb Styling */
-.breadcrumb {
-    background-color: transparent;
-    padding: 0;
-    margin-bottom: 1.5rem;
+.saas_spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    animation: saas_spin 1s linear infinite;
+    margin: 0 auto 30px;
 }
 
-.breadcrumb-item + .breadcrumb-item::before {
-    content: ">";
-    color: #6c757d;
+@keyframes saas_spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-.breadcrumb-item.active {
-    color: #495057;
-    font-weight: 500;
+.saas_success_icon {
+    font-size: 4rem;
+    color: #28a745;
+    margin-bottom: 1rem;
 }
 
-/* Main Title */
-h1 {
+.saas_success_title {
     font-size: 2rem;
     font-weight: 600;
     color: #2c3e50;
     margin-bottom: 1.5rem;
 }
 
-/* Card Shadow */
-.shadow-sm {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+.saas_continue_btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
-/* Payment Method Cards */
-.payment-method-item {
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    padding: 1rem;
-    margin-bottom: 0.75rem;
-    transition: all 0.2s ease;
+.saas_continue_btn:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
 }
 
-.payment-method-item:hover {
-    border-color: #007bff;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 123, 255, 0.1);
+/* FontAwesome Icons */
+.fa {
+    font-family: 'FontAwesome';
+    font-weight: normal;
+    font-style: normal;
+    display: inline-block;
 }
 
-.payment-method-item input:checked ~ label {
-    color: #007bff;
-    font-weight: 500;
-}
+.fa-edit:before { content: "\f044"; }
+.fa-info-circle:before { content: "\f05a"; }
+.fa-exclamation-triangle:before { content: "\f071"; }
+.fa-credit-card:before { content: "\f09d"; }
+.fa-arrow-left:before { content: "\f060"; }
+.fa-check-circle:before { content: "\f058"; }
+.fa-check:before { content: "\f00c"; }
