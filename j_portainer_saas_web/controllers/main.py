@@ -243,7 +243,10 @@ class SaaSWebController(http.Controller):
                 'free_trial_days': self._get_free_trial_days(),
                 'payment_acquirers': payment_acquirers,
                 # Payment form specific variables
-                'providers': payment_acquirers,
+                'providers_sudo': payment_acquirers,
+                'payment_methods_sudo': [],
+                'tokens_sudo': [],
+                'selected_token_id': False,
                 'reference': f'SAAS-{package.id}-{billing_cycle}',
                 'amount': price,
                 'currency': package.pkg_currency_id or request.env.company.currency_id,
@@ -252,6 +255,7 @@ class SaaSWebController(http.Controller):
                 'transaction_route': '/payment/transaction',
                 'landing_route': '/saas/payment/success',
                 'submit_button_label': 'Pay now',
+                'inline_form': True,
             }
             
             # Log template data for debugging

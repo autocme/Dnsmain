@@ -41,7 +41,10 @@
                                         <t t-if="payment_acquirers">
                                             <!-- Use Odoo's existing payment form template -->
                                             <t t-call="payment.form">
-                                                <t t-set="providers" t-value="payment_acquirers"/>
+                                                <t t-set="providers_sudo" t-value="payment_acquirers"/>
+                                                <t t-set="payment_methods_sudo" t-value="[]"/>
+                                                <t t-set="tokens_sudo" t-value="[]"/>
+                                                <t t-set="selected_token_id" t-value="False"/>
                                                 <t t-set="reference" t-value="'SAAS-' + str(package.id) + '-' + billing_cycle"/>
                                                 <t t-set="amount" t-value="price"/>
                                                 <t t-set="currency" t-value="request.env.company.currency_id"/>
@@ -50,6 +53,7 @@
                                                 <t t-set="transaction_route" t-value="'/payment/transaction'"/>
                                                 <t t-set="landing_route" t-value="'/saas/payment/success'"/>
                                                 <t t-set="submit_button_label" t-value="'Pay now'"/>
+                                                <t t-set="inline_form" t-value="True"/>
                                             </t>
                                         </t>
                                         <t t-else="">
