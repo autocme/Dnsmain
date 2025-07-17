@@ -70,7 +70,7 @@
                                             <li>Package ID: <span t-esc="package.id"/></li>
                                             <li>Package Name: <span t-esc="package.pkg_name"/></li>
                                             <li>Billing Cycle: <span t-esc="billing_cycle"/></li>
-                                            <li>is_free_trial: '<span t-esc="is_free_trial"/>' (type: <span t-esc="type(is_free_trial).__name__"/>)</li>
+                                            <li>is_free_trial: '<span t-esc="is_free_trial"/>'</li>
                                             <li>is_free_trial bool check: <span t-esc="bool(is_free_trial)"/></li>
                                             <li>Price: <span t-esc="price"/></li>
                                             <li>Currency Symbol: <span t-esc="currency_symbol"/></li>
