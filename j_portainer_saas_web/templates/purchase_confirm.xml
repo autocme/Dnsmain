@@ -76,21 +76,27 @@
                                         <t t-else="">
                                             <t t-if="payment_acquirers">
                                                 <!-- Payment form for paid packages -->
-                                                <t t-call="payment.form">
-                                                    <t t-set="providers_sudo" t-value="payment_acquirers"/>
-                                                    <t t-set="payment_methods_sudo" t-value="request.env['payment.method'].sudo().browse()"/>
-                                                    <t t-set="tokens_sudo" t-value="request.env['payment.token'].sudo().browse()"/>
-                                                    <t t-set="selected_token_id" t-value="False"/>
-                                                    <t t-set="reference" t-value="'SAAS-' + str(package.id) + '-' + billing_cycle"/>
-                                                    <t t-set="amount" t-value="price"/>
-                                                    <t t-set="currency" t-value="request.env.company.currency_id"/>
-                                                    <t t-set="partner_id" t-value="request.env.user.partner_id.id"/>
-                                                    <t t-set="access_token" t-value="False"/>
-                                                    <t t-set="transaction_route" t-value="'/payment/transaction'"/>
-                                                    <t t-set="landing_route" t-value="'/saas/payment/success'"/>
-                                                    <t t-set="submit_button_label" t-value="'Pay now'"/>
-                                                    <t t-set="inline_form" t-value="True"/>
-                                                </t>
+                                                <!-- Manual payment provider selection instead of payment.form template -->
+                                                <div class="o_payment_form">
+                                                    <h5>Select Payment Method</h5>
+                                                    <div class="o_payment_provider_selection">
+                                                        <t t-foreach="payment_acquirers" t-as="provider">
+                                                            <div class="o_payment_provider_option">
+                                                                <label class="o_payment_provider_label" style="display: block; padding: 15px; border: 1px solid #ddd; margin-bottom: 10px; cursor: pointer; border-radius: 5px;">
+                                                                    <input type="radio" name="payment_provider" t-att-value="provider.id" style="margin-right: 10px;"/>
+                                                                    <img t-if="provider.image" t-att-src="'/web/image/payment.provider/' + str(provider.id) + '/image'" style="height: 30px; margin-right: 10px;"/>
+                                                                    <span t-esc="provider.name"/>
+                                                                </label>
+                                                            </div>
+                                                        </t>
+                                                    </div>
+                                                    
+                                                    <div class="o_payment_submit_section" style="margin-top: 20px;">
+                                                        <button type="button" class="btn btn-primary btn-lg" id="saas_payment_submit" style="width: 100%;">
+                                                            Pay now
+                                                        </button>
+                                                    </div>
+                                                </div>
                                                 <!-- Debug information -->
                                                 <div class="mt-3" style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-size: 12px;">
                                                     <strong>Debug Info:</strong><br/>

@@ -15,6 +15,7 @@
         var startBtn = document.getElementById('saasStartBtn');
         var payBtn = document.getElementById('saasPayBtn');
         var continueBtn = document.getElementById('saasContinueBtn');
+        var paymentSubmitBtn = document.getElementById('saas_payment_submit');
         
         if (startBtn) {
             startBtn.addEventListener('click', handleStartClick);
@@ -26,6 +27,10 @@
         
         if (continueBtn) {
             continueBtn.addEventListener('click', handleContinueClick);
+        }
+        
+        if (paymentSubmitBtn) {
+            paymentSubmitBtn.addEventListener('click', handlePaymentSubmit);
         }
     }
     
@@ -192,6 +197,189 @@
             var payBtn = document.getElementById('saasPayBtn');
             if (payBtn) payBtn.disabled = false;
         }
+    }
+    
+    /**
+     * Handle payment submission for manual payment provider selection
+     */
+    function handlePaymentSubmit(e) {
+        e.preventDefault();
+        
+        console.log('Payment submit button clicked');
+        
+        // Check if a payment provider is selected
+        var selectedProvider = document.querySelector('input[name="payment_provider"]:checked');
+        if (!selectedProvider) {
+            showErrorMessage('Please select a payment method.');
+            return;
+        }
+        
+        var providerId = selectedProvider.value;
+        console.log('Selected provider ID:', providerId);
+        
+        // Get package information from the page
+        var packageId = getPackageIdFromPage();
+        var billingCycle = getBillingCycleFromPage();
+        var price = getPriceFromPage();
+        
+        if (!packageId || !billingCycle || !price) {
+            console.error('Missing required payment information:', {
+                packageId: packageId,
+                billingCycle: billingCycle,
+                price: price
+            });
+            showErrorMessage('Missing payment information. Please refresh the page and try again.');
+            return;
+        }
+        
+        // Show loading screen
+        showLoadingScreen();
+        
+        // Disable button to prevent double submission
+        var button = document.getElementById('saas_payment_submit');
+        if (button) button.disabled = true;
+        
+        // Process payment through Odoo's payment system
+        processPaymentManual(packageId, billingCycle, providerId, price);
+    }
+    
+    /**
+     * Process payment through Odoo's payment system (manual implementation)
+     */
+    function processPaymentManual(packageId, billingCycle, providerId, price) {
+        console.log('Processing payment:', {
+            packageId: packageId,
+            billingCycle: billingCycle,
+            providerId: providerId,
+            price: price
+        });
+        
+        // Create a form to submit to Odoo's payment processing
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/saas/payment/process';
+        
+        // Add form fields
+        var fields = {
+            'package_id': packageId,
+            'billing_cycle': billingCycle,
+            'acquirer_id': providerId,
+            'amount': price,
+            'currency_id': getCurrencyIdFromPage()
+        };
+        
+        for (var key in fields) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = fields[key];
+            form.appendChild(input);
+        }
+        
+        // Add CSRF token if available
+        var csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) {
+            var csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken.getAttribute('content');
+            form.appendChild(csrfInput);
+        }
+        
+        // Add form to body and submit
+        document.body.appendChild(form);
+        form.submit();
+    }
+    
+    /**
+     * Get package ID from the page
+     */
+    function getPackageIdFromPage() {
+        // Try to get from debug info
+        var debugInfo = document.querySelector('.mt-3 strong');
+        if (debugInfo) {
+            var spans = debugInfo.parentElement.querySelectorAll('span');
+            for (var i = 0; i < spans.length; i++) {
+                var span = spans[i];
+                if (span.textContent.includes('SAAS-')) {
+                    var match = span.textContent.match(/SAAS-(\d+)-/);
+                    if (match) {
+                        return match[1];
+                    }
+                }
+            }
+        }
+        
+        // Fallback: try to get from URL parameters
+        var urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('package_id');
+    }
+    
+    /**
+     * Get billing cycle from the page
+     */
+    function getBillingCycleFromPage() {
+        // Try to get from debug info
+        var debugInfo = document.querySelector('.mt-3 strong');
+        if (debugInfo) {
+            var spans = debugInfo.parentElement.querySelectorAll('span');
+            for (var i = 0; i < spans.length; i++) {
+                var span = spans[i];
+                if (span.textContent.includes('SAAS-')) {
+                    var referenceText = span.textContent;
+                    if (referenceText.includes('monthly')) {
+                        return 'monthly';
+                    } else if (referenceText.includes('yearly')) {
+                        return 'yearly';
+                    }
+                }
+            }
+        }
+        
+        // Fallback: try to get from URL parameters
+        var urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('billing_cycle');
+    }
+    
+    /**
+     * Get price from the page
+     */
+    function getPriceFromPage() {
+        // Try to get from debug info
+        var debugInfo = document.querySelector('.mt-3 strong');
+        if (debugInfo) {
+            var spans = debugInfo.parentElement.querySelectorAll('span');
+            for (var i = 0; i < spans.length; i++) {
+                var span = spans[i];
+                if (span.textContent.includes('Price:')) {
+                    var match = span.textContent.match(/Price: ([\d.]+)/);
+                    if (match) {
+                        return parseFloat(match[1]);
+                    }
+                }
+            }
+        }
+        
+        // Fallback: try to get from price display
+        var priceElement = document.querySelector('.saas_price_text');
+        if (priceElement) {
+            var priceText = priceElement.textContent;
+            var match = priceText.match(/([\d.]+)/);
+            if (match) {
+                return parseFloat(match[1]);
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Get currency ID from the page
+     */
+    function getCurrencyIdFromPage() {
+        // For now, assume USD (currency_id = 1 in most Odoo installations)
+        // In a real implementation, this should be passed from the template
+        return 1;
     }
     
     /**
