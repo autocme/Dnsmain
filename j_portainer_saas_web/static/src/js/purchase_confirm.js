@@ -13,34 +13,32 @@
         console.log('Initializing SaaS purchase confirmation page...');
         
         var startBtn = document.getElementById('saasStartBtn');
-        var payNowBtn = document.getElementById('saasPayNowBtn');
+        var payBtn = document.getElementById('saasPayBtn');
         var continueBtn = document.getElementById('saasContinueBtn');
         
         if (startBtn) {
             startBtn.addEventListener('click', handleStartClick);
         }
         
-        if (payNowBtn) {
-            payNowBtn.addEventListener('click', handlePayNowClick);
+        if (payBtn) {
+            payBtn.addEventListener('click', handlePayClick);
         }
         
         if (continueBtn) {
             continueBtn.addEventListener('click', handleContinueClick);
         }
-        
-        // For paid packages, the payment form is handled by Odoo's payment module
-        // We just need to handle the free trial flow
     }
     
     /**
-     * Handle "Start Now" button click (Free Trial)
+     * Handle "Start Now" button click
      */
     function handleStartClick(e) {
         e.preventDefault();
         
-        var button = e.target.closest('#saasStartBtn');
+        // Find the actual button element (in case click was on child element)
+        var button = e.target.closest('.saas_start_btn');
         if (!button) {
-            console.error('Could not find start button element');
+            console.error('Could not find button element');
             return;
         }
         
@@ -49,7 +47,15 @@
         var isFreeTrialAttr = button.getAttribute('data-is-free-trial');
         var isFreeTrial = isFreeTrialAttr === 'true' || isFreeTrialAttr === 'True';
         
-        console.log('Starting free trial process:', {
+        // Debug logging to track the attribute value
+        console.log('Button attributes:', {
+            'data-package-id': packageId,
+            'data-billing-cycle': billingCycle,
+            'data-is-free-trial': isFreeTrialAttr,
+            'isFreeTrial (converted)': isFreeTrial
+        });
+        
+        console.log('Starting purchase process:', {
             packageId: packageId,
             billingCycle: billingCycle,
             isFreeTrial: isFreeTrial
@@ -76,26 +82,40 @@
     }
     
     /**
-     * Handle "Pay Now" button click (For Free Trial - redirects to purchase endpoint)
+     * Handle "Pay Now" button click
      */
-    function handlePayNowClick(e) {
+    function handlePayClick(e) {
         e.preventDefault();
         
-        var button = e.target.closest('#saasPayNowBtn');
+        // Find the actual button element
+        var button = e.target.closest('.saas_pay_btn');
         if (!button) {
-            console.error('Could not find pay now button element');
+            console.error('Could not find pay button element');
+            return;
+        }
+        
+        // Check if payment form exists (fallback to regular purchase if not)
+        var paymentForm = document.getElementById('saasPaymentForm');
+        if (!paymentForm) {
+            console.log('Payment form not found, falling back to regular purchase flow');
+            // Fallback to regular purchase request
+            makePurchaseRequest(packageId, billingCycle, false);
+            return;
+        }
+        
+        var selectedAcquirer = paymentForm.querySelector('input[name="acquirer_id"]:checked');
+        if (!selectedAcquirer) {
+            showErrorMessage('Please select a payment method to continue.');
             return;
         }
         
         var packageId = button.getAttribute('data-package-id');
         var billingCycle = button.getAttribute('data-billing-cycle');
-        var isFreeTrialAttr = button.getAttribute('data-is-free-trial');
-        var isFreeTrial = isFreeTrialAttr === 'true' || isFreeTrialAttr === 'True';
         
-        console.log('Pay Now button clicked (should only be for free trial):', {
+        console.log('Starting payment process:', {
             packageId: packageId,
             billingCycle: billingCycle,
-            isFreeTrial: isFreeTrial
+            acquirerId: selectedAcquirer.value
         });
         
         // Validate required parameters
@@ -114,8 +134,8 @@
         // Disable the button
         button.disabled = true;
         
-        // Make purchase request for free trial
-        makePurchaseRequest(packageId, billingCycle, isFreeTrial);
+        // Process payment
+        processPayment(packageId, billingCycle, selectedAcquirer.value);
     }
     
     /**
@@ -142,13 +162,36 @@
     }
     
     /**
-     * Process payment through Odoo payment acquirer (Not needed - handled by payment.form)
-     * This function is kept for backward compatibility but should not be used
+     * Process payment through Odoo payment acquirer
      */
     function processPayment(packageId, billingCycle, acquirerId) {
-        console.log('Payment processing is now handled by Odoo payment module');
-        // Payment processing is handled by Odoo's payment.form template
-        // This function is kept for backward compatibility but not used
+        console.log('Processing payment...', {
+            packageId: packageId,
+            billingCycle: billingCycle,
+            acquirerId: acquirerId
+        });
+        
+        // Submit payment form to Odoo payment processing
+        var paymentForm = document.getElementById('saasPaymentForm');
+        if (paymentForm) {
+            // Add acquirer_id to form if not already present
+            var acquirerInput = paymentForm.querySelector('input[name="acquirer_id"]:checked');
+            if (acquirerInput) {
+                paymentForm.submit();
+            } else {
+                console.error('No payment method selected');
+                showErrorMessage('Please select a payment method.');
+                hideLoadingScreen();
+                var payBtn = document.getElementById('saasPayBtn');
+                if (payBtn) payBtn.disabled = false;
+            }
+        } else {
+            console.error('Payment form not found');
+            showErrorMessage('Payment form not found. Please refresh the page.');
+            hideLoadingScreen();
+            var payBtn = document.getElementById('saasPayBtn');
+            if (payBtn) payBtn.disabled = false;
+        }
     }
     
     /**
@@ -336,102 +379,6 @@
                 errorAlert.remove();
             }
         }, 5000);
-    }
-    
-    /**
-     * Handle checkout button click (redirect to ecommerce-style checkout)
-     */
-    function handleCheckoutClick() {
-        var checkoutBtn = document.getElementById('saasCheckoutBtn');
-        if (!checkoutBtn) {
-            console.error('Checkout button not found');
-            return;
-        }
-        
-        // Get package data from button attributes
-        var packageId = checkoutBtn.getAttribute('data-package-id');
-        var billingCycle = checkoutBtn.getAttribute('data-billing-cycle');
-        var price = checkoutBtn.getAttribute('data-price');
-        var currencySymbol = checkoutBtn.getAttribute('data-currency-symbol');
-        var periodText = checkoutBtn.getAttribute('data-period-text');
-        
-        console.log('Checkout button clicked:', {
-            packageId: packageId,
-            billingCycle: billingCycle,
-            price: price,
-            currencySymbol: currencySymbol,
-            periodText: periodText
-        });
-        
-        // For now, redirect to regular purchase flow
-        // In a full ecommerce implementation, this would go to a proper checkout page
-        makePurchaseRequest(packageId, billingCycle, false);
-    }
-    
-    /**
-     * Handle pay now button click (ecommerce-style payment)
-     */
-    function handlePayNowClick() {
-        var payNowBtn = document.getElementById('saasPayNowBtn');
-        if (!payNowBtn) {
-            console.error('Pay now button not found');
-            return;
-        }
-        
-        // Disable button to prevent double clicks
-        payNowBtn.disabled = true;
-        
-        // Get package data from button attributes
-        var packageId = payNowBtn.getAttribute('data-package-id');
-        var billingCycle = payNowBtn.getAttribute('data-billing-cycle');
-        var isFreeTrial = payNowBtn.getAttribute('data-is-free-trial');
-        
-        console.log('Pay now button clicked:', {
-            packageId: packageId,
-            billingCycle: billingCycle,
-            isFreeTrial: isFreeTrial
-        });
-        
-        // Show loading screen
-        showLoadingScreen();
-        
-        // Make purchase request
-        makePurchaseRequest(packageId, billingCycle, false);
-    }
-    
-    /**
-     * Initialize purchase confirmation page
-     */
-    function initPurchaseConfirm() {
-        // Start button for free trials
-        var startBtn = document.getElementById('saasStartBtn');
-        if (startBtn) {
-            startBtn.addEventListener('click', handleStartClick);
-        }
-        
-        // Pay button for paid packages (legacy)
-        var payBtn = document.getElementById('saasPayBtn');
-        if (payBtn) {
-            payBtn.addEventListener('click', handlePayClick);
-        }
-        
-        // New checkout button for paid packages
-        var checkoutBtn = document.getElementById('saasCheckoutBtn');
-        if (checkoutBtn) {
-            checkoutBtn.addEventListener('click', handleCheckoutClick);
-        }
-        
-        // Pay now button for paid packages (ecommerce style)
-        var payNowBtn = document.getElementById('saasPayNowBtn');
-        if (payNowBtn) {
-            payNowBtn.addEventListener('click', handlePayNowClick);
-        }
-        
-        // Continue button (success screen)
-        var continueBtn = document.getElementById('saasContinueBtn');
-        if (continueBtn) {
-            continueBtn.addEventListener('click', handleContinueClick);
-        }
     }
     
     // Initialize when DOM is ready

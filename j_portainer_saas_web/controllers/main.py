@@ -232,30 +232,16 @@ class SaaSWebController(http.Controller):
                     # Fallback to regular purchase flow
                     return request.redirect(f'/saas/package/purchase?package_id={package_id}&billing_cycle={billing_cycle}&is_free_trial=false')
             
-            # Prepare template data for payment.form template
+            # Prepare template data
             template_data = {
                 'package': package,
                 'billing_cycle': billing_cycle,
-                'is_free_trial': str(is_free_trial).lower(),  # Convert to string for template
+                'is_free_trial': is_free_trial,
                 'price': price,
                 'currency_symbol': currency_symbol,
                 'period_text': 'month' if billing_cycle == 'monthly' else 'year',
                 'free_trial_days': self._get_free_trial_days(),
                 'payment_acquirers': payment_acquirers,
-                # Payment form specific variables
-                'providers_sudo': payment_acquirers,
-                'payment_methods_sudo': request.env['payment.method'].sudo().browse(),
-                'tokens_sudo': request.env['payment.token'].sudo().browse(),
-                'selected_token_id': False,
-                'reference': f'SAAS-{package.id}-{billing_cycle}',
-                'amount': price,
-                'currency': package.pkg_currency_id or request.env.company.currency_id,
-                'partner_id': request.env.user.partner_id.id,
-                'access_token': False,
-                'transaction_route': '/payment/transaction',
-                'landing_route': '/saas/payment/success',
-                'submit_button_label': 'Pay now',
-                'inline_form': True,
             }
             
             # Log template data for debugging
