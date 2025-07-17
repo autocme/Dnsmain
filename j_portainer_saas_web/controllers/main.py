@@ -213,16 +213,25 @@ class SaaSWebController(http.Controller):
                 try:
                     # Check if payment module is available (Odoo 17 uses payment.provider)
                     if 'payment.provider' in request.env:
+                        # Try to search for enabled payment providers
                         payment_acquirers = request.env['payment.provider'].sudo().search([
                             ('state', '=', 'enabled'),
                             ('company_id', '=', request.env.user.company_id.id)
                         ])
+                        _logger.info(f"Found {len(payment_acquirers)} payment providers: {[p.name for p in payment_acquirers]}")
+                        
+                        # If no enabled providers found, try to get all providers for debugging
+                        if not payment_acquirers:
+                            all_providers = request.env['payment.provider'].sudo().search([])
+                            _logger.info(f"All payment providers in system: {[(p.name, p.state, p.company_id.name) for p in all_providers]}")
+                            
                     elif 'payment.acquirer' in request.env:
                         # Fallback for older Odoo versions
                         payment_acquirers = request.env['payment.acquirer'].sudo().search([
                             ('state', '=', 'enabled'),
                             ('company_id', '=', request.env.user.company_id.id)
                         ])
+                        _logger.info(f"Found {len(payment_acquirers)} payment acquirers: {[p.name for p in payment_acquirers]}")
                     else:
                         # Payment module not available - redirect to regular flow
                         _logger.warning("Payment module not available, redirecting to regular purchase flow")

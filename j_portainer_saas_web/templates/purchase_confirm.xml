@@ -66,25 +66,51 @@
                                     </div>
 
                                     <div>
-                                        <t t-call="payment.form">
-                                            <t t-set="providers_sudo" t-value="payment_acquirers"/>
-                                            <t t-set="payment_methods_sudo"
-                                               t-value="request.env['payment.method'].sudo().browse()"/>
-                                            <t t-set="tokens_sudo"
-                                               t-value="request.env['payment.token'].sudo().browse()"/>
-                                            <t t-set="selected_token_id" t-value="False"/>
-                                            <t t-set="reference"
-                                               t-value="'SAAS-' + str(package.id) + '-' + billing_cycle"/>
-                                            <t t-set="amount" t-value="price"/>
-                                            <t t-set="currency" t-value="request.env.company.currency_id"/>
-                                            <t t-set="partner_id" t-value="request.env.user.partner_id.id"/>
-                                            <t t-set="access_token" t-value="False"/>
-                                            <t t-set="transaction_route" t-value="'/payment/transaction'"/>
-                                            <t t-set="landing_route" t-value="'/saas/payment/success'"/>
-                                            <t t-set="submit_button_label" t-value="'Pay now'"/>
-                                            <t t-set="inline_form" t-value="True"/>
+                                        <t t-if="is_free_trial">
+                                            <!-- Free trial flow - no payment needed -->
+                                            <div class="alert alert-info mb-3">
+                                                <i class="fa fa-info-circle me-2"></i>
+                                                This is a free trial. No payment required.
+                                            </div>
                                         </t>
-
+                                        <t t-else="">
+                                            <t t-if="payment_acquirers">
+                                                <!-- Payment form for paid packages -->
+                                                <t t-call="payment.form">
+                                                    <t t-set="providers_sudo" t-value="payment_acquirers"/>
+                                                    <t t-set="payment_methods_sudo" t-value="request.env['payment.method'].sudo().browse()"/>
+                                                    <t t-set="tokens_sudo" t-value="request.env['payment.token'].sudo().browse()"/>
+                                                    <t t-set="selected_token_id" t-value="False"/>
+                                                    <t t-set="reference" t-value="'SAAS-' + str(package.id) + '-' + billing_cycle"/>
+                                                    <t t-set="amount" t-value="price"/>
+                                                    <t t-set="currency" t-value="request.env.company.currency_id"/>
+                                                    <t t-set="partner_id" t-value="request.env.user.partner_id.id"/>
+                                                    <t t-set="access_token" t-value="False"/>
+                                                    <t t-set="transaction_route" t-value="'/payment/transaction'"/>
+                                                    <t t-set="landing_route" t-value="'/saas/payment/success'"/>
+                                                    <t t-set="submit_button_label" t-value="'Pay now'"/>
+                                                    <t t-set="inline_form" t-value="True"/>
+                                                </t>
+                                                <!-- Debug information -->
+                                                <div class="mt-3" style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-size: 12px;">
+                                                    <strong>Debug Info:</strong><br/>
+                                                    Payment providers count: <span t-esc="len(payment_acquirers)"/><br/>
+                                                    <t t-if="payment_acquirers">
+                                                        Providers: <span t-esc="', '.join([p.name for p in payment_acquirers])"/><br/>
+                                                    </t>
+                                                    Price: <span t-esc="price"/><br/>
+                                                    Currency: <span t-esc="request.env.company.currency_id.name"/><br/>
+                                                    Reference: <span t-esc="'SAAS-' + str(package.id) + '-' + billing_cycle"/><br/>
+                                                </div>
+                                            </t>
+                                            <t t-else="">
+                                                <!-- No payment providers available - show manual payment info -->
+                                                <div class="alert alert-warning mb-3">
+                                                    <i class="fa fa-exclamation-triangle me-2"></i>
+                                                    No payment methods configured. Please contact support for manual payment processing.
+                                                </div>
+                                            </t>
+                                        </t>
                                     </div>
                                     <!-- Debug: Show all template variables -->
                                     <!--                                    <div class="saas_debug_vars" style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 20px;">-->
