@@ -381,6 +381,65 @@
         }, 5000);
     }
     
+    /**
+     * Handle checkout button click (redirect to ecommerce-style checkout)
+     */
+    function handleCheckoutClick() {
+        var checkoutBtn = document.getElementById('saasCheckoutBtn');
+        if (!checkoutBtn) {
+            console.error('Checkout button not found');
+            return;
+        }
+        
+        // Get package data from button attributes
+        var packageId = checkoutBtn.getAttribute('data-package-id');
+        var billingCycle = checkoutBtn.getAttribute('data-billing-cycle');
+        var price = checkoutBtn.getAttribute('data-price');
+        var currencySymbol = checkoutBtn.getAttribute('data-currency-symbol');
+        var periodText = checkoutBtn.getAttribute('data-period-text');
+        
+        console.log('Checkout button clicked:', {
+            packageId: packageId,
+            billingCycle: billingCycle,
+            price: price,
+            currencySymbol: currencySymbol,
+            periodText: periodText
+        });
+        
+        // For now, redirect to regular purchase flow
+        // In a full ecommerce implementation, this would go to a proper checkout page
+        makePurchaseRequest(packageId, billingCycle, false);
+    }
+    
+    /**
+     * Initialize purchase confirmation page
+     */
+    function initPurchaseConfirm() {
+        // Start button for free trials
+        var startBtn = document.getElementById('saasStartBtn');
+        if (startBtn) {
+            startBtn.addEventListener('click', handleStartClick);
+        }
+        
+        // Pay button for paid packages (legacy)
+        var payBtn = document.getElementById('saasPayBtn');
+        if (payBtn) {
+            payBtn.addEventListener('click', handlePayClick);
+        }
+        
+        // New checkout button for paid packages
+        var checkoutBtn = document.getElementById('saasCheckoutBtn');
+        if (checkoutBtn) {
+            checkoutBtn.addEventListener('click', handleCheckoutClick);
+        }
+        
+        // Continue button (success screen)
+        var continueBtn = document.getElementById('saasContinueBtn');
+        if (continueBtn) {
+            continueBtn.addEventListener('click', handleContinueClick);
+        }
+    }
+    
     // Initialize when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initPurchaseConfirm);
