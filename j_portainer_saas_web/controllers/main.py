@@ -161,6 +161,34 @@ class SaaSWebController(http.Controller):
             return int(config.get_param('j_portainer_saas.free_trial_interval_days', 30))
         except:
             return 30
+    
+    def _get_or_create_portal_token(self, partner):
+        """
+        Get or create portal access token for partner
+        
+        Args:
+            partner: res.partner record
+            
+        Returns:
+            str: Access token or False if not available
+        """
+        try:
+            # Try different methods to get portal token based on Odoo version
+            if hasattr(partner, '_portal_ensure_token'):
+                return partner._portal_ensure_token()
+            elif hasattr(partner, 'signup_token'):
+                # Use signup token if available
+                if not partner.signup_token:
+                    partner.sudo().signup_prepare()
+                return partner.signup_token
+            else:
+                # Fallback: create a simple token based on partner info
+                import hashlib
+                token_string = f"{partner.id}-{partner.email or 'noemail'}-{time.time()}"
+                return hashlib.md5(token_string.encode()).hexdigest()
+        except Exception as e:
+            _logger.warning(f"Could not generate portal token: {str(e)}")
+            return False
 
     @http.route('/saas/purchase/confirm', type='http', website=True, auth='user', methods=['GET'], csrf=False)
     def purchase_confirm(self, package_id, billing_cycle='monthly', is_free_trial='false', **kwargs):
@@ -292,7 +320,7 @@ class SaaSWebController(http.Controller):
                 'partner_id': request.env.user.partner_id.id,
                 'transaction_route': '/saas/payment/transaction',
                 'landing_route': '/saas/payment/success',
-                'access_token': request.env.user.partner_id._portal_ensure_token(),
+                'access_token': self._get_or_create_portal_token(request.env.user.partner_id),
                 'mode': 'payment',
                 'allow_token_selection': True,
                 'allow_token_deletion': False,
@@ -358,7 +386,7 @@ class SaaSWebController(http.Controller):
                     return {
                         'result': 'success',
                         'transaction_id': transaction.id,
-                        'redirect_url': f'/payment/process/{transaction.id}?access_token={request.env.user.partner_id._portal_ensure_token()}'
+                        'redirect_url': f'/payment/process/{transaction.id}?access_token={self._get_or_create_portal_token(request.env.user.partner_id)}'
                     }
                     
                 except Exception as e:
