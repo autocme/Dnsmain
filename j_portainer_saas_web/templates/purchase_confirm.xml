@@ -71,62 +71,25 @@
                                         </ul>
                                     </div>
                                     
-                                    <!-- Payment Wizard Container (Hidden initially for paid packages) -->
-                                    <div class="saas_payment_wizard_wrapper" id="saasPaymentWizard" t-att-style="'display: none;' if is_free_trial else 'display: block;'">
-                                        <t t-if="not is_free_trial">
-                                            <t t-set="payment_providers" t-value="request.env['payment.provider'].sudo().search([('state', '=', 'enabled')])"/>
-                                            <div class="saas_payment_methods_section">
-                                                <h5>CHOOSE A PAYMENT METHOD</h5>
-                                                
-                                                <t t-if="payment_providers">
-                                                    <form action="/payment/transaction" method="post" class="saas_payment_form">
-                                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                                        <input type="hidden" name="reference" t-att-value="'SAAS-' + str(package.id) + '-' + billing_cycle"/>
-                                                        <input type="hidden" name="amount" t-att-value="price"/>
-                                                        <input type="hidden" name="currency_id" t-att-value="request.env.company.currency_id.id"/>
-                                                        <input type="hidden" name="partner_id" t-att-value="request.env.user.partner_id.id"/>
-                                                        <input type="hidden" name="landing_route" value="/saas/payment/success"/>
-                                                        <input type="hidden" name="saas_package_id" t-att-value="package.id"/>
-                                                        <input type="hidden" name="saas_billing_cycle" t-att-value="billing_cycle"/>
-                                                        
-                                                        <!-- Payment Provider Selection -->
-                                                        <div class="saas_payment_providers">
-                                                            <t t-foreach="payment_providers" t-as="provider">
-                                                                <div class="saas_payment_provider">
-                                                                    <label class="saas_provider_option">
-                                                                        <input type="radio" name="provider_id" t-att-value="provider.id" 
-                                                                               t-att-checked="'checked' if provider_index == 0 else None"/>
-                                                                        <div class="saas_provider_info">
-                                                                            <div class="saas_provider_name">
-                                                                                <span t-esc="provider.name"/>
-                                                                                <t t-if="provider.code == 'demo'">
-                                                                                    <small class="text-muted">(Demo - No real payment)</small>
-                                                                                </t>
-                                                                            </div>
-                                                                            <div class="saas_provider_description" t-if="provider.pre_msg">
-                                                                                <small t-esc="provider.pre_msg"/>
-                                                                            </div>
-                                                                        </div>
-                                                                    </label>
-                                                                </div>
-                                                            </t>
-                                                        </div>
-                                                        
-                                                        <!-- Pay Button -->
-                                                        <div class="saas_payment_submit">
-                                                            <button type="submit" class="btn btn-primary btn-lg saas_pay_button">
-                                                                <i class="fa fa-credit-card" style="margin-right: 8px;"></i>
-                                                                Pay <span t-esc="currency_symbol"/><span t-esc="price"/>
-                                                            </button>
-                                                        </div>
-                                                    </form>
-                                                </t>
-                                                <div t-else="" class="alert alert-warning">
-                                                    <h6>No Payment Methods Available</h6>
-                                                    <p>Payment providers are not configured. Please contact support.</p>
-                                                </div>
+                                    <!-- Payment Information (shown after client creation for paid packages) -->
+                                    <div class="saas_payment_info_wrapper" id="saasPaymentInfo" style="display: none;">
+                                        <div class="saas_invoice_created_section">
+                                            <div class="alert alert-info">
+                                                <h5><i class="fa fa-file-text-o"></i> Invoice Created</h5>
+                                                <p>Your subscription has been created and an invoice has been generated.</p>
+                                                <p><strong>Next step:</strong> Complete payment to activate your SaaS instance.</p>
                                             </div>
-                                        </t>
+                                            
+                                            <div class="saas_payment_action">
+                                                <button type="button" class="btn btn-primary btn-lg" id="saasPayInvoiceBtn">
+                                                    <i class="fa fa-credit-card" style="margin-right: 8px;"></i>
+                                                    Pay Invoice Now
+                                                </button>
+                                                <p class="text-muted mt-2">
+                                                    <small>Click to open Odoo's secure payment wizard</small>
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 

@@ -376,6 +376,154 @@ class SaaSWebController(http.Controller):
                 'error': f'Failed to create SaaS instance: {str(e)}'
             }
 
+    @http.route('/saas/client/invoice_info', type='http', auth='user', methods=['GET'], csrf=False)
+    def get_client_invoice_info(self, client_id, **kwargs):
+        """
+        Get invoice information for a SaaS client
+        
+        Args:
+            client_id: SaaS client ID
+            
+        Returns:
+            JSON with invoice_id and access_token
+        """
+        try:
+            import logging
+            _logger = logging.getLogger(__name__)
+            
+            client_id_int = int(client_id)
+            client = request.env['saas.client'].sudo().browse(client_id_int)
+            
+            if not client.exists():
+                return request.make_response(
+                    json.dumps({'success': False, 'error': 'Client not found'}),
+                    headers=[('Content-Type', 'application/json')]
+                )
+            
+            # Check if client belongs to current user
+            if client.sc_partner_id.id != request.env.user.partner_id.id:
+                return request.make_response(
+                    json.dumps({'success': False, 'error': 'Access denied'}),
+                    headers=[('Content-Type', 'application/json')]
+                )
+            
+            # Get the subscription and invoice
+            subscription = client.sc_subscription_id
+            if not subscription:
+                return request.make_response(
+                    json.dumps({'success': False, 'error': 'No subscription found'}),
+                    headers=[('Content-Type', 'application/json')]
+                )
+            
+            # Get the latest unpaid invoice
+            invoice = request.env['account.move'].sudo().search([
+                ('partner_id', '=', client.sc_partner_id.id),
+                ('state', '=', 'posted'),
+                ('payment_state', 'in', ['not_paid', 'partial']),
+                ('move_type', '=', 'out_invoice')
+            ], order='create_date desc', limit=1)
+            
+            if not invoice:
+                return request.make_response(
+                    json.dumps({'success': False, 'error': 'No unpaid invoice found'}),
+                    headers=[('Content-Type', 'application/json')]
+                )
+            
+            # Generate access token for invoice
+            access_token = invoice._portal_ensure_token()
+            
+            _logger.info(f"Retrieved invoice info for client {client_id}: invoice_id={invoice.id}")
+            
+            return request.make_response(
+                json.dumps({
+                    'success': True,
+                    'invoice_id': invoice.id,
+                    'access_token': access_token,
+                    'amount': float(invoice.amount_residual),
+                    'currency': invoice.currency_id.name
+                }),
+                headers=[('Content-Type', 'application/json')]
+            )
+            
+        except Exception as e:
+            _logger.error(f"Error getting invoice info for client {client_id}: {str(e)}")
+            return request.make_response(
+                json.dumps({'success': False, 'error': str(e)}),
+                headers=[('Content-Type', 'application/json')]
+            )
+
+    @http.route('/saas/client/payment_status', type='http', auth='user', methods=['GET'], csrf=False)
+    def check_client_payment_status(self, client_id, **kwargs):
+        """
+        Check payment status for a SaaS client
+        
+        Args:
+            client_id: SaaS client ID
+            
+        Returns:
+            JSON with payment status
+        """
+        try:
+            import logging
+            _logger = logging.getLogger(__name__)
+            
+            client_id_int = int(client_id)
+            client = request.env['saas.client'].sudo().browse(client_id_int)
+            
+            if not client.exists():
+                return request.make_response(
+                    json.dumps({'success': False, 'error': 'Client not found'}),
+                    headers=[('Content-Type', 'application/json')]
+                )
+            
+            # Check if client belongs to current user
+            if client.sc_partner_id.id != request.env.user.partner_id.id:
+                return request.make_response(
+                    json.dumps({'success': False, 'error': 'Access denied'}),
+                    headers=[('Content-Type', 'application/json')]
+                )
+            
+            # Check if there are any unpaid invoices
+            unpaid_invoices = request.env['account.move'].sudo().search([
+                ('partner_id', '=', client.sc_partner_id.id),
+                ('state', '=', 'posted'),
+                ('payment_state', 'in', ['not_paid', 'partial']),
+                ('move_type', '=', 'out_invoice')
+            ])
+            
+            is_paid = len(unpaid_invoices) == 0
+            client_url = None
+            
+            if is_paid and client.sc_full_domain:
+                client_url = client.sc_full_domain
+                if not client_url.startswith('http'):
+                    client_url = f"https://{client_url}"
+                
+                # Deploy client if not already deployed
+                if client.sc_status in ['draft', 'ready']:
+                    try:
+                        client.action_deploy_client()
+                        _logger.info(f"Auto-deployed client {client_id} after payment verification")
+                    except Exception as e:
+                        _logger.warning(f"Failed to auto-deploy client {client_id}: {e}")
+            
+            return request.make_response(
+                json.dumps({
+                    'success': True,
+                    'paid': is_paid,
+                    'client_url': client_url,
+                    'unpaid_count': len(unpaid_invoices)
+                }),
+                headers=[('Content-Type', 'application/json')]
+            )
+            
+        except Exception as e:
+            _logger.error(f"Error checking payment status for client {client_id}: {str(e)}")
+            return request.make_response(
+                json.dumps({'success': False, 'error': str(e)}),
+                headers=[('Content-Type', 'application/json')]
+            )
+
     @http.route(['/saas/invoice/payment_wizard', '/saas/test/wizard'], type='http', auth='user', methods=['GET', 'POST'], csrf=False)
     def get_invoice_payment_wizard(self, **kwargs):
         """

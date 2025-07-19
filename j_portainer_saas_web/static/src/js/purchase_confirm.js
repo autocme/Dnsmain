@@ -256,28 +256,120 @@
     }
     
     /**
-     * Show payment form for paid packages (form is already embedded in template)
+     * Show payment info for paid packages and setup invoice payment
      */
     function showPaymentForm(clientId) {
-        console.log('Showing payment form for client:', clientId);
+        console.log('Showing payment info for client:', clientId);
         
-        // Hide package features and show payment wizard
+        // Hide package features and show payment info
         var packageFeatures = document.getElementById('saasPackageFeatures');
-        var paymentWizard = document.getElementById('saasPaymentWizard');
+        var paymentInfo = document.getElementById('saasPaymentInfo');
         
         if (packageFeatures) {
             packageFeatures.style.display = 'none';
         }
         
-        if (paymentWizard) {
-            paymentWizard.style.display = 'block';
+        if (paymentInfo) {
+            paymentInfo.style.display = 'block';
             
             // Update progress step to show payment as current
             updateProgressToPayment();
             
-            // Store client ID for payment success handling
+            // Store client ID and setup payment button
             window.saasCurrentClientId = clientId;
+            setupInvoicePaymentButton(clientId);
         }
+    }
+    
+    /**
+     * Setup the invoice payment button to open Odoo's payment wizard
+     */
+    function setupInvoicePaymentButton(clientId) {
+        var payBtn = document.getElementById('saasPayInvoiceBtn');
+        if (payBtn) {
+            payBtn.addEventListener('click', function() {
+                openInvoicePaymentWizard(clientId);
+            });
+        }
+    }
+    
+    /**
+     * Open Odoo's built-in invoice payment wizard
+     */
+    function openInvoicePaymentWizard(clientId) {
+        console.log('Opening invoice payment wizard for client:', clientId);
+        
+        // Get the invoice ID for this client via AJAX
+        fetch('/saas/client/invoice_info?client_id=' + clientId, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.success && data.invoice_id) {
+                // Open Odoo's invoice payment portal
+                var invoicePaymentUrl = '/my/invoices/' + data.invoice_id + '?access_token=' + (data.access_token || '');
+                
+                // Option 1: Open in new window/tab
+                var paymentWindow = window.open(invoicePaymentUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+                
+                // Option 2: If you prefer modal (uncomment this and comment the line above)
+                // window.location.href = invoicePaymentUrl;
+                
+                // Monitor for payment completion (optional)
+                if (paymentWindow) {
+                    var checkClosed = setInterval(function() {
+                        if (paymentWindow.closed) {
+                            clearInterval(checkClosed);
+                            console.log('Payment window closed, checking payment status...');
+                            checkPaymentStatus(clientId);
+                        }
+                    }, 1000);
+                }
+            } else {
+                console.error('Failed to get invoice info:', data.error || 'Unknown error');
+                showErrorMessage('Unable to load payment information. Please try again.');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error getting invoice info:', error);
+            showErrorMessage('Error loading payment information. Please try again.');
+        });
+    }
+    
+    /**
+     * Check if payment has been completed
+     */
+    function checkPaymentStatus(clientId) {
+        fetch('/saas/client/payment_status?client_id=' + clientId, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.success && data.paid) {
+                console.log('Payment completed, redirecting to instance...');
+                // Redirect to the client instance
+                if (data.client_url) {
+                    window.location.href = data.client_url;
+                } else {
+                    showSuccessScreen();
+                }
+            } else {
+                console.log('Payment not yet completed');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error checking payment status:', error);
+        });
     }
     
     /**

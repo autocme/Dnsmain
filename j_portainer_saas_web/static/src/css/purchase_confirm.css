@@ -684,3 +684,47 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
 }
+
+/* Payment Info Section Styles */
+.saas_payment_info_wrapper {
+    margin-top: 20px;
+}
+
+.saas_invoice_created_section {
+    text-align: center;
+}
+
+.saas_invoice_created_section .alert {
+    margin-bottom: 25px;
+    text-align: left;
+}
+
+.saas_invoice_created_section .alert h5 {
+    margin-bottom: 15px;
+    color: #2c3e50;
+}
+
+.saas_payment_action {
+    margin-top: 25px;
+}
+
+.saas_payment_action .btn {
+    padding: 15px 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background-color: #3498db;
+    border-color: #3498db;
+}
+
+.saas_payment_action .btn:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.saas_payment_action .text-muted {
+    margin-top: 10px;
+}
