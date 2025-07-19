@@ -92,9 +92,13 @@
                                                     Tokens count: <span t-esc="len(tokens_sudo)"/><br/>
                                                     Price: <span t-esc="price"/><br/>
                                                     Currency: <span t-esc="currency.name"/><br/>
+                                                    Reference: <span t-esc="reference"/><br/>
                                                     Reference prefix: <span t-esc="reference_prefix"/><br/>
                                                     Mode: <span t-esc="mode"/><br/>
                                                     Partner ID: <span t-esc="partner_id"/><br/>
+                                                    Access Token: <span t-esc="access_token and 'Generated' or 'None'"/><br/>
+                                                    Transaction Route: <span t-esc="transaction_route"/><br/>
+                                                    Landing Route: <span t-esc="landing_route"/><br/>
                                                 </div>
                                             </t>
                                             <t t-else="">

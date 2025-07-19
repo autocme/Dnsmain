@@ -285,13 +285,14 @@ class SaaSWebController(http.Controller):
                 'providers_sudo': payment_acquirers,
                 'payment_methods_sudo': payment_methods_sudo,
                 'tokens_sudo': tokens_sudo,
+                'reference': f'SAAS-{package.id}-{billing_cycle}-{int(time.time())}',
                 'reference_prefix': f'SAAS-{package.id}-{billing_cycle}',
                 'amount': price,
                 'currency': request.env.company.currency_id,
                 'partner_id': request.env.user.partner_id.id,
-                'transaction_route': '/payment/transaction',
+                'transaction_route': '/saas/payment/transaction',
                 'landing_route': '/saas/payment/success',
-                'access_token': False,
+                'access_token': request.env.user.partner_id._portal_ensure_token(),
                 'mode': 'payment',
                 'allow_token_selection': True,
                 'allow_token_deletion': False,
@@ -312,6 +313,98 @@ class SaaSWebController(http.Controller):
         except Exception as e:
             return request.render('j_portainer_saas_web.purchase_error', {
                 'error_message': f'Error loading confirmation page: {str(e)}'
+            })
+
+    @http.route('/saas/payment/transaction', type='json', auth='user', methods=['POST'], csrf=False)
+    def saas_payment_transaction(self, **kwargs):
+        """
+        Custom payment transaction handler for SaaS packages
+        This mimics Odoo's standard payment transaction creation but with SaaS-specific context
+        """
+        try:
+            _logger.info(f"SaaS Payment Transaction called with kwargs: {kwargs}")
+            
+            # Extract payment form data
+            provider_id = kwargs.get('provider_id')
+            amount = kwargs.get('amount')
+            currency_id = kwargs.get('currency_id')
+            reference = kwargs.get('reference')
+            partner_id = kwargs.get('partner_id')
+            
+            # Extract SaaS-specific data from reference
+            if reference and reference.startswith('SAAS-'):
+                try:
+                    parts = reference.split('-')
+                    package_id = int(parts[1])
+                    billing_cycle = parts[2]
+                    
+                    # Create payment transaction with SaaS context
+                    transaction_vals = {
+                        'provider_id': provider_id,
+                        'amount': amount,
+                        'currency_id': currency_id,
+                        'reference': reference,
+                        'partner_id': partner_id,
+                        'x_saas_package_id': package_id,
+                        'x_saas_billing_cycle': billing_cycle,
+                        'x_saas_user_id': request.env.user.id,
+                    }
+                    
+                    # Create the transaction
+                    transaction = request.env['payment.transaction'].sudo().create(transaction_vals)
+                    
+                    _logger.info(f"Created SaaS payment transaction: {transaction.id}")
+                    
+                    return {
+                        'result': 'success',
+                        'transaction_id': transaction.id,
+                        'redirect_url': f'/payment/process/{transaction.id}?access_token={request.env.user.partner_id._portal_ensure_token()}'
+                    }
+                    
+                except Exception as e:
+                    _logger.error(f"Error creating SaaS payment transaction: {str(e)}")
+                    return {'result': 'error', 'error': str(e)}
+            else:
+                return {'result': 'error', 'error': 'Invalid reference format'}
+                
+        except Exception as e:
+            _logger.error(f"SaaS payment transaction error: {str(e)}")
+            return {'result': 'error', 'error': str(e)}
+
+    @http.route('/saas/payment/success', type='http', auth='user', methods=['GET'], csrf=False)
+    def saas_payment_success(self, **kwargs):
+        """
+        Handle successful SaaS payment completion
+        """
+        try:
+            _logger.info(f"SaaS Payment Success called with kwargs: {kwargs}")
+            
+            # Get transaction ID from kwargs or session
+            transaction_id = kwargs.get('transaction_id')
+            access_token = kwargs.get('access_token')
+            
+            if transaction_id:
+                # Get the transaction and process SaaS client creation
+                transaction = request.env['payment.transaction'].sudo().browse(int(transaction_id))
+                if transaction.exists() and transaction.state == 'done':
+                    # Extract SaaS package info from transaction
+                    package_id = transaction.x_saas_package_id
+                    billing_cycle = transaction.x_saas_billing_cycle
+                    
+                    if package_id and billing_cycle:
+                        # Create SaaS client and redirect
+                        self_obj = SaasPackageController()
+                        return self_obj.purchase_package(package_id=package_id, billing_cycle=billing_cycle, is_free_trial='false')
+            
+            # If we reach here, show success page with manual continuation
+            return request.render('j_portainer_saas_web.purchase_success', {
+                'message': 'Payment completed successfully! You can now proceed to create your SaaS instance.'
+            })
+            
+        except Exception as e:
+            _logger.error(f"SaaS payment success error: {str(e)}")
+            return request.render('j_portainer_saas_web.purchase_error', {
+                'error_message': f'Error processing payment success: {str(e)}'
             })
 
     @http.route('/saas/payment/process', type='http', auth='user', methods=['POST'], csrf=False)
