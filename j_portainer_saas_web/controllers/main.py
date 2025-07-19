@@ -583,6 +583,101 @@ class SaaSWebController(http.Controller):
             _logger.error(f"Error opening payment wizard for invoice {invoice_id}: {str(e)}")
             return {'success': False, 'error': str(e)}
 
+    @http.route('/saas/client/invoice_details', type='http', auth='user', methods=['GET'])
+    def get_client_invoice_details(self, client_id, **kwargs):
+        """
+        Get detailed invoice information for display in form
+        
+        Args:
+            client_id: SaaS client ID
+            
+        Returns:
+            JSON with detailed invoice information including line items
+        """
+        try:
+            import logging
+            _logger = logging.getLogger(__name__)
+            
+            _logger.info(f"Getting detailed invoice info for client {client_id}")
+            
+            client = request.env['saas.client'].sudo().browse(int(client_id))
+            
+            if not client.exists():
+                return request.make_response(
+                    json.dumps({'success': False, 'error': 'Client not found'}),
+                    headers=[('Content-Type', 'application/json')]
+                )
+            
+            # Check if user has access to this client
+            if client.sc_partner_id.id != request.env.user.partner_id.id:
+                return request.make_response(
+                    json.dumps({'success': False, 'error': 'Access denied'}),
+                    headers=[('Content-Type', 'application/json')]
+                )
+            
+            # Get subscription and invoice
+            subscription = client.sc_subscription_id
+            if not subscription:
+                return request.make_response(
+                    json.dumps({'success': False, 'error': 'No subscription found'}),
+                    headers=[('Content-Type', 'application/json')]
+                )
+            
+            # Get the latest invoice from subscription
+            invoices = subscription.invoice_ids.filtered(lambda inv: inv.state in ['draft', 'posted'] and inv.amount_residual > 0)
+            
+            if not invoices:
+                return request.make_response(
+                    json.dumps({'success': False, 'error': 'No unpaid invoice found'}),
+                    headers=[('Content-Type', 'application/json')]
+                )
+            
+            # Get the most recent invoice
+            invoice = invoices.sorted('create_date', reverse=True)[0]
+            
+            # Prepare invoice line items
+            line_items = []
+            for line in invoice.invoice_line_ids:
+                line_items.append({
+                    'name': line.product_id.name if line.product_id else line.name,
+                    'description': line.name,
+                    'quantity': line.quantity,
+                    'unit_price': line.price_unit,
+                    'subtotal': line.price_subtotal,
+                    'currency_symbol': invoice.currency_id.symbol
+                })
+            
+            invoice_details = {
+                'success': True,
+                'invoice_number': invoice.name,
+                'invoice_date': invoice.invoice_date.strftime('%B %d, %Y') if invoice.invoice_date else '',
+                'due_date': invoice.invoice_date_due.strftime('%B %d, %Y') if invoice.invoice_date_due else '',
+                'customer_name': invoice.partner_id.name,
+                'line_items': line_items,
+                'subtotal': invoice.amount_untaxed,
+                'tax_amount': invoice.amount_tax,
+                'total_amount': invoice.amount_total,
+                'amount_due': invoice.amount_residual,
+                'currency_symbol': invoice.currency_id.symbol,
+                'currency_name': invoice.currency_id.name,
+                'state': invoice.state,
+                'payment_state': invoice.payment_state
+            }
+            
+            _logger.info(f"Detailed invoice info retrieved for client {client_id}")
+            
+            return request.make_response(
+                json.dumps(invoice_details),
+                headers=[('Content-Type', 'application/json')]
+            )
+            
+        except Exception as e:
+            _logger.error(f"Error getting detailed invoice info for client {client_id}: {str(e)}")
+            return request.make_response(
+                json.dumps({'success': False, 'error': str(e)}),
+                headers=[('Content-Type', 'application/json')]
+            )
+
     @http.route(['/saas/invoice/payment_wizard', '/saas/test/wizard'], type='http', auth='user', methods=['GET', 'POST'], csrf=False)
     def get_invoice_payment_wizard(self, **kwargs):
         """

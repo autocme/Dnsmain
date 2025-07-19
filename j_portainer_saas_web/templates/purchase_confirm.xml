@@ -136,6 +136,34 @@
                                     </div>
                                 </div>
                                 
+                                <!-- Invoice Payment Screen (Hidden initially) -->
+                                <div class="saas_invoice_screen" id="saasInvoiceScreen" style="display: none;">
+                                    <div class="saas_invoice_content">
+                                        <div class="saas_invoice_icon">
+                                            <i class="fa fa-file-text-o"></i>
+                                        </div>
+                                        <h3 class="saas_invoice_title">Invoice Created</h3>
+                                        <div class="saas_invoice_message">
+                                            <p>Your subscription has been created and an invoice has been generated.</p>
+                                            <p><strong>Next step:</strong> Complete payment to activate your SaaS instance.</p>
+                                        </div>
+                                        
+                                        <!-- Invoice Details Display -->
+                                        <div id="saasInvoiceDetails" class="saas_invoice_details" style="margin: 30px 0;">
+                                            <!-- Invoice details will be loaded here -->
+                                        </div>
+                                        
+                                        <!-- Payment Action Button -->
+                                        <div class="saas_payment_action">
+                                            <button type="button" class="btn btn-primary btn-lg saas_pay_invoice_btn" 
+                                                    id="saasPayInvoiceBtn" onclick="openInvoicePaymentWizard(window.saasClientId)">
+                                                <i class="fa fa-credit-card"></i> PAY INVOICE NOW
+                                            </button>
+                                            <p class="text-muted">Click to open Odoo's secure payment wizard</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
                                 <!-- Success Screen (Hidden initially) -->
                                 <div class="saas_success_screen" id="saasSuccessScreen" style="display: none;">
                                     <div class="saas_success_content">

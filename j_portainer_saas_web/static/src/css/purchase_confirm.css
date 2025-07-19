@@ -728,3 +728,162 @@
 .saas_payment_action .text-muted {
     margin-top: 10px;
 }
+
+/* Invoice Screen Styles */
+.saas_invoice_screen {
+    text-align: center;
+    padding: 40px 20px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1);
+    margin-top: 30px;
+}
+
+.saas_invoice_content {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.saas_invoice_icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 25px;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.saas_invoice_icon i {
+    font-size: 36px;
+    color: white;
+}
+
+.saas_invoice_title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.saas_invoice_message {
+    margin-bottom: 30px;
+    color: #7f8c8d;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.saas_invoice_message p {
+    margin-bottom: 10px;
+}
+
+.saas_invoice_message strong {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.saas_invoice_details {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 25px;
+    text-align: left;
+    margin: 30px 0;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.saas_invoice_table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.saas_invoice_table th,
+.saas_invoice_table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.saas_invoice_table th {
+    background-color: #e9ecef;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+}
+
+.saas_invoice_table tbody tr:hover {
+    background-color: #f1f3f4;
+}
+
+.saas_invoice_table .invoice_total {
+    font-weight: 700;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    background-color: #e8f4f8;
+}
+
+.saas_pay_invoice_btn {
+    background: linear-gradient(135deg, #875A7B, #6F4771);
+    border: none;
+    padding: 18px 40px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 50px;
+    color: white;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 20px rgba(135, 90, 123, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.saas_pay_invoice_btn:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    transform: translate(-50%, -50%);
+}
+
+.saas_pay_invoice_btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(135, 90, 123, 0.4);
+    background: linear-gradient(135deg, #9B6B8A, #7D5579);
+}
+
+.saas_pay_invoice_btn:hover:before {
+    width: 300px;
+    height: 300px;
+}
+
+.saas_pay_invoice_btn:active {
+    transform: translateY(-1px);
+}
+
+.saas_pay_invoice_btn i {
+    margin-right: 12px;
+    font-size: 1.3rem;
+}
+
+.saas_payment_action {
+    margin-top: 35px;
+}
+
+.saas_payment_action .text-muted {
+    margin-top: 15px;
+    font-style: italic;
+    color: #6c757d;
+}
