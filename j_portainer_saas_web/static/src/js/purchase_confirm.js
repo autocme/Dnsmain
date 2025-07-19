@@ -294,7 +294,7 @@
     }
     
     /**
-     * Open Odoo's built-in invoice payment wizard
+     * Open Odoo's built-in invoice payment wizard directly as modal
      */
     function openInvoicePaymentWizard(clientId) {
         console.log('Opening invoice payment wizard for client:', clientId);
@@ -311,24 +311,15 @@
         })
         .then(function(data) {
             if (data.success && data.invoice_id) {
-                // Open Odoo's invoice payment portal
-                var invoicePaymentUrl = '/my/invoices/' + data.invoice_id + '?access_token=' + (data.access_token || '');
+                console.log('Invoice info retrieved, opening payment wizard...');
                 
-                // Option 1: Open in new window/tab
-                var paymentWindow = window.open(invoicePaymentUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
-                
-                // Option 2: If you prefer modal (uncomment this and comment the line above)
-                // window.location.href = invoicePaymentUrl;
-                
-                // Monitor for payment completion (optional)
-                if (paymentWindow) {
-                    var checkClosed = setInterval(function() {
-                        if (paymentWindow.closed) {
-                            clearInterval(checkClosed);
-                            console.log('Payment window closed, checking payment status...');
-                            checkPaymentStatus(clientId);
-                        }
-                    }, 1000);
+                // Check if we're in Odoo web interface with access to web client APIs
+                if (typeof odoo !== 'undefined' && odoo.define) {
+                    // Method 1: Use Odoo's web client to open payment wizard
+                    openOdooPaymentWizard(data.invoice_id, data.access_token, clientId);
+                } else {
+                    // Method 2: Direct AJAX call to get payment wizard HTML and show as modal
+                    openPaymentWizardModal(data.invoice_id, data.access_token, clientId, data.amount, data.currency);
                 }
             } else {
                 console.error('Failed to get invoice info:', data.error || 'Unknown error');
@@ -338,6 +329,205 @@
         .catch(function(error) {
             console.error('Error getting invoice info:', error);
             showErrorMessage('Error loading payment information. Please try again.');
+        });
+    }
+    
+    /**
+     * Open payment wizard using Odoo web client (if available)
+     */
+    function openOdooPaymentWizard(invoiceId, accessToken, clientId) {
+        try {
+            // Use Odoo's action manager to open payment wizard
+            var action = {
+                type: 'ir.actions.act_window',
+                name: 'Pay Invoice',
+                res_model: 'account.payment.register',
+                view_mode: 'form',
+                views: [[false, 'form']],
+                target: 'new',
+                context: {
+                    'active_model': 'account.move',
+                    'active_ids': [invoiceId],
+                    'default_invoice_ids': [[6, 0, [invoiceId]]],
+                    'saas_client_id': clientId
+                }
+            };
+            
+            if (window.parent && window.parent.odoo) {
+                window.parent.odoo.action_manager.do_action(action);
+            } else if (window.odoo && window.odoo.action_manager) {
+                window.odoo.action_manager.do_action(action);
+            } else {
+                // Fallback to modal approach
+                openPaymentWizardModal(invoiceId, accessToken, clientId);
+            }
+        } catch (e) {
+            console.log('Odoo web client not available, using modal approach:', e);
+            openPaymentWizardModal(invoiceId, accessToken, clientId);
+        }
+    }
+    
+    /**
+     * Open payment wizard as modal dialog
+     */
+    function openPaymentWizardModal(invoiceId, accessToken, clientId, amount, currency) {
+        console.log('Opening payment wizard as modal...');
+        
+        // Create modal backdrop
+        var modalBackdrop = document.createElement('div');
+        modalBackdrop.className = 'saas_payment_modal_backdrop';
+        modalBackdrop.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        // Create modal content
+        var modal = document.createElement('div');
+        modal.className = 'saas_payment_modal';
+        modal.style.cssText = `
+            background: white;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        `;
+        
+        // Add modal header
+        modal.innerHTML = `
+            <div style="padding: 20px; border-bottom: 1px solid #dee2e6;">
+                <div style="display: flex; justify-content: between; align-items: center;">
+                    <h4 style="margin: 0; color: #2c3e50;">Pay with</h4>
+                    <button type="button" class="saas_close_modal" style="background: none; border: none; font-size: 24px; cursor: pointer; padding: 0; margin-left: auto;">×</button>
+                </div>
+                <p style="margin: 10px 0 0 0; color: #7f8c8d;">CHOOSE A PAYMENT METHOD</p>
+            </div>
+            <div id="saasPaymentModalContent" style="padding: 20px;">
+                <div style="text-align: center; padding: 40px;">
+                    <div class="saas_spinner" style="margin: 0 auto 20px;"></div>
+                    <p>Loading payment options...</p>
+                </div>
+            </div>
+        `;
+        
+        modalBackdrop.appendChild(modal);
+        document.body.appendChild(modalBackdrop);
+        
+        // Close modal functionality
+        var closeBtn = modal.querySelector('.saas_close_modal');
+        closeBtn.addEventListener('click', function() {
+            document.body.removeChild(modalBackdrop);
+        });
+        
+        modalBackdrop.addEventListener('click', function(e) {
+            if (e.target === modalBackdrop) {
+                document.body.removeChild(modalBackdrop);
+            }
+        });
+        
+        // Load payment wizard content
+        fetch('/saas/invoice/payment_wizard_modal?invoice_id=' + invoiceId + '&access_token=' + accessToken + '&client_id=' + clientId, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function(response) {
+            return response.text();
+        })
+        .then(function(html) {
+            var contentDiv = modal.querySelector('#saasPaymentModalContent');
+            if (contentDiv) {
+                contentDiv.innerHTML = html;
+                
+                // Handle payment form submission within modal
+                var paymentForms = contentDiv.querySelectorAll('form');
+                paymentForms.forEach(function(form) {
+                    form.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        handleModalPaymentSubmission(form, clientId, modalBackdrop);
+                    });
+                });
+            }
+        })
+        .catch(function(error) {
+            console.error('Error loading payment wizard modal:', error);
+            var contentDiv = modal.querySelector('#saasPaymentModalContent');
+            if (contentDiv) {
+                contentDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h6>Error Loading Payment Options</h6>
+                        <p>Unable to load payment wizard. Please try again.</p>
+                        <button type="button" class="btn btn-secondary" onclick="this.closest('.saas_payment_modal_backdrop').remove();">Close</button>
+                    </div>
+                `;
+            }
+        });
+    }
+    
+    /**
+     * Handle payment form submission within modal
+     */
+    function handleModalPaymentSubmission(form, clientId, modalBackdrop) {
+        console.log('Handling payment form submission in modal...');
+        
+        // Show loading state
+        var submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+        var originalText = submitBtn ? submitBtn.textContent : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+        }
+        
+        // Create form data
+        var formData = new FormData(form);
+        
+        // Submit payment form
+        fetch(form.action || '/payment/transaction', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function(response) {
+            if (response.ok) {
+                console.log('Payment submitted successfully, closing modal and checking status...');
+                
+                // Close modal
+                if (modalBackdrop && modalBackdrop.parentElement) {
+                    modalBackdrop.parentElement.removeChild(modalBackdrop);
+                }
+                
+                // Check payment status after a short delay
+                setTimeout(function() {
+                    checkPaymentStatus(clientId);
+                }, 2000);
+                
+            } else {
+                throw new Error('Payment submission failed: ' + response.status);
+            }
+        })
+        .catch(function(error) {
+            console.error('Payment submission error:', error);
+            
+            // Restore submit button
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+            
+            // Show error message
+            showErrorMessage('Payment failed. Please try again.');
         });
     }
     

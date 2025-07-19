@@ -524,6 +524,129 @@ class SaaSWebController(http.Controller):
                 headers=[('Content-Type', 'application/json')]
             )
 
+    @http.route('/saas/invoice/payment_wizard_modal', type='http', auth='user', methods=['GET'], csrf=False)
+    def get_invoice_payment_wizard_modal(self, invoice_id, access_token=None, client_id=None, **kwargs):
+        """
+        Get payment wizard modal HTML for an invoice
+        
+        Args:
+            invoice_id: Invoice ID
+            access_token: Invoice access token
+            client_id: SaaS client ID (for context)
+            
+        Returns:
+            HTML fragment for payment wizard modal content
+        """
+        try:
+            import logging
+            _logger = logging.getLogger(__name__)
+            
+            invoice_id_int = int(invoice_id)
+            invoice = request.env['account.move'].sudo().browse(invoice_id_int)
+            
+            if not invoice.exists():
+                return request.make_response('<div class="alert alert-danger">Invoice not found</div>')
+            
+            # Verify access token if provided
+            if access_token and invoice.access_token != access_token:
+                return request.make_response('<div class="alert alert-danger">Invalid access token</div>')
+            
+            # Check if user has access to this invoice
+            if invoice.partner_id.id != request.env.user.partner_id.id:
+                return request.make_response('<div class="alert alert-danger">Access denied</div>')
+            
+            # Get payment providers
+            providers = request.env['payment.provider'].sudo().search([('state', '=', 'enabled')])
+            
+            if not providers:
+                return request.make_response("""
+                    <div class="alert alert-warning">
+                        <h6>No Payment Methods Available</h6>
+                        <p>Payment providers are not configured. Please contact support.</p>
+                    </div>
+                """)
+            
+            # Prepare payment form HTML
+            payment_html = f"""
+                <form action="/payment/transaction" method="post" style="margin: 0;">
+                    <input type="hidden" name="csrf_token" value="{request.csrf_token()}"/>
+                    <input type="hidden" name="reference" value="INV-{invoice.name}"/>
+                    <input type="hidden" name="amount" value="{invoice.amount_residual}"/>
+                    <input type="hidden" name="currency_id" value="{invoice.currency_id.id}"/>
+                    <input type="hidden" name="partner_id" value="{invoice.partner_id.id}"/>
+                    <input type="hidden" name="invoice_id" value="{invoice.id}"/>
+                    <input type="hidden" name="access_token" value="{access_token or ''}"/>
+                    <input type="hidden" name="landing_route" value="/saas/payment/success"/>
+                    {f'<input type="hidden" name="saas_client_id" value="{client_id}"/>' if client_id else ''}
+                    
+                    <div style="margin-bottom: 20px;">
+            """
+            
+            # Add payment providers
+            for i, provider in enumerate(providers):
+                checked = 'checked="checked"' if i == 0 else ''
+                demo_text = ' (Demo - No real payment)' if provider.code == 'demo' else ''
+                
+                payment_html += f"""
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; padding: 15px; border: 2px solid #e9ecef; border-radius: 8px; cursor: pointer; background: #f8f9fa; margin: 0; transition: all 0.3s ease;">
+                            <input type="radio" name="provider_id" value="{provider.id}" {checked} style="margin-right: 12px; transform: scale(1.2);"/>
+                            <span style="font-weight: 600; color: #2c3e50;">{provider.name}{demo_text}</span>
+                            {f'<br/><small style="color: #7f8c8d;">{provider.pre_msg}</small>' if provider.pre_msg else ''}
+                        </label>
+                    </div>
+                """
+            
+            payment_html += f"""
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 25px;">
+                        <button type="submit" class="btn btn-primary btn-lg" style="padding: 15px 30px; font-size: 1.1rem; font-weight: 600; border-radius: 8px; background-color: #27ae60; border-color: #27ae60;">
+                            <i class="fa fa-credit-card" style="margin-right: 8px;"></i>
+                            Pay {invoice.currency_id.symbol}{invoice.amount_residual:.2f}
+                        </button>
+                    </div>
+                </form>
+                
+                <script>
+                // Add hover effects for payment options
+                document.querySelectorAll('label').forEach(function(label) {{
+                    label.addEventListener('mouseenter', function() {{
+                        this.style.borderColor = '#3498db';
+                        this.style.background = '#fff';
+                        this.style.boxShadow = '0 2px 8px rgba(52, 152, 219, 0.15)';
+                    }});
+                    label.addEventListener('mouseleave', function() {{
+                        if (!this.querySelector('input[type="radio"]').checked) {{
+                            this.style.borderColor = '#e9ecef';
+                            this.style.background = '#f8f9fa';
+                            this.style.boxShadow = 'none';
+                        }}
+                    }});
+                    
+                    var radio = label.querySelector('input[type="radio"]');
+                    radio.addEventListener('change', function() {{
+                        document.querySelectorAll('label').forEach(function(l) {{
+                            l.style.borderColor = '#e9ecef';
+                            l.style.background = '#f8f9fa';
+                            l.style.boxShadow = 'none';
+                        }});
+                        if (this.checked) {{
+                            this.closest('label').style.borderColor = '#3498db';
+                            this.closest('label').style.background = '#fff';
+                            this.closest('label').style.boxShadow = '0 2px 8px rgba(52, 152, 219, 0.15)';
+                        }}
+                    }});
+                }});
+                </script>
+            """
+            
+            return request.make_response(payment_html, headers=[('Content-Type', 'text/html')])
+            
+        except Exception as e:
+            _logger.error(f"Error generating payment wizard modal for invoice {invoice_id}: {str(e)}")
+            return request.make_response(f'<div class="alert alert-danger">Error: {str(e)}</div>')
+
     @http.route(['/saas/invoice/payment_wizard', '/saas/test/wizard'], type='http', auth='user', methods=['GET', 'POST'], csrf=False)
     def get_invoice_payment_wizard(self, **kwargs):
         """
