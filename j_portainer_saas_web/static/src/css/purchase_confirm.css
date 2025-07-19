@@ -182,209 +182,13 @@
     text-decoration: underline;
 }
 
-/* Payment Section */
-.saas_payment_section {
-    background: #f8f9fa;
-    border-radius: 12px;
-    padding: 30px;
-    margin: 30px 0;
-    border: 1px solid #e9ecef;
-}
-
-.saas_payment_title {
-    color: #2c3e50;
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.saas_payment_title::before {
-    content: "💳";
-    font-size: 18px;
-}
-
-.saas_payment_summary {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 25px;
-    border: 1px solid #e9ecef;
-}
-
-.saas_payment_item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid #f1f3f4;
-}
-
-.saas_payment_item:last-child {
-    border-bottom: none;
-}
-
-.saas_payment_total {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 0 10px 0;
-    border-top: 2px solid #e9ecef;
-    margin-top: 15px;
-    font-weight: 600;
-    font-size: 18px;
-}
-
-.saas_payment_label {
-    color: #495057;
-    font-size: 14px;
-}
-
-.saas_payment_total .saas_payment_label {
-    color: #2c3e50;
-    font-size: 16px;
-}
-
-.saas_payment_amount {
-    color: #28a745;
-    font-weight: 600;
-    font-size: 16px;
-}
-
-.saas_payment_total .saas_payment_amount {
-    color: #875a7b;
-    font-size: 18px;
-}
-
-.saas_payment_methods h5 {
-    color: #2c3e50;
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 15px;
-}
-
-.saas_acquirer_list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-}
-
-.saas_acquirer_option {
-    background: white;
-    border: 2px solid #e9ecef;
-    border-radius: 8px;
-    padding: 0;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    overflow: hidden;
-}
-
-.saas_acquirer_option:hover {
-    border-color: #875a7b;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(135, 90, 123, 0.15);
-}
-
-.saas_acquirer_radio {
-    display: none;
-}
-
-.saas_acquirer_radio:checked + .saas_acquirer_label {
-    background: linear-gradient(135deg, #875a7b 0%, #6b4c66 100%);
-    color: white;
-}
-
-.saas_acquirer_label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    margin: 0;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    height: 80px;
-    background: white;
-}
-
-.saas_acquirer_image {
-    max-width: 60px;
-    max-height: 30px;
-    object-fit: contain;
-}
-
-.saas_acquirer_name {
-    font-size: 14px;
-    font-weight: 600;
-    color: #495057;
-}
-
-.saas_acquirer_radio:checked + .saas_acquirer_label .saas_acquirer_name {
-    color: white;
-}
-
-/* Error Page Styles */
-.saas_error_container {
-    text-align: center;
-    padding: 60px 20px;
-    background: #f8f9fa;
-    border-radius: 12px;
-    margin-top: 50px;
-}
-
-.saas_error_icon {
-    font-size: 60px;
-    color: #dc3545;
-    margin-bottom: 30px;
-}
-
-.saas_error_title {
-    color: #2c3e50;
-    font-size: 32px;
-    font-weight: 700;
-    margin-bottom: 20px;
-}
-
-.saas_error_message {
-    color: #6c757d;
-    font-size: 16px;
-    margin-bottom: 40px;
-    line-height: 1.6;
-}
-
-.saas_error_actions {
-    margin-top: 30px;
-}
-
-.saas_error_btn {
-    background: linear-gradient(135deg, #875a7b 0%, #6b4c66 100%);
-    color: white;
-    padding: 12px 30px;
-    border-radius: 8px;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.saas_error_btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(135, 90, 123, 0.3);
-    color: white;
-    text-decoration: none;
-}
-
 /* Action Button */
 .saas_action_section {
     text-align: center;
     margin-bottom: 30px;
 }
 
-.saas_start_btn,
-.saas_pay_btn {
+.saas_start_btn {
     background-color: #875a7b;
     color: white;
     border: none;
@@ -399,33 +203,17 @@
     gap: 10px;
 }
 
-.saas_pay_btn {
-    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
-    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-}
-
-.saas_start_btn:hover,
-.saas_pay_btn:hover {
-    transform: translateY(-2px);
-}
-
 .saas_start_btn:hover {
     background-color: #6b4c66;
+    transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(135, 90, 123, 0.3);
 }
 
-.saas_pay_btn:hover {
-    background: linear-gradient(135deg, #218838 0%, #1a6e2e 100%);
-    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
-}
-
-.saas_start_btn:active,
-.saas_pay_btn:active {
+.saas_start_btn:active {
     transform: translateY(0);
 }
 
-.saas_start_btn:disabled,
-.saas_pay_btn:disabled {
+.saas_start_btn:disabled {
     background-color: #6c757d;
     cursor: not-allowed;
     transform: none;
