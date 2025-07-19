@@ -35,22 +35,55 @@
                 
                 <!-- Payment Form -->
                 <div class="saas_payment_form_container">
-                    <t t-call="payment.form">
-                        <t t-set="providers" t-value="providers_sudo"/>
-                        <t t-set="payment_methods_sudo" t-value="payment_methods_sudo"/>
-                        <t t-set="tokens_sudo" t-value="tokens_sudo"/>
-                        <t t-set="reference_prefix" t-value="reference_prefix"/>
-                        <t t-set="amount" t-value="amount"/>
-                        <t t-set="currency" t-value="currency"/>
-                        <t t-set="partner_id" t-value="partner_id"/>
-                        <t t-set="transaction_route" t-value="transaction_route"/>
-                        <t t-set="landing_route" t-value="landing_route"/>
-                        <t t-set="access_token" t-value="access_token"/>
-                        <t t-set="mode" t-value="mode"/>
-                        <t t-set="allow_token_selection" t-value="allow_token_selection"/>
-                        <t t-set="allow_token_deletion" t-value="allow_token_deletion"/>
-                        <t t-set="default_token_id" t-value="default_token_id"/>
+                    <t t-if="providers_sudo">
+                        <form action="/payment/transaction" method="post" class="saas_payment_form">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <input type="hidden" name="reference" t-att-value="reference"/>
+                            <input type="hidden" name="amount" t-att-value="amount"/>
+                            <input type="hidden" name="currency_id" t-att-value="currency.id"/>
+                            <input type="hidden" name="partner_id" t-att-value="partner_id"/>
+                            <input type="hidden" name="access_token" t-att-value="access_token"/>
+                            <input type="hidden" name="landing_route" t-att-value="landing_route"/>
+                            
+                            <!-- Payment Provider Selection -->
+                            <div class="saas_payment_providers">
+                                <t t-foreach="providers_sudo" t-as="provider">
+                                    <div class="saas_payment_provider" t-if="provider.state == 'enabled'">
+                                        <label class="saas_provider_option">
+                                            <input type="radio" name="provider_id" t-att-value="provider.id" 
+                                                   t-att-checked="'checked' if provider_index == 0 else None"/>
+                                            <div class="saas_provider_info">
+                                                <div class="saas_provider_name">
+                                                    <span t-esc="provider.name"/>
+                                                    <t t-if="provider.code == 'demo'">
+                                                        <small class="text-muted">(Demo - No real payment)</small>
+                                                    </t>
+                                                </div>
+                                                <div class="saas_provider_description" t-if="provider.pre_msg">
+                                                    <small t-esc="provider.pre_msg"/>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </t>
+                            </div>
+                            
+                            <!-- Pay Button -->
+                            <div class="saas_payment_submit">
+                                <button type="submit" class="btn btn-primary btn-lg saas_pay_button">
+                                    <i class="fa fa-credit-card" style="margin-right: 8px;"></i>
+                                    Pay <span t-esc="currency.symbol"/><span t-esc="amount"/>
+                                </button>
+                            </div>
+                        </form>
                     </t>
+                    <div t-else="" class="alert alert-warning">
+                        <h6>No Payment Methods Available</h6>
+                        <p>Payment providers are not configured. Please contact support.</p>
+                        <a href="/my/invoices" class="btn btn-secondary">
+                            <i class="fa fa-external-link"></i> View Invoices Portal
+                        </a>
+                    </div>
                 </div>
             </div>
             

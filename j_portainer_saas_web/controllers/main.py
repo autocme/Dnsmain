@@ -376,8 +376,13 @@ class SaaSWebController(http.Controller):
                 'error': f'Failed to create SaaS instance: {str(e)}'
             }
 
+    @http.route('/saas/test/wizard', type='http', auth='public', methods=['GET'], csrf=False)
+    def test_wizard_route(self, **kwargs):
+        """Test route to verify controller is working"""
+        return request.make_response('Controller is working', headers=[('Content-Type', 'text/plain')])
+
     @http.route('/saas/invoice/payment_wizard', type='http', auth='user', methods=['GET'], csrf=False)
-    def get_invoice_payment_wizard(self, client_id, **kwargs):
+    def get_invoice_payment_wizard(self, client_id=None, **kwargs):
         """
         Get invoice payment wizard HTML for a SaaS client
         
@@ -391,11 +396,20 @@ class SaaSWebController(http.Controller):
             import logging
             _logger = logging.getLogger(__name__)
             
+            _logger.info(f"Payment wizard request: client_id={client_id}, kwargs={kwargs}")
+            
+            # Check if client_id parameter is provided
+            if client_id is None:
+                _logger.error("No client_id parameter provided")
+                return request.make_response('Missing client_id parameter', status=400)
+            
             # Get the SaaS client
             try:
                 client_id_int = int(client_id)
-            except (ValueError, TypeError):
-                return request.make_response('Invalid client ID', status=400)
+                _logger.info(f"Client ID converted to int: {client_id_int}")
+            except (ValueError, TypeError) as e:
+                _logger.error(f"Invalid client_id format: {client_id}, error: {e}")
+                return request.make_response(f'Invalid client ID format: {client_id}', status=400)
             
             client = request.env['saas.client'].sudo().browse(client_id_int)
             if not client.exists():
@@ -421,17 +435,36 @@ class SaaSWebController(http.Controller):
             _logger.info(f"Getting payment wizard for client {client.id}, invoice {invoice.id}")
             
             # Get payment providers
-            providers = request.env['payment.provider'].sudo().search([('state', '=', 'enabled')])
-            if not providers:
-                return request.make_response('No payment providers available', status=500)
+            try:
+                providers = request.env['payment.provider'].sudo().search([('state', '=', 'enabled')])
+                if not providers:
+                    # Try to get any available providers if none are enabled
+                    providers = request.env['payment.provider'].sudo().search([])
+                    if not providers:
+                        return request.make_response('No payment providers available', status=500)
+            except Exception as e:
+                _logger.error(f"Error accessing payment providers: {str(e)}")
+                return request.make_response('Payment system not available', status=500)
+            
+            # Get additional payment data
+            try:
+                payment_methods = request.env['payment.method'].sudo().search([])
+                tokens = request.env['payment.token'].sudo().search([('partner_id', '=', request.env.user.partner_id.id)])
+            except Exception as e:
+                _logger.warning(f"Error accessing payment methods/tokens: {str(e)}")
+                payment_methods = request.env['payment.method'].sudo().browse()
+                tokens = request.env['payment.token'].sudo().browse()
+            
+            # Generate access token
+            access_token = self._get_or_create_portal_token(request.env.user.partner_id)
             
             # Prepare payment wizard data
             payment_data = {
                 'invoice': invoice,
                 'client': client,
                 'providers_sudo': providers,
-                'payment_methods_sudo': request.env['payment.method'].sudo().search([]),
-                'tokens_sudo': request.env['payment.token'].sudo().search([('partner_id', '=', request.env.user.partner_id.id)]),
+                'payment_methods_sudo': payment_methods,
+                'tokens_sudo': tokens,
                 'amount': invoice.amount_residual,
                 'currency': invoice.currency_id,
                 'partner_id': request.env.user.partner_id.id,
@@ -439,19 +472,55 @@ class SaaSWebController(http.Controller):
                 'reference_prefix': 'INV',
                 'transaction_route': '/payment/transaction',
                 'landing_route': f'/saas/payment/invoice_success/{client.id}',
-                'access_token': self._get_or_create_portal_token(request.env.user.partner_id),
+                'access_token': access_token,
                 'mode': 'payment',
                 'allow_token_selection': True,
                 'allow_token_deletion': False,
                 'default_token_id': False,
             }
             
+            _logger.info(f"Payment wizard data prepared: providers={len(providers)}, amount={invoice.amount_residual}, currency={invoice.currency_id.name}, access_token={'***' if access_token else 'None'}")
+            
+            # Verify template exists before rendering
+            try:
+                template = request.env.ref('j_portainer_saas_web.invoice_payment_wizard')
+                _logger.info(f"Template found: {template}")
+            except Exception as template_err:
+                _logger.error(f"Template not found: {template_err}")
+                return request.make_response(f'Template error: {str(template_err)}', status=500)
+            
             # Render the payment wizard template
-            return request.render('j_portainer_saas_web.invoice_payment_wizard', payment_data)
+            _logger.info("Attempting to render payment wizard template...")
+            try:
+                result = request.render('j_portainer_saas_web.invoice_payment_wizard', payment_data)
+                _logger.info("Payment wizard template rendered successfully")
+                return result
+            except Exception as render_err:
+                _logger.error(f"Template rendering failed: {render_err}")
+                raise render_err
             
         except Exception as e:
             _logger.error(f"Error getting payment wizard for client {client_id}: {str(e)}")
-            return request.make_response(f'Error loading payment wizard: {str(e)}', status=500)
+            
+            # Return a user-friendly fallback HTML with error message
+            fallback_html = f"""
+            <div class="saas_payment_wizard_container">
+                <div class="alert alert-danger">
+                    <h5><i class="fa fa-exclamation-triangle"></i> Payment System Error</h5>
+                    <p>Unable to load the payment wizard at this time.</p>
+                    <p><strong>Error:</strong> {str(e)}</p>
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-primary" onclick="location.reload();">
+                            <i class="fa fa-refresh"></i> Retry
+                        </button>
+                        <a href="/my/invoices" class="btn btn-secondary ml-2">
+                            <i class="fa fa-external-link"></i> View Invoices
+                        </a>
+                    </div>
+                </div>
+            </div>
+            """
+            return request.make_response(fallback_html, headers=[('Content-Type', 'text/html')])
 
     @http.route('/saas/payment/invoice_success/<int:client_id>', type='http', auth='user', methods=['GET'], csrf=False)
     def invoice_payment_success(self, client_id, **kwargs):

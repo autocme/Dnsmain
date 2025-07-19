@@ -279,7 +279,7 @@
         }
         
         // Fetch payment wizard HTML
-        fetch(`/saas/invoice/payment_wizard?client_id=${clientId}`, {
+        fetch('/saas/invoice/payment_wizard?client_id=' + clientId, {
             method: 'GET',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'

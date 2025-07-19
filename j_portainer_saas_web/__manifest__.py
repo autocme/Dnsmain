@@ -29,6 +29,7 @@ conversion-optimized layout similar to Odoo's official pricing structure.
         'base',
         'website',
         'j_portainer_saas',
+        'payment',
     ],
     'data': [
         'views/snippets.xml',
