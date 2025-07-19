@@ -213,6 +213,22 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Clean Domain URL Handling**: Added proper URL parsing and cleaning for client domain redirects in both controller and JavaScript
 - **Debug Logging Enhancement**: Added comprehensive logging throughout purchase flow to track parameter passing and client creation
 
+## July 19, 2025 - Invoice Payment Wizard Integration
+
+- **Embedded Payment Wizard**: Replaced redirect-based payment flow with embedded invoice payment wizard directly in confirmation page
+- **Dynamic Content Replacement**: "What's included" section is replaced with payment wizard for paid packages after client creation
+- **Dual Flow Implementation**: Free trials continue with existing success screen flow, paid packages show embedded payment wizard
+- **New Controller Endpoints**: Added `/saas/invoice/payment_wizard` and `/saas/payment/invoice_success/<client_id>` for wizard handling
+- **Professional Payment Interface**: Created styled payment wizard template matching Odoo's invoice payment design
+- **Invoice Integration**: Payment wizard automatically retrieves subscription invoices and displays payment options
+- **Progress Step Updates**: Progress bar updates to show payment completion and advances to setup step
+- **Auto-Deployment**: Clients are automatically deployed after successful payment completion
+- **Seamless User Experience**: Users complete payment and are immediately redirected to their SaaS instance
+- **Enhanced CSS Styling**: Added comprehensive payment wizard styling with responsive design and Odoo payment form integration
+- **Error Handling**: Robust error handling for payment wizard loading failures with retry options
+- **Security Validation**: Access control ensures users can only access their own payment wizards
+- **Template Architecture**: Clean separation between package features display and payment wizard content
+
 ## July 17, 2025 - Ecommerce-Style Checkout Implementation and Payment Form Debugging
 
 - **Complete Ecommerce Layout**: Transformed purchase confirmation page to exactly match Odoo's standard ecommerce "Confirm order" page

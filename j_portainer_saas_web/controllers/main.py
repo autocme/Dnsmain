@@ -4,6 +4,7 @@
 from odoo import http
 from odoo.http import request
 import json
+import time
 
 
 class SaaSWebController(http.Controller):
@@ -374,6 +375,132 @@ class SaaSWebController(http.Controller):
                 'success': False,
                 'error': f'Failed to create SaaS instance: {str(e)}'
             }
+
+    @http.route('/saas/invoice/payment_wizard', type='http', auth='user', methods=['GET'], csrf=False)
+    def get_invoice_payment_wizard(self, client_id, **kwargs):
+        """
+        Get invoice payment wizard HTML for a SaaS client
+        
+        Args:
+            client_id (int): SaaS client ID
+            
+        Returns:
+            HTML fragment for invoice payment wizard
+        """
+        try:
+            import logging
+            _logger = logging.getLogger(__name__)
+            
+            # Get the SaaS client
+            try:
+                client_id_int = int(client_id)
+            except (ValueError, TypeError):
+                return request.make_response('Invalid client ID', status=400)
+            
+            client = request.env['saas.client'].sudo().browse(client_id_int)
+            if not client.exists():
+                return request.make_response('Client not found', status=404)
+            
+            # Check if client belongs to current user
+            if client.sc_partner_id.id != request.env.user.partner_id.id:
+                return request.make_response('Access denied', status=403)
+            
+            # Get the subscription and its invoices
+            if not client.sc_subscription_id:
+                return request.make_response('No subscription found for this client', status=404)
+            
+            subscription = client.sc_subscription_id
+            invoices = subscription.invoice_ids.filtered(lambda inv: inv.state == 'posted' and inv.payment_state in ['not_paid', 'partial'])
+            
+            if not invoices:
+                return request.make_response('No unpaid invoices found', status=404)
+            
+            # Get the latest unpaid invoice
+            invoice = invoices[-1]
+            
+            _logger.info(f"Getting payment wizard for client {client.id}, invoice {invoice.id}")
+            
+            # Get payment providers
+            providers = request.env['payment.provider'].sudo().search([('state', '=', 'enabled')])
+            if not providers:
+                return request.make_response('No payment providers available', status=500)
+            
+            # Prepare payment wizard data
+            payment_data = {
+                'invoice': invoice,
+                'client': client,
+                'providers_sudo': providers,
+                'payment_methods_sudo': request.env['payment.method'].sudo().search([]),
+                'tokens_sudo': request.env['payment.token'].sudo().search([('partner_id', '=', request.env.user.partner_id.id)]),
+                'amount': invoice.amount_residual,
+                'currency': invoice.currency_id,
+                'partner_id': request.env.user.partner_id.id,
+                'reference': f"Invoice {invoice.name}",
+                'reference_prefix': 'INV',
+                'transaction_route': '/payment/transaction',
+                'landing_route': f'/saas/payment/invoice_success/{client.id}',
+                'access_token': self._get_or_create_portal_token(request.env.user.partner_id),
+                'mode': 'payment',
+                'allow_token_selection': True,
+                'allow_token_deletion': False,
+                'default_token_id': False,
+            }
+            
+            # Render the payment wizard template
+            return request.render('j_portainer_saas_web.invoice_payment_wizard', payment_data)
+            
+        except Exception as e:
+            _logger.error(f"Error getting payment wizard for client {client_id}: {str(e)}")
+            return request.make_response(f'Error loading payment wizard: {str(e)}', status=500)
+
+    @http.route('/saas/payment/invoice_success/<int:client_id>', type='http', auth='user', methods=['GET'], csrf=False)
+    def invoice_payment_success(self, client_id, **kwargs):
+        """
+        Handle successful invoice payment and redirect to client instance
+        
+        Args:
+            client_id (int): SaaS client ID
+            
+        Returns:
+            Redirect to client instance or success page
+        """
+        try:
+            import logging
+            _logger = logging.getLogger(__name__)
+            
+            client = request.env['saas.client'].sudo().browse(client_id)
+            if not client.exists():
+                return request.redirect('/web')
+            
+            # Check if client belongs to current user
+            if client.sc_partner_id.id != request.env.user.partner_id.id:
+                return request.redirect('/web')
+            
+            _logger.info(f"Payment successful for client {client.id}, deploying and redirecting...")
+            
+            # Deploy the client if not already deployed
+            if client.sc_status == 'draft':
+                try:
+                    client.action_deploy_client()
+                    _logger.info(f"Deployed client {client.id} after payment")
+                except Exception as e:
+                    _logger.warning(f"Failed to deploy client {client.id} after payment: {e}")
+            
+            # Get client domain for redirect
+            client_domain = '/web'
+            if client.sc_full_domain:
+                full_domain = client.sc_full_domain
+                if full_domain.startswith('http://') or full_domain.startswith('https://'):
+                    client_domain = full_domain
+                else:
+                    client_domain = f"https://{full_domain}" if not full_domain.startswith('http') else full_domain
+            
+            # Redirect to client instance
+            return request.redirect(client_domain)
+            
+        except Exception as e:
+            _logger.error(f"Error in invoice payment success for client {client_id}: {str(e)}")
+            return request.redirect('/web')
 
     @http.route('/saas/package/select', type='json', auth='public', methods=['POST'], csrf=False)
     def select_package(self, package_id, billing_period='monthly', free_trial=False):

@@ -221,20 +221,18 @@
         // Store result data for success screen
         window.saasClientResult = result;
         
-        // Show invoice link for paid packages
-        if (!result.is_free_trial && result.invoice_portal_url) {
-            var paymentLink = document.getElementById('saasPaymentLink');
-            var invoiceLink = document.getElementById('saasInvoiceLink');
-            if (paymentLink && invoiceLink) {
-                invoiceLink.href = result.invoice_portal_url;
-                paymentLink.style.display = 'block';
-            }
+        // Handle free trial vs paid packages differently
+        if (result.is_free_trial) {
+            // For free trial: show success screen as before
+            setTimeout(function() {
+                showSuccessScreen();
+            }, 500);
+        } else {
+            // For paid packages: load payment wizard
+            setTimeout(function() {
+                loadPaymentWizard(result.client_id);
+            }, 500);
         }
-        
-        // Show success screen after a short delay
-        setTimeout(function() {
-            showSuccessScreen();
-        }, 500);
     }
     
     /**
@@ -254,6 +252,100 @@
         
         // Show error message
         showErrorMessage(errorMessage);
+    }
+    
+    /**
+     * Load payment wizard for paid packages
+     */
+    function loadPaymentWizard(clientId) {
+        console.log('Loading payment wizard for client:', clientId);
+        
+        // Hide package features and show loading message
+        var packageFeatures = document.getElementById('saasPackageFeatures');
+        var paymentWizard = document.getElementById('saasPaymentWizard');
+        
+        if (packageFeatures) {
+            packageFeatures.style.display = 'none';
+        }
+        
+        if (paymentWizard) {
+            paymentWizard.style.display = 'block';
+            paymentWizard.innerHTML = `
+                <div class="text-center" style="padding: 40px;">
+                    <div class="saas_spinner" style="margin: 0 auto 20px;"></div>
+                    <h5>Loading payment options...</h5>
+                </div>
+            `;
+        }
+        
+        // Fetch payment wizard HTML
+        fetch(`/saas/invoice/payment_wizard?client_id=${clientId}`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function(response) {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.text();
+        })
+        .then(function(html) {
+            console.log('Payment wizard loaded successfully');
+            
+            if (paymentWizard) {
+                paymentWizard.innerHTML = html;
+                
+                // Update progress step to show payment as current
+                updateProgressToPayment();
+            }
+        })
+        .catch(function(error) {
+            console.error('Failed to load payment wizard:', error);
+            
+            // Show error and fallback to invoice link
+            if (paymentWizard) {
+                paymentWizard.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5>Payment Error</h5>
+                        <p>Unable to load payment wizard. Please try again or contact support.</p>
+                        <button type="button" class="btn btn-primary" onclick="location.reload();">
+                            Retry
+                        </button>
+                    </div>
+                `;
+            }
+        });
+    }
+    
+    /**
+     * Update progress steps to show payment as current
+     */
+    function updateProgressToPayment() {
+        // Update step 2 (payment) to completed
+        var step2 = document.querySelector('.saas_steps_progress .saas_step:nth-child(3)');
+        if (step2) {
+            step2.classList.remove('saas_step_current');
+            step2.classList.add('saas_step_completed');
+            
+            var step2Circle = step2.querySelector('.saas_step_circle');
+            if (step2Circle) {
+                step2Circle.innerHTML = '<i class="fa fa-check"></i>';
+            }
+        }
+        
+        // Update line between step 2 and 3
+        var line2 = document.querySelector('.saas_steps_progress .saas_step_line:nth-child(5)');
+        if (line2) {
+            line2.classList.add('saas_step_line_completed');
+        }
+        
+        // Update step 3 (setup) to current
+        var step3 = document.querySelector('.saas_steps_progress .saas_step:nth-child(7)');
+        if (step3) {
+            step3.classList.add('saas_step_current');
+        }
     }
     
     /**

@@ -63,12 +63,17 @@
                                         <p t-esc="package.pkg_description"/>
                                     </div>
                                     
-                                    <div class="saas_package_features">
+                                    <div class="saas_package_features" id="saasPackageFeatures">
                                         <h5>What's included:</h5>
                                         <ul>
                                             <li t-foreach="package.pkg_feature_ids" t-as="feature" t-esc="feature.pf_name"/>
                                             <li t-if="not package.pkg_feature_ids">All standard features included</li>
                                         </ul>
+                                    </div>
+                                    
+                                    <!-- Payment Wizard Container (Hidden initially) -->
+                                    <div class="saas_payment_wizard_wrapper" id="saasPaymentWizard" style="display: none;">
+                                        <!-- Payment wizard content will be loaded here -->
                                     </div>
                                 </div>
                                 
