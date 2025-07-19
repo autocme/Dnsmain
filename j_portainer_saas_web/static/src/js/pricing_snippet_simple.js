@@ -66,7 +66,7 @@
             })
             .catch(function(error) {
                 console.error('All loading methods failed:', error);
-                showError(pricingCards, 'Failed to load packages. Please check your connection.');
+                showPricingError(pricingCards, 'Failed to load packages. Please check your connection.');
             });
     }
     
@@ -128,7 +128,7 @@
     /**
      * Show error message in pricing cards container
      */
-    function showError(pricingCards, message) {
+    function showPricingError(pricingCards, message) {
         if (pricingCards) {
             pricingCards.innerHTML = `
                 <div class="text-center" style="padding: 40px;">
@@ -410,116 +410,8 @@
         window.location.href = confirmUrl;
     }
     
-    /**
-     * Make purchase request to server
-     */
-    function makePurchaseRequest(packageId, billingCycle, isFreeTrial, button) {
-        console.log('makePurchaseRequest called with:', {
-            packageId: packageId,
-            billingCycle: billingCycle,
-            isFreeTrial: isFreeTrial,
-            button: button
-        });
-        
-        fetch('/saas/package/purchase', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({
-                jsonrpc: '2.0',
-                method: 'call',
-                params: {
-                    package_id: parseInt(packageId),
-                    billing_cycle: billingCycle,
-                    is_free_trial: isFreeTrial
-                }
-            })
-        })
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(data) {
-            // Check for authentication errors (Odoo returns error code 100 for authentication failures)
-            if (data.error && (data.error.code === 100 || data.error.message.includes('authentication') || data.error.message.includes('login'))) {
-                hideLoadingState(button);
-                
-                // Store purchase details to resume after login
-                sessionStorage.setItem('pendingPurchase', JSON.stringify({
-                    packageId: packageId,
-                    billingCycle: billingCycle,
-                    isFreeTrial: isFreeTrial
-                }));
-                
-                // Redirect to login page immediately
-                window.location.href = '/web/login';
-                return;
-            }
-            
-            // Check for other JSON-RPC errors
-            if (data.error) {
-                hideLoadingState(button);
-                var errorMessage = data.error.message || 'Purchase failed. Please try again.';
-                try {
-                    showError(errorMessage);
-                } catch (e) {
-                    console.error('Error showing error message:', e);
-                }
-                return;
-            }
-            
-            hideLoadingState(button);
-            
-            if (data.result && data.result.success) {
-                handlePurchaseSuccess(data.result);
-            } else if (data.result && data.result.redirect_login) {
-                handleLoginRequired();
-            } else {
-                var errorMsg = 'Purchase failed. Please try again.';
-                if (data.result && data.result.error) {
-                    errorMsg = typeof data.result.error === 'string' ? data.result.error : 'Purchase failed. Please try again.';
-                }
-                try {
-                    showError(errorMsg);
-                } catch (e) {
-                    console.error('Error showing error message:', e);
-                }
-            }
-        })
-        .catch(function(error) {
-            hideLoadingState(button);
-            console.error('Purchase request failed:', error);
-            
-            // Check if it's a network error that might indicate authentication issues
-            if (error.message && (error.message.includes('401') || error.message.includes('403'))) {
-                // Store purchase details to resume after login
-                sessionStorage.setItem('pendingPurchase', JSON.stringify({
-                    packageId: packageId,
-                    billingCycle: billingCycle,
-                    isFreeTrial: isFreeTrial
-                }));
-                
-                // Redirect to login page immediately
-                window.location.href = '/web/login';
-                return;
-            }
-            
-            // Ensure we pass a string to showError
-            var errorMessage = 'Network error. Please check your connection and try again.';
-            if (error && typeof error === 'object' && error.message) {
-                errorMessage = error.message;
-            } else if (typeof error === 'string') {
-                errorMessage = error;
-            }
-            
-            try {
-                showError(errorMessage);
-            } catch (e) {
-                console.error('Error showing error message:', e);
-            }
-        });
-    }
+    // Note: Purchase requests are now handled in purchase_confirm.js
+    // This snippet only handles package display and redirects to confirmation page
     
     /**
      * Check for pending purchase after login redirect
@@ -547,38 +439,14 @@
     }
     
     /**
-     * Complete pending purchase after login
+     * Complete pending purchase after login - redirect to confirmation page
      */
     function completePendingPurchase(purchaseData) {
         console.log('Completing pending purchase...', purchaseData);
         
-        // Create a temporary button for loading state management
-        var tempButton = document.createElement('button');
-        tempButton.textContent = 'Processing...';
-        tempButton.disabled = true;
-        
-        // Make the purchase request
-        makePurchaseRequest(purchaseData.packageId, purchaseData.billingCycle, purchaseData.isFreeTrial, tempButton);
-    }
-    
-    /**
-     * Handle successful purchase
-     */
-    function handlePurchaseSuccess(result) {
-        // Redirect immediately without showing success message
-        window.location.href = result.redirect_url;
-    }
-    
-    /**
-     * Handle login required scenario
-     */
-    function handleLoginRequired() {
-        showError('Please log in to purchase a package');
-        
-        // Redirect to login page after delay
-        setTimeout(function() {
-            window.location.href = '/web/login';
-        }, 2000);
+        // Redirect to confirmation page with stored purchase data
+        var confirmUrl = `/saas/purchase/confirm?package_id=${purchaseData.packageId}&billing_cycle=${purchaseData.billingCycle}&is_free_trial=${purchaseData.isFreeTrial}`;
+        window.location.href = confirmUrl;
     }
     
     /**
@@ -908,19 +776,8 @@
         updateColumnLayout(section);
     }
     
-    /**
-     * Show error message
-     */
-    function showError(container, message) {
-        container.innerHTML = `
-            <div class="col-12 text-center">
-                <div class="alert alert-warning" role="alert">
-                    <i class="fa fa-exclamation-triangle"></i>
-                    ${message}
-                </div>
-            </div>
-        `;
-    }
+    // Note: Container error function removed to prevent duplicate function definitions
+    // Use showError(message) for popup messages or showPricingError(container, message) for container errors
     
     /**
      * Initialize when DOM is ready

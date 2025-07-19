@@ -5,6 +5,25 @@ channel = "stable-24_05"
 packages = ["cargo", "cyrus_sasl", "freetype", "glibcLocales", "lcms2", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "libyaml", "openjpeg", "openldap", "openssl", "pkg-config", "rustc", "tcl", "tk", "xcodebuild", "zlib"]
 
 [workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "OdooServer"
+
+[[workflows.workflow]]
+name = "OdooServer"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python ./odoo/odoo-bin --addons-path=. --database=postgres --db-filter=postgres --xmlrpc-port=5000 --dev=reload"
+waitForPort = 5000
 
 [deployment]
 run = ["sh", "-c", "rm -rf odoo_repo 2>/dev/null || true && git clone https://github.com/odoo/odoo.git -b 17.0 --depth=1 odoo_repo && pip install -e odoo_repo && python -m odoo --addons-path=. -d testdb -i dns_base --no-http --stop-after-init && python -m odoo --addons-path=. -d testdb --dev=all"]
