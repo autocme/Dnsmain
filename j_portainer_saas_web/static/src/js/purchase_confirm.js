@@ -228,9 +228,10 @@
                 showSuccessScreen();
             }, 500);
         } else {
-            // For paid packages: load payment wizard
+            // For paid packages: hide loading and show payment form (already embedded)
             setTimeout(function() {
-                loadPaymentWizard(result.client_id);
+                hideLoadingScreen();
+                showPaymentForm(result.client_id);
             }, 500);
         }
     }
@@ -255,7 +256,32 @@
     }
     
     /**
-     * Load payment wizard for paid packages
+     * Show payment form for paid packages (form is already embedded in template)
+     */
+    function showPaymentForm(clientId) {
+        console.log('Showing payment form for client:', clientId);
+        
+        // Hide package features and show payment wizard
+        var packageFeatures = document.getElementById('saasPackageFeatures');
+        var paymentWizard = document.getElementById('saasPaymentWizard');
+        
+        if (packageFeatures) {
+            packageFeatures.style.display = 'none';
+        }
+        
+        if (paymentWizard) {
+            paymentWizard.style.display = 'block';
+            
+            // Update progress step to show payment as current
+            updateProgressToPayment();
+            
+            // Store client ID for payment success handling
+            window.saasCurrentClientId = clientId;
+        }
+    }
+    
+    /**
+     * Load payment wizard for paid packages (DEPRECATED - replaced with embedded form)
      */
     function loadPaymentWizard(clientId) {
         console.log('Loading payment wizard for client:', clientId);
@@ -278,12 +304,18 @@
             `;
         }
         
-        // Fetch payment wizard HTML
-        fetch('/saas/invoice/payment_wizard?client_id=' + clientId, {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+        // Test controller first
+        fetch('/saas/test/wizard')
+        .then(function(testResp) {
+            console.log('Test route status:', testResp.status);
+            
+            // Fetch payment wizard HTML
+            return fetch('/saas/invoice/payment_wizard?client_id=' + clientId, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
         })
         .then(function(response) {
             if (!response.ok) {

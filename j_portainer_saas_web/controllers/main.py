@@ -376,13 +376,8 @@ class SaaSWebController(http.Controller):
                 'error': f'Failed to create SaaS instance: {str(e)}'
             }
 
-    @http.route('/saas/test/wizard', type='http', auth='public', methods=['GET'], csrf=False)
-    def test_wizard_route(self, **kwargs):
-        """Test route to verify controller is working"""
-        return request.make_response('Controller is working', headers=[('Content-Type', 'text/plain')])
-
-    @http.route('/saas/invoice/payment_wizard', type='http', auth='user', methods=['GET'], csrf=False)
-    def get_invoice_payment_wizard(self, client_id=None, **kwargs):
+    @http.route(['/saas/invoice/payment_wizard', '/saas/test/wizard'], type='http', auth='user', methods=['GET', 'POST'], csrf=False)
+    def get_invoice_payment_wizard(self, **kwargs):
         """
         Get invoice payment wizard HTML for a SaaS client
         
@@ -396,6 +391,12 @@ class SaaSWebController(http.Controller):
             import logging
             _logger = logging.getLogger(__name__)
             
+            # Check if this is the test route
+            if request.httprequest.path == '/saas/test/wizard':
+                return request.make_response('Controller is working - test route OK', headers=[('Content-Type', 'text/plain')])
+            
+            # Get client_id from parameters
+            client_id = kwargs.get('client_id')
             _logger.info(f"Payment wizard request: client_id={client_id}, kwargs={kwargs}")
             
             # Check if client_id parameter is provided
@@ -522,8 +523,8 @@ class SaaSWebController(http.Controller):
             """
             return request.make_response(fallback_html, headers=[('Content-Type', 'text/html')])
 
-    @http.route('/saas/payment/invoice_success/<int:client_id>', type='http', auth='user', methods=['GET'], csrf=False)
-    def invoice_payment_success(self, client_id, **kwargs):
+    @http.route(['/saas/payment/success', '/saas/payment/invoice_success/<int:client_id>'], type='http', auth='user', methods=['GET'], csrf=False)
+    def invoice_payment_success(self, client_id=None, **kwargs):
         """
         Handle successful invoice payment and redirect to client instance
         
