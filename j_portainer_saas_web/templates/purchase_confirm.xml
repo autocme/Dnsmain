@@ -74,39 +74,27 @@
                                             </div>
                                         </t>
                                         <t t-else="">
-                                            <t t-if="payment_acquirers">
-                                                <!-- Payment form for paid packages -->
-                                                <!-- Manual payment provider selection instead of payment.form template -->
-                                                <div class="o_payment_form">
-                                                    <h5>Select Payment Method</h5>
-                                                    <div class="o_payment_provider_selection">
-                                                        <t t-foreach="payment_acquirers" t-as="provider">
-                                                            <div class="o_payment_provider_option">
-                                                                <label class="o_payment_provider_label" style="display: block; padding: 15px; border: 1px solid #ddd; margin-bottom: 10px; cursor: pointer; border-radius: 5px;">
-                                                                    <input type="radio" name="payment_provider" t-att-value="provider.id" style="margin-right: 10px;"/>
-                                                                    <img t-if="provider.image" t-att-src="'/web/image/payment.provider/' + str(provider.id) + '/image'" style="height: 30px; margin-right: 10px;"/>
-                                                                    <span t-esc="provider.name"/>
-                                                                </label>
-                                                            </div>
-                                                        </t>
-                                                    </div>
-                                                    
-                                                    <div class="o_payment_submit_section" style="margin-top: 20px;">
-                                                        <button type="button" class="btn btn-primary btn-lg" id="saas_payment_submit" style="width: 100%;">
-                                                            Pay now
-                                                        </button>
-                                                    </div>
-                                                </div>
+                                            <t t-if="providers_sudo">
+                                                <!-- Payment form using Odoo's built-in payment.form template -->
+                                                <t t-call="payment.form"/>
+                                                
                                                 <!-- Debug information -->
                                                 <div class="mt-3" style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-size: 12px;">
                                                     <strong>Debug Info:</strong><br/>
-                                                    Payment providers count: <span t-esc="len(payment_acquirers)"/><br/>
-                                                    <t t-if="payment_acquirers">
-                                                        Providers: <span t-esc="', '.join([p.name for p in payment_acquirers])"/><br/>
+                                                    Payment providers count: <span t-esc="len(providers_sudo)"/><br/>
+                                                    <t t-if="providers_sudo">
+                                                        Providers: <span t-esc="', '.join([p.name for p in providers_sudo])"/><br/>
                                                     </t>
+                                                    Payment methods count: <span t-esc="len(payment_methods_sudo)"/><br/>
+                                                    <t t-if="payment_methods_sudo">
+                                                        Payment methods: <span t-esc="', '.join([pm.name for pm in payment_methods_sudo])"/><br/>
+                                                    </t>
+                                                    Tokens count: <span t-esc="len(tokens_sudo)"/><br/>
                                                     Price: <span t-esc="price"/><br/>
-                                                    Currency: <span t-esc="request.env.company.currency_id.name"/><br/>
-                                                    Reference: <span t-esc="'SAAS-' + str(package.id) + '-' + billing_cycle"/><br/>
+                                                    Currency: <span t-esc="currency.name"/><br/>
+                                                    Reference prefix: <span t-esc="reference_prefix"/><br/>
+                                                    Mode: <span t-esc="mode"/><br/>
+                                                    Partner ID: <span t-esc="partner_id"/><br/>
                                                 </div>
                                             </t>
                                             <t t-else="">

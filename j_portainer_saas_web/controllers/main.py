@@ -207,18 +207,48 @@ class SaaSWebController(http.Controller):
             if price is None:
                 price = 0.0
             
-            # Get payment acquirers for paid packages
-            payment_acquirers = []
+            # Get payment data for paid packages
+            payment_acquirers = request.env['payment.provider'].sudo().browse()
+            payment_methods_sudo = request.env['payment.method'].sudo().browse()
+            tokens_sudo = request.env['payment.token'].sudo().browse()
+            
             if not is_free_trial:
                 try:
                     # Check if payment module is available (Odoo 17 uses payment.provider)
                     if 'payment.provider' in request.env:
-                        # Try to search for enabled payment providers
+                        # Get enabled payment providers
                         payment_acquirers = request.env['payment.provider'].sudo().search([
                             ('state', '=', 'enabled'),
                             ('company_id', '=', request.env.user.company_id.id)
                         ])
                         _logger.info(f"Found {len(payment_acquirers)} payment providers: {[p.name for p in payment_acquirers]}")
+                        
+                        # Get payment methods for these providers
+                        if payment_acquirers:
+                            # Try to get payment methods associated with the providers
+                            payment_methods_sudo = request.env['payment.method'].sudo().search([])
+                            if hasattr(request.env['payment.method'], 'provider_ids'):
+                                # If payment methods have provider_ids field
+                                payment_methods_sudo = request.env['payment.method'].sudo().search([
+                                    ('provider_ids', 'in', payment_acquirers.ids)
+                                ])
+                            else:
+                                # Fallback: get all payment methods and filter by provider support
+                                all_methods = request.env['payment.method'].sudo().search([])
+                                payment_methods_sudo = all_methods.filtered(
+                                    lambda pm: any(provider.id in pm.provider_ids.ids if hasattr(pm, 'provider_ids') else True for provider in payment_acquirers)
+                                )
+                            _logger.info(f"Found {len(payment_methods_sudo)} payment methods: {[pm.name for pm in payment_methods_sudo]}")
+                        else:
+                            # If no providers, get all available payment methods
+                            payment_methods_sudo = request.env['payment.method'].sudo().search([])
+                            _logger.info(f"No providers found, getting all payment methods: {len(payment_methods_sudo)}")
+                        
+                        # Get user's saved payment tokens
+                        tokens_sudo = request.env['payment.token'].sudo().search([
+                            ('partner_id', '=', request.env.user.partner_id.id)
+                        ])
+                        _logger.info(f"Found {len(tokens_sudo)} payment tokens for user")
                         
                         # If no enabled providers found, try to get all providers for debugging
                         if not payment_acquirers:
@@ -250,14 +280,32 @@ class SaaSWebController(http.Controller):
                 'currency_symbol': currency_symbol,
                 'period_text': 'month' if billing_cycle == 'monthly' else 'year',
                 'free_trial_days': self._get_free_trial_days(),
-                'payment_acquirers': payment_acquirers,
+                
+                # Payment form template variables (required by payment.form)
+                'providers_sudo': payment_acquirers,
+                'payment_methods_sudo': payment_methods_sudo,
+                'tokens_sudo': tokens_sudo,
+                'reference_prefix': f'SAAS-{package.id}-{billing_cycle}',
+                'amount': price,
+                'currency': request.env.company.currency_id,
+                'partner_id': request.env.user.partner_id.id,
+                'transaction_route': '/payment/transaction',
+                'landing_route': '/saas/payment/success',
+                'access_token': False,
+                'mode': 'payment',
+                'allow_token_selection': True,
+                'allow_token_deletion': False,
+                'default_token_id': False,
+                'display_submit_button': True,
+                'submit_button_label': 'Pay now',
             }
             
             # Log template data for debugging
             import logging
             _logger = logging.getLogger(__name__)
             _logger.info(f"Purchase Confirm Template Data: package_id={package.id}, billing_cycle='{billing_cycle}', is_free_trial={is_free_trial}, price={price}")
-            _logger.info(f"Template data types: is_free_trial={type(is_free_trial)}, payment_acquirers={type(payment_acquirers)}, count={len(payment_acquirers)}")
+            _logger.info(f"Payment form variables: providers_sudo={len(payment_acquirers)}, payment_methods_sudo={len(payment_methods_sudo)}, tokens_sudo={len(tokens_sudo)}")
+            _logger.info(f"Payment form config: mode={template_data['mode']}, reference_prefix={template_data['reference_prefix']}, currency={template_data['currency'].name if template_data['currency'] else 'None'}")
             
             return request.render('j_portainer_saas_web.purchase_confirm', template_data)
             
