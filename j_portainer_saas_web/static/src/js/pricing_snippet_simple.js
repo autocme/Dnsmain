@@ -40,12 +40,25 @@
         var pricingCards = section.querySelector('#pricingCards');
         
         console.log('Loading packages...');
+        showLoading(pricingCards);
         
         // Try main endpoint first, fallback to demo, then static
         loadFromEndpoint('/saas/packages/data', pricingCards)
+            .then(function(data) {
+                console.log('Main endpoint succeeded:', data);
+                return data;
+            })
             .catch(function(error) {
                 console.log('Main endpoint failed, trying demo endpoint...', error);
                 return loadFromEndpoint('/saas/packages/demo', pricingCards);
+            })
+            .then(function(data) {
+                if (data) {
+                    console.log('Demo endpoint succeeded:', data);
+                    return data;
+                } else {
+                    throw new Error('Demo endpoint returned null');
+                }
             })
             .catch(function(error) {
                 console.log('Demo endpoint failed, using static fallback...', error);
@@ -96,6 +109,41 @@
         });
     }
     
+    /**
+     * Show loading spinner in pricing cards container
+     */
+    function showLoading(pricingCards) {
+        if (pricingCards) {
+            pricingCards.innerHTML = `
+                <div class="text-center" style="padding: 40px;">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <p class="mt-3" style="color: #666;">Loading pricing packages...</p>
+                </div>
+            `;
+        }
+    }
+    
+    /**
+     * Show error message in pricing cards container
+     */
+    function showError(pricingCards, message) {
+        if (pricingCards) {
+            pricingCards.innerHTML = `
+                <div class="text-center" style="padding: 40px;">
+                    <div class="alert alert-danger">
+                        <h5><i class="fa fa-exclamation-triangle"></i> Error Loading Packages</h5>
+                        <p>${message}</p>
+                        <button class="btn btn-primary btn-sm" onclick="location.reload();">
+                            <i class="fa fa-refresh"></i> Retry
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
     /**
      * Load static packages as final fallback
      */

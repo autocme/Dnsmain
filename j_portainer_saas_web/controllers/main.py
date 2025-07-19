@@ -26,8 +26,13 @@ class SaaSWebController(http.Controller):
             JSON response containing package data with pricing info
         """
         try:
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.info("Starting package data retrieval...")
+            
             # Check if saas.package model exists
             if 'saas.package' not in request.env:
+                _logger.error("SaaS package model not found in request.env")
                 response_data = {
                     'success': False,
                     'error': 'SaaS package model not found. Please ensure j_portainer_saas module is installed.',
@@ -39,17 +44,33 @@ class SaaSWebController(http.Controller):
                 )
             
             # Get all packages published on website
+            _logger.info("Searching for packages with pkg_active=True and pkg_publish_website=True")
+            # First try with both conditions
             packages = request.env['saas.package'].sudo().search([
                 ('pkg_active', '=', True),
                 ('pkg_publish_website', '=', True)
             ])
+            _logger.info(f"Found {len(packages)} packages with both conditions")
             
-            # If no packages found, return error to force demo fallback
+            # If no packages found with both conditions, try just active packages
             if not packages:
+                _logger.info("No packages found with both conditions, trying just pkg_active=True")
+                packages = request.env['saas.package'].sudo().search([
+                    ('pkg_active', '=', True)
+                ])
+                _logger.info(f"Found {len(packages)} packages with just active condition")
+            
+            # If still no packages found, try any packages at all
+            if not packages:
+                _logger.info("No packages found with active condition, trying all packages")
+                all_packages = request.env['saas.package'].sudo().search([])
+                _logger.info(f"Found {len(all_packages)} total packages in database")
+                
+                # Return error to force demo fallback, but include debug info
                 response_data = {
                     'success': False,
-                    'error': 'No published packages found in database',
-                    'debug': 'Database query returned 0 packages with pkg_active=True and pkg_publish_website=True'
+                    'error': f'No active packages found in database (total packages: {len(all_packages)})',
+                    'debug': f'Database query returned 0 active packages out of {len(all_packages)} total. Falling back to demo data.'
                 }
                 return request.make_response(
                     json.dumps(response_data),
@@ -903,7 +924,12 @@ class SaaSWebController(http.Controller):
         Returns:
             JSON response containing demo package data
         """
-        demo_packages = [
+        try:
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.info("Demo packages endpoint called")
+            
+            demo_packages = [
             {
                 'id': 1,
                 'name': 'Starter',
@@ -912,7 +938,8 @@ class SaaSWebController(http.Controller):
                 'yearly_price': 261.0,  # 10% discount
                 'currency_symbol': '$',
                 'has_free_trial': True,
-                'subscription_period': 'monthly',
+                'monthly_active': True,
+                'yearly_active': True,
                 'features': [
                     '5 Projects',
                     '10GB Storage',
@@ -928,7 +955,8 @@ class SaaSWebController(http.Controller):
                 'yearly_price': 711.0,  # 10% discount
                 'currency_symbol': '$',
                 'has_free_trial': True,
-                'subscription_period': 'monthly',
+                'monthly_active': True,
+                'yearly_active': True,
                 'features': [
                     '25 Projects',
                     '100GB Storage',
@@ -944,7 +972,8 @@ class SaaSWebController(http.Controller):
                 'yearly_price': 1791.0,  # 10% discount
                 'currency_symbol': '$',
                 'has_free_trial': False,
-                'subscription_period': 'monthly',
+                'monthly_active': True,
+                'yearly_active': True,
                 'features': [
                     'Unlimited Projects',
                     '1TB Storage',
@@ -954,14 +983,31 @@ class SaaSWebController(http.Controller):
             }
         ]
         
-        response_data = {
-            'success': True,
-            'packages': demo_packages,
-            'free_trial_days': 30,
-            'debug': 'Demo data returned'
-        }
+            response_data = {
+                'success': True,
+                'packages': demo_packages,
+                'free_trial_days': 30,
+                'debug': f'Demo data returned: {len(demo_packages)} packages'
+            }
+            
+            _logger.info(f"Demo packages endpoint returning {len(demo_packages)} packages")
+            
+            return request.make_response(
+                json.dumps(response_data),
+                headers=[('Content-Type', 'application/json')]
+            )
         
-        return request.make_response(
-            json.dumps(response_data),
-            headers=[('Content-Type', 'application/json')]
-        )
+        except Exception as e:
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.error(f"Error in demo packages endpoint: {str(e)}")
+            
+            response_data = {
+                'success': False,
+                'error': f'Demo endpoint error: {str(e)}',
+                'debug': f'Exception in get_demo_packages: {type(e).__name__}'
+            }
+            return request.make_response(
+                json.dumps(response_data),
+                headers=[('Content-Type', 'application/json')]
+            )
