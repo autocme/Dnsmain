@@ -1,0 +1,30 @@
+2025-07-20 13:20:18,689 399173 INFO SSS odoo.addons.j_portainer_saas_web.controllers.main: Retrieved invoice info for client 126: invoice_id=62 
+2025-07-20 13:20:18,690 399173 INFO SSS werkzeug: 192.168.1.21 - - [20/Jul/2025 13:20:18] "GET /saas/client/invoice_info?client_id=126 HTTP/1.1" 200 - 7 0.005 0.006
+2025-07-20 13:20:18,713 399173 ERROR SSS odoo.http: Exception during request handling. 
+Traceback (most recent call last):
+  File "/home/ibra/odoo17/odoo/http.py", line 2206, in __call__
+    response = request._serve_db()
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/ibra/odoo17/odoo/http.py", line 1782, in _serve_db
+    return service_model.retrying(self._serve_ir_http, self.env)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ibra/odoo17/odoo/service/model.py", line 133, in retrying
+    result = func()
+             ^^^^^^
+  File "/home/ibra/odoo17/odoo/http.py", line 1809, in _serve_ir_http
+    response = self.dispatcher.dispatch(rule.endpoint, args)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ibra/odoo17/odoo/http.py", line 2013, in dispatch
+    result = self.request.registry['ir.http']._dispatch(endpoint)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ibra/odoo17/addons/website/models/ir_http.py", line 235, in _dispatch
+    response = super()._dispatch(endpoint)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ibra/odoo17/odoo/addons/base/models/ir_http.py", line 221, in _dispatch
+    result = endpoint(**request.params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ibra/odoo17/odoo/http.py", line 757, in route_wrapper
+    result = endpoint(self, *args, **params_ok)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: SaaSWebController.open_invoice_payment_wizard() missing 1 required positional argument: 'invoice_id'
+2025-07-20 13:20:18,713 399173 INFO SSS werkzeug: 192.168.1.21 - - [20/Jul/2025 13:20:18] "POST /saas/invoice/open_payment_wizard HTTP/1.1" 200 - 1 0.001 0.003

@@ -338,7 +338,7 @@
         console.log('Opening native Odoo payment wizard for invoice:', invoiceId, 'client:', clientId);
         
         // Call our controller to get the payment wizard action
-        fetch('/saas/invoice/open_payment_wizard', {
+        fetch('/saas/client/open_payment_wizard', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

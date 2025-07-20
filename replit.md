@@ -259,6 +259,10 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Response Format**: Standardized controller responses to include all required fields (invoice_amount, invoice_currency, invoice_name) for consistent display
 - **Critical Syntax Fix**: Fixed missing closing parenthesis in print statement that was causing JSON-RPC controller to fail silently with empty error response
 - **JSON-RPC Error Resolution**: Resolved "No result in response" error by fixing Python syntax error in payment wizard controller function
+- **Route Conflict Resolution**: Fixed critical route conflict where two methods shared the same `/saas/invoice/open_payment_wizard` endpoint with different parameter signatures
+- **Endpoint Separation**: Changed client-based payment wizard route to `/saas/client/open_payment_wizard` to resolve parameter mismatch
+- **JavaScript Route Update**: Updated purchase_confirm.js to call the correct endpoint for client-based payment wizard functionality
+- **Full Functionality Restoration**: Restored complete payment wizard logic after resolving route and parameter conflicts
 
 ## July 17, 2025 - Ecommerce-Style Checkout Implementation and Payment Form Debugging
 
