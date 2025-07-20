@@ -913,6 +913,25 @@ class SaaSWebController(http.Controller):
             JSON response with payment wizard action or portal URL
         """
         print(f"=== Starting open_payment_wizard for client_id: {client_id} ===")
+        
+        # Simple test to check if JSON-RPC is working
+        try:
+            print(f"Testing basic JSON-RPC response...")
+            return {
+                'success': True,
+                'test': 'JSON-RPC is working',
+                'client_id': client_id,
+                'message': 'This is a test response'
+            }
+        except Exception as e:
+            print(f"Even basic response failed: {e}")
+            return {
+                'success': False,
+                'error': 'Basic test failed'
+            }
+        
+        # Original complex logic (commented out for testing)
+        """
         try:
             print(f"Step 1: Checking models availability...")
             # Check if models exist
@@ -1053,3 +1072,4 @@ class SaaSWebController(http.Controller):
                 'success': False,
                 'error': f'Server error: {str(e)}'
             }
+        """
