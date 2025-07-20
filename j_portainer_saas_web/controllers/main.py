@@ -933,7 +933,7 @@ class SaaSWebController(http.Controller):
                     'error': 'SaaS client not found'
                 }
             
-            print(f"Step 3: Found client {client.id}, checking subscription..."
+            print(f"Step 3: Found client {client.id}, checking subscription...")
             
             # Get the subscription and its invoices
             if not client.sc_subscription_id:
