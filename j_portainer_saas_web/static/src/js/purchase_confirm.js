@@ -332,10 +332,10 @@
     }
     
     /**
-     * Open Odoo's native payment wizard using JSON-RPC
+     * Generate and redirect to payment link for invoice
      */
     function openNativeOdooPaymentWizard(invoiceId, clientId) {
-        console.log('Opening native Odoo payment wizard for invoice:', invoiceId, 'client:', clientId);
+        console.log('Generating payment link for invoice:', invoiceId, 'client:', clientId);
         
         // Call our controller to get the payment wizard action
         fetch('/saas/client/open_payment_wizard', {
@@ -357,33 +357,19 @@
             return response.json();
         })
         .then(function(data) {
-            console.log('Payment wizard raw response:', data);
+            console.log('Payment link response:', data);
             
-            if (data.result && data.result.success && data.result.action) {
-                console.log('Payment wizard action received:', data.result.action);
+            if (data.result && data.result.success && data.result.payment_link) {
+                console.log('Payment link generated:', data.result.payment_link);
                 
-                // Try to use Odoo's action manager if available
-                if (tryOpenWithOdooActionManager(data.result.action, clientId)) {
-                    return; // Success with action manager
-                }
-                
-                // Fallback: Show info about the payment and redirect to invoice portal
-                showPaymentRedirectInfo(invoiceId, data.result, clientId);
-                
-            } else if (data.result && data.result.portal_url) {
-                console.log('Payment wizard not available, using portal URL:', data.result.portal_url);
-                
-                // Open portal URL in new tab
-                window.open(data.result.portal_url, '_blank');
-                
-                // Show message about payment completion
-                showPaymentRedirectInfo(data.result.invoice_id, data.result, clientId);
+                // Redirect to the payment link (same window for better UX)
+                window.location.href = data.result.payment_link;
                 
             } else {
-                console.error('Failed to get payment wizard action. Full response:', data);
+                console.error('Failed to generate payment link. Full response:', data);
                 console.error('Error details:', data.result ? data.result.error : 'No result in response');
                 
-                var errorMsg = 'Unable to open payment wizard';
+                var errorMsg = 'Unable to generate payment link';
                 if (data.result && data.result.error) {
                     errorMsg += ': ' + data.result.error;
                 } else if (data.error) {

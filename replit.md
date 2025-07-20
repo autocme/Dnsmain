@@ -267,6 +267,11 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Custom Transaction Route**: Created `/saas/payment/invoice_transaction` endpoint with automatic access token provision for SaaS invoice payments
 - **Payment Portal Integration**: Enhanced payment wizard to work seamlessly with Odoo's payment portal transaction system
 - **Access Token Context**: Added access_token, custom_transaction_route, and payment parameters to wizard context for proper payment flow
+- **Direct Payment Link Implementation**: Replaced complex payment wizard modal with direct payment link generation matching "Generate a payment link" server action
+- **Payment Link Format**: Generated payment links follow format `/payment/pay?amount=X&access_token=Y&invoice_id=Z` exactly like server action output
+- **Simplified User Experience**: PAY INVOICE NOW button now redirects directly to payment page instead of opening complex modal dialogs
+- **Controller Streamlining**: Removed complex payment wizard action generation in favor of simple payment link URL construction
+- **JavaScript Simplification**: Updated payment handling to redirect to payment link instead of managing action manager and wizard modals
 
 ## July 17, 2025 - Ecommerce-Style Checkout Implementation and Payment Form Debugging
 
