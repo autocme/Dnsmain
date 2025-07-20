@@ -981,14 +981,31 @@ class SaaSWebController(http.Controller):
             try:
                 print(f"Generating direct payment link for invoice {invoice.id}, amount: {invoice.amount_total}")
                 
-                # Generate access token for the invoice
-                access_token = invoice._portal_ensure_token()
+                # Ensure invoice has required fields
+                if not invoice.amount_total or invoice.amount_total <= 0:
+                    return {
+                        'success': False,
+                        'error': f'Invalid invoice amount: {invoice.amount_total}'
+                    }
                 
-                # Generate the direct payment link like the server action does
-                # Format: /payment/pay?amount=X&access_token=Y&invoice_id=Z
-                payment_link = f"/payment/pay?amount={invoice.amount_total}&access_token={access_token}&invoice_id={invoice.id}"
+                # Generate access token for the invoice using the same method as portal
+                try:
+                    access_token = invoice._portal_ensure_token()
+                    print(f"Access token generated: {access_token[:10]}...{access_token[-10:]} (length: {len(access_token)})")
+                except Exception as token_error:
+                    print(f"Error generating access token: {token_error}")
+                    return {
+                        'success': False,
+                        'error': f'Unable to generate access token: {str(token_error)}'
+                    }
+                
+                # Generate payment link with proper URL encoding and validation
+                # Use the exact same format as shown in your example
+                base_url = request.httprequest.url_root.rstrip('/')
+                payment_link = f"{base_url}/payment/pay?amount={invoice.amount_total}&access_token={access_token}&invoice_id={invoice.id}"
                 
                 print(f"Generated payment link: {payment_link}")
+                print(f"Invoice details - ID: {invoice.id}, Amount: {invoice.amount_total}, Currency: {invoice.currency_id.name}, Partner: {invoice.partner_id.name}")
                 
                 return {
                     'success': True,
@@ -997,6 +1014,7 @@ class SaaSWebController(http.Controller):
                     'invoice_name': invoice.name,
                     'invoice_amount': float(invoice.amount_total),
                     'invoice_currency': invoice.currency_id.name,
+                    'access_token': access_token[:10] + '...' + access_token[-10:],  # Partial token for debugging
                     'message': 'Payment link generated successfully'
                 }
                 

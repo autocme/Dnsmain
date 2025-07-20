@@ -272,6 +272,9 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Simplified User Experience**: PAY INVOICE NOW button now redirects directly to payment page instead of opening complex modal dialogs
 - **Controller Streamlining**: Removed complex payment wizard action generation in favor of simple payment link URL construction
 - **JavaScript Simplification**: Updated payment handling to redirect to payment link instead of managing action manager and wizard modals
+- **Enhanced Payment Link Validation**: Added comprehensive validation for invoice amount, access token generation, and URL formatting
+- **Debug Logging Enhancement**: Added detailed logging for payment link generation process including token validation and invoice details
+- **Parameter Validation Error**: Identified "invalid parameters" error in payment link format requiring further investigation of Odoo payment endpoint expectations
 
 ## July 17, 2025 - Ecommerce-Style Checkout Implementation and Payment Form Debugging
 
