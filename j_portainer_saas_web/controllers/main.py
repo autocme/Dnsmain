@@ -912,21 +912,28 @@ class SaaSWebController(http.Controller):
         Returns:
             JSON response with payment wizard action or portal URL
         """
+        print(f"=== Starting open_payment_wizard for client_id: {client_id} ===")
         try:
+            print(f"Step 1: Checking models availability...")
             # Check if models exist
             if 'saas.client' not in request.env:
+                print("ERROR: SaaS client model not found")
                 return {
                     'success': False,
                     'error': 'SaaS client model not found'
                 }
             
+            print(f"Step 2: Getting SaaS client with ID: {client_id}")
             # Get the SaaS client
             client = request.env['saas.client'].sudo().browse(int(client_id))
             if not client.exists():
+                print(f"ERROR: SaaS client {client_id} not found")
                 return {
                     'success': False,
                     'error': 'SaaS client not found'
                 }
+            
+            print(f"Step 3: Found client {client.id}, checking subscription..."
             
             # Get the subscription and its invoices
             if not client.sc_subscription_id:
@@ -1036,6 +1043,12 @@ class SaaSWebController(http.Controller):
                 }
                 
         except Exception as e:
+            print(f"=== MAIN EXCEPTION in open_payment_wizard ===")
+            print(f"Exception type: {type(e).__name__}")
+            print(f"Exception message: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            print(f"=== END EXCEPTION ===")
             return {
                 'success': False,
                 'error': f'Server error: {str(e)}'
