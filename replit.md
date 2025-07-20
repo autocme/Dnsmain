@@ -248,6 +248,11 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Portal URL Fallback**: Enhanced fallback system opens invoice portal in new tab when payment wizard unavailable
 - **Button Loading States**: Added proper loading states and error handling for payment wizard opening
 - **No Package Display Impact**: Carefully implemented without affecting existing pricing snippet package loading functionality
+- **Invoice Filtering Fix**: Enhanced invoice search to include both posted unpaid invoices AND draft invoices with amount > 0
+- **Auto-Draft Posting**: Added automatic posting of draft invoices when payment is attempted to ensure smooth payment flow
+- **Debug Information**: Added comprehensive debugging for invoice lookup issues showing all subscription invoices when none found
+- **Consistent Filtering**: Applied same invoice filtering logic across all endpoints (`/saas/invoice/open_payment_wizard`, `/saas/client/invoice_info`)
+- **Error Handling**: Enhanced error messages to show actual invoice states and debug information for troubleshooting
 
 ## July 17, 2025 - Ecommerce-Style Checkout Implementation and Payment Form Debugging
 

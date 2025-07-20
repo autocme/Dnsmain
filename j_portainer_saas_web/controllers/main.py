@@ -415,19 +415,38 @@ class SaaSWebController(http.Controller):
                     headers=[('Content-Type', 'application/json')]
                 )
             
-            # Get the latest unpaid invoice
-            invoice = request.env['account.move'].sudo().search([
-                ('partner_id', '=', client.sc_partner_id.id),
-                ('state', '=', 'posted'),
-                ('payment_state', 'in', ['not_paid', 'partial']),
-                ('move_type', '=', 'out_invoice')
-            ], order='create_date desc', limit=1)
+            # Get unpaid invoices from subscription (including draft invoices that need payment)
+            unpaid_invoices = subscription.invoice_ids.filtered(
+                lambda inv: (
+                    # Posted invoices that are unpaid or partially paid
+                    (inv.state == 'posted' and inv.payment_state in ['not_paid', 'partial']) or
+                    # Draft invoices with amount > 0 (need to be paid)
+                    (inv.state == 'draft' and inv.amount_total > 0)
+                )
+            )
             
-            if not invoice:
+            if not unpaid_invoices:
+                # Debug: show what invoices exist for this subscription
+                all_invoices = subscription.invoice_ids
+                invoice_debug = [f"ID:{inv.id} State:{inv.state} Payment:{getattr(inv, 'payment_state', 'N/A')} Amount:{inv.amount_total}" for inv in all_invoices]
                 return request.make_response(
-                    json.dumps({'success': False, 'error': 'No unpaid invoice found'}),
+                    json.dumps({'success': False, 'error': f'No unpaid invoice found. Debug - All invoices: {invoice_debug}'}),
                     headers=[('Content-Type', 'application/json')]
                 )
+            
+            # Get the first unpaid invoice
+            invoice = unpaid_invoices[0]
+            
+            # If invoice is draft, try to post it first
+            if invoice.state == 'draft':
+                try:
+                    # Auto-post draft invoice to make it ready for payment
+                    invoice.action_post()
+                except Exception as post_error:
+                    return request.make_response(
+                        json.dumps({'success': False, 'error': f'Invoice needs to be confirmed before payment. Error: {str(post_error)}'}),
+                        headers=[('Content-Type', 'application/json')]
+                    )
             
             # Generate access token for invoice
             access_token = invoice._portal_ensure_token()
@@ -632,10 +651,21 @@ class SaaSWebController(http.Controller):
                 return request.make_response('No subscription found for this client', status=404)
             
             subscription = client.sc_subscription_id
-            invoices = subscription.invoice_ids.filtered(lambda inv: inv.state == 'posted' and inv.payment_state in ['not_paid', 'partial'])
+            # Get unpaid invoices from subscription (including draft invoices that need payment)
+            invoices = subscription.invoice_ids.filtered(
+                lambda inv: (
+                    # Posted invoices that are unpaid or partially paid
+                    (inv.state == 'posted' and inv.payment_state in ['not_paid', 'partial']) or
+                    # Draft invoices with amount > 0 (need to be paid)
+                    (inv.state == 'draft' and inv.amount_total > 0)
+                )
+            )
             
             if not invoices:
-                return request.make_response('No unpaid invoices found', status=404)
+                # Debug: show what invoices exist for this subscription
+                all_invoices = subscription.invoice_ids
+                invoice_debug = [f"ID:{inv.id} State:{inv.state} Payment:{getattr(inv, 'payment_state', 'N/A')} Amount:{inv.amount_total}" for inv in all_invoices]
+                return request.make_response(f'No unpaid invoices found. Debug - All invoices: {invoice_debug}', status=404)
             
             # Get the latest unpaid invoice
             invoice = invoices[-1]
@@ -906,17 +936,38 @@ class SaaSWebController(http.Controller):
                 }
             
             subscription = client.sc_subscription_id
-            # Get unpaid invoices from subscription
-            unpaid_invoices = subscription.invoice_ids.filtered(lambda inv: inv.state == 'posted' and inv.payment_state in ['not_paid', 'partial'])
+            # Get unpaid invoices from subscription (including draft invoices that need payment)
+            unpaid_invoices = subscription.invoice_ids.filtered(
+                lambda inv: (
+                    # Posted invoices that are unpaid or partially paid
+                    (inv.state == 'posted' and inv.payment_state in ['not_paid', 'partial']) or
+                    # Draft invoices with amount > 0 (need to be paid)
+                    (inv.state == 'draft' and inv.amount_total > 0)
+                )
+            )
             
             if not unpaid_invoices:
+                # Debug: show what invoices exist for this subscription
+                all_invoices = subscription.invoice_ids
+                invoice_debug = [f"ID:{inv.id} State:{inv.state} Payment:{getattr(inv, 'payment_state', 'N/A')} Amount:{inv.amount_total}" for inv in all_invoices]
                 return {
                     'success': False,
-                    'error': 'No unpaid invoices found for this subscription'
+                    'error': f'No unpaid invoices found for this subscription. Debug - All invoices: {invoice_debug}'
                 }
             
             # Get the first unpaid invoice
             invoice = unpaid_invoices[0]
+            
+            # If invoice is draft, try to post it first
+            if invoice.state == 'draft':
+                try:
+                    # Auto-post draft invoice to make it ready for payment
+                    invoice.action_post()
+                except Exception as post_error:
+                    return {
+                        'success': False,
+                        'error': f'Invoice needs to be confirmed before payment. Error: {str(post_error)}'
+                    }
             
             # Try to create payment wizard action (if account.payment.register model exists)
             try:
