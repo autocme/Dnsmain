@@ -213,7 +213,7 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Clean Domain URL Handling**: Added proper URL parsing and cleaning for client domain redirects in both controller and JavaScript
 - **Debug Logging Enhancement**: Added comprehensive logging throughout purchase flow to track parameter passing and client creation
 
-## July 19, 2025 - Critical JavaScript Fix and Native Odoo Payment Wizard Integration
+## July 19, 2025 - PAY INVOICE NOW Button Integration and JavaScript Fix
 
 - **JavaScript Syntax Error Resolution**: Fixed critical duplicate function definitions causing package display failures
 - **Function Consolidation**: Removed duplicate `makePurchaseRequest`, `handlePurchaseSuccess`, and `handleLoginRequired` functions from pricing snippet
@@ -240,6 +240,14 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Security Validation**: Access control ensures users can only access their own invoices and payment wizards
 - **Progress Flow**: Proper flow from Package Selection → Payment (with invoice) → Setup
 - **Cross-Context Compatibility**: Works in both website frontend and Odoo backend environments
+- **PAY INVOICE NOW Button Integration**: Added complete integration of payment wizard directly into purchase confirmation page
+- **Controller Endpoint**: Created `/saas/invoice/open_payment_wizard` endpoint that returns Odoo's payment wizard action or portal URL fallback
+- **Smart Payment Opening**: Tries Odoo action manager first, falls back to invoice portal in new tab if action manager unavailable
+- **Existing Code Integration**: Leveraged existing `setupInvoicePaymentButton` and `openNativeOdooPaymentWizard` functions without duplicating handlers
+- **Parameter Alignment**: Fixed parameter passing between JavaScript and controller (client_id based lookup)
+- **Portal URL Fallback**: Enhanced fallback system opens invoice portal in new tab when payment wizard unavailable
+- **Button Loading States**: Added proper loading states and error handling for payment wizard opening
+- **No Package Display Impact**: Carefully implemented without affecting existing pricing snippet package loading functionality
 
 ## July 17, 2025 - Ecommerce-Style Checkout Implementation and Payment Form Debugging
 

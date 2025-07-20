@@ -870,3 +870,108 @@ class SaaSWebController(http.Controller):
             json.dumps(response_data),
             headers=[('Content-Type', 'application/json')]
         )
+    
+    @http.route('/saas/invoice/open_payment_wizard', type='json', auth='user', methods=['POST'], csrf=False)
+    def open_payment_wizard(self, client_id, **kwargs):
+        """
+        Open Odoo's standard payment wizard for SaaS client invoice
+        
+        Args:
+            client_id (int): SaaS client ID
+            
+        Returns:
+            JSON response with payment wizard action or portal URL
+        """
+        try:
+            # Check if models exist
+            if 'saas.client' not in request.env:
+                return {
+                    'success': False,
+                    'error': 'SaaS client model not found'
+                }
+            
+            # Get the SaaS client
+            client = request.env['saas.client'].sudo().browse(int(client_id))
+            if not client.exists():
+                return {
+                    'success': False,
+                    'error': 'SaaS client not found'
+                }
+            
+            # Get the subscription and its invoices
+            if not client.sc_subscription_id:
+                return {
+                    'success': False,
+                    'error': 'No subscription found for this client'
+                }
+            
+            subscription = client.sc_subscription_id
+            # Get unpaid invoices from subscription
+            unpaid_invoices = subscription.invoice_ids.filtered(lambda inv: inv.state == 'posted' and inv.payment_state in ['not_paid', 'partial'])
+            
+            if not unpaid_invoices:
+                return {
+                    'success': False,
+                    'error': 'No unpaid invoices found for this subscription'
+                }
+            
+            # Get the first unpaid invoice
+            invoice = unpaid_invoices[0]
+            
+            # Try to create payment wizard action (if account.payment.register model exists)
+            try:
+                if 'account.payment.register' in request.env:
+                    # Create the payment register wizard with the invoice context
+                    wizard_context = {
+                        'active_model': 'account.move',
+                        'active_ids': [invoice.id],
+                        'active_id': invoice.id,
+                    }
+                    
+                    # Return action configuration for opening payment wizard
+                    action = {
+                        'type': 'ir.actions.act_window',
+                        'name': 'Register Payment',
+                        'res_model': 'account.payment.register',
+                        'view_mode': 'form',
+                        'view_id': False,
+                        'target': 'new',
+                        'context': wizard_context,
+                    }
+                    
+                    # Also provide portal URL as fallback
+                    portal_url = f'/my/invoices/{invoice.id}?access_token={invoice._portal_ensure_token()}'
+                    
+                    return {
+                        'success': True,
+                        'action': action,
+                        'portal_url': portal_url,
+                        'invoice_id': invoice.id,
+                        'invoice_name': invoice.name
+                    }
+                    
+            except Exception as e:
+                # If payment wizard fails, fall back to portal URL only
+                print(f"Payment wizard creation failed: {e}")
+            
+            # Fallback: return portal URL for invoice payment
+            try:
+                portal_url = f'/my/invoices/{invoice.id}?access_token={invoice._portal_ensure_token()}'
+                return {
+                    'success': True,
+                    'portal_url': portal_url,
+                    'invoice_id': invoice.id,
+                    'invoice_name': invoice.name,
+                    'message': 'Payment wizard not available, redirecting to invoice portal'
+                }
+            except Exception as portal_error:
+                return {
+                    'success': False,
+                    'error': f'Unable to generate portal access: {str(portal_error)}'
+                }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Server error: {str(e)}'
+            }

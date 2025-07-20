@@ -22,6 +22,8 @@
         if (continueBtn) {
             continueBtn.addEventListener('click', handleContinueClick);
         }
+        
+        // Note: PAY INVOICE NOW button handler is set up dynamically in showPaymentForm
     }
     
     /**
@@ -98,6 +100,9 @@
         console.log('Redirecting to:', redirectUrl);
         window.location.href = redirectUrl;
     }
+    
+    // Note: Duplicate handlePayInvoiceClick function removed
+    // Payment handling is done through setupInvoicePaymentButton/openNativeOdooPaymentWizard
     
     /**
      * Show loading screen with animation
@@ -343,7 +348,6 @@
                 jsonrpc: '2.0',
                 method: 'call',
                 params: {
-                    invoice_id: invoiceId,
                     client_id: clientId
                 },
                 id: new Date().getTime()
@@ -363,6 +367,15 @@
                 
                 // Fallback: Show info about the payment and redirect to invoice portal
                 showPaymentRedirectInfo(invoiceId, data.result, clientId);
+                
+            } else if (data.result && data.result.portal_url) {
+                console.log('Payment wizard not available, using portal URL:', data.result.portal_url);
+                
+                // Open portal URL in new tab
+                window.open(data.result.portal_url, '_blank');
+                
+                // Show message about payment completion
+                showPaymentRedirectInfo(data.result.invoice_id, data.result, clientId);
                 
             } else {
                 console.error('Failed to get payment wizard action:', data.result ? data.result.error : 'Unknown error');
