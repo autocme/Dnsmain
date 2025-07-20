@@ -971,7 +971,11 @@ class SaaSWebController(http.Controller):
             
             # Try to create payment wizard action (if account.payment.register model exists)
             try:
+                print(f"Checking for payment wizard model: account.payment.register in env: {'account.payment.register' in request.env}")
+                
                 if 'account.payment.register' in request.env:
+                    print(f"Creating payment wizard for invoice {invoice.id}, state: {invoice.state}, amount: {invoice.amount_total}")
+                    
                     # Create the payment register wizard with the invoice context
                     wizard_context = {
                         'active_model': 'account.move',
@@ -993,17 +997,25 @@ class SaaSWebController(http.Controller):
                     # Also provide portal URL as fallback
                     portal_url = f'/my/invoices/{invoice.id}?access_token={invoice._portal_ensure_token()}'
                     
+                    print(f"Payment wizard action created successfully, returning action and portal URL")
+                    
                     return {
                         'success': True,
                         'action': action,
                         'portal_url': portal_url,
                         'invoice_id': invoice.id,
-                        'invoice_name': invoice.name
+                        'invoice_name': invoice.name,
+                        'invoice_amount': float(invoice.amount_total),
+                        'invoice_currency': invoice.currency_id.name
                     }
+                else:
+                    print("account.payment.register model not found in environment")
                     
             except Exception as e:
                 # If payment wizard fails, fall back to portal URL only
-                print(f"Payment wizard creation failed: {e}")
+                print(f"Payment wizard creation failed with exception: {type(e).__name__}: {str(e)}")
+                import traceback
+                traceback.print_exc()
             
             # Fallback: return portal URL for invoice payment
             try:
@@ -1013,6 +1025,8 @@ class SaaSWebController(http.Controller):
                     'portal_url': portal_url,
                     'invoice_id': invoice.id,
                     'invoice_name': invoice.name,
+                    'invoice_amount': float(invoice.amount_total),
+                    'invoice_currency': invoice.currency_id.name,
                     'message': 'Payment wizard not available, redirecting to invoice portal'
                 }
             except Exception as portal_error:

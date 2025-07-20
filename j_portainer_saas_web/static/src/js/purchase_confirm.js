@@ -357,6 +357,8 @@
             return response.json();
         })
         .then(function(data) {
+            console.log('Payment wizard raw response:', data);
+            
             if (data.result && data.result.success && data.result.action) {
                 console.log('Payment wizard action received:', data.result.action);
                 
@@ -378,8 +380,19 @@
                 showPaymentRedirectInfo(data.result.invoice_id, data.result, clientId);
                 
             } else {
-                console.error('Failed to get payment wizard action:', data.result ? data.result.error : 'Unknown error');
-                showErrorMessage('Unable to open payment wizard. Please try again.');
+                console.error('Failed to get payment wizard action. Full response:', data);
+                console.error('Error details:', data.result ? data.result.error : 'No result in response');
+                
+                var errorMsg = 'Unable to open payment wizard';
+                if (data.result && data.result.error) {
+                    errorMsg += ': ' + data.result.error;
+                } else if (data.error) {
+                    errorMsg += ': ' + (data.error.message || data.error);
+                } else {
+                    errorMsg += '. Please try again.';
+                }
+                
+                showErrorMessage(errorMsg);
             }
         })
         .catch(function(error) {
@@ -449,17 +462,22 @@
      * Show payment redirect info when action manager is not available
      */
     function showPaymentRedirectInfo(invoiceId, paymentData, clientId) {
-        console.log('Showing payment redirect info...');
+        console.log('Showing payment redirect info for invoice:', invoiceId, 'with data:', paymentData);
+        
+        // Safe access to payment data with fallbacks
+        var amount = paymentData.invoice_amount || paymentData.amount || '0.00';
+        var currency = paymentData.invoice_currency || paymentData.currency || '$';
+        var invoiceName = paymentData.invoice_name || `Invoice ${invoiceId}`;
         
         // Show message about redirecting to payment
         var messageHtml = `
             <div class="alert alert-info" style="margin: 20px 0;">
                 <h5><i class="fa fa-credit-card"></i> Ready to Pay</h5>
-                <p>Your invoice for <strong>${paymentData.invoice_currency}${paymentData.invoice_amount}</strong> is ready for payment.</p>
+                <p>Your invoice for <strong>${currency} ${amount}</strong> is ready for payment.</p>
                 <p>Click the button below to complete your payment using Odoo's secure payment system.</p>
                 <div style="text-align: center; margin-top: 20px;">
                     <a href="/my/invoices/${invoiceId}" target="_blank" class="btn btn-primary btn-lg" style="background-color: #875A7B; border-color: #875A7B; padding: 15px 30px;">
-                        <i class="fa fa-external-link"></i> Pay Invoice ${paymentData.invoice_name}
+                        <i class="fa fa-external-link"></i> Pay ${invoiceName}
                     </a>
                 </div>
                 <p style="margin-top: 15px; text-align: center; color: #666;">

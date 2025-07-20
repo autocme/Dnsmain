@@ -253,6 +253,10 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Debug Information**: Added comprehensive debugging for invoice lookup issues showing all subscription invoices when none found
 - **Consistent Filtering**: Applied same invoice filtering logic across all endpoints (`/saas/invoice/open_payment_wizard`, `/saas/client/invoice_info`)
 - **Error Handling**: Enhanced error messages to show actual invoice states and debug information for troubleshooting
+- **Comprehensive Debug Logging**: Added detailed console logging for payment wizard creation, action manager detection, and error tracking
+- **Safe Data Display**: Enhanced JavaScript to safely handle missing payment data fields with proper fallbacks (currency, amount, invoice name)
+- **Exception Handling**: Added detailed server-side exception logging with traceback for payment wizard failures
+- **Response Format**: Standardized controller responses to include all required fields (invoice_amount, invoice_currency, invoice_name) for consistent display
 
 ## July 17, 2025 - Ecommerce-Style Checkout Implementation and Payment Form Debugging
 
