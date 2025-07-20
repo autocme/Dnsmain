@@ -984,11 +984,20 @@ class SaaSWebController(http.Controller):
                 if 'account.payment.register' in request.env:
                     print(f"Creating payment wizard for invoice {invoice.id}, state: {invoice.state}, amount: {invoice.amount_total}")
                     
-                    # Create the payment register wizard with the invoice context
+                    # Generate access token for the invoice
+                    access_token = invoice._portal_ensure_token()
+                    
+                    # Create the payment register wizard with the invoice context and access token
                     wizard_context = {
                         'active_model': 'account.move',
                         'active_ids': [invoice.id],
                         'active_id': invoice.id,
+                        'default_invoice_ids': [(6, 0, [invoice.id])],
+                        'access_token': access_token,
+                        'saas_context': True,
+                        'portal_payment': True,
+                        # Add custom transaction route that handles access tokens
+                        'custom_transaction_route': f'/saas/payment/invoice_transaction?invoice_id={invoice.id}&access_token={access_token}',
                     }
                     
                     # Return action configuration for opening payment wizard
@@ -1000,6 +1009,11 @@ class SaaSWebController(http.Controller):
                         'view_id': False,
                         'target': 'new',
                         'context': wizard_context,
+                        # Add access token to action as well
+                        'params': {
+                            'access_token': access_token,
+                            'invoice_id': invoice.id,
+                        }
                     }
                     
                     # Also provide portal URL as fallback
@@ -1054,3 +1068,53 @@ class SaaSWebController(http.Controller):
                 'success': False,
                 'error': f'Server error: {str(e)}'
             }
+
+    @http.route('/saas/payment/invoice_transaction', type='json', auth='user', methods=['POST'], csrf=False)
+    def saas_invoice_transaction(self, invoice_id=None, **kwargs):
+        """
+        Custom payment transaction handler for SaaS invoices that provides access token
+        This overrides the standard payment portal transaction to add access token
+        """
+        try:
+            print(f"=== SaaS Invoice Transaction Handler ===")
+            print(f"Invoice ID: {invoice_id}, kwargs: {kwargs}")
+            
+            if not invoice_id:
+                return {'error': 'Missing invoice_id parameter'}
+            
+            # Get the invoice
+            invoice = request.env['account.move'].sudo().browse(int(invoice_id))
+            if not invoice.exists():
+                return {'error': 'Invoice not found'}
+            
+            # Generate access token
+            access_token = invoice._portal_ensure_token()
+            print(f"Generated access token for invoice {invoice_id}")
+            
+            # Add access token to kwargs and call standard payment portal method
+            kwargs['access_token'] = access_token
+            
+            # Try to call the standard payment portal invoice transaction method
+            try:
+                # Import payment portal controller
+                from odoo.addons.payment.controllers.portal import PaymentPortal
+                payment_portal = PaymentPortal()
+                
+                # Call the standard method with access token
+                return payment_portal.invoice_transaction(invoice_id, access_token, **kwargs)
+                
+            except Exception as portal_error:
+                print(f"Payment portal method failed: {portal_error}")
+                # Fallback: redirect to invoice portal
+                portal_url = f'/my/invoices/{invoice_id}?access_token={access_token}'
+                return {
+                    'success': False,
+                    'redirect_url': portal_url,
+                    'error': 'Payment processing failed, redirecting to invoice portal'
+                }
+                
+        except Exception as e:
+            print(f"SaaS invoice transaction error: {e}")
+            import traceback
+            traceback.print_exc()
+            return {'error': f'Transaction failed: {str(e)}'}
