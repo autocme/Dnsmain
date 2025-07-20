@@ -228,9 +228,10 @@
                 showSuccessScreen();
             }, 500);
         } else {
-            // For paid packages: show invoice screen with details
+            // For paid packages: hide loading and show payment form (already embedded)
             setTimeout(function() {
-                showInvoiceScreen(result.client_id);
+                hideLoadingScreen();
+                showPaymentForm(result.client_id);
             }, 500);
         }
     }
@@ -255,168 +256,23 @@
     }
     
     /**
-     * Show invoice screen for paid packages with detailed invoice information
+     * Show payment info for paid packages and setup invoice payment
      */
-    function showInvoiceScreen(clientId) {
-        console.log('Showing invoice screen for client:', clientId);
+    function showPaymentForm(clientId) {
+        console.log('Showing payment info for client:', clientId);
         
-        // Store client ID globally
-        window.saasClientId = clientId;
-        
-        // Hide package features and show invoice screen
+        // Hide package features and show payment info
         var packageFeatures = document.getElementById('saasPackageFeatures');
-        var invoiceScreen = document.getElementById('saasInvoiceScreen');
+        var paymentInfo = document.getElementById('saasPaymentInfo');
         
         if (packageFeatures) {
             packageFeatures.style.display = 'none';
         }
         
-        if (invoiceScreen) {
-            invoiceScreen.style.display = 'block';
+        if (paymentInfo) {
+            paymentInfo.style.display = 'block';
             
             // Update progress step to show payment as current
-            updateProgressStep(2);
-            
-            // Load and display invoice details
-            loadInvoiceDetails(clientId);
-        }
-    }
-    
-    /**
-     * Load detailed invoice information and display in the form
-     */
-    function loadInvoiceDetails(clientId) {
-        console.log('Loading invoice details for client:', clientId);
-        
-        // Show loading message in invoice details section
-        var invoiceDetails = document.getElementById('saasInvoiceDetails');
-        if (invoiceDetails) {
-            invoiceDetails.innerHTML = `
-                <div style="text-align: center; padding: 20px;">
-                    <div class="saas_spinner" style="margin: 0 auto 15px;"></div>
-                    <p>Loading invoice details...</p>
-                </div>
-            `;
-        }
-        
-        // Fetch invoice details from server
-        fetch('/saas/client/invoice_details?client_id=' + clientId, {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(data) {
-            if (data.success) {
-                console.log('Invoice details loaded:', data);
-                displayInvoiceDetails(data);
-            } else {
-                console.error('Failed to load invoice details:', data.error);
-                if (invoiceDetails) {
-                    invoiceDetails.innerHTML = `
-                        <div class="alert alert-warning">
-                            <h6>Unable to load invoice details</h6>
-                            <p>${data.error || 'Please try again.'}</p>
-                        </div>
-                    `;
-                }
-            }
-        })
-        .catch(function(error) {
-            console.error('Error loading invoice details:', error);
-            if (invoiceDetails) {
-                invoiceDetails.innerHTML = `
-                    <div class="alert alert-danger">
-                        <h6>Error loading invoice</h6>
-                        <p>Please try again or contact support.</p>
-                    </div>
-                `;
-            }
-        });
-    }
-    
-    /**
-     * Display invoice details in a formatted table
-     */
-    function displayInvoiceDetails(invoiceData) {
-        console.log('Displaying invoice details...');
-        
-        var invoiceDetails = document.getElementById('saasInvoiceDetails');
-        if (!invoiceDetails) return;
-        
-        // Build line items table
-        var lineItemsHtml = '';
-        if (invoiceData.line_items && invoiceData.line_items.length > 0) {
-            invoiceData.line_items.forEach(function(item) {
-                lineItemsHtml += `
-                    <tr>
-                        <td>${item.name}</td>
-                        <td style="text-align: center;">${item.quantity}</td>
-                        <td style="text-align: right;">${item.currency_symbol}${item.unit_price.toFixed(2)}</td>
-                        <td style="text-align: right;">${item.currency_symbol}${item.subtotal.toFixed(2)}</td>
-                    </tr>
-                `;
-            });
-        }
-        
-        // Build complete invoice display
-        var invoiceHtml = `
-            <div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 25px; margin: 20px 0;">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <h4 style="margin: 0; color: #2c3e50; font-weight: 700;">
-                        Invoice ${invoiceData.invoice_number}
-                    </h4>
-                    <p style="margin: 5px 0 0 0; color: #7f8c8d;">
-                        Date: ${invoiceData.invoice_date}
-                        ${invoiceData.due_date ? ' • Due: ' + invoiceData.due_date : ''}
-                    </p>
-                </div>
-                
-                <div style="margin-bottom: 25px;">
-                    <strong>Bill To:</strong><br/>
-                    ${invoiceData.customer_name}
-                </div>
-                
-                <table class="saas_invoice_table">
-                    <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th style="text-align: center;">Qty</th>
-                            <th style="text-align: right;">Unit Price</th>
-                            <th style="text-align: right;">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${lineItemsHtml}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3" style="text-align: right; font-weight: 600;">Subtotal:</td>
-                            <td style="text-align: right; font-weight: 600;">${invoiceData.currency_symbol}${invoiceData.subtotal.toFixed(2)}</td>
-                        </tr>
-                        ${invoiceData.tax_amount > 0 ? `
-                        <tr>
-                            <td colspan="3" style="text-align: right; font-weight: 600;">Tax:</td>
-                            <td style="text-align: right; font-weight: 600;">${invoiceData.currency_symbol}${invoiceData.tax_amount.toFixed(2)}</td>
-                        </tr>
-                        ` : ''}
-                        <tr class="invoice_total">
-                            <td colspan="3" style="text-align: right; font-weight: 700; font-size: 1.1rem;">Total:</td>
-                            <td style="text-align: right; font-weight: 700; font-size: 1.1rem;">${invoiceData.currency_symbol}${invoiceData.amount_due.toFixed(2)}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-                
-                <div style="margin-top: 20px; padding: 15px; background: #e8f4f8; border-radius: 6px; text-align: center;">
-                    <strong>Amount Due: ${invoiceData.currency_symbol}${invoiceData.amount_due.toFixed(2)}</strong>
-                </div>
-            </div>
-        `;
-        
-        invoiceDetails.innerHTML = invoiceHtml;
             updateProgressToPayment();
             
             // Store client ID and setup payment button
