@@ -66,15 +66,21 @@ class AccountMove(models.Model):
                     # Mark the invoice as processed to avoid duplicate processing
                     invoice.sudo().write({'is_saas_first_invoice': False})
                     
-                    # Add a small delay and trigger a client domain redirect notification
-                    # This will be handled by the payment success controller
+                    # Add client-specific redirect handling after payment
                     try:
                         import time
                         time.sleep(1)  # Brief delay for deployment to initialize
                         
+                        # Store payment completion in session for JavaScript redirect
+                        # This will trigger a client-side redirect to the subdomain
+                        if hasattr(self.env, 'session'):
+                            self.env.session['saas_payment_completed'] = True
+                            self.env.session['saas_completed_client_id'] = saas_client.id
+                            self.env.session['saas_client_domain'] = saas_client.sc_full_domain
+                        
                         # Log the client domain for redirection
                         if saas_client.sc_full_domain:
-                            _logger.info(f"SaaS client {saas_client.id} ready for redirect to: {saas_client.sc_full_domain}")
+                            _logger.info(f"SaaS client {saas_client.id} payment completed, ready for redirect to: {saas_client.sc_full_domain}")
                         
                     except Exception as redirect_error:
                         _logger.warning(f"Error preparing redirect for client {saas_client.id}: {redirect_error}")

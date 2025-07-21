@@ -765,6 +765,42 @@ class SaaSWebController(http.Controller):
             _logger.error(f"Error in invoice payment success for client {client_id}: {str(e)}")
             return request.redirect('/web')
 
+    @http.route('/saas/payment/check_completion', type='json', auth='user', methods=['POST'], csrf=False)
+    def check_payment_completion(self, **kwargs):
+        """
+        Check if there's a completed SaaS payment that needs redirection
+        
+        Returns:
+            dict: Redirect information if payment completed
+        """
+        try:
+            # Check session for completed payment
+            client_id = request.session.get('saas_completed_client_id')
+            client_domain = request.session.get('saas_client_domain')
+            payment_completed = request.session.get('saas_payment_completed')
+            
+            if payment_completed and client_id and client_domain:
+                # Clear session data
+                request.session.pop('saas_payment_completed', None)
+                request.session.pop('saas_completed_client_id', None)
+                request.session.pop('saas_client_domain', None)
+                
+                # Get client details
+                client = request.env['saas.client'].sudo().browse(client_id)
+                if client.exists():
+                    return {
+                        'success': True,
+                        'redirect_url': client_domain,
+                        'client_name': client.sc_package_id.pkg_name if client.sc_package_id else 'SaaS',
+                        'client_id': client_id
+                    }
+            
+            return {'success': False, 'message': 'No pending redirect'}
+            
+        except Exception as e:
+            _logger.error(f"Error checking payment completion: {str(e)}")
+            return {'success': False, 'error': str(e)}
+
     @http.route('/saas/package/select', type='json', auth='public', methods=['POST'], csrf=False)
     def select_package(self, package_id, billing_period='monthly', free_trial=False):
         """
@@ -946,10 +982,13 @@ class SaaSWebController(http.Controller):
                         'error': f'Unable to generate access token: {str(token_error)}'
                     }
                 
-                # Generate payment link with custom success route to redirect to client subdomain
+                # Generate standard payment link without custom redirect parameter
+                # The redirect will be handled by the payment completion monitoring in account_move.py
                 base_url = request.httprequest.url_root.rstrip('/')
-                success_route = f"/saas/payment/invoice_success/{client.id}"
-                payment_link = f"{base_url}/payment/pay?amount={invoice.amount_total}&access_token={access_token}&invoice_id={invoice.id}&landing_route={success_route}"
+                payment_link = f"{base_url}/payment/pay?amount={invoice.amount_total}&access_token={access_token}&invoice_id={invoice.id}"
+                
+                # Store client ID in session for post-payment processing
+                request.session['saas_pending_client_id'] = client.id
                 
                 print(f"Generated payment link: {payment_link}")
                 print(f"Invoice details - ID: {invoice.id}, Amount: {invoice.amount_total}, Currency: {invoice.currency_id.name}, Partner: {invoice.partner_id.name}")
