@@ -77,33 +77,30 @@
                                                         <div class="saas_package_description">
                                                             <p t-esc="package.pkg_description"/>
                                                         </div>
+                                                        
+                                                        <!-- Payment Information (shown after client creation for paid packages) -->
+                                                        <div class="saas_payment_info_wrapper" id="saasPaymentInfo" style="display: none;">
+                                                            <div class="saas_invoice_created_section">
+                                                                <div class="alert alert-info">
+                                                                    <h5><i class="fa fa-file-text-o"></i> Invoice Created</h5>
+                                                                    <p>Your subscription has been created and an invoice has been generated.</p>
+                                                                    <p><strong>Next step:</strong> Complete payment to activate your SaaS instance.</p>
+                                                                </div>
+                                                                
+                                                                <div class="saas_payment_action">
+                                                                    <button type="button" class="btn btn-primary btn-lg" id="saasPayInvoiceBtn">
+                                                                        <i class="fa fa-credit-card" style="margin-right: 8px;"></i>
+                                                                        PAY INVOICE NOW
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </section>
-                                    
-
-                                    
-                                    <!-- Payment Information (shown after client creation for paid packages) -->
-                                    <div class="saas_payment_info_wrapper" id="saasPaymentInfo" style="display: none;">
-                                        <div class="saas_invoice_created_section">
-                                            <div class="alert alert-info">
-                                                <h5><i class="fa fa-file-text-o"></i> Invoice Created</h5>
-                                                <p>Your subscription has been created and an invoice has been generated.</p>
-                                                <p><strong>Next step:</strong> Complete payment to activate your SaaS instance.</p>
-                                            </div>
-                                            
-                                            <div class="saas_payment_action">
-                                                <button type="button" class="btn btn-primary btn-lg" id="saasPayInvoiceBtn">
-                                                    <i class="fa fa-credit-card" style="margin-right: 8px;"></i>
-                                                    PAY INVOICE NOW
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                                 
                                 <!-- Legal Agreement - Editable Website Section -->
                                 <t t-call="j_portainer_saas_web.legal_agreement_editable"/>
