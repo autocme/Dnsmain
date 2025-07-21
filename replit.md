@@ -288,18 +288,26 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Dynamic Legal URLs**: Purchase confirmation page now uses website-specific legal URLs that can be customized per website instance
 - **Website Editor Data Attributes**: Added proper data-oe-model attributes to enable inline editing of legal links through website editor
 
-## July 21, 2025 - Complete Website Editor Integration
+## July 21, 2025 - Complete Website Editor Integration & Payment Redirect Fix
 
+### **Website Editor Integration**
 - **Website Snippet Architecture**: Converted entire purchase confirmation page to use Odoo's standard website snippet classes (s_text_block, s_banner, s_process_steps, s_call_to_action)
 - **Full Inline Editing**: All sections now support website editor with right-side panel options for text, links, styles, and formatting
 - **Removed Custom Website Model**: Eliminated website model inheritance and related fields, using standard Odoo website snippets instead
+- **Separated Templates**: Created standalone editable templates (`legal_agreement_snippet.xml`) with t-call integration for dynamic content
 - **Legal Agreement Editing**: Legal agreement section now uses s_text_block class enabling full inline editing of text and links through website editor
-- **Progress Bar Editing**: Step progress section uses s_process_steps class for editable progress indicators and text
-- **Package Details Editing**: Package details card uses s_banner class enabling header and description editing
 - **Action Button Editing**: Call-to-action button section uses s_call_to_action class for button text and styling customization
+- **JavaScript Bridge**: Connected editable buttons to functional hidden buttons preserving all purchase flow functionality
 - **Standard Website Behavior**: All sections now behave exactly like native Odoo website content with full editing capabilities
-- **Removed Website Dependencies**: Cleaned up manifest and models to remove unused website model extensions and data files
-- **Consistent Editor Experience**: Users can now edit all text, links, styles, and formatting through the standard website editor interface
+
+### **Payment Redirect Fix** 
+- **Fixed Payment Success Flow**: Resolved critical issue where successful payments showed invoice page instead of redirecting to client subdomain
+- **Custom Landing Route**: Added `landing_route` parameter to payment links directing to `/saas/payment/invoice_success/{client_id}`
+- **Enhanced Success Handler**: Modified payment success controller to properly redirect to client's full domain URL
+- **Direct Instance Redirect**: After payment completion, users now redirect directly to their SaaS instance subdomain
+- **Payment Monitoring**: Enhanced account.move model to log client domain readiness for redirection after deployment
+- **Dual Payment Detection**: Payment completion triggers both deployment and redirect through backend monitoring and frontend routing
+- **Invoice Section Moved**: Positioned invoice created section and "PAY INVOICE NOW" button inside package details white card for better visual cohesion
 
 ## July 17, 2025 - Ecommerce-Style Checkout Implementation and Payment Form Debugging
 

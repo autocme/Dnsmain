@@ -754,13 +754,12 @@ class SaaSWebController(http.Controller):
                     constructed_domain = f"https://{subdomain}.{domain}"
                     client_domain = constructed_domain
                     _logger.info(f"Constructed client domain: {client_domain}")
+                else:
+                    _logger.warning(f"Unable to determine client domain for {client.id}, using fallback")
             
-            # Show a success page with redirect for better UX
-            return request.render('j_portainer_saas_web.payment_success_redirect', {
-                'client': client,
-                'client_domain': client_domain,
-                'redirect_delay': 3  # 3 seconds delay
-            })
+            # Direct redirect to client instance instead of success page
+            _logger.info(f"Payment successful for client {client.id}, redirecting to: {client_domain}")
+            return request.redirect(client_domain)
             
         except Exception as e:
             _logger.error(f"Error in invoice payment success for client {client_id}: {str(e)}")
@@ -947,10 +946,10 @@ class SaaSWebController(http.Controller):
                         'error': f'Unable to generate access token: {str(token_error)}'
                     }
                 
-                # Generate payment link with proper URL encoding and validation
-                # Use the exact same format as shown in your example
+                # Generate payment link with custom success route to redirect to client subdomain
                 base_url = request.httprequest.url_root.rstrip('/')
-                payment_link = f"{base_url}/payment/pay?amount={invoice.amount_total}&access_token={access_token}&invoice_id={invoice.id}"
+                success_route = f"/saas/payment/invoice_success/{client.id}"
+                payment_link = f"{base_url}/payment/pay?amount={invoice.amount_total}&access_token={access_token}&invoice_id={invoice.id}&landing_route={success_route}"
                 
                 print(f"Generated payment link: {payment_link}")
                 print(f"Invoice details - ID: {invoice.id}, Amount: {invoice.amount_total}, Currency: {invoice.currency_id.name}, Partner: {invoice.partner_id.name}")

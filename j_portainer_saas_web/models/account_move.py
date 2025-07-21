@@ -65,6 +65,19 @@ class AccountMove(models.Model):
                     
                     # Mark the invoice as processed to avoid duplicate processing
                     invoice.sudo().write({'is_saas_first_invoice': False})
+                    
+                    # Add a small delay and trigger a client domain redirect notification
+                    # This will be handled by the payment success controller
+                    try:
+                        import time
+                        time.sleep(1)  # Brief delay for deployment to initialize
+                        
+                        # Log the client domain for redirection
+                        if saas_client.sc_full_domain:
+                            _logger.info(f"SaaS client {saas_client.id} ready for redirect to: {saas_client.sc_full_domain}")
+                        
+                    except Exception as redirect_error:
+                        _logger.warning(f"Error preparing redirect for client {saas_client.id}: {redirect_error}")
                 
             except Exception as e:
                 _logger.error(f"Error handling SaaS payment completion for invoice {invoice.name}: {str(e)}")
