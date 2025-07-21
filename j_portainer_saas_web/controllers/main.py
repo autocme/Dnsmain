@@ -711,27 +711,56 @@ class SaaSWebController(http.Controller):
             if client.sc_partner_id.id != request.env.user.partner_id.id:
                 return request.redirect('/web')
             
-            _logger.info(f"Payment successful for client {client.id}, deploying and redirecting...")
+            _logger.info(f"Payment successful for client {client.id}, checking deployment status...")
             
-            # Deploy the client if not already deployed
-            if client.sc_status == 'draft':
+            # Deploy the client if not already deployed or running
+            if client.sc_status in ['draft', 'ready']:
                 try:
                     client.action_deploy_client()
-                    _logger.info(f"Deployed client {client.id} after payment")
+                    _logger.info(f"Initiated deployment for client {client.id} after payment")
+                    
+                    # Wait a moment for deployment to start
+                    import time
+                    time.sleep(2)
+                    
+                    # Refresh client data
+                    client = request.env['saas.client'].sudo().browse(client_id)
+                    
                 except Exception as e:
                     _logger.warning(f"Failed to deploy client {client.id} after payment: {e}")
             
             # Get client domain for redirect
             client_domain = '/web'
-            if client.sc_full_domain:
+            
+            # First, check if we have a subdomain created
+            if client.sc_subdomain_id and client.sc_full_domain:
                 full_domain = client.sc_full_domain
                 if full_domain.startswith('http://') or full_domain.startswith('https://'):
                     client_domain = full_domain
                 else:
-                    client_domain = f"https://{full_domain}" if not full_domain.startswith('http') else full_domain
+                    client_domain = f"https://{full_domain}"
+                _logger.info(f"Redirecting to client domain: {client_domain}")
+            else:
+                # Fallback: try to construct domain from environment and package
+                if (client.sc_deployment_environment_id and 
+                    client.sc_package_id and 
+                    client.sc_package_id.pkg_dns_domain_id):
+                    
+                    env = client.sc_deployment_environment_id
+                    domain = client.sc_package_id.pkg_dns_domain_id.domain
+                    
+                    # Use subdomain number if available, otherwise use client sequence
+                    subdomain = client.sc_subdomain_id.name if client.sc_subdomain_id else client.sc_sequence
+                    constructed_domain = f"https://{subdomain}.{domain}"
+                    client_domain = constructed_domain
+                    _logger.info(f"Constructed client domain: {client_domain}")
             
-            # Redirect to client instance
-            return request.redirect(client_domain)
+            # Show a success page with redirect for better UX
+            return request.render('j_portainer_saas_web.payment_success_redirect', {
+                'client': client,
+                'client_domain': client_domain,
+                'redirect_delay': 3  # 3 seconds delay
+            })
             
         except Exception as e:
             _logger.error(f"Error in invoice payment success for client {client_id}: {str(e)}")

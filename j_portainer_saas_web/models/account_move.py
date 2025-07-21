@@ -35,11 +35,22 @@ class AccountMove(models.Model):
                 continue
             
             try:
-                # Find the SaaS client related to this invoice
-                saas_client = self.env['saas.client'].sudo().search([
-                    ('sc_partner_id', '=', invoice.partner_id.id),
-                    ('sc_status', 'in', ['draft', 'ready'])
-                ], limit=1)
+                # Find the SaaS client related to this invoice via subscription
+                saas_client = None
+                
+                if invoice.subscription_id:
+                    # First, try to find client by subscription
+                    saas_client = self.env['saas.client'].sudo().search([
+                        ('sc_subscription_id', '=', invoice.subscription_id.id),
+                        ('sc_status', 'in', ['draft', 'ready'])
+                    ], limit=1)
+                
+                if not saas_client:
+                    # Fallback: find by partner
+                    saas_client = self.env['saas.client'].sudo().search([
+                        ('sc_partner_id', '=', invoice.partner_id.id),
+                        ('sc_status', 'in', ['draft', 'ready'])
+                    ], limit=1)
                 
                 if not saas_client:
                     _logger.warning(f"No SaaS client found for paid invoice {invoice.name}")
@@ -47,10 +58,13 @@ class AccountMove(models.Model):
                 
                 _logger.info(f"SaaS first invoice {invoice.name} paid for client {saas_client.id}, initiating deployment...")
                 
-                # Deploy the client
+                # Deploy the client if not already deployed
                 if saas_client.sc_status in ['draft', 'ready']:
                     saas_client.action_deploy_client()
-                    _logger.info(f"Successfully deployed SaaS client {saas_client.id} after payment of invoice {invoice.name}")
+                    _logger.info(f"Successfully initiated deployment for SaaS client {saas_client.id} after payment of invoice {invoice.name}")
+                    
+                    # Mark the invoice as processed to avoid duplicate processing
+                    invoice.sudo().write({'is_saas_first_invoice': False})
                 
             except Exception as e:
                 _logger.error(f"Error handling SaaS payment completion for invoice {invoice.name}: {str(e)}")

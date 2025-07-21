@@ -5,21 +5,21 @@
 
 (function() {
     'use strict';
-    
+
     /**
      * Initialize purchase confirmation page when DOM is ready
      */
     function initPurchaseConfirm() {
         console.log('Initializing SaaS purchase confirmation page...');
-        
+
         var startBtn = document.getElementById('saasStartBtn');
         var continueBtn = document.getElementById('saasContinueBtn');
         var editableBtn = document.querySelector('.s_call_to_action a[role="button"]');
-        
+
         if (startBtn) {
             startBtn.addEventListener('click', handleStartClick);
         }
-        
+
         // Also handle clicks on the editable button in website editor mode
         if (editableBtn) {
             editableBtn.addEventListener('click', function(e) {
@@ -30,7 +30,7 @@
                 }
             });
         }
-        
+
         // Handle the new editable button class as well
         var editableStartBtn = document.querySelector('.saas_editable_start_btn');
         if (editableStartBtn) {
@@ -42,32 +42,32 @@
                 }
             });
         }
-        
+
         if (continueBtn) {
             continueBtn.addEventListener('click', handleContinueClick);
         }
-        
+
         // Note: PAY INVOICE NOW button handler is set up dynamically in showPaymentForm
     }
-    
+
     /**
      * Handle "Start Now" button click
      */
     function handleStartClick(e) {
         e.preventDefault();
-        
+
         // Find the actual button element (in case click was on child element)
         var button = e.target.closest('.saas_start_btn');
         if (!button) {
             console.error('Could not find button element');
             return;
         }
-        
+
         var packageId = button.getAttribute('data-package-id');
         var billingCycle = button.getAttribute('data-billing-cycle');
         var isFreeTrialAttr = button.getAttribute('data-is-free-trial');
         var isFreeTrial = isFreeTrialAttr === 'true' || isFreeTrialAttr === 'True';
-        
+
         // Debug logging to track the attribute value
         console.log('Button attributes:', {
             'data-package-id': packageId,
@@ -75,13 +75,13 @@
             'data-is-free-trial': isFreeTrialAttr,
             'isFreeTrial (converted)': isFreeTrial
         });
-        
+
         console.log('Starting purchase process:', {
             packageId: packageId,
             billingCycle: billingCycle,
             isFreeTrial: isFreeTrial
         });
-        
+
         // Validate required parameters
         if (!packageId || !billingCycle) {
             console.error('Missing required parameters:', {
@@ -91,23 +91,23 @@
             showErrorMessage('Missing required information. Please refresh the page and try again.');
             return;
         }
-        
+
         // Show loading screen
         showLoadingScreen();
-        
+
         // Disable the button
         button.disabled = true;
-        
+
         // Make purchase request
         makePurchaseRequest(packageId, billingCycle, isFreeTrial);
     }
-    
+
     /**
      * Handle "Continue to Dashboard" button click
      */
     function handleContinueClick(e) {
         e.preventDefault();
-        
+
         // Redirect to client domain if available, otherwise to dashboard
         var redirectUrl = '/web';
         if (window.saasClientResult && window.saasClientResult.client_domain) {
@@ -120,14 +120,14 @@
                 redirectUrl = clientDomain.startsWith('http') ? clientDomain : `https://${clientDomain}`;
             }
         }
-        
+
         console.log('Redirecting to:', redirectUrl);
         window.location.href = redirectUrl;
     }
-    
+
     // Note: Duplicate handlePayInvoiceClick function removed
     // Payment handling is done through setupInvoicePaymentButton/openNativeOdooPaymentWizard
-    
+
     /**
      * Show loading screen with animation
      */
@@ -135,7 +135,7 @@
         var loadingScreen = document.getElementById('saasLoadingScreen');
         if (loadingScreen) {
             loadingScreen.style.display = 'flex';
-            
+
             // Add fade-in animation
             loadingScreen.style.opacity = '0';
             setTimeout(function() {
@@ -143,7 +143,7 @@
             }, 10);
         }
     }
-    
+
     /**
      * Hide loading screen
      */
@@ -156,7 +156,7 @@
             }, 300);
         }
     }
-    
+
     /**
      * Show success screen with animation
      */
@@ -164,7 +164,7 @@
         var successScreen = document.getElementById('saasSuccessScreen');
         if (successScreen) {
             successScreen.style.display = 'flex';
-            
+
             // Add fade-in animation
             successScreen.style.opacity = '0';
             setTimeout(function() {
@@ -172,7 +172,7 @@
             }, 10);
         }
     }
-    
+
     /**
      * Make purchase request to server
      */
@@ -182,7 +182,7 @@
             billingCycle: billingCycle,
             isFreeTrial: isFreeTrial
         });
-        
+
         // Convert packageId to integer and validate
         var packageIdInt = parseInt(packageId);
         if (isNaN(packageIdInt) || packageIdInt <= 0) {
@@ -190,7 +190,7 @@
             handlePurchaseError('Invalid package ID. Please refresh the page and try again.');
             return;
         }
-        
+
         fetch('/saas/package/purchase', {
             method: 'POST',
             headers: {
@@ -212,13 +212,13 @@
         })
         .then(function(data) {
             console.log('Purchase response:', data);
-            
+
             // Check for JSON-RPC errors
             if (data.error) {
                 handlePurchaseError(data.error.message || 'Purchase failed. Please try again.');
                 return;
             }
-            
+
             if (data.result && data.result.success) {
                 // Wait a moment for the loading animation, then show success
                 setTimeout(function() {
@@ -237,19 +237,19 @@
             handlePurchaseError('Network error. Please check your connection and try again.');
         });
     }
-    
+
     /**
      * Handle successful purchase
      */
     function handlePurchaseSuccess(result) {
         console.log('Purchase successful:', result);
-        
+
         // Hide loading screen
         hideLoadingScreen();
-        
+
         // Store result data for success screen
         window.saasClientResult = result;
-        
+
         // Handle free trial vs paid packages differently
         if (result.is_free_trial) {
             // For free trial: show success screen as before
@@ -264,52 +264,52 @@
             }, 500);
         }
     }
-    
+
     /**
      * Handle purchase error
      */
     function handlePurchaseError(errorMessage) {
         console.error('Purchase error:', errorMessage);
-        
+
         // Hide loading screen
         hideLoadingScreen();
-        
+
         // Re-enable the start button
         var startBtn = document.getElementById('saasStartBtn');
         if (startBtn) {
             startBtn.disabled = false;
         }
-        
+
         // Show error message
         showErrorMessage(errorMessage);
     }
-    
+
     /**
      * Show payment info for paid packages and setup invoice payment
      */
     function showPaymentForm(clientId) {
         console.log('Showing payment info for client:', clientId);
-        
+
         // Hide package features and show payment info
         var packageFeatures = document.getElementById('saasPackageFeatures');
         var paymentInfo = document.getElementById('saasPaymentInfo');
-        
+
         if (packageFeatures) {
             packageFeatures.style.display = 'none';
         }
-        
+
         if (paymentInfo) {
             paymentInfo.style.display = 'block';
-            
+
             // Update progress step to show payment as current
             updateProgressToPayment();
-            
+
             // Store client ID and setup payment button
             window.saasCurrentClientId = clientId;
             setupInvoicePaymentButton(clientId);
         }
     }
-    
+
     /**
      * Setup the invoice payment button to open Odoo's payment wizard
      */
@@ -321,13 +321,13 @@
             });
         }
     }
-    
+
     /**
      * Open Odoo's built-in invoice payment wizard directly as modal
      */
     function openInvoicePaymentWizard(clientId) {
         console.log('Opening invoice payment wizard for client:', clientId);
-        
+
         // Get the invoice ID for this client via AJAX
         fetch('/saas/client/invoice_info?client_id=' + clientId, {
             method: 'GET',
@@ -341,7 +341,7 @@
         .then(function(data) {
             if (data.success && data.invoice_id) {
                 console.log('Invoice info retrieved, opening native payment wizard...');
-                
+
                 // Use Odoo's native payment wizard via JSON-RPC
                 openNativeOdooPaymentWizard(data.invoice_id, clientId);
             } else {
@@ -354,13 +354,13 @@
             showErrorMessage('Error loading payment information. Please try again.');
         });
     }
-    
+
     /**
      * Generate and redirect to payment link for invoice
      */
     function openNativeOdooPaymentWizard(invoiceId, clientId) {
         console.log('Generating payment link for invoice:', invoiceId, 'client:', clientId);
-        
+
         // Call our controller to get the payment wizard action
         fetch('/saas/client/open_payment_wizard', {
             method: 'POST',
@@ -382,17 +382,17 @@
         })
         .then(function(data) {
             console.log('Payment link response:', data);
-            
+
             if (data.result && data.result.success && data.result.payment_link) {
                 console.log('Payment link generated:', data.result.payment_link);
-                
+
                 // Redirect to the payment link (same window for better UX)
                 window.location.href = data.result.payment_link;
-                
+
             } else {
                 console.error('Failed to generate payment link. Full response:', data);
                 console.error('Error details:', data.result ? data.result.error : 'No result in response');
-                
+
                 var errorMsg = 'Unable to generate payment link';
                 if (data.result && data.result.error) {
                     errorMsg += ': ' + data.result.error;
@@ -401,7 +401,7 @@
                 } else {
                     errorMsg += '. Please try again.';
                 }
-                
+
                 showErrorMessage(errorMsg);
             }
         })
@@ -410,7 +410,7 @@
             showErrorMessage('Error opening payment wizard. Please try again.');
         });
     }
-    
+
     /**
      * Try to open action using Odoo's action manager
      */
@@ -432,7 +432,7 @@
                     return true;
                 }
             }
-            
+
             // Method 2: Check for parent window Odoo
             if (window.parent && window.parent.odoo && window.parent.odoo.action_manager) {
                 console.log('Using parent Odoo action manager...');
@@ -446,7 +446,7 @@
                 });
                 return true;
             }
-            
+
             // Method 3: Try current window action manager
             if (window.odoo && window.odoo.action_manager) {
                 console.log('Using current window action manager...');
@@ -460,25 +460,25 @@
                 });
                 return true;
             }
-            
+
         } catch (e) {
             console.log('Could not use Odoo action manager:', e);
         }
-        
+
         return false; // No action manager available
     }
-    
+
     /**
      * Show payment redirect info when action manager is not available
      */
     function showPaymentRedirectInfo(invoiceId, paymentData, clientId) {
         console.log('Showing payment redirect info for invoice:', invoiceId, 'with data:', paymentData);
-        
+
         // Safe access to payment data with fallbacks
         var amount = paymentData.invoice_amount || paymentData.amount || '0.00';
         var currency = paymentData.invoice_currency || paymentData.currency || '$';
         var invoiceName = paymentData.invoice_name || `Invoice ${invoiceId}`;
-        
+
         // Show message about redirecting to payment
         var messageHtml = `
             <div class="alert alert-info" style="margin: 20px 0;">
@@ -495,23 +495,23 @@
                 </p>
             </div>
         `;
-        
+
         // Replace payment info section with redirect message
         var paymentInfo = document.getElementById('saasPaymentInfo');
         if (paymentInfo) {
             paymentInfo.innerHTML = messageHtml;
-            
+
             // Payment status is now handled automatically by backend
             // No need for manual polling - invoice payment triggers automatic deployment
         }
     }
-    
+
     /**
      * Open Odoo's native payment wizard as modal dialog
      */
     function openPaymentWizardModal(invoiceId, accessToken, clientId, amount, currency) {
         console.log('Opening Odoo native payment wizard as modal...');
-        
+
         // Try to use Odoo's web framework to open the native payment wizard
         if (typeof odoo !== 'undefined' && odoo.define) {
             // Use Odoo's modal system
@@ -521,13 +521,13 @@
             openInvoicePortalModal(invoiceId, accessToken, clientId);
         }
     }
-    
+
     /**
      * Open native Odoo payment modal using Odoo's web framework
      */
     function openOdooNativePaymentModal(invoiceId, accessToken, clientId) {
         console.log('Using Odoo native payment modal...');
-        
+
         try {
             // Import Odoo's Dialog component and open payment wizard
             if (window.parent && window.parent.odoo) {
@@ -537,7 +537,7 @@
                     var Dialog = require('web.Dialog');
                     var core = require('web.core');
                     var rpc = require('web.rpc');
-                    
+
                     // Create payment wizard action
                     return rpc.query({
                         model: 'account.move',
@@ -568,13 +568,13 @@
             openInvoicePortalModal(invoiceId, accessToken, clientId);
         }
     }
-    
+
     /**
      * Open invoice portal payment wizard in modal iframe
      */
     function openInvoicePortalModal(invoiceId, accessToken, clientId) {
         console.log('Opening invoice portal in modal iframe...');
-        
+
         // Create modal backdrop matching Odoo's native style
         var modalBackdrop = document.createElement('div');
         modalBackdrop.className = 'modal fade show';
@@ -588,7 +588,7 @@
             z-index: 1050;
             display: block;
         `;
-        
+
         // Create modal dialog matching Odoo's native payment wizard
         var modalDialog = document.createElement('div');
         modalDialog.className = 'modal-dialog modal-lg';
@@ -597,7 +597,7 @@
             max-width: 600px;
             width: calc(100% - 60px);
         `;
-        
+
         // Modal content
         var modalContent = document.createElement('div');
         modalContent.className = 'modal-content';
@@ -608,7 +608,7 @@
             box-shadow: 0 3px 9px rgba(0,0,0,0.5);
             background-clip: padding-box;
         `;
-        
+
         // Build the exact modal structure from the screenshot
         modalContent.innerHTML = `
             <div class="modal-header" style="padding: 20px 24px; border-bottom: 1px solid #e5e5e5; background-color: #f8f9fa;">
@@ -623,36 +623,36 @@
                 </iframe>
             </div>
         `;
-        
+
         modalDialog.appendChild(modalContent);
         modalBackdrop.appendChild(modalDialog);
         document.body.appendChild(modalBackdrop);
-        
+
         // Close modal functionality
         var closeBtn = modalContent.querySelector('.saas_close_modal');
         closeBtn.addEventListener('click', function() {
             document.body.removeChild(modalBackdrop);
         });
-        
+
         modalBackdrop.addEventListener('click', function(e) {
             if (e.target === modalBackdrop) {
                 document.body.removeChild(modalBackdrop);
             }
         });
-        
+
         // Store reference for frame communication
         window.saasPaymentModal = {
             backdrop: modalBackdrop,
             clientId: clientId
         };
     }
-    
+
     /**
      * Global function to handle payment frame load
      */
     window.handlePaymentFrameLoad = function(iframe, clientId) {
         console.log('Payment iframe loaded for client:', clientId);
-        
+
         try {
             // Add styles to make the iframe content look seamless
             var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
@@ -666,26 +666,26 @@
                 .card-header { display: none !important; }
             `;
             iframeDoc.head.appendChild(style);
-            
+
             // Monitor for payment completion
             var checkInterval = setInterval(function() {
                 try {
                     var currentUrl = iframe.contentWindow.location.href;
                     console.log('Current iframe URL:', currentUrl);
-                    
+
                     // Check if payment was successful (redirect to success page)
                     if (currentUrl.includes('/payment/status') || 
                         currentUrl.includes('/payment/confirm') ||
                         currentUrl.includes('payment_success')) {
-                        
+
                         console.log('Payment completed, closing modal...');
                         clearInterval(checkInterval);
-                        
+
                         // Close modal
                         if (window.saasPaymentModal && window.saasPaymentModal.backdrop) {
                             document.body.removeChild(window.saasPaymentModal.backdrop);
                         }
-                        
+
                         // Payment completion handled automatically by backend
                         console.log('Payment completed - backend will handle deployment automatically');
                     }
@@ -693,23 +693,23 @@
                     // Cross-origin issues, ignore
                 }
             }, 1000);
-            
+
             // Stop monitoring after 10 minutes
             setTimeout(function() {
                 clearInterval(checkInterval);
             }, 600000);
-            
+
         } catch (e) {
             console.log('Could not modify iframe content due to cross-origin restrictions:', e);
         }
     };
-    
+
     /**
      * Handle payment form submission within modal
      */
     function handleModalPaymentSubmission(form, clientId, modalBackdrop) {
         console.log('Handling payment form submission in modal...');
-        
+
         // Show loading state
         var submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
         var originalText = submitBtn ? submitBtn.textContent : '';
@@ -717,10 +717,10 @@
             submitBtn.disabled = true;
             submitBtn.textContent = 'Processing...';
         }
-        
+
         // Create form data
         var formData = new FormData(form);
-        
+
         // Submit payment form
         fetch(form.action || '/payment/transaction', {
             method: 'POST',
@@ -732,52 +732,52 @@
         .then(function(response) {
             if (response.ok) {
                 console.log('Payment submitted successfully, closing modal and checking status...');
-                
+
                 // Close modal
                 if (modalBackdrop && modalBackdrop.parentElement) {
                     modalBackdrop.parentElement.removeChild(modalBackdrop);
                 }
-                
+
                 // Payment completion handled automatically by backend
                 console.log('Payment submitted - backend will handle deployment automatically');
-                
+
             } else {
                 throw new Error('Payment submission failed: ' + response.status);
             }
         })
         .catch(function(error) {
             console.error('Payment submission error:', error);
-            
+
             // Restore submit button
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalText;
             }
-            
+
             // Show error message
             showErrorMessage('Payment failed. Please try again.');
         });
     }
-    
+
     /**
      * Payment status now handled automatically by backend when invoice is paid
      * No need for manual checking - payment completion triggers automatic deployment
      */
-    
+
     /**
      * Load payment wizard for paid packages (DEPRECATED - replaced with embedded form)
      */
     function loadPaymentWizard(clientId) {
         console.log('Loading payment wizard for client:', clientId);
-        
+
         // Hide package features and show loading message
         var packageFeatures = document.getElementById('saasPackageFeatures');
         var paymentWizard = document.getElementById('saasPaymentWizard');
-        
+
         if (packageFeatures) {
             packageFeatures.style.display = 'none';
         }
-        
+
         if (paymentWizard) {
             paymentWizard.style.display = 'block';
             paymentWizard.innerHTML = `
@@ -787,12 +787,12 @@
                 </div>
             `;
         }
-        
+
         // Test controller first
         fetch('/saas/test/wizard')
         .then(function(testResp) {
             console.log('Test route status:', testResp.status);
-            
+
             // Fetch payment wizard HTML
             return fetch('/saas/invoice/payment_wizard?client_id=' + clientId, {
                 method: 'GET',
@@ -809,17 +809,17 @@
         })
         .then(function(html) {
             console.log('Payment wizard loaded successfully');
-            
+
             if (paymentWizard) {
                 paymentWizard.innerHTML = html;
-                
+
                 // Update progress step to show payment as current
                 updateProgressToPayment();
             }
         })
         .catch(function(error) {
             console.error('Failed to load payment wizard:', error);
-            
+
             // Show error and fallback to invoice link
             if (paymentWizard) {
                 paymentWizard.innerHTML = `
@@ -834,7 +834,7 @@
             }
         });
     }
-    
+
     /**
      * Update progress steps to show payment as current
      */
@@ -844,26 +844,26 @@
         if (step2) {
             step2.classList.remove('saas_step_current');
             step2.classList.add('saas_step_completed');
-            
+
             var step2Circle = step2.querySelector('.saas_step_circle');
             if (step2Circle) {
                 step2Circle.innerHTML = '<i class="fa fa-check"></i>';
             }
         }
-        
+
         // Update line between step 2 and 3
         var line2 = document.querySelector('.saas_steps_progress .saas_step_line:nth-child(5)');
         if (line2) {
             line2.classList.add('saas_step_line_completed');
         }
-        
+
         // Update step 3 (setup) to current
         var step3 = document.querySelector('.saas_steps_progress .saas_step:nth-child(7)');
         if (step3) {
             step3.classList.add('saas_step_current');
         }
     }
-    
+
     /**
      * Show error message
      */
@@ -873,7 +873,7 @@
         if (existingAlert) {
             existingAlert.remove();
         }
-        
+
         var errorAlert = document.createElement('div');
         errorAlert.className = 'alert alert-danger saas_error_alert';
         errorAlert.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000; max-width: 400px;';
@@ -883,9 +883,9 @@
             </button>
             <strong>Error:</strong> ${message}
         `;
-        
+
         document.body.appendChild(errorAlert);
-        
+
         // Auto-remove after 5 seconds
         setTimeout(function() {
             if (errorAlert.parentElement) {
@@ -893,12 +893,72 @@
             }
         }, 5000);
     }
-    
+
+    /**
+     * Handle successful payment redirect
+     */
+    function handlePaymentRedirect(paymentLink) {
+        console.log('Redirecting to payment:', paymentLink);
+
+        // Create redirect message
+        var messageHtml = `
+            <div class="saas_payment_redirect">
+                <div class="alert alert-info text-center">
+                    <h5><i class="fa fa-credit-card"></i> Processing Payment</h5>
+                    <p>You are being redirected to complete your payment...</p>
+                    <div class="saas_loading_spinner">
+                        <div class="saas_spinner"></div>
+                    </div>
+                </div>
+                <p style="margin-top: 15px; text-align: center; color: #666;">
+                    <small>After payment completion, you will be automatically redirected to your SaaS instance.</small>
+                </p>
+                <div class="alert alert-success" style="margin-top: 15px;">
+                    <i class="fa fa-info-circle"></i>
+                    <strong>What happens next:</strong>
+                    <ol style="margin-top: 10px; margin-bottom: 0;">
+                        <li>Complete payment in the new window</li>
+                        <li>Your SaaS instance will be deployed automatically</li>
+                        <li>You'll be redirected to your instance URL</li>
+                    </ol>
+                </div>
+            </div>
+        `;
+
+        // Replace payment info section with redirect message
+        var paymentInfo = document.getElementById('saasPaymentInfo');
+        if (paymentInfo) {
+            paymentInfo.innerHTML = messageHtml;
+        }
+
+        // Open payment in new window and monitor for completion
+        var paymentWindow = window.open(paymentLink, '_blank');
+
+        // Optional: Check if payment window is closed (user might have completed payment)
+        var checkClosed = setInterval(function() {
+            if (paymentWindow.closed) {
+                clearInterval(checkClosed);
+                console.log('Payment window closed - payment may be completed');
+                // Show completion message
+                if (paymentInfo) {
+                    paymentInfo.innerHTML = `
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-hourglass-half"></i>
+                            <strong>Payment Processing...</strong>
+                            <p>Please wait while we verify your payment and prepare your instance.</p>
+                            <p><small>You will be redirected automatically once processing is complete.</small></p>
+                        </div>
+                    `;
+                }
+            }
+        }, 1000);
+    }
+
     // Initialize when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initPurchaseConfirm);
     } else {
         initPurchaseConfirm();
     }
-    
+
 })();
