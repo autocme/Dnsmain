@@ -971,17 +971,6 @@ class SaaSWebController(http.Controller):
             # Get the first unpaid invoice
             invoice = unpaid_invoices[0]
             
-            # If invoice is draft, try to post it first
-            if invoice.state == 'draft':
-                try:
-                    # Auto-post draft invoice to make it ready for payment
-                    invoice.action_post()
-                except Exception as post_error:
-                    return {
-                        'success': False,
-                        'error': f'Invoice needs to be confirmed before payment. Error: {str(post_error)}'
-                    }
-            
             # Generate direct payment link like "Generate a payment link" server action
             try:
                 print(f"Generating direct payment link for invoice {invoice.id}, amount: {invoice.amount_total}")

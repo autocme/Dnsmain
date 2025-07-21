@@ -275,6 +275,8 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Enhanced Payment Link Validation**: Added comprehensive validation for invoice amount, access token generation, and URL formatting
 - **Debug Logging Enhancement**: Added detailed logging for payment link generation process including token validation and invoice details
 - **Parameter Validation Error**: Identified "invalid parameters" error in payment link format requiring further investigation of Odoo payment endpoint expectations
+- **Removed Invoice Auto-Posting**: Eliminated automatic invoice posting logic from PAY INVOICE NOW button to allow direct payment link access regardless of invoice state
+- **Direct Payment Link Access**: Button now immediately opens payment link without attempting to change invoice status, maintaining proper workflow separation
 
 ## July 17, 2025 - Ecommerce-Style Checkout Implementation and Payment Form Debugging
 
