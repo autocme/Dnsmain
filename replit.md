@@ -277,6 +277,7 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Parameter Validation Error**: Identified "invalid parameters" error in payment link format requiring further investigation of Odoo payment endpoint expectations
 - **Removed Invoice Auto-Posting**: Eliminated automatic invoice posting logic from PAY INVOICE NOW button to allow direct payment link access regardless of invoice state
 - **Direct Payment Link Access**: Button now immediately opens payment link without attempting to change invoice status, maintaining proper workflow separation
+- **Removed Invoice Auto-Posting from Invoice Info**: Also eliminated automatic invoice posting logic from `get_client_invoice_info` method to ensure consistent behavior across all payment-related endpoints
 
 ## July 17, 2025 - Ecommerce-Style Checkout Implementation and Payment Form Debugging
 

@@ -438,17 +438,6 @@ class SaaSWebController(http.Controller):
             # Get the first unpaid invoice
             invoice = unpaid_invoices[0]
             
-            # If invoice is draft, try to post it first
-            if invoice.state == 'draft':
-                try:
-                    # Auto-post draft invoice to make it ready for payment
-                    invoice.action_post()
-                except Exception as post_error:
-                    return request.make_response(
-                        json.dumps({'success': False, 'error': f'Invoice needs to be confirmed before payment. Error: {str(post_error)}'}),
-                        headers=[('Content-Type', 'application/json')]
-                    )
-            
             # Generate access token for invoice
             access_token = payment_utils.generate_access_token(
                 invoice.partner_id.id, invoice.amount_total, invoice.currency_id.id
