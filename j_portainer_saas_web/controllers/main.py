@@ -207,9 +207,6 @@ class SaaSWebController(http.Controller):
             if price is None:
                 price = 0.0
             
-            # Get current website for legal links
-            website = request.website
-            
             # Prepare template data
             template_data = {
                 'package': package,
@@ -219,8 +216,6 @@ class SaaSWebController(http.Controller):
                 'currency_symbol': currency_symbol,
                 'period_text': 'month' if billing_cycle == 'monthly' else 'year',
                 'free_trial_days': self._get_free_trial_days(),
-                'subscription_agreement_url': website.subscription_agreement_url or '/terms',
-                'privacy_policy_url': website.privacy_policy_url or '/privacy',
             }
             
             # Log template data for debugging
