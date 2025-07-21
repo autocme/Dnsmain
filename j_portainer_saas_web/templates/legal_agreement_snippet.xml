@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Standalone Legal Agreement Template (Editable in Website Builder) -->
+    <template id="legal_agreement_editable" name="Legal Agreement Text">
+        <section class="s_text_block o_colored_level" data-snippet="s_text_block" data-name="Legal Agreement">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-8 offset-lg-2 text-center">
+                        <p class="lead">
+                            By clicking on <strong>Start Now</strong>, you accept our 
+                            <a href="/terms" class="text-primary">Subscription Agreement</a> and 
+                            <a href="/privacy" class="text-primary">Privacy Policy</a>.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <!-- Call-to-Action Button Template (Editable in Website Builder) -->
+    <template id="start_button_editable" name="Start Now Button">
+        <section class="s_call_to_action o_colored_level pt32 pb32" data-snippet="s_call_to_action" data-name="Start Now Button">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-6 offset-lg-3 text-center">
+                        <h3 class="mb-3">Ready to get started?</h3>
+                        <a href="#" class="btn btn-primary btn-lg saas_editable_start_btn" role="button">
+                            Start Now <i class="fa fa-arrow-right ml-2"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </template>
+</odoo>

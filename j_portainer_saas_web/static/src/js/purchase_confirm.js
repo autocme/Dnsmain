@@ -14,9 +14,33 @@
         
         var startBtn = document.getElementById('saasStartBtn');
         var continueBtn = document.getElementById('saasContinueBtn');
+        var editableBtn = document.querySelector('.s_call_to_action a[role="button"]');
         
         if (startBtn) {
             startBtn.addEventListener('click', handleStartClick);
+        }
+        
+        // Also handle clicks on the editable button in website editor mode
+        if (editableBtn) {
+            editableBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                // Trigger the hidden functional button
+                if (startBtn) {
+                    startBtn.click();
+                }
+            });
+        }
+        
+        // Handle the new editable button class as well
+        var editableStartBtn = document.querySelector('.saas_editable_start_btn');
+        if (editableStartBtn) {
+            editableStartBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                // Trigger the hidden functional button
+                if (startBtn) {
+                    startBtn.click();
+                }
+            });
         }
         
         if (continueBtn) {
