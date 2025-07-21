@@ -477,19 +477,8 @@
         if (paymentInfo) {
             paymentInfo.innerHTML = messageHtml;
             
-            // Start checking payment status periodically
-            var checkInterval = setInterval(function() {
-                checkPaymentStatus(clientId, function(paid) {
-                    if (paid) {
-                        clearInterval(checkInterval);
-                    }
-                });
-            }, 5000); // Check every 5 seconds
-            
-            // Stop checking after 10 minutes
-            setTimeout(function() {
-                clearInterval(checkInterval);
-            }, 600000);
+            // Payment status is now handled automatically by backend
+            // No need for manual polling - invoice payment triggers automatic deployment
         }
     }
     
@@ -673,10 +662,8 @@
                             document.body.removeChild(window.saasPaymentModal.backdrop);
                         }
                         
-                        // Check payment status
-                        setTimeout(function() {
-                            checkPaymentStatus(clientId);
-                        }, 1500);
+                        // Payment completion handled automatically by backend
+                        console.log('Payment completed - backend will handle deployment automatically');
                     }
                 } catch (e) {
                     // Cross-origin issues, ignore
@@ -727,10 +714,8 @@
                     modalBackdrop.parentElement.removeChild(modalBackdrop);
                 }
                 
-                // Check payment status after a short delay
-                setTimeout(function() {
-                    checkPaymentStatus(clientId);
-                }, 2000);
+                // Payment completion handled automatically by backend
+                console.log('Payment submitted - backend will handle deployment automatically');
                 
             } else {
                 throw new Error('Payment submission failed: ' + response.status);
@@ -751,46 +736,9 @@
     }
     
     /**
-     * Check if payment has been completed
+     * Payment status now handled automatically by backend when invoice is paid
+     * No need for manual checking - payment completion triggers automatic deployment
      */
-    function checkPaymentStatus(clientId, callback) {
-        fetch('/saas/client/payment_status?client_id=' + clientId, {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(data) {
-            if (data.success && data.paid) {
-                console.log('Payment completed, redirecting to instance...');
-                
-                // Call callback if provided
-                if (callback) {
-                    callback(true);
-                }
-                
-                // Redirect to the client instance
-                if (data.client_url) {
-                    window.location.href = data.client_url;
-                } else {
-                    showSuccessScreen();
-                }
-            } else {
-                console.log('Payment not yet completed');
-                
-                // Call callback if provided
-                if (callback) {
-                    callback(false);
-                }
-            }
-        })
-        .catch(function(error) {
-            console.error('Error checking payment status:', error);
-        });
-    }
     
     /**
      * Load payment wizard for paid packages (DEPRECATED - replaced with embedded form)

@@ -207,6 +207,9 @@ class SaaSWebController(http.Controller):
             if price is None:
                 price = 0.0
             
+            # Get current website for legal links
+            website = request.website
+            
             # Prepare template data
             template_data = {
                 'package': package,
@@ -216,6 +219,8 @@ class SaaSWebController(http.Controller):
                 'currency_symbol': currency_symbol,
                 'period_text': 'month' if billing_cycle == 'monthly' else 'year',
                 'free_trial_days': self._get_free_trial_days(),
+                'subscription_agreement_url': website.subscription_agreement_url or '/terms',
+                'privacy_policy_url': website.privacy_policy_url or '/privacy',
             }
             
             # Log template data for debugging
@@ -329,7 +334,7 @@ class SaaSWebController(http.Controller):
                 except Exception as e:
                     _logger.warning(f"Failed to deploy free trial client {saas_client.id}: {e}")
             
-            # Get invoice portal URL for paid packages (invoice already created by base module)
+            # Get invoice portal URL for paid packages and flag the first invoice
             invoice_portal_url = None
             if not is_free_trial and saas_client.sc_subscription_id:
                 try:
@@ -337,8 +342,12 @@ class SaaSWebController(http.Controller):
                     invoices = saas_client.sc_subscription_id.invoice_ids
                     if invoices:
                         latest_invoice = invoices[-1]  # Get the most recent invoice
+                        
+                        # Flag this as the first SaaS invoice for payment monitoring
+                        latest_invoice.sudo().write({'is_saas_first_invoice': True})
+                        
                         invoice_portal_url = f"/my/invoices/{latest_invoice.id}"
-                        _logger.info(f"Found invoice {latest_invoice.id} for paid client {saas_client.id}")
+                        _logger.info(f"Found and flagged invoice {latest_invoice.id} as first SaaS invoice for paid client {saas_client.id}")
                 except Exception as e:
                     _logger.warning(f"Failed to get invoice for paid client {saas_client.id}: {e}")
             
@@ -463,77 +472,7 @@ class SaaSWebController(http.Controller):
                 headers=[('Content-Type', 'application/json')]
             )
 
-    @http.route('/saas/client/payment_status', type='http', auth='user', methods=['GET'], csrf=False)
-    def check_client_payment_status(self, client_id, **kwargs):
-        """
-        Check payment status for a SaaS client
-        
-        Args:
-            client_id: SaaS client ID
-            
-        Returns:
-            JSON with payment status
-        """
-        try:
-            import logging
-            _logger = logging.getLogger(__name__)
-            
-            client_id_int = int(client_id)
-            client = request.env['saas.client'].sudo().browse(client_id_int)
-            
-            if not client.exists():
-                return request.make_response(
-                    json.dumps({'success': False, 'error': 'Client not found'}),
-                    headers=[('Content-Type', 'application/json')]
-                )
-            
-            # Check if client belongs to current user
-            if client.sc_partner_id.id != request.env.user.partner_id.id:
-                return request.make_response(
-                    json.dumps({'success': False, 'error': 'Access denied'}),
-                    headers=[('Content-Type', 'application/json')]
-                )
-            
-            # Check if there are any unpaid invoices
-            unpaid_invoices = request.env['account.move'].sudo().search([
-                ('partner_id', '=', client.sc_partner_id.id),
-                ('state', '=', 'posted'),
-                ('payment_state', 'in', ['not_paid', 'partial']),
-                ('move_type', '=', 'out_invoice')
-            ])
-            
-            is_paid = len(unpaid_invoices) == 0
-            client_url = None
-            
-            if is_paid and client.sc_full_domain:
-                client_url = client.sc_full_domain
-                if not client_url.startswith('http'):
-                    client_url = f"https://{client_url}"
-                
-                # Deploy client if not already deployed
-                if client.sc_status in ['draft', 'ready']:
-                    try:
-                        client.action_deploy_client()
-                        _logger.info(f"Auto-deployed client {client_id} after payment verification")
-                    except Exception as e:
-                        _logger.warning(f"Failed to auto-deploy client {client_id}: {e}")
-            
-            return request.make_response(
-                json.dumps({
-                    'success': True,
-                    'paid': is_paid,
-                    'client_url': client_url,
-                    'unpaid_count': len(unpaid_invoices)
-                }),
-                headers=[('Content-Type', 'application/json')]
-            )
-            
-        except Exception as e:
-            _logger.error(f"Error checking payment status for client {client_id}: {str(e)}")
-            return request.make_response(
-                json.dumps({'success': False, 'error': str(e)}),
-                headers=[('Content-Type', 'application/json')]
-            )
+    # Note: Payment status checking removed - now handled automatically by account.move payment detection
 
     @http.route('/saas/invoice/open_payment_wizard', type='json', auth='user', methods=['POST'])
     def open_invoice_payment_wizard(self, invoice_id, client_id=None, **kwargs):

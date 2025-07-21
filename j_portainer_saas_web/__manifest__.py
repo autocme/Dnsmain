@@ -32,6 +32,7 @@ conversion-optimized layout similar to Odoo's official pricing structure.
         'payment',
     ],
     'data': [
+        'data/website_data.xml',
         'views/snippets.xml',
         'views/snippet_options.xml',
         'templates/purchase_confirm.xml',

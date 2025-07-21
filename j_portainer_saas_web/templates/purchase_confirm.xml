@@ -63,13 +63,7 @@
                                         <p t-esc="package.pkg_description"/>
                                     </div>
                                     
-                                    <div class="saas_package_features" id="saasPackageFeatures">
-                                        <h5>What's included:</h5>
-                                        <ul>
-                                            <li t-foreach="package.pkg_feature_ids" t-as="feature" t-esc="feature.pf_name"/>
-                                            <li t-if="not package.pkg_feature_ids">All standard features included</li>
-                                        </ul>
-                                    </div>
+
                                     
                                     <!-- Payment Information (shown after client creation for paid packages) -->
                                     <div class="saas_payment_info_wrapper" id="saasPaymentInfo" style="display: none;">
@@ -83,29 +77,24 @@
                                             <div class="saas_payment_action">
                                                 <button type="button" class="btn btn-primary btn-lg" id="saasPayInvoiceBtn">
                                                     <i class="fa fa-credit-card" style="margin-right: 8px;"></i>
-                                                    Pay Invoice Now
+                                                    PAY INVOICE NOW
                                                 </button>
-                                                <p class="text-muted mt-2">
-                                                    <small>Click to open Odoo's secure payment wizard</small>
-                                                </p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                                 
                                 <!-- Legal Agreement -->
-                                <div class="saas_legal_agreement">
+                                <div class="saas_legal_agreement" data-oe-model="website" data-oe-field="legal_agreement_text" data-oe-type="html">
                                     <p t-if="is_free_trial">
                                         By clicking on <strong>Start Now</strong>, you accept our 
-                                        <a href="#" class="saas_legal_link">Subscription Agreement</a> and 
-                                        <a href="#" class="saas_legal_link">Privacy Policy</a>
+                                        <a t-att-href="subscription_agreement_url" class="saas_legal_link" data-oe-model="website" data-oe-field="subscription_agreement_url" data-oe-type="char">Subscription Agreement</a> and 
+                                        <a t-att-href="privacy_policy_url" class="saas_legal_link" data-oe-model="website" data-oe-field="privacy_policy_url" data-oe-type="char">Privacy Policy</a>
                                     </p>
                                     <p t-else="">
                                         By clicking on <strong>Start Now</strong>, you accept our 
-                                        <a href="#" class="saas_legal_link">Subscription Agreement</a> and 
-                                        <a href="#" class="saas_legal_link">Privacy Policy</a>. 
-                                        <br/><br/>
-                                        <strong>Note:</strong> A subscription will be created and an invoice will be generated for your account. You will be able to review and pay the invoice after confirmation.
+                                        <a t-att-href="subscription_agreement_url" class="saas_legal_link" data-oe-model="website" data-oe-field="subscription_agreement_url" data-oe-type="char">Subscription Agreement</a> and 
+                                        <a t-att-href="privacy_policy_url" class="saas_legal_link" data-oe-model="website" data-oe-field="privacy_policy_url" data-oe-type="char">Privacy Policy</a>.
                                     </p>
                                 </div>
                                 

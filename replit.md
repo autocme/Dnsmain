@@ -278,6 +278,15 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Removed Invoice Auto-Posting**: Eliminated automatic invoice posting logic from PAY INVOICE NOW button to allow direct payment link access regardless of invoice state
 - **Direct Payment Link Access**: Button now immediately opens payment link without attempting to change invoice status, maintaining proper workflow separation
 - **Removed Invoice Auto-Posting from Invoice Info**: Also eliminated automatic invoice posting logic from `get_client_invoice_info` method to ensure consistent behavior across all payment-related endpoints
+- **Enhanced Invoice Payment Detection**: Added `is_saas_first_invoice` boolean field to `account.move` model to flag first subscription invoices for payment monitoring
+- **Automatic Payment-to-Deployment Flow**: Extended `account.move` model with payment state monitoring - when first SaaS invoice is paid, system automatically deploys client and redirects to subdomain
+- **Removed Manual Payment Status Checking**: Eliminated `/saas/client/payment_status` polling route and related JavaScript checking logic
+- **Template UI Improvements**: Removed "What's included" section, subscription creation note, and payment wizard click instruction from purchase confirmation page
+- **Enhanced Invoice Section Styling**: Added elegant info background styling to invoice created section for better user experience
+- **Editable Legal Agreement Links**: Made Subscription Agreement and Privacy Policy links editable through website editor using website model fields
+- **Website Editor Integration**: Added `subscription_agreement_url` and `privacy_policy_url` fields to website model with default values (/terms, /privacy)
+- **Dynamic Legal URLs**: Purchase confirmation page now uses website-specific legal URLs that can be customized per website instance
+- **Website Editor Data Attributes**: Added proper data-oe-model attributes to enable inline editing of legal links through website editor
 
 ## July 17, 2025 - Ecommerce-Style Checkout Implementation and Payment Form Debugging
 
