@@ -5,6 +5,7 @@ from odoo import http
 from odoo.http import request
 import json
 import time
+from odoo.addons.payment import utils as payment_utils
 
 
 class SaaSWebController(http.Controller):
@@ -449,7 +450,9 @@ class SaaSWebController(http.Controller):
                     )
             
             # Generate access token for invoice
-            access_token = invoice._portal_ensure_token()
+            access_token = payment_utils.generate_access_token(
+                invoice.partner_id.id, invoice.amount_total, invoice.currency_id.id
+            )
             
             _logger.info(f"Retrieved invoice info for client {client_id}: invoice_id={invoice.id}")
             
@@ -694,7 +697,9 @@ class SaaSWebController(http.Controller):
                 tokens = request.env['payment.token'].sudo().browse()
             
             # Generate access token
-            access_token = self._get_or_create_portal_token(request.env.user.partner_id)
+            access_token = payment_utils.generate_access_token(
+                invoice.partner_id.id, invoice.amount_total, invoice.currency_id.id
+            )
             
             # Prepare payment wizard data
             payment_data = {
@@ -990,7 +995,9 @@ class SaaSWebController(http.Controller):
                 
                 # Generate access token for the invoice using the same method as portal
                 try:
-                    access_token = invoice._portal_ensure_token()
+                    access_token = payment_utils.generate_access_token(
+                    invoice.partner_id.id, invoice.amount_total, invoice.currency_id.id
+                    )
                     print(f"Access token generated: {access_token[:10]}...{access_token[-10:]} (length: {len(access_token)})")
                 except Exception as token_error:
                     print(f"Error generating access token: {token_error}")
