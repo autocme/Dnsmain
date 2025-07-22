@@ -312,7 +312,17 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Simplified Architecture**: Payment flow now focuses only on invoice generation and native Odoo payment processing
 - **Maintained Core Payment**: Kept essential payment invoice creation and PAY INVOICE NOW button functionality
 - **Clean Codebase**: Removed all debugging and parameter storage code related to payment completion tracking
-- **Free Trial Only Redirect**: Redirect functionality now exclusively works for free trial packages using direct response data
+
+### **PaymentPostProcessing Controller Override Implementation**
+- **CustomPaymentPortal Controller**: Created new controller class inheriting from PaymentPostProcessing to override `/payment/status` route
+- **Smart Payment Detection**: Override checks for SaaS-related transactions using custom fields (x_saas_package_id, x_saas_billing_cycle, x_saas_user_id)
+- **Direct Instance Redirect**: Successful SaaS payments now redirect directly to client's SaaS instance instead of invoice confirmation page
+- **Fallback Safety**: Controller safely falls back to default Odoo behavior for non-SaaS transactions or errors
+- **Transaction State Validation**: Only processes 'done' (successful) payment transactions for redirect
+- **Client Domain Resolution**: Automatically adds HTTPS protocol to client domains and validates domain existence
+- **Comprehensive Logging**: Added detailed logging throughout payment status processing for debugging and monitoring
+- **Exception Handling**: Robust error handling ensures system stability with graceful fallbacks
+- **Unified Redirect System**: Both free trials and paid packages now have working redirect functionality to SaaS instances
 
 ### **Website Editor Integration** 
 - **Website Snippet Architecture**: Converted entire purchase confirmation page to use Odoo's standard website snippet classes (s_text_block, s_banner, s_process_steps, s_call_to_action)

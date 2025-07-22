@@ -5,8 +5,12 @@ from odoo import http, fields
 from odoo.http import request
 import json
 import time
+import logging
 from datetime import timedelta
 from odoo.addons.payment import utils as payment_utils
+from odoo.addons.payment.controllers.post_processing import PaymentPostProcessing
+
+_logger = logging.getLogger(__name__)
 
 
 class SaaSWebController(http.Controller):
@@ -992,4 +996,107 @@ class SaaSWebController(http.Controller):
                 'success': False,
                 'error': f'Server error: {str(e)}'
             }
+
+
+class CustomPaymentPortal(PaymentPostProcessing):
+    """
+    Custom Payment Post Processing Controller
+    
+    This controller overrides Odoo's default payment status handling to redirect 
+    paid SaaS package clients directly to their instance instead of invoice page.
+    """
+
+    @http.route('/payment/status', type='http', auth="public", website=True, sitemap=False)
+    def display_status(self, **kwargs):
+        """
+        Override payment status display to redirect SaaS clients to their instance
+        
+        This method intercepts successful payments and checks if they are for SaaS packages.
+        If so, it redirects the user directly to their SaaS instance instead of the default
+        invoice confirmation page.
+        
+        Args:
+            **kwargs: Payment status parameters from Odoo's payment system
+            
+        Returns:
+            HTTP redirect to SaaS instance or default payment status behavior
+        """
+        try:
+            _logger.info('CustomPaymentPortal.display_status called with kwargs: %s', kwargs)
+            
+            # Get transaction reference from kwargs
+            tx_ref = kwargs.get('reference') or kwargs.get('tx_ref')
+            if not tx_ref:
+                _logger.info('No transaction reference found, using default behavior')
+                return super().display_status(**kwargs)
+            
+            _logger.info(f'Processing payment status for transaction reference: {tx_ref}')
+            
+            # Find the payment transaction
+            tx = request.env['payment.transaction'].sudo().search([
+                ('reference', '=', tx_ref)
+            ], limit=1)
+            
+            if not tx:
+                _logger.info(f'No transaction found for reference {tx_ref}, using default behavior')
+                return super().display_status(**kwargs)
+            
+            _logger.info(f'Found transaction {tx.id} with state: {tx.state}')
+            
+            # Only process successful transactions
+            if tx.state != 'done':
+                _logger.info(f'Transaction {tx.id} not successful (state: {tx.state}), using default behavior')
+                return super().display_status(**kwargs)
+            
+            # Check if this transaction has SaaS context (custom fields we added)
+            saas_package_id = getattr(tx, 'x_saas_package_id', None)
+            saas_billing_cycle = getattr(tx, 'x_saas_billing_cycle', None)
+            saas_user_id = getattr(tx, 'x_saas_user_id', None)
+            
+            if not saas_package_id:
+                _logger.info(f'Transaction {tx.id} is not SaaS-related, using default behavior')
+                return super().display_status(**kwargs)
+            
+            _logger.info(f'SaaS payment detected - Package: {saas_package_id}, Billing: {saas_billing_cycle}, User: {saas_user_id}')
+            
+            # Find the SaaS client created for this payment
+            saas_client = request.env['saas.client'].sudo().search([
+                ('sc_partner_id', '=', tx.partner_id.id),
+                ('sc_package_id', '=', saas_package_id),
+                ('sc_subscription_period', '=', saas_billing_cycle)
+            ], limit=1)
+            
+            if not saas_client:
+                _logger.warning(f'No SaaS client found for payment transaction {tx.id}')
+                return super().display_status(**kwargs)
+            
+            _logger.info(f'Found SaaS client {saas_client.id} with status: {saas_client.sc_status}')
+            
+            # Check if client has a domain to redirect to
+            if not saas_client.sc_full_domain:
+                _logger.warning(f'SaaS client {saas_client.id} has no domain configured')
+                return super().display_status(**kwargs)
+            
+            # Ensure domain has proper protocol
+            client_domain = saas_client.sc_full_domain
+            if not client_domain.startswith(('http://', 'https://')):
+                client_domain = f'https://{client_domain}'
+            
+            _logger.info(f'Redirecting successful SaaS payment to client domain: {client_domain}')
+            
+            # Add a small delay to ensure payment processing is complete
+            import time
+            time.sleep(1)
+            
+            # Redirect to the SaaS instance
+            return request.redirect(client_domain)
+            
+        except Exception as e:
+            _logger.error(f'Error in CustomPaymentPortal.display_status: {str(e)}')
+            import traceback
+            _logger.error(traceback.format_exc())
+            
+        # Fallback to default behavior if anything goes wrong
+        _logger.info('Falling back to default payment status behavior')
+        return super().display_status(**kwargs)
 
