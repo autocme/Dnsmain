@@ -70,29 +70,6 @@ class AccountMove(models.Model):
                     
                     # Mark the invoice as processed to avoid duplicate processing
                     invoice.sudo().write({'is_saas_first_invoice': False})
-                    
-                    # Add client-specific redirect handling after payment
-                    try:
-                        import time
-                        time.sleep(1)  # Brief delay for deployment to initialize
-                        
-                        # Store payment completion in ir.config_parameter for cross-session tracking
-                        # This works without requiring database field changes
-                        try:
-                            config_param = self.env['ir.config_parameter'].sudo()
-                            param_key = f'saas.payment_completed.user_{invoice.partner_id.id}'
-                            param_value = f'{saas_client.id}|{saas_client.sc_full_domain}|{fields.Datetime.now()}'
-                            config_param.set_param(param_key, param_value)
-                            _logger.info(f"Stored payment completion for client {saas_client.id} in config parameters: {saas_client.sc_full_domain}")
-                        except Exception as param_error:
-                            _logger.warning(f"Could not store payment completion for client {saas_client.id}: {param_error}")
-                        
-                        # Log the client domain for redirection
-                        if saas_client.sc_full_domain:
-                            _logger.info(f"SaaS client {saas_client.id} payment completed, ready for redirect to: {saas_client.sc_full_domain}")
-                        
-                    except Exception as redirect_error:
-                        _logger.warning(f"Error preparing redirect for client {saas_client.id}: {redirect_error}")
                 
             except Exception as e:
                 _logger.error(f"Error handling SaaS payment completion for invoice {invoice.name}: {str(e)}")

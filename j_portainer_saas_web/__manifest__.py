@@ -45,7 +45,6 @@ conversion-optimized layout similar to Odoo's official pricing structure.
             'j_portainer_saas_web/static/src/js/pricing_snippet_simple.js',
             'j_portainer_saas_web/static/src/css/purchase_confirm.css',
             'j_portainer_saas_web/static/src/js/purchase_confirm.js',
-            'j_portainer_saas_web/static/src/js/payment_redirect.js',
         ],
     },
     'installable': True,

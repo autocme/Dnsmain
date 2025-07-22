@@ -288,11 +288,10 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Dynamic Legal URLs**: Purchase confirmation page now uses website-specific legal URLs that can be customized per website instance
 - **Website Editor Data Attributes**: Added proper data-oe-model attributes to enable inline editing of legal links through website editor
 
-## July 22, 2025 - Free Trial Direct Redirect Implementation
+## July 22, 2025 - Free Trial Direct Redirect Implementation & Payment Redirect Cleanup
 
 ### **Simplified Free Trial Redirect**
 - **Direct Instance Redirect**: Free trial clients now redirect directly to their SaaS instance after deployment completion
-- **Removed Complex Tracking**: Eliminated config parameter tracking system that wasn't working reliably for payment completion
 - **JavaScript Direct Redirect**: Modified `handlePurchaseSuccess` function to immediately redirect free trial users to their `client_domain`
 - **Clean URL Handling**: Automatic HTTPS prefix addition for domain URLs without protocol
 - **Professional Redirect Message**: Added elegant overlay notification showing "Free Trial Activated!" with countdown timer and instance domain
@@ -300,11 +299,20 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Enhanced User Feedback**: Users see confirmation message "Your SaaS instance is ready and you'll be redirected in seconds..."
 - **Styled Redirect UI**: Professional overlay design with blur backdrop, slide-up animation, and Odoo color scheme
 - **3-Second Deployment Wait**: Extended to 3-second delay to show redirect message before automatic redirect
-- **Simplified Controller**: Removed parameter storage logic from free trial deployment, relying on direct response data
 - **Seamless User Experience**: Users go from "Start Free Trial" → Loading → Redirect notification → Direct redirect to SaaS instance
 - **No Intermediate Screens**: Eliminated "All done" success screen for free trials, providing streamlined flow
 - **Maintained Paid Flow**: Kept existing payment form flow for paid packages unchanged
 - **Responsive Design**: Redirect message adapts properly to mobile devices with responsive styling
+
+### **Payment Redirect Logic Removal**
+- **Removed Complex Payment Tracking**: Eliminated non-working config parameter tracking system for payment completion detection
+- **Cleaned Account Move Model**: Removed payment completion storage logic from `_handle_saas_payment_completion` method
+- **Removed Controller Routes**: Eliminated `/saas/payment/check_completion` and `/saas/payment/test_redirect` endpoints
+- **Deleted Payment Redirect JS**: Removed entire `payment_redirect.js` file and manifest reference
+- **Simplified Architecture**: Payment flow now focuses only on invoice generation and native Odoo payment processing
+- **Maintained Core Payment**: Kept essential payment invoice creation and PAY INVOICE NOW button functionality
+- **Clean Codebase**: Removed all debugging and parameter storage code related to payment completion tracking
+- **Free Trial Only Redirect**: Redirect functionality now exclusively works for free trial packages using direct response data
 
 ### **Website Editor Integration** 
 - **Website Snippet Architecture**: Converted entire purchase confirmation page to use Odoo's standard website snippet classes (s_text_block, s_banner, s_process_steps, s_call_to_action)
