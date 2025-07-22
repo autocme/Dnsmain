@@ -71,12 +71,13 @@ class AccountMove(models.Model):
                         import time
                         time.sleep(1)  # Brief delay for deployment to initialize
                         
-                        # Store payment completion in session for JavaScript redirect
-                        # This will trigger a client-side redirect to the subdomain
-                        if hasattr(self.env, 'session'):
-                            self.env.session['saas_payment_completed'] = True
-                            self.env.session['saas_completed_client_id'] = saas_client.id
-                            self.env.session['saas_client_domain'] = saas_client.sc_full_domain
+                        # Mark client as payment completed for redirect tracking
+                        # This will be checked by the JavaScript redirect handler
+                        saas_client.sudo().write({
+                            'sc_payment_completed': True,
+                            'sc_payment_completed_time': fields.Datetime.now()
+                        })
+                        _logger.info(f"Marked client {saas_client.id} as payment completed for redirect: {saas_client.sc_full_domain}")
                         
                         # Log the client domain for redirection
                         if saas_client.sc_full_domain:

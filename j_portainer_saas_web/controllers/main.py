@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from odoo import http
+from odoo import http, fields
 from odoo.http import request
 import json
 import time
+from datetime import timedelta
 from odoo.addons.payment import utils as payment_utils
 
 
@@ -774,26 +775,25 @@ class SaaSWebController(http.Controller):
             dict: Redirect information if payment completed
         """
         try:
-            # Check session for completed payment
-            client_id = request.session.get('saas_completed_client_id')
-            client_domain = request.session.get('saas_client_domain')
-            payment_completed = request.session.get('saas_payment_completed')
+            # Check for client with recent payment completion for current user
+            recent_client = request.env['saas.client'].sudo().search([
+                ('sc_partner_id', '=', request.env.user.partner_id.id),
+                ('sc_payment_completed', '=', True),
+                ('sc_payment_completed_time', '>=', fields.Datetime.now() - timedelta(minutes=30))
+            ], limit=1, order='sc_payment_completed_time desc')
             
-            if payment_completed and client_id and client_domain:
-                # Clear session data
-                request.session.pop('saas_payment_completed', None)
-                request.session.pop('saas_completed_client_id', None)
-                request.session.pop('saas_client_domain', None)
+            if recent_client:
+                # Clear the payment completed flag
+                recent_client.sudo().write({'sc_payment_completed': False})
                 
-                # Get client details
-                client = request.env['saas.client'].sudo().browse(client_id)
-                if client.exists():
-                    return {
-                        'success': True,
-                        'redirect_url': client_domain,
-                        'client_name': client.sc_package_id.pkg_name if client.sc_package_id else 'SaaS',
-                        'client_id': client_id
-                    }
+                _logger.info(f"Found recent payment completion for client {recent_client.id}, domain: {recent_client.sc_full_domain}")
+                
+                return {
+                    'success': True,
+                    'redirect_url': recent_client.sc_full_domain,
+                    'client_name': recent_client.sc_package_id.pkg_name if recent_client.sc_package_id else 'SaaS',
+                    'client_id': recent_client.id
+                }
             
             return {'success': False, 'message': 'No pending redirect'}
             
@@ -986,9 +986,6 @@ class SaaSWebController(http.Controller):
                 # The redirect will be handled by the payment completion monitoring in account_move.py
                 base_url = request.httprequest.url_root.rstrip('/')
                 payment_link = f"{base_url}/payment/pay?amount={invoice.amount_total}&access_token={access_token}&invoice_id={invoice.id}"
-                
-                # Store client ID in session for post-payment processing
-                request.session['saas_pending_client_id'] = client.id
                 
                 print(f"Generated payment link: {payment_link}")
                 print(f"Invoice details - ID: {invoice.id}, Amount: {invoice.amount_total}, Currency: {invoice.currency_id.name}, Partner: {invoice.partner_id.name}")
