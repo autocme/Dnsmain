@@ -119,20 +119,6 @@ class SaasClient(models.Model):
         tracking=True,
         help='Billing frequency determining which subscription template to use from the package')
     
-    # Payment completion tracking fields for redirect handling
-    sc_payment_completed = fields.Boolean(
-        string='Payment Completed',
-        default=False,
-        tracking=True,
-        help='Indicates if first payment was completed and client needs redirect'
-    )
-    
-    sc_payment_completed_time = fields.Datetime(
-        string='Payment Completed Time',
-        tracking=True,
-        help='When the payment was completed'
-    )
-    
     sc_is_free_trial = fields.Boolean(
         string='Is Free Trial',
         default=False,

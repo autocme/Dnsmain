@@ -71,13 +71,16 @@ class AccountMove(models.Model):
                         import time
                         time.sleep(1)  # Brief delay for deployment to initialize
                         
-                        # Mark client as payment completed for redirect tracking
-                        # This will be checked by the JavaScript redirect handler
-                        saas_client.sudo().write({
-                            'sc_payment_completed': True,
-                            'sc_payment_completed_time': fields.Datetime.now()
-                        })
-                        _logger.info(f"Marked client {saas_client.id} as payment completed for redirect: {saas_client.sc_full_domain}")
+                        # Store payment completion in ir.config_parameter for cross-session tracking
+                        # This works without requiring database field changes
+                        try:
+                            config_param = self.env['ir.config_parameter'].sudo()
+                            param_key = f'saas.payment_completed.user_{invoice.partner_id.id}'
+                            param_value = f'{saas_client.id}|{saas_client.sc_full_domain}|{fields.Datetime.now()}'
+                            config_param.set_param(param_key, param_value)
+                            _logger.info(f"Stored payment completion for client {saas_client.id} in config parameters: {saas_client.sc_full_domain}")
+                        except Exception as param_error:
+                            _logger.warning(f"Could not store payment completion for client {saas_client.id}: {param_error}")
                         
                         # Log the client domain for redirection
                         if saas_client.sc_full_domain:

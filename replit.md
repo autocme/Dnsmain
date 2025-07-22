@@ -302,14 +302,16 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 
 ### **Payment Redirect Fix** 
 - **Resolved TypeError Issue**: Fixed `landing_route` parameter conflict with Odoo's payment portal by removing custom URL parameters
-- **Database-Based Payment Tracking**: Implemented robust tracking using `sc_payment_completed` and `sc_payment_completed_time` fields on SaaS client model
-- **Enhanced Payment Detection**: Modified `account_move.py` to mark clients when first payment is completed and deployment is triggered
+- **Config Parameter-Based Tracking**: Implemented robust tracking using `ir.config_parameter` to avoid database field dependency issues
+- **No Database Changes Required**: Solution works without requiring module upgrades or database field additions
+- **Enhanced Payment Detection**: Modified `account_move.py` to store payment completion data in config parameters when first payment is completed
 - **JavaScript Auto-Redirect System**: Created `payment_redirect.js` with intelligent payment completion detection across multiple scenarios
-- **Session-Independent Solution**: Replaced unreliable session-based approach with database tracking that works across different browser contexts
-- **User-Specific Tracking**: Payment completion check now searches for recent payments by current user within 30-minute window
+- **Cross-Session Compatibility**: Config parameter approach works across different browser sessions and contexts
+- **User-Specific Parameter Keys**: Each user gets unique config parameter key (`saas.payment_completed.user_{partner_id}`) for isolated tracking
+- **Time-Bounded Tracking**: Payment completion stored with timestamp, valid for 30-minute window to prevent stale redirects
 - **Visual Redirect Notification**: Added professional redirect message with 3-second countdown and "Go now →" option
-- **Automatic Flag Clearing**: System clears payment completion flag after successful redirect to prevent duplicate redirections
-- **Comprehensive Error Handling**: Added detailed logging and fallback mechanisms for edge cases
+- **Automatic Parameter Clearing**: System clears config parameter after successful redirect to prevent duplicate redirections
+- **Parse Error Handling**: Robust parsing of stored data with fallback to clear invalid parameters
 - **Direct Instance Redirect**: After payment completion, users automatically redirect to their SaaS instance subdomain
 - **Invoice Section Moved**: Positioned invoice created section and "PAY INVOICE NOW" button inside package details white card for better visual cohesion
 

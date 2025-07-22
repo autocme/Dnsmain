@@ -775,30 +775,41 @@ class SaaSWebController(http.Controller):
             dict: Redirect information if payment completed
         """
         try:
-            # Check for client with recent payment completion for current user
-            recent_client = request.env['saas.client'].sudo().search([
-                ('sc_partner_id', '=', request.env.user.partner_id.id),
-                ('sc_payment_completed', '=', True),
-                ('sc_payment_completed_time', '>=', fields.Datetime.now() - timedelta(minutes=30))
-            ], limit=1, order='sc_payment_completed_time desc')
+            # Check for payment completion in config parameters (works without DB changes)
+            config_param = request.env['ir.config_parameter'].sudo()
+            param_key = f'saas.payment_completed.user_{request.env.user.partner_id.id}'
             
-            if recent_client:
-                # Clear the payment completed flag
-                recent_client.sudo().write({'sc_payment_completed': False})
-                
-                _logger.info(f"Found recent payment completion for client {recent_client.id}, domain: {recent_client.sc_full_domain}")
-                
-                return {
-                    'success': True,
-                    'redirect_url': recent_client.sc_full_domain,
-                    'client_name': recent_client.sc_package_id.pkg_name if recent_client.sc_package_id else 'SaaS',
-                    'client_id': recent_client.id
-                }
+            param_value = config_param.get_param(param_key)
+            if param_value:
+                try:
+                    # Parse stored data: client_id|domain|timestamp
+                    parts = param_value.split('|')
+                    if len(parts) >= 3:
+                        client_id = int(parts[0])
+                        client_domain = parts[1]
+                        stored_time = fields.Datetime.from_string(parts[2])
+                        
+                        # Check if payment completion is recent (within 30 minutes)
+                        if stored_time >= fields.Datetime.now() - timedelta(minutes=30):
+                            # Clear the parameter
+                            config_param.set_param(param_key, False)
+                            
+                            # Get client details
+                            client = request.env['saas.client'].sudo().browse(client_id)
+                            if client.exists():
+                                return {
+                                    'success': True,
+                                    'redirect_url': client_domain,
+                                    'client_name': client.sc_package_id.pkg_name if client.sc_package_id else 'SaaS',
+                                    'client_id': client_id
+                                }
+                except Exception as parse_error:
+                    # Clear invalid parameter
+                    config_param.set_param(param_key, False)
             
             return {'success': False, 'message': 'No pending redirect'}
             
         except Exception as e:
-            _logger.error(f"Error checking payment completion: {str(e)}")
             return {'success': False, 'error': str(e)}
 
     @http.route('/saas/package/select', type='json', auth='public', methods=['POST'], csrf=False)
