@@ -779,8 +779,15 @@ class SaaSWebController(http.Controller):
             config_param = request.env['ir.config_parameter'].sudo()
             param_key = f'saas.payment_completed.user_{request.env.user.partner_id.id}'
             
+            # Add debug logging
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.info(f"Checking payment completion for user {request.env.user.partner_id.id}, key: {param_key}")
+            
             param_value = config_param.get_param(param_key)
-            if param_value:
+            _logger.info(f"Retrieved param value: {param_value}")
+            
+            if param_value and param_value != 'False':
                 try:
                     # Parse stored data: client_id|domain|timestamp
                     parts = param_value.split('|')
@@ -807,7 +814,49 @@ class SaaSWebController(http.Controller):
                     # Clear invalid parameter
                     config_param.set_param(param_key, False)
             
-            return {'success': False, 'message': 'No pending redirect'}
+            # Also check if there's any param for debugging
+            all_params = config_param.search([('key', 'like', 'saas.payment_completed%')])
+            debug_info = [f"{p.key}: {p.value}" for p in all_params]
+            _logger.info(f"All saas payment completion params: {debug_info}")
+            
+            return {'success': False, 'message': 'No pending redirect', 'debug_params': debug_info}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    @http.route('/saas/payment/test_redirect', type='json', auth='user', methods=['POST'], csrf=False)
+    def test_payment_redirect(self, client_id=None, **kwargs):
+        """
+        Test endpoint to manually create a payment completion for testing redirect
+        
+        Args:
+            client_id: ID of the SaaS client to test redirect for
+            
+        Returns:
+            dict: Success/error message
+        """
+        try:
+            if not client_id:
+                return {'success': False, 'error': 'client_id required'}
+            
+            # Get the client
+            client = request.env['saas.client'].sudo().browse(int(client_id))
+            if not client.exists():
+                return {'success': False, 'error': f'Client {client_id} not found'}
+            
+            # Store test payment completion
+            config_param = request.env['ir.config_parameter'].sudo()
+            param_key = f'saas.payment_completed.user_{request.env.user.partner_id.id}'
+            param_value = f'{client.id}|{client.sc_full_domain}|{fields.Datetime.now()}'
+            config_param.set_param(param_key, param_value)
+            
+            return {
+                'success': True, 
+                'message': f'Test payment completion created for client {client_id}',
+                'param_key': param_key,
+                'param_value': param_value,
+                'redirect_url': client.sc_full_domain
+            }
             
         except Exception as e:
             return {'success': False, 'error': str(e)}

@@ -23,13 +23,18 @@ class AccountMove(models.Model):
         
         # Check if payment_state is being updated to 'paid'
         if 'payment_state' in vals and vals['payment_state'] == 'paid':
+            _logger.info(f"Payment state changed to paid for {len(self)} invoices")
             self._handle_saas_payment_completion()
         
         return result
     
     def _handle_saas_payment_completion(self):
         """Handle SaaS client deployment when first invoice is paid"""
+        _logger.info(f"_handle_saas_payment_completion called for {len(self)} invoices")
+        
         for invoice in self:
+            _logger.info(f"Processing invoice {invoice.name}, is_saas_first_invoice: {invoice.is_saas_first_invoice}")
+            
             # Only process invoices marked as SaaS first invoices
             if not invoice.is_saas_first_invoice:
                 continue
