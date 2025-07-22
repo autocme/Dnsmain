@@ -328,13 +328,7 @@ class SaaSWebController(http.Controller):
                     saas_client.action_deploy_client()
                     _logger.info(f"Free trial client {saas_client.id} deployment started")
                     
-                    # Store free trial completion for redirect (similar to payment completion)
-                    from odoo import fields
-                    config_param = request.env['ir.config_parameter'].sudo()
-                    param_key = f'saas.freetrial_completed.user_{request.env.user.partner_id.id}'
-                    param_value = f'{saas_client.id}|{saas_client.sc_full_domain}|{fields.Datetime.now()}'
-                    config_param.set_param(param_key, param_value)
-                    _logger.info(f"Stored free trial completion parameter: {param_key} = {param_value}")
+                    # Free trial deployment completed - JavaScript will handle direct redirect
                     
                 except Exception as e:
                     _logger.warning(f"Failed to deploy free trial client {saas_client.id}: {e}")

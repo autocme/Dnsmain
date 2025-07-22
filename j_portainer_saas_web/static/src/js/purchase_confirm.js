@@ -252,10 +252,20 @@
 
         // Handle free trial vs paid packages differently
         if (result.is_free_trial) {
-            // For free trial: show success screen as before
+            // For free trial: directly redirect to client domain
+            console.log('Free trial completed, redirecting to:', result.client_domain);
+            
             setTimeout(function() {
-                showSuccessScreen();
-            }, 500);
+                var redirectUrl = result.client_domain || '/web';
+                
+                // Ensure clean URL format
+                if (redirectUrl !== '/web' && !redirectUrl.startsWith('http')) {
+                    redirectUrl = `https://${redirectUrl}`;
+                }
+                
+                console.log('Redirecting to SaaS instance:', redirectUrl);
+                window.location.href = redirectUrl;
+            }, 2000); // Wait 2 seconds for any deployment to complete
         } else {
             // For paid packages: hide loading and show payment form (already embedded)
             setTimeout(function() {
