@@ -295,11 +295,16 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Removed Complex Tracking**: Eliminated config parameter tracking system that wasn't working reliably for payment completion
 - **JavaScript Direct Redirect**: Modified `handlePurchaseSuccess` function to immediately redirect free trial users to their `client_domain`
 - **Clean URL Handling**: Automatic HTTPS prefix addition for domain URLs without protocol
-- **2-Second Deployment Wait**: Added 2-second delay to allow deployment process to complete before redirect
+- **Professional Redirect Message**: Added elegant overlay notification showing "Free Trial Activated!" with countdown timer and instance domain
+- **Visual Loading Experience**: Custom redirect overlay with rocket icon, countdown timer (3 seconds), and animated loading dots
+- **Enhanced User Feedback**: Users see confirmation message "Your SaaS instance is ready and you'll be redirected in seconds..."
+- **Styled Redirect UI**: Professional overlay design with blur backdrop, slide-up animation, and Odoo color scheme
+- **3-Second Deployment Wait**: Extended to 3-second delay to show redirect message before automatic redirect
 - **Simplified Controller**: Removed parameter storage logic from free trial deployment, relying on direct response data
-- **Instant User Experience**: Users go from "Start Free Trial" → Loading → Direct redirect to SaaS instance
-- **No Intermediate Screens**: Eliminated "All done" success screen for free trials, providing seamless flow
+- **Seamless User Experience**: Users go from "Start Free Trial" → Loading → Redirect notification → Direct redirect to SaaS instance
+- **No Intermediate Screens**: Eliminated "All done" success screen for free trials, providing streamlined flow
 - **Maintained Paid Flow**: Kept existing payment form flow for paid packages unchanged
+- **Responsive Design**: Redirect message adapts properly to mobile devices with responsive styling
 
 ### **Website Editor Integration** 
 - **Website Snippet Architecture**: Converted entire purchase confirmation page to use Odoo's standard website snippet classes (s_text_block, s_banner, s_process_steps, s_call_to_action)

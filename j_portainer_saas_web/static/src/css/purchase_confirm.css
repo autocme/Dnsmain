@@ -728,3 +728,140 @@
 .saas_payment_action .text-muted {
     margin-top: 10px;
 }
+
+/* ============================================================================== */
+/* FREE TRIAL REDIRECT MESSAGE STYLES */
+/* Professional redirect notification for free trial completion */
+/* ============================================================================== */
+
+/* Redirect overlay and content */
+.saas_redirect_content {
+    background: white;
+    border-radius: 15px;
+    padding: 40px;
+    max-width: 500px;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    position: relative;
+    animation: saas_slideInUp 0.5s ease-out;
+}
+
+.saas_redirect_icon {
+    font-size: 3rem;
+    color: #875A7B;
+    margin-bottom: 20px;
+}
+
+.saas_redirect_content h3 {
+    color: #2E7D32;
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.saas_redirect_content p {
+    color: #666;
+    font-size: 1.1rem;
+    margin-bottom: 25px;
+}
+
+.saas_redirect_countdown {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.countdown-text {
+    display: block;
+    color: #495057;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.domain-display {
+    color: #875A7B;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    word-break: break-all;
+}
+
+.countdown-timer {
+    background: #875A7B;
+    color: white;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    line-height: 60px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0 auto;
+    animation: saas_pulse 1s infinite;
+}
+
+.saas_loading_dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.saas_loading_dots .dot {
+    width: 8px;
+    height: 8px;
+    background: #875A7B;
+    border-radius: 50%;
+    animation: saas_loadingDots 1.4s infinite ease-in-out both;
+}
+
+.saas_loading_dots .dot:nth-child(1) { animation-delay: -0.32s; }
+.saas_loading_dots .dot:nth-child(2) { animation-delay: -0.16s; }
+
+/* Animations for redirect message */
+@keyframes saas_slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes saas_pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+@keyframes saas_loadingDots {
+    0%, 80%, 100% {
+        transform: scale(0);
+    }
+    40% {
+        transform: scale(1);
+    }
+}
+
+/* Responsive design for redirect message */
+@media (max-width: 576px) {
+    .saas_redirect_content {
+        margin: 20px;
+        padding: 30px 20px;
+        max-width: calc(100% - 40px);
+    }
+    
+    .saas_redirect_content h3 {
+        font-size: 1.5rem;
+    }
+    
+    .domain-display {
+        font-size: 1rem;
+    }
+}

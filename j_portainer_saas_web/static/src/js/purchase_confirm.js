@@ -174,6 +174,72 @@
     }
 
     /**
+     * Show redirect message for free trial completion
+     */
+    function showRedirectMessage(clientDomain) {
+        // Hide loading screen
+        hideLoadingScreen();
+        
+        // Create redirect message overlay
+        var redirectOverlay = document.createElement('div');
+        redirectOverlay.className = 'saas_redirect_overlay';
+        redirectOverlay.innerHTML = `
+            <div class="saas_redirect_content">
+                <div class="saas_redirect_icon">
+                    <i class="fa fa-rocket" aria-hidden="true"></i>
+                </div>
+                <h3>🎉 Free Trial Activated!</h3>
+                <p>Your SaaS instance is ready and you'll be redirected in seconds...</p>
+                <div class="saas_redirect_countdown">
+                    <span class="countdown-text">Redirecting to your instance:</span>
+                    <div class="domain-display">${clientDomain || 'your SaaS instance'}</div>
+                    <div class="countdown-timer" id="redirectTimer">3</div>
+                </div>
+                <div class="saas_loading_dots">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+            </div>
+        `;
+        
+        // Add styles
+        redirectOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(5px);
+        `;
+        
+        document.body.appendChild(redirectOverlay);
+        
+        // Start countdown
+        var timer = 3;
+        var timerElement = document.getElementById('redirectTimer');
+        var countdown = setInterval(function() {
+            timer--;
+            if (timerElement) {
+                timerElement.textContent = timer;
+            }
+            if (timer <= 0) {
+                clearInterval(countdown);
+            }
+        }, 1000);
+        
+        // Add fade-in animation
+        setTimeout(function() {
+            redirectOverlay.style.opacity = '1';
+        }, 10);
+    }
+
+    /**
      * Make purchase request to server
      */
     function makePurchaseRequest(packageId, billingCycle, isFreeTrial) {
@@ -252,8 +318,11 @@
 
         // Handle free trial vs paid packages differently
         if (result.is_free_trial) {
-            // For free trial: directly redirect to client domain
+            // For free trial: show redirect message and redirect to client domain
             console.log('Free trial completed, redirecting to:', result.client_domain);
+            
+            // Show redirect notification
+            showRedirectMessage(result.client_domain);
             
             setTimeout(function() {
                 var redirectUrl = result.client_domain || '/web';
@@ -265,7 +334,7 @@
                 
                 console.log('Redirecting to SaaS instance:', redirectUrl);
                 window.location.href = redirectUrl;
-            }, 2000); // Wait 2 seconds for any deployment to complete
+            }, 3000); // Wait 3 seconds to show the redirect message
         } else {
             // For paid packages: hide loading and show payment form (already embedded)
             setTimeout(function() {
