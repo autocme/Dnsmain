@@ -288,6 +288,25 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Dynamic Legal URLs**: Purchase confirmation page now uses website-specific legal URLs that can be customized per website instance
 - **Website Editor Data Attributes**: Added proper data-oe-model attributes to enable inline editing of legal links through website editor
 
+## July 23, 2025 - Payment Transaction Context Fix Implementation
+
+### **Custom SaaS Payment Transaction Route**
+- **Added /saas/payment/transaction endpoint**: Created dedicated route for SaaS payment transaction creation with custom context fields
+- **Transaction Context Population**: Payment transactions now properly store x_saas_package_id, x_saas_billing_cycle, and x_saas_user_id fields
+- **Payment Form Integration**: Added payment.form template to purchase confirmation page for paid packages
+- **Payment Form Intercept**: JavaScript now intercepts payment form submission to add SaaS context parameters
+- **Custom Transaction Route Assignment**: Payment forms automatically use /saas/payment/transaction instead of default /payment/transaction
+- **Enhanced Payment Context**: Purchase confirmation controller provides full payment context (providers, methods, tokens, reference, access_token)
+- **Payment Provider Support**: Added payment provider search and integration with Odoo 17's payment.provider system
+- **SaaS Context Template**: Hidden form in template passes package_id, billing_cycle, and user_id to payment processing
+- **Payment Flow Fix**: Fixed payment transaction creation to use proper redirect to /payment/pay for processing
+- **Access Token Generation**: Added cross-version compatible access token generation with UUID fallback
+- **Enhanced Debugging**: Comprehensive logging throughout payment transaction creation and context handling
+- **PaymentPostProcessing Integration**: CustomPaymentPortal controller now properly detects SaaS transactions for redirect
+- **Transaction Reference Matching**: Fixed transaction reference detection in payment status controller
+- **Automatic Client Creation**: SaaS clients are created automatically when payment transactions reach 'done' state
+- **Direct Instance Redirect**: Successfully completed payments redirect users directly to their SaaS instance subdomain
+
 ## July 22, 2025 - Free Trial Direct Redirect Implementation & Payment Redirect Cleanup
 
 ### **Simplified Free Trial Redirect**

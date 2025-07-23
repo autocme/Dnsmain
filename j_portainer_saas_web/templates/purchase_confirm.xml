@@ -77,6 +77,32 @@
                                                         <div class="saas_package_description">
                                                             <p t-esc="package.pkg_description"/>
                                                         </div>
+                                        
+                                        <!-- Payment Form (shown for paid packages) -->
+                                        <div t-if="not is_free_trial and price > 0 and providers_sudo" class="saas_payment_form_wrapper">
+                                            <div class="saas_payment_section">
+                                                <div class="alert alert-info">
+                                                    <h5><i class="fa fa-credit-card"></i> Payment Required</h5>
+                                                    <p>Complete payment to activate your SaaS instance.</p>
+                                                    <p><strong>Amount:</strong> <span t-esc="currency_symbol"/><span t-esc="price"/>/<span t-esc="period_text"/></p>
+                                                </div>
+                                                
+                                                <!-- Odoo Payment Form -->
+                                                <div class="saas_payment_form">
+                                                    <t t-call="payment.form">
+                                                        <t t-set="submit_txt">Pay Now</t>
+                                                        <t t-set="icon_class">fa-credit-card</t>
+                                                    </t>
+                                                    
+                                                    <!-- Hidden form to pass SaaS context to payment -->
+                                                    <form id="saasPymentContextForm" style="display: none;">
+                                                        <input type="hidden" name="saas_package_id" t-att-value="saas_package_id or package.id"/>
+                                                        <input type="hidden" name="saas_billing_cycle" t-att-value="billing_cycle"/>
+                                                        <input type="hidden" name="saas_user_id" t-att-value="saas_user_id or request.env.user.id"/>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
                                                         
                                                         <!-- Payment Information (shown after client creation for paid packages) -->
                                                         <div class="saas_payment_info_wrapper" id="saasPaymentInfo" style="display: none;">

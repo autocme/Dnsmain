@@ -47,6 +47,9 @@
             continueBtn.addEventListener('click', handleContinueClick);
         }
 
+        // Setup payment form intercept if payment form exists
+        setupPaymentFormIntercept();
+        
         // Note: PAY INVOICE NOW button handler is set up dynamically in showPaymentForm
     }
 
@@ -1031,6 +1034,49 @@
                 }
             }
         }, 1000);
+    }
+
+    /**
+     * Setup payment form intercept to add SaaS context parameters
+     */
+    function setupPaymentFormIntercept() {
+        console.log('Setting up payment form intercept...');
+        
+        // Find payment form (Odoo's payment form typically has id "payment_form")
+        var paymentForm = document.querySelector('#payment_form, form[action*="payment"], .saas_payment_form form');
+        if (!paymentForm) {
+            console.log('No payment form found, payment intercept not needed');
+            return;
+        }
+        
+        console.log('Payment form found, setting up intercept');
+        
+        // Intercept form submission to add SaaS context
+        paymentForm.addEventListener('submit', function(e) {
+            console.log('Payment form submission intercepted');
+            
+            // Get SaaS context from the hidden form
+            var contextForm = document.getElementById('saasPymentContextForm');
+            if (contextForm) {
+                // Add SaaS context fields to payment form
+                var fields = contextForm.querySelectorAll('input[type="hidden"]');
+                fields.forEach(function(field) {
+                    var newField = document.createElement('input');
+                    newField.type = 'hidden';
+                    newField.name = field.name;
+                    newField.value = field.value;
+                    paymentForm.appendChild(newField);
+                    console.log('Added SaaS context field:', field.name, '=', field.value);
+                });
+            }
+            
+            // Update the form action to use our custom transaction route
+            var currentAction = paymentForm.action;
+            if (currentAction && !currentAction.includes('/saas/payment/transaction')) {
+                paymentForm.action = '/saas/payment/transaction';
+                console.log('Updated payment form action to use SaaS transaction route');
+            }
+        });
     }
 
     // Initialize when DOM is ready

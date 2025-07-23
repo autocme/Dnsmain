@@ -223,6 +223,58 @@ class SaaSWebController(http.Controller):
                 'free_trial_days': self._get_free_trial_days(),
             }
             
+            # Add payment form context for paid packages
+            if not is_free_trial and price > 0:
+                try:
+                    # Get payment providers
+                    providers = request.env['payment.provider'].sudo().search([('state', '=', 'enabled')])
+                    if not providers:
+                        providers = request.env['payment.provider'].sudo().search([])
+                    
+                    # Get payment methods and tokens
+                    payment_methods = request.env['payment.method'].sudo().search([])
+                    tokens = request.env['payment.token'].sudo().search([
+                        ('partner_id', '=', request.env.user.partner_id.id)
+                    ])
+                    
+                    # Generate payment reference
+                    reference_prefix = f'SAAS-{package.id}-{billing_cycle.upper()}'
+                    
+                    # Generate access token for payment
+                    try:
+                        from odoo.addons.payment.utils import generate_access_token
+                        access_token = generate_access_token(
+                            request.env.user.partner_id.id, price, package.pkg_currency_id.id or 1
+                        )
+                    except ImportError:
+                        # Fallback if payment utils not available
+                        import uuid
+                        access_token = str(uuid.uuid4())
+                    
+                    # Add payment context to template data
+                    template_data.update({
+                        'providers_sudo': providers,
+                        'payment_methods_sudo': payment_methods,
+                        'tokens_sudo': tokens,
+                        'reference_prefix': reference_prefix,
+                        'amount': price,
+                        'currency': package.pkg_currency_id or request.env.company.currency_id,
+                        'partner_id': request.env.user.partner_id.id,
+                        'transaction_route': '/saas/payment/transaction',
+                        'landing_route': '/payment/status',
+                        'access_token': access_token,
+                        'mode': 'redirect',
+                        'saas_package_id': package.id,
+                        'saas_billing_cycle': billing_cycle,
+                        'saas_user_id': request.env.user.id,
+                    })
+                    
+                    _logger.info(f"Added payment context for package {package.id}: {len(providers)} providers, amount={price}")
+                    
+                except Exception as e:
+                    _logger.warning(f"Error setting up payment context: {str(e)}")
+                    # Continue without payment context - template will handle gracefully
+            
             # Log template data for debugging
             import logging
             _logger = logging.getLogger(__name__)
@@ -1041,19 +1093,24 @@ class CustomPaymentPortal(PaymentPostProcessing):
             if not tx_ref:
                 _logger.info('No transaction reference found, trying to find recent SaaS transactions')
                 
-                # Fallback: Look for recent SaaS transactions for current user
+                # Fallback: Look for recent successful transactions for current user
                 if request.env.user and not request.env.user._is_public():
                     recent_tx = request.env['payment.transaction'].sudo().search([
                         ('partner_id', '=', request.env.user.partner_id.id),
-                        ('state', '=', 'done'),
-                        ('x_saas_package_id', '!=', False)
+                        ('state', '=', 'done')
                     ], order='create_date desc', limit=1)
                     
                     if recent_tx:
-                        _logger.info(f'Found recent SaaS transaction {recent_tx.id} for current user')
-                        tx_ref = recent_tx.reference
+                        _logger.info(f'Found recent transaction {recent_tx.id} for current user, checking if SaaS-related')
+                        # Check if this transaction has SaaS context
+                        if hasattr(recent_tx, 'x_saas_package_id') and recent_tx.x_saas_package_id:
+                            tx_ref = recent_tx.reference
+                            _logger.info(f'Recent transaction {recent_tx.id} is SaaS-related, using it')
+                        else:
+                            _logger.info('Recent transaction is not SaaS-related, using default behavior')
+                            return super().display_status(**kwargs)
                     else:
-                        _logger.info('No recent SaaS transactions found for current user, using default behavior')
+                        _logger.info('No recent transactions found for current user, using default behavior')
                         return super().display_status(**kwargs)
                 else:
                     _logger.info('Public user or no user context, using default behavior')
@@ -1128,4 +1185,60 @@ class CustomPaymentPortal(PaymentPostProcessing):
         # Fallback to default behavior if anything goes wrong
         _logger.info('Falling back to default payment status behavior')
         return super().display_status(**kwargs)
+
+    
+    @http.route('/saas/payment/transaction', type='http', auth='user', methods=['POST'], csrf=False, website=True)
+    def saas_payment_transaction(self, **kwargs):
+        """
+        Create payment transaction with SaaS context
+        
+        This endpoint is used as the custom transaction_route for SaaS payments
+        to ensure transaction records include SaaS package information.
+        """
+        try:
+            _logger.info(f'SaaS payment transaction creation called with kwargs: {kwargs}')
+            
+            # Get SaaS context from kwargs
+            saas_package_id = kwargs.get('saas_package_id')
+            saas_billing_cycle = kwargs.get('saas_billing_cycle') 
+            saas_user_id = kwargs.get('saas_user_id')
+            
+            if not all([saas_package_id, saas_billing_cycle, saas_user_id]):
+                _logger.warning('Missing SaaS context in payment transaction creation')
+                # Fall back to default transaction creation if SaaS context missing
+                return request.redirect('/payment/transaction?' + request.httprequest.query_string.decode())
+            
+            # Create the transaction with SaaS context
+            # Generate unique reference if not provided
+            reference = kwargs.get('reference')
+            if not reference:
+                import uuid
+                reference = f'SAAS-{saas_package_id}-{saas_billing_cycle.upper()}-{str(uuid.uuid4())[:8]}'
+            
+            transaction_data = {
+                'provider_id': int(kwargs.get('provider_id')),
+                'reference': reference,
+                'amount': float(kwargs.get('amount', 0)),
+                'currency_id': int(kwargs.get('currency_id')),
+                'partner_id': request.env.user.partner_id.id,
+                'x_saas_package_id': int(saas_package_id),
+                'x_saas_billing_cycle': saas_billing_cycle,
+                'x_saas_user_id': int(saas_user_id),
+                'state': 'draft'
+            }
+            
+            tx = request.env['payment.transaction'].sudo().create(transaction_data)
+            _logger.info(f'Created SaaS payment transaction {tx.id} with context - Package: {saas_package_id}, Billing: {saas_billing_cycle}')
+            
+            # Return response to continue with payment processing
+            # The payment form will handle the actual processing
+            return request.make_response(
+                f'<script>window.location.href="/payment/pay?tx_id={tx.id}";</script>',
+                headers={'Content-Type': 'text/html'}
+            )
+            
+        except Exception as e:
+            _logger.error(f'Error creating SaaS payment transaction: {str(e)}')
+            # Fall back to default behavior
+            return request.redirect('/payment/transaction?' + request.httprequest.query_string.decode())
 
