@@ -1072,17 +1072,32 @@ class CustomPaymentPortal(PaymentPostProcessing):
                 _logger.warning('No SaaS client found for invoice %s', invoice.id)
                 return super().display_status(**kwargs)
 
+            _logger.info('Found SaaS client %s for invoice %s', saas_client.id, invoice.id)
+
+            # Clear the first invoice flag to prevent duplicate redirects
+            invoice.sudo().write({'is_saas_first_invoice': False})
+
             # Redirect the user to the SaaS client instance
-            client_domain = '/web'
+            client_domain = None
             if saas_client.sc_full_domain:
-                full_domain = saas_client.sc_full_domain
-                if full_domain.startswith('http://') or full_domain.startswith('https://'):
-                    client_domain = full_domain
-                else:
-                    client_domain = f"https://{full_domain}"
+                full_domain = saas_client.sc_full_domain.strip()
+                if full_domain:
+                    if full_domain.startswith('http://') or full_domain.startswith('https://'):
+                        client_domain = full_domain
+                    else:
+                        client_domain = f"https://{full_domain}"
+
+            if not client_domain:
+                _logger.warning('No valid client domain found for SaaS client %s, falling back to default', saas_client.id)
+                return super().display_status(**kwargs)
 
             _logger.info('Redirecting user to SaaS client instance: %s', client_domain)
-            return request.redirect(client_domain)
+
+            # Use werkzeug redirect to ensure proper redirect handling
+            from werkzeug.utils import redirect as werkzeug_redirect
+            response = werkzeug_redirect(client_domain, code=302)
+            _logger.info('Redirect response created with status: %s', response.status_code)
+            return response
 
         except Exception as e:
             _logger.exception('Error in CustomPaymentPortal: %s', e)
