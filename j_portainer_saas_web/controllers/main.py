@@ -10,6 +10,8 @@ from odoo.addons.payment import utils as payment_utils
 from odoo.addons.payment.controllers.post_processing import PaymentPostProcessing
 import logging
 
+_logger = logging.getLogger(__name__)
+
 
 class SaaSWebController(http.Controller):
     """
@@ -794,8 +796,7 @@ class SaaSWebController(http.Controller):
             'free_trial': free_trial,
         }
 
-    @http.route('/saas/packages/demo', type='http',```python
- auth='public', methods=['POST', 'GET'], csrf=False)
+    @http.route('/saas/packages/demo', type='http', auth='public', methods=['POST', 'GET'], csrf=False)
     def get_demo_packages(self):
         """
         Return demo packages for testing the snippet functionality
@@ -999,6 +1000,8 @@ class SaaSWebController(http.Controller):
 class CustomPaymentPortal(PaymentPostProcessing):
     """Override payment post-processing to handle SaaS client redirects"""
 
+    _logger = logging.getLogger(__name__)
+
     @http.route('/payment/status', type='http', auth="public", website=True, sitemap=False)
     def display_status(self, **kwargs):
         """Override payment status to redirect SaaS clients to their instance after successful payment"""
@@ -1054,3 +1057,33 @@ class CustomPaymentPortal(PaymentPostProcessing):
             if not transaction:
                 _logger.info('No successful transaction found for reference %s', tx_reference)
                 return super().display_status(**kwargs)
+
+            # Get the related invoice and SaaS client
+            invoice = transaction.invoice_ids.filtered('is_saas_first_invoice')
+            if not invoice:
+                _logger.info('No SaaS invoice found for transaction %s', tx_reference)
+                return super().display_status(**kwargs)
+
+            saas_client = request.env['saas.client'].sudo().search([
+                ('sc_subscription_id', '=', invoice.subscription_id.id)
+            ], limit=1)
+
+            if not saas_client:
+                _logger.warning('No SaaS client found for invoice %s', invoice.id)
+                return super().display_status(**kwargs)
+
+            # Redirect the user to the SaaS client instance
+            client_domain = '/web'
+            if saas_client.sc_full_domain:
+                full_domain = saas_client.sc_full_domain
+                if full_domain.startswith('http://') or full_domain.startswith('https://'):
+                    client_domain = full_domain
+                else:
+                    client_domain = f"https://{full_domain}"
+
+            _logger.info('Redirecting user to SaaS client instance: %s', client_domain)
+            return request.redirect(client_domain)
+
+        except Exception as e:
+            _logger.exception('Error in CustomPaymentPortal: %s', e)
+            return super().display_status(**kwargs)
