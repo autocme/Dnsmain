@@ -1058,18 +1058,33 @@ class CustomPaymentPortal(PaymentPostProcessing):
                 _logger.info('No successful transaction found for reference %s', tx_reference)
                 return super().display_status(**kwargs)
 
-            # Get the related invoice and SaaS client
-            invoice = transaction.invoice_ids.filtered('is_saas_first_invoice')
-            if not invoice:
-                _logger.info('No SaaS invoice found for transaction %s', tx_reference)
+            # Check if this transaction is related to SaaS package purchase
+            # First, check if any invoice has the SaaS first invoice flag
+            saas_invoices = transaction.invoice_ids.filtered('is_saas_first_invoice')
+            if not saas_invoices:
+                _logger.info('No SaaS invoices found for transaction %s - not a SaaS package purchase', tx_reference)
                 return super().display_status(**kwargs)
 
+            # Get the first SaaS invoice
+            invoice = saas_invoices[0]
+
+            # Verify this invoice is actually linked to a SaaS subscription
+            if not invoice.subscription_id:
+                _logger.info('Invoice %s has SaaS flag but no subscription - falling back to default', invoice.id)
+                return super().display_status(**kwargs)
+
+            # Find the SaaS client associated with this subscription
             saas_client = request.env['saas.client'].sudo().search([
                 ('sc_subscription_id', '=', invoice.subscription_id.id)
             ], limit=1)
 
             if not saas_client:
-                _logger.warning('No SaaS client found for invoice %s', invoice.id)
+                _logger.warning('No SaaS client found for subscription %s - falling back to default', invoice.subscription_id.id)
+                return super().display_status(**kwargs)
+
+            # Additional validation: ensure the SaaS client has a valid package
+            if not saas_client.sc_package_id:
+                _logger.warning('SaaS client %s has no package - falling back to default', saas_client.id)
                 return super().display_status(**kwargs)
 
             _logger.info('Found SaaS client %s for invoice %s', saas_client.id, invoice.id)
