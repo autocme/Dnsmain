@@ -1024,11 +1024,40 @@ class CustomPaymentPortal(PaymentPostProcessing):
         try:
             _logger.info('CustomPaymentPortal.display_status called with kwargs: %s', kwargs)
             
-            # Get transaction reference from kwargs
-            tx_ref = kwargs.get('reference') or kwargs.get('tx_ref')
+            # Get transaction reference from multiple possible sources
+            tx_ref = (
+                kwargs.get('reference') or 
+                kwargs.get('tx_ref') or 
+                kwargs.get('tx_id') or
+                request.httprequest.args.get('reference') or
+                request.httprequest.args.get('tx_ref') or
+                request.httprequest.args.get('tx_id')
+            )
+            
+            # Also log the raw request parameters for debugging
+            _logger.info('Request args: %s', dict(request.httprequest.args))
+            _logger.info('Request form: %s', dict(request.httprequest.form))
+            
             if not tx_ref:
-                _logger.info('No transaction reference found, using default behavior')
-                return super().display_status(**kwargs)
+                _logger.info('No transaction reference found, trying to find recent SaaS transactions')
+                
+                # Fallback: Look for recent SaaS transactions for current user
+                if request.env.user and not request.env.user._is_public():
+                    recent_tx = request.env['payment.transaction'].sudo().search([
+                        ('partner_id', '=', request.env.user.partner_id.id),
+                        ('state', '=', 'done'),
+                        ('x_saas_package_id', '!=', False)
+                    ], order='create_date desc', limit=1)
+                    
+                    if recent_tx:
+                        _logger.info(f'Found recent SaaS transaction {recent_tx.id} for current user')
+                        tx_ref = recent_tx.reference
+                    else:
+                        _logger.info('No recent SaaS transactions found for current user, using default behavior')
+                        return super().display_status(**kwargs)
+                else:
+                    _logger.info('Public user or no user context, using default behavior')
+                    return super().display_status(**kwargs)
             
             _logger.info(f'Processing payment status for transaction reference: {tx_ref}')
             
