@@ -721,53 +721,51 @@ class SaaSWebController(http.Controller):
 
             _logger.info(f"Payment successful for client {client.id}, checking deployment status...")
 
+            # Clear the first invoice flag to prevent duplicate redirects
+            invoice = transaction.invoice_ids[0]
+            invoice.sudo().write({'is_saas_first_invoice': False})
+
+            # Get the client domain for redirect first
+            client_domain = None
+            if saas_client.sc_full_domain:
+                full_domain = saas_client.sc_full_domain.strip()
+                if full_domain:
+                    if full_domain.startswith('http://') or full_domain.startswith('https://'):
+                        client_domain = full_domain
+                    else:
+                        client_domain = f"https://{full_domain}"
+
+            if not client_domain:
+                _logger.warning('No valid client domain found for SaaS client %s, falling back to default', saas_client.id)
+                return super().display_status(**kwargs)
+
             # Deploy the client if not already deployed or running
-            if client.sc_status in ['draft', 'ready']:
+            deployment_needed = saas_client.sc_status in ['draft', 'ready']
+
+            if deployment_needed:
                 try:
-                    client.action_deploy_client()
-                    _logger.info(f"Initiated deployment for client {client.id} after payment")
-
-                    # Wait a moment for deployment to start
-                    import time
-                    time.sleep(2)
-
-                    # Refresh client data
-                    client = request.env['saas.client'].sudo().browse(client_id)
-
+                    _logger.info('Deploying SaaS client %s after successful payment', saas_client.id)
+                    saas_client.action_deploy_client()
+                    _logger.info('Client %s deployment initiated successfully', saas_client.id)
                 except Exception as e:
-                    _logger.warning(f"Failed to deploy client {client.id} after payment: {e}")
-
-            # Get client domain for redirect
-            client_domain = '/web'
-
-            # First, check if we have a subdomain created
-            if client.sc_subdomain_id and client.sc_full_domain:
-                full_domain = client.sc_full_domain
-                if full_domain.startswith('http://') or full_domain.startswith('https://'):
-                    client_domain = full_domain
-                else:
-                    client_domain = f"https://{full_domain}"
-                _logger.info(f"Redirecting to client domain: {client_domain}")
+                    _logger.warning('Failed to deploy client %s after payment: %s', saas_client.id, e)
+                    # Continue with redirect even if deployment fails
             else:
-                # Fallback: try to construct domain from environment and package
-                if (client.sc_deployment_environment_id and 
-                    client.sc_package_id and 
-                    client.sc_package_id.pkg_dns_domain_id):
+                _logger.info('Client %s already deployed (status: %s), proceeding with redirect', saas_client.id, saas_client.sc_status)
 
-                    env = client.sc_deployment_environment_id
-                    domain = client.sc_package_id.pkg_dns_domain_id.domain
+            _logger.info('Redirecting user to SaaS client instance: %s', client_domain)
 
-                    # Use subdomain number if available, otherwise use client sequence
-                    subdomain = client.sc_subdomain_id.name if client.sc_subdomain_id else client.sc_sequence
-                    constructed_domain = f"https://{subdomain}.{domain}"
-                    client_domain = constructed_domain
-                    _logger.info(f"Constructed client domain: {client_domain}")
-                else:
-                    _logger.warning(f"Unable to determine client domain for {client.id}, using fallback")
+            # Show the same loading screen as free trial before redirecting
+            redirect_data = {
+                'client': saas_client,
+                'client_domain': client_domain,
+                'redirect_delay': 5,  # 5 seconds to allow for deployment completion
+                'package_name': saas_client.sc_package_id.pkg_name,
+                'is_paid_package': True,
+                'deployment_initiated': deployment_needed
+            }
 
-            # Direct redirect to client instance instead of success page
-            _logger.info(f"Payment successful for client {client.id}, redirecting to: {client_domain}")
-            return request.redirect(client_domain)
+            return request.render('j_portainer_saas_web.payment_success_redirect', redirect_data)
 
         except Exception as e:
             _logger.error(f"Error in invoice payment success for client {client_id}: {str(e)}")
@@ -1092,7 +1090,7 @@ class CustomPaymentPortal(PaymentPostProcessing):
             # Clear the first invoice flag to prevent duplicate redirects
             invoice.sudo().write({'is_saas_first_invoice': False})
 
-            # Redirect the user to the SaaS client instance
+            # Get the client domain for redirect first
             client_domain = None
             if saas_client.sc_full_domain:
                 full_domain = saas_client.sc_full_domain.strip()
@@ -1106,15 +1104,30 @@ class CustomPaymentPortal(PaymentPostProcessing):
                 _logger.warning('No valid client domain found for SaaS client %s, falling back to default', saas_client.id)
                 return super().display_status(**kwargs)
 
+            # Deploy the client if not already deployed or running
+            deployment_needed = saas_client.sc_status in ['draft', 'ready']
+
+            if deployment_needed:
+                try:
+                    _logger.info('Deploying SaaS client %s after successful payment', saas_client.id)
+                    saas_client.action_deploy_client()
+                    _logger.info('Client %s deployment initiated successfully', saas_client.id)
+                except Exception as e:
+                    _logger.warning('Failed to deploy client %s after payment: %s', saas_client.id, e)
+                    # Continue with redirect even if deployment fails
+            else:
+                _logger.info('Client %s already deployed (status: %s), proceeding with redirect', saas_client.id, saas_client.sc_status)
+
             _logger.info('Redirecting user to SaaS client instance: %s', client_domain)
 
-            # Show redirect loading screen with message before redirecting
+            # Show the same loading screen as free trial before redirecting
             redirect_data = {
                 'client': saas_client,
                 'client_domain': client_domain,
-                'redirect_delay': 3,  # 3 seconds delay like free trial
+                'redirect_delay': 5,  # 5 seconds to allow for deployment completion
                 'package_name': saas_client.sc_package_id.pkg_name,
-                'is_paid_package': True
+                'is_paid_package': True,
+                'deployment_initiated': deployment_needed
             }
 
             return request.render('j_portainer_saas_web.payment_success_redirect', redirect_data)

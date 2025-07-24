@@ -14,7 +14,7 @@
                                 </div>
 
                                 <h2 class="text-success mb-3">
-                                    <t t-if="is_paid_package">Payment Successful!</t>
+                                    <t t-if="is_paid_package">🎉 Payment Successful!</t>
                                     <t t-else="">🎉 Free Trial Activated!</t>
                                 </h2>
                                 <h4 class="text-muted">Your SaaS instance is ready and you'll be redirected in seconds...</h4>
@@ -47,8 +47,11 @@
                             <div class="text-center">
                                 <div class="alert alert-info">
                                     <i class="fa fa-rocket"></i>
-                                    <strong>Please wait...</strong> You will be automatically redirected to your SaaS instance in 
-                                    <span id="countdown" t-esc="redirect_delay">3</span> seconds.
+                                    <strong>Please wait...</strong> 
+                                    <t t-if="deployment_initiated">Your SaaS instance is being deployed and</t>
+                                    <t t-else="">Your SaaS instance is ready and</t>
+                                    you'll be redirected in 
+                                    <span id="countdown" t-esc="redirect_delay">5</span> seconds.
                                     <div class="saas_loading_dots mt-3">
                                         <div class="dot"></div>
                                         <div class="dot"></div>
@@ -56,7 +59,8 @@
                                     </div>
                                     <div class="mt-2">
                                         <small class="text-muted">
-                                            <t t-if="is_paid_package">Your instance has been deployed and is ready to use!</t>
+                                            <t t-if="deployment_initiated">Deployment is in progress... Please wait.</t>
+                                            <t t-elif="is_paid_package">Your paid instance is ready to use!</t>
                                             <t t-else="">Your free trial instance is ready to explore!</t>
                                         </small>
                                     </div>
