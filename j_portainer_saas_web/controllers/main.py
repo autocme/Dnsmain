@@ -1108,11 +1108,16 @@ class CustomPaymentPortal(PaymentPostProcessing):
 
             _logger.info('Redirecting user to SaaS client instance: %s', client_domain)
 
-            # Use werkzeug redirect to ensure proper redirect handling
-            from werkzeug.utils import redirect as werkzeug_redirect
-            response = werkzeug_redirect(client_domain, code=302)
-            _logger.info('Redirect response created with status: %s', response.status_code)
-            return response
+            # Show redirect loading screen with message before redirecting
+            redirect_data = {
+                'client': saas_client,
+                'client_domain': client_domain,
+                'redirect_delay': 3,  # 3 seconds delay like free trial
+                'package_name': saas_client.sc_package_id.pkg_name,
+                'is_paid_package': True
+            }
+
+            return request.render('j_portainer_saas_web.payment_success_redirect', redirect_data)
 
         except Exception as e:
             _logger.exception('Error in CustomPaymentPortal: %s', e)
