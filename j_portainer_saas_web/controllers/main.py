@@ -755,14 +755,14 @@ class SaaSWebController(http.Controller):
 
             _logger.info('Redirecting user to SaaS client instance: %s', client_domain)
 
-            # Use deployment monitoring for paid packages
+            # Show the same loading screen as free trial before redirecting
             redirect_data = {
                 'client': saas_client,
                 'client_domain': client_domain,
+                'redirect_delay': 5,  # 5 seconds to allow for deployment completion
                 'package_name': saas_client.sc_package_id.pkg_name,
                 'is_paid_package': True,
-                'deployment_initiated': deployment_needed,
-                'use_deployment_monitoring': True
+                'deployment_initiated': deployment_needed
             }
 
             return request.render('j_portainer_saas_web.payment_success_redirect', redirect_data)
@@ -1120,14 +1120,14 @@ class CustomPaymentPortal(PaymentPostProcessing):
 
             _logger.info('Redirecting user to SaaS client instance: %s', client_domain)
 
-            # Use deployment monitoring for paid packages
+            # Show the same loading screen as free trial before redirecting
             redirect_data = {
                 'client': saas_client,
                 'client_domain': client_domain,
+                'redirect_delay': 5,  # 5 seconds to allow for deployment completion
                 'package_name': saas_client.sc_package_id.pkg_name,
                 'is_paid_package': True,
-                'deployment_initiated': deployment_needed,
-                'use_deployment_monitoring': True
+                'deployment_initiated': deployment_needed
             }
 
             return request.render('j_portainer_saas_web.payment_success_redirect', redirect_data)
