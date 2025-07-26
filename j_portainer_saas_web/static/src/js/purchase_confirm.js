@@ -126,9 +126,6 @@
         window.location.href = redirectUrl;
     }
 
-    // Note: Duplicate handlePayInvoiceClick function removed
-    // Payment handling is done through setupInvoicePaymentButton/openNativeOdooPaymentWizard
-
     /**
      * Show loading screen with animation
      */
@@ -239,6 +236,7 @@
             redirectOverlay.style.opacity = '1';
         }, 10);
     }
+
     /**
      * Show full-screen deployment monitoring
      */
@@ -323,6 +321,7 @@
         // Check status every 5 seconds
         var statusInterval = setInterval(checkDeploymentStatus, 5000);
     }
+
     /**
      * Make purchase request to server
      */
@@ -391,45 +390,6 @@
     /**
      * Handle successful purchase
      */
-    function handlePurchaseSuccess(result, packageName) {
-        console.log('Purchase successful:', result);
-
-        // Hide loading screen
-        hideLoadingScreen();
-
-        // Store result data for success screen
-        window.saasClientResult = result;
-
-        // Handle free trial vs paid packages differently
-        if (result.is_free_trial) {
-            // For free trial: show redirect message and redirect to client domain
-            console.log('Free trial completed, redirecting to:', result.client_domain);
-
-            // Show redirect notification
-            showRedirectMessage(result.client_domain);
-
-            setTimeout(function() {
-                var redirectUrl = result.client_domain || '/web';
-
-                // Ensure clean URL format
-                if (redirectUrl !== '/web' && !redirectUrl.startsWith('http')) {
-                    redirectUrl = `https://${redirectUrl}`;
-                }
-
-                console.log('Redirecting to SaaS instance:', redirectUrl);
-                window.location.href = redirectUrl;
-            }, 3000); // Wait 3 seconds to show the redirect message
-        } else {
-            // For paid packages: hide loading and show payment form (already embedded)
-            setTimeout(function() {
-                hideLoadingScreen();
-                showPaymentForm(result.client_id);
-            }, 500);
-        }
-    }
-    /**
-     * Handle successful purchase
-     */
     function handlePurchaseSuccess(data, packageName) {
         console.log('Purchase successful:', data);
 
@@ -443,9 +403,9 @@
             showDeploymentMonitoring(data.client_id, data.client_domain, packageName, data.is_free_trial);
         } else if (data.is_free_trial) {
             // Legacy fallback for free trial
-            setTimeout(() => {
+            setTimeout(function() {
                 showRedirectMessage(data.client_domain);
-                setTimeout(() => {
+                setTimeout(function() {
                     window.location.href = data.client_domain || '/web';
                 }, 3000);
             }, 2000);
@@ -841,63 +801,6 @@
     }
 
     /**
-     * Global function to handle payment frame load
-     */
-    window.handlePaymentFrameLoad = function(iframe, clientId) {
-        console.log('Payment iframe loaded for client:', clientId);
-
-        try {
-            // Add styles to make the iframe content look seamless
-            var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            var style = iframeDoc.createElement('style');
-            style.textContent = `
-                .o_portal_navbar, .o_portal_breadcrumb, .o_portal_sidebar { display: none !important; }
-                .o_portal_wrap { padding: 0 !important; margin: 0 !important; }
-                body { background: transparent !important; margin: 0 !important; padding: 20px !important; }
-                .container { max-width: none !important; padding: 0 !important; }
-                .card { border: none !important; box-shadow: none !important; }
-                .card-header { display: none !important; }
-            `;
-            iframeDoc.head.appendChild(style);
-
-            // Monitor for payment completion
-            var checkInterval = setInterval(function() {
-                try {
-                    var currentUrl = iframe.contentWindow.location.href;
-                    console.log('Current iframe URL:', currentUrl);
-
-                    // Check if payment was successful (redirect to success page)
-                    if (currentUrl.includes('/payment/status') || 
-                        currentUrl.includes('/payment/confirm') ||
-                        currentUrl.includes('payment_success')) {
-
-                        console.log('Payment completed, closing modal...');
-                        clearInterval(checkInterval);
-
-                        // Close modal
-                        if (window.saasPaymentModal && window.saasPaymentModal.backdrop) {
-                            document.body.removeChild(window.saasPaymentModal.backdrop);
-                        }
-
-                        // Payment completion handled automatically by backend
-                        console.log('Payment completed - backend will handle deployment automatically');
-                    }
-                } catch (e) {
-                    // Cross-origin issues, ignore
-                }
-            }, 1000);
-
-            // Stop monitoring after 10 minutes
-            setTimeout(function() {
-                clearInterval(checkInterval);
-            }, 600000);
-
-        } catch (e) {
-            console.log('Could not modify iframe content due to cross-origin restrictions:', e);
-        }
-    };
-
-    /**
      * Handle payment form submission within modal
      */
     function handleModalPaymentSubmission(form, clientId, modalBackdrop) {
@@ -1029,35 +932,6 @@
     }
 
     /**
-     * Update progress steps to show payment as current
-     */
-    function updateProgressToPayment() {
-        // Update step 2 (payment) to completed
-        var step2 = document.querySelector('.saas_steps_progress .saas_step:nth-child(3)');
-        if (step2) {
-            step2.classList.remove('saas_step_current');
-            step2.classList.add('saas_step_completed');
-
-            var step2Circle = step2.querySelector('.saas_step_circle');
-            if (step2Circle) {
-                step2Circle.innerHTML = '<i class="fa fa-check"></i>';
-            }
-        }
-
-        // Update line between step 2 and 3
-        var line2 = document.querySelector('.saas_steps_progress .saas_step_line:nth-child(5)');
-        if (line2) {
-            line2.classList.add('saas_step_line_completed');
-        }
-
-        // Update step 3 (setup) to current
-        var step3 = document.querySelector('.saas_steps_progress .saas_step:nth-child(7)');
-        if (step3) {
-            step3.classList.add('saas_step_current');
-        }
-    }
-
-    /**
      * Show error message
      */
     function showErrorMessage(message) {
@@ -1104,8 +978,7 @@
                     </div>
                 </div>
                 <p style="margin-top: 15px; text-align: center; color: #666;">
-                    <small>After payment completion, you will be automatically redirected to your SaaS instance.</small>
-                </p>
+                    <small>After payment completion, you will be automatically redirected to your SaaS instance.</small></p>
                 <div class="alert alert-success" style="margin-top: 15px;">
                     <i class="fa fa-info-circle"></i>
                     <strong>What happens next:</strong>
