@@ -995,6 +995,95 @@ class SaaSWebController(http.Controller):
                 'error': f'Server error: {str(e)}'
             }
 
+    @http.route('/saas/client/deployment_status/<int:client_id>', type='json', auth='user', methods=['POST'])
+    def check_deployment_status(self, client_id):
+        """
+        Check the deployment status of a SaaS client by monitoring job queue
+        
+        Args:
+            client_id (int): ID of the SaaS client
+            
+        Returns:
+            dict: Status information including job state and deployment status
+        """
+        try:
+            # Find the SaaS client
+            client = request.env['saas.client'].browse(client_id)
+            if not client.exists():
+                return {
+                    'success': False,
+                    'error': 'Client not found',
+                    'status': 'error'
+                }
+            
+            # Check if client is already deployed/running
+            if client.sc_status == 'running':
+                return {
+                    'success': True,
+                    'status': 'completed',
+                    'deployment_complete': True,
+                    'client_domain': client.sc_full_domain,
+                    'message': 'Deployment completed successfully'
+                }
+            
+            # Check for job queue status
+            # Look for deployment jobs for this client
+            jobs = request.env['queue.job'].sudo().search([
+                ('model_name', '=', 'saas.client'),
+                ('record_ids', 'like', f'[{client_id}]'),
+                ('method_name', '=', 'action_deploy')
+            ], order='date_created desc', limit=1)
+            
+            if jobs:
+                job = jobs[0]
+                _logger.info(f'Found deployment job {job.id} with state: {job.state}')
+                
+                if job.state == 'done':
+                    # Job completed successfully, update client status if needed
+                    if client.sc_status != 'running':
+                        client.sudo().write({'sc_status': 'running'})
+                    
+                    return {
+                        'success': True,
+                        'status': 'completed',
+                        'deployment_complete': True,
+                        'client_domain': client.sc_full_domain,
+                        'message': 'Deployment completed successfully'
+                    }
+                elif job.state == 'failed':
+                    return {
+                        'success': True,
+                        'status': 'failed',
+                        'deployment_complete': False,
+                        'error_message': 'Deployment failed. Please contact support for assistance.',
+                        'message': 'Deployment encountered an error'
+                    }
+                else:
+                    # Job is still pending/started
+                    return {
+                        'success': True,
+                        'status': 'deploying',
+                        'deployment_complete': False,
+                        'message': 'Deployment in progress...'
+                    }
+            else:
+                # No job found, deployment might not have started yet
+                return {
+                    'success': True,
+                    'status': 'pending',
+                    'deployment_complete': False,
+                    'message': 'Deployment starting...'
+                }
+                
+        except Exception as e:
+            _logger.error(f'Error checking deployment status for client {client_id}: {str(e)}')
+            return {
+                'success': False,
+                'error': f'Error checking deployment status: {str(e)}',
+                'status': 'error'
+            }
+
+
 class CustomPaymentPortal(PaymentPostProcessing):
     """Override payment post-processing to handle SaaS client redirects"""
 

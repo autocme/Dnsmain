@@ -865,3 +865,131 @@
         font-size: 1rem;
     }
 }
+
+/* ===================================================== */
+/* FULL-SCREEN DEPLOYMENT OVERLAY */
+/* ===================================================== */
+
+.saas_deployment_overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: linear-gradient(135deg, #2F3349 0%, #1a1e30 100%) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 99999 !important;
+    color: white !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.saas_deployment_content {
+    text-align: center;
+    max-width: 500px;
+    padding: 40px;
+}
+
+.saas_deployment_icon {
+    font-size: 64px;
+    margin-bottom: 30px;
+    color: #00a0b0;
+}
+
+.saas_deployment_content h3 {
+    font-size: 32px;
+    margin-bottom: 20px;
+    font-weight: 300;
+    color: white;
+}
+
+.saas_deployment_content p {
+    font-size: 18px;
+    margin-bottom: 30px;
+    color: #b8c6db;
+    line-height: 1.5;
+}
+
+.saas_instance_info {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 30px 0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.instance-label {
+    display: block;
+    font-size: 14px;
+    color: #b8c6db;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.saas_deployment_content .domain-display {
+    font-size: 18px;
+    font-weight: bold;
+    color: #00a0b0;
+    word-break: break-all;
+}
+
+.saas_deployment_error {
+    background: rgba(231, 76, 60, 0.2);
+    border: 1px solid #e74c3c;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 30px;
+    color: #e74c3c;
+}
+
+.saas_deployment_error i {
+    font-size: 24px;
+    margin-bottom: 10px;
+    display: block;
+}
+
+/* Enhanced loading dots animation for deployment */
+.saas_deployment_content .saas_loading_dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 30px;
+}
+
+.saas_deployment_content .saas_loading_dots .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #00a0b0;
+    margin: 0 6px;
+    animation: saas_deployment_bounce 1.4s ease-in-out infinite both;
+}
+
+.saas_deployment_content .saas_loading_dots .dot:nth-child(1) { animation-delay: -0.32s; }
+.saas_deployment_content .saas_loading_dots .dot:nth-child(2) { animation-delay: -0.16s; }
+.saas_deployment_content .saas_loading_dots .dot:nth-child(3) { animation-delay: 0s; }
+
+@keyframes saas_deployment_bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Spinning animation for deployment icon */
+.saas_deployment_icon .fa-spin {
+    animation: saas_deployment_spin 2s linear infinite;
+}
+
+@keyframes saas_deployment_spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

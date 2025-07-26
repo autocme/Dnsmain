@@ -174,69 +174,163 @@
     }
 
     /**
-     * Show redirect message for free trial completion
+     * Show deployment monitoring screen with job queue tracking
      */
-    function showRedirectMessage(clientDomain) {
-        // Hide loading screen
+    function showDeploymentMonitoring(clientId, clientDomain, isFreeTrial) {
+        // Hide current loading screen
         hideLoadingScreen();
         
-        // Create redirect message overlay
-        var redirectOverlay = document.createElement('div');
-        redirectOverlay.className = 'saas_redirect_overlay';
-        redirectOverlay.innerHTML = `
-            <div class="saas_redirect_content">
-                <div class="saas_redirect_icon">
-                    <i class="fa fa-rocket" aria-hidden="true"></i>
+        // Create full-screen deployment overlay
+        var deploymentOverlay = document.createElement('div');
+        deploymentOverlay.id = 'saasDeploymentOverlay';
+        deploymentOverlay.className = 'saas_deployment_overlay';
+        deploymentOverlay.innerHTML = `
+            <div class="saas_deployment_content">
+                <div class="saas_deployment_icon">
+                    <i class="fa fa-cogs fa-spin" aria-hidden="true"></i>
                 </div>
-                <h3>🎉 Free Trial Activated!</h3>
-                <p>Your SaaS instance is ready and you'll be redirected in seconds...</p>
-                <div class="saas_redirect_countdown">
-                    <span class="countdown-text">Redirecting to your instance:</span>
+                <h3>${isFreeTrial ? '🎉 Free Trial Activated!' : '💳 Payment Successful!'}</h3>
+                <p id="deploymentStatusText">Deploying your SaaS instance...</p>
+                <div class="saas_instance_info">
+                    <span class="instance-label">Instance URL:</span>
                     <div class="domain-display">${clientDomain || 'your SaaS instance'}</div>
-                    <div class="countdown-timer" id="redirectTimer">3</div>
                 </div>
                 <div class="saas_loading_dots">
                     <div class="dot"></div>
                     <div class="dot"></div>
                     <div class="dot"></div>
                 </div>
+                <div id="deploymentError" class="saas_deployment_error" style="display: none;">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    <p>Deployment failed. Please contact support for assistance.</p>
+                </div>
             </div>
         `;
         
-        // Add styles
-        redirectOverlay.style.cssText = `
+        // Full viewport coverage styles
+        deploymentOverlay.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #2F3349 0%, #1a1e30 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 9999;
-            backdrop-filter: blur(5px);
+            z-index: 99999;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         `;
         
-        document.body.appendChild(redirectOverlay);
+        document.body.appendChild(deploymentOverlay);
         
-        // Start countdown
-        var timer = 3;
-        var timerElement = document.getElementById('redirectTimer');
-        var countdown = setInterval(function() {
-            timer--;
-            if (timerElement) {
-                timerElement.textContent = timer;
-            }
-            if (timer <= 0) {
-                clearInterval(countdown);
-            }
-        }, 1000);
+        // Start monitoring deployment status
+        monitorDeploymentStatus(clientId, clientDomain);
         
         // Add fade-in animation
         setTimeout(function() {
-            redirectOverlay.style.opacity = '1';
-        }, 10);
+            deploymentOverlay.style.opacity = '1';
+        }, 100);
+    }
+    
+    /**
+     * Monitor deployment status using job queue
+     */
+    function monitorDeploymentStatus(clientId, clientDomain) {
+        console.log('Starting deployment monitoring for client:', clientId);
+        
+        var checkInterval = setInterval(function() {
+            fetch('/saas/client/deployment_status/' + clientId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    method: 'call',
+                    params: {}
+                })
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.result) {
+                    var status = data.result.status;
+                    var message = data.result.message || 'Deployment in progress...';
+                    
+                    console.log('Deployment status:', status, 'Message:', message);
+                    
+                    // Update status text
+                    var statusText = document.getElementById('deploymentStatusText');
+                    if (statusText) {
+                        statusText.textContent = message;
+                    }
+                    
+                    if (status === 'completed' && data.result.deployment_complete) {
+                        // Deployment completed successfully
+                        clearInterval(checkInterval);
+                        console.log('Deployment completed, redirecting to:', clientDomain);
+                        
+                        // Show success message briefly then redirect
+                        if (statusText) {
+                            statusText.textContent = 'Deployment completed! Redirecting...';
+                        }
+                        
+                        setTimeout(function() {
+                            var redirectUrl = clientDomain || '/web';
+                            
+                            // Ensure clean URL format
+                            if (redirectUrl !== '/web' && !redirectUrl.startsWith('http')) {
+                                redirectUrl = `https://${redirectUrl}`;
+                            }
+                            
+                            console.log('Redirecting to SaaS instance:', redirectUrl);
+                            window.location.href = redirectUrl;
+                        }, 2000);
+                        
+                    } else if (status === 'failed') {
+                        // Deployment failed
+                        clearInterval(checkInterval);
+                        console.error('Deployment failed');
+                        
+                        // Hide loading elements and show error
+                        var deploymentIcon = document.querySelector('.saas_deployment_icon i');
+                        var loadingDots = document.querySelector('.saas_loading_dots');
+                        var errorDiv = document.getElementById('deploymentError');
+                        
+                        if (deploymentIcon) {
+                            deploymentIcon.className = 'fa fa-exclamation-triangle';
+                            deploymentIcon.style.color = '#e74c3c';
+                        }
+                        if (loadingDots) {
+                            loadingDots.style.display = 'none';
+                        }
+                        if (errorDiv) {
+                            errorDiv.style.display = 'block';
+                        }
+                        if (statusText) {
+                            statusText.textContent = 'Deployment failed. Please contact support.';
+                        }
+                    }
+                    // For 'deploying', 'pending' statuses, continue monitoring
+                } else {
+                    console.error('Invalid response from deployment status check:', data);
+                }
+            })
+            .catch(function(error) {
+                console.error('Error checking deployment status:', error);
+                // Continue monitoring despite errors
+            });
+        }, 3000); // Check every 3 seconds
+        
+        // Safety timeout after 10 minutes
+        setTimeout(function() {
+            clearInterval(checkInterval);
+            console.log('Deployment monitoring timeout after 10 minutes');
+        }, 600000);
     }
 
     /**
@@ -318,23 +412,11 @@
 
         // Handle free trial vs paid packages differently
         if (result.is_free_trial) {
-            // For free trial: show redirect message and redirect to client domain
-            console.log('Free trial completed, redirecting to:', result.client_domain);
+            // For free trial: monitor deployment and redirect when complete
+            console.log('Free trial created, monitoring deployment for client:', result.client_id);
             
-            // Show redirect notification
-            showRedirectMessage(result.client_domain);
-            
-            setTimeout(function() {
-                var redirectUrl = result.client_domain || '/web';
-                
-                // Ensure clean URL format
-                if (redirectUrl !== '/web' && !redirectUrl.startsWith('http')) {
-                    redirectUrl = `https://${redirectUrl}`;
-                }
-                
-                console.log('Redirecting to SaaS instance:', redirectUrl);
-                window.location.href = redirectUrl;
-            }, 3000); // Wait 3 seconds to show the redirect message
+            // Show deployment monitoring screen
+            showDeploymentMonitoring(result.client_id, result.client_domain, true);
         } else {
             // For paid packages: hide loading and show payment form (already embedded)
             setTimeout(function() {
