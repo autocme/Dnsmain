@@ -91,18 +91,38 @@
             <script type="text/javascript">
                 <![CDATA[
                 document.addEventListener('DOMContentLoaded', function() {
-                    var countdown = parseInt(document.getElementById('countdown').textContent);
+                    var useDeploymentMonitoring = ]]><t t-esc="use_deployment_monitoring or False"/><![CDATA[;
+                    var clientId = ]]><t t-esc="client.id"/><![CDATA[;
                     var clientDomain = ']]><t t-esc="client_domain"/><![CDATA[';
+                    var packageName = ']]><t t-esc="package_name"/><![CDATA[';
+                    var isFreeTrialParam = ]]><t t-esc="client.sc_is_free_trial or False"/><![CDATA[;
+                    
+                    if (useDeploymentMonitoring) {
+                        // Import deployment monitoring functions from purchase_confirm.js
+                        var script = document.createElement('script');
+                        script.src = '/j_portainer_saas_web/static/src/js/purchase_confirm.js';
+                        script.onload = function() {
+                            // Show deployment monitoring overlay after short delay
+                            setTimeout(function() {
+                                if (typeof showDeploymentMonitoring === 'function') {
+                                    showDeploymentMonitoring(clientId, clientDomain, packageName, isFreeTrialParam);
+                                }
+                            }, 1000);
+                        };
+                        document.head.appendChild(script);
+                    } else {
+                        // Legacy countdown redirect
+                        var countdown = parseInt(document.getElementById('countdown').textContent);
+                        var timer = setInterval(function() {
+                            countdown--;
+                            document.getElementById('countdown').textContent = countdown;
 
-                    var timer = setInterval(function() {
-                        countdown--;
-                        document.getElementById('countdown').textContent = countdown;
-
-                        if (countdown <= 0) {
-                            clearInterval(timer);
-                            window.location.href = clientDomain;
-                        }
-                    }, 1000);
+                            if (countdown <= 0) {
+                                clearInterval(timer);
+                                window.location.href = clientDomain;
+                            }
+                        }, 1000);
+                    }
                 });
                 ]]>
             </script>

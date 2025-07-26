@@ -67,6 +67,7 @@
         var billingCycle = button.getAttribute('data-billing-cycle');
         var isFreeTrialAttr = button.getAttribute('data-is-free-trial');
         var isFreeTrial = isFreeTrialAttr === 'true' || isFreeTrialAttr === 'True';
+        var packageName = button.getAttribute('data-package-name');
 
         // Debug logging to track the attribute value
         console.log('Button attributes:', {
@@ -99,7 +100,7 @@
         button.disabled = true;
 
         // Make purchase request
-        makePurchaseRequest(packageId, billingCycle, isFreeTrial);
+        makePurchaseRequest(packageId, billingCycle, isFreeTrial, packageName);
     }
 
     /**
@@ -179,7 +180,7 @@
     function showRedirectMessage(clientDomain) {
         // Hide loading screen
         hideLoadingScreen();
-        
+
         // Create redirect message overlay
         var redirectOverlay = document.createElement('div');
         redirectOverlay.className = 'saas_redirect_overlay';
@@ -202,7 +203,7 @@
                 </div>
             </div>
         `;
-        
+
         // Add styles
         redirectOverlay.style.cssText = `
             position: fixed;
@@ -217,9 +218,9 @@
             z-index: 9999;
             backdrop-filter: blur(5px);
         `;
-        
+
         document.body.appendChild(redirectOverlay);
-        
+
         // Start countdown
         var timer = 3;
         var timerElement = document.getElementById('redirectTimer');
@@ -232,17 +233,100 @@
                 clearInterval(countdown);
             }
         }, 1000);
-        
+
         // Add fade-in animation
         setTimeout(function() {
             redirectOverlay.style.opacity = '1';
         }, 10);
     }
+    /**
+     * Show full-screen deployment monitoring
+     */
+    function showDeploymentMonitoring(clientId, clientDomain, packageName, isFreeTrial) {
+        var monitoringOverlay = document.createElement('div');
+        monitoringOverlay.className = 'saas_monitoring_overlay';
+        monitoringOverlay.innerHTML = `
+            <div class="saas_monitoring_content">
+                <div class="saas_monitoring_icon">
+                    <i class="fa fa-cogs fa-spin" aria-hidden="true"></i>
+                </div>
+                <h3>Deploying your ${packageName} instance...</h3>
+                <p>Please wait while we set up your instance. This may take a few minutes.</p>
+                <div class="saas_loading_dots">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+                <div id="deploymentStatusMessage"></div>
+            </div>
+        `;
 
+        // Add styles for full-screen overlay
+        monitoringOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(5px);
+            color: white;
+            text-align: center;
+        `;
+
+        document.body.appendChild(monitoringOverlay);
+
+        // Function to check deployment status
+        function checkDeploymentStatus() {
+            fetch('/saas/client/deployment_status?client_id=' + clientId, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'running') {
+                    // Still deploying
+                    console.log('Deployment in progress...');
+                } else if (data.status === 'done') {
+                    // Deployment done, redirect
+                    console.log('Deployment complete, redirecting to:', clientDomain);
+                    document.body.removeChild(monitoringOverlay); // Remove overlay
+                    window.location.href = clientDomain || '/web';
+                } else if (data.status === 'failed') {
+                    // Deployment failed
+                    console.error('Deployment failed:', data.error);
+                    var statusMessageDiv = document.getElementById('deploymentStatusMessage');
+                    if (statusMessageDiv) {
+                        statusMessageDiv.innerHTML = `
+                            <div class="alert alert-danger">
+                                <strong>Deployment Failed!</strong>
+                                <p>We encountered an error while deploying your instance. Please contact support.</p>
+                            </div>
+                        `;
+                    }
+                    // Optionally stop polling after a failure
+                    clearInterval(statusInterval);
+                }
+            })
+            .catch(error => {
+                console.error('Error checking deployment status:', error);
+                // Optionally handle network errors
+            });
+        }
+
+        // Check status every 5 seconds
+        var statusInterval = setInterval(checkDeploymentStatus, 5000);
+    }
     /**
      * Make purchase request to server
      */
-    function makePurchaseRequest(packageId, billingCycle, isFreeTrial) {
+    function makePurchaseRequest(packageId, billingCycle, isFreeTrial, packageName) {
         console.log('Making purchase request with:', {
             packageId: packageId,
             billingCycle: billingCycle,
@@ -288,7 +372,7 @@
             if (data.result && data.result.success) {
                 // Wait a moment for the loading animation, then show success
                 setTimeout(function() {
-                    handlePurchaseSuccess(data.result);
+                    handlePurchaseSuccess(data.result, packageName);
                 }, 2000);
             } else {
                 var errorMsg = 'Purchase failed. Please try again.';
@@ -307,7 +391,7 @@
     /**
      * Handle successful purchase
      */
-    function handlePurchaseSuccess(result) {
+    function handlePurchaseSuccess(result, packageName) {
         console.log('Purchase successful:', result);
 
         // Hide loading screen
@@ -320,18 +404,18 @@
         if (result.is_free_trial) {
             // For free trial: show redirect message and redirect to client domain
             console.log('Free trial completed, redirecting to:', result.client_domain);
-            
+
             // Show redirect notification
             showRedirectMessage(result.client_domain);
-            
+
             setTimeout(function() {
                 var redirectUrl = result.client_domain || '/web';
-                
+
                 // Ensure clean URL format
                 if (redirectUrl !== '/web' && !redirectUrl.startsWith('http')) {
                     redirectUrl = `https://${redirectUrl}`;
                 }
-                
+
                 console.log('Redirecting to SaaS instance:', redirectUrl);
                 window.location.href = redirectUrl;
             }, 3000); // Wait 3 seconds to show the redirect message
@@ -340,6 +424,36 @@
             setTimeout(function() {
                 hideLoadingScreen();
                 showPaymentForm(result.client_id);
+            }, 500);
+        }
+    }
+    /**
+     * Handle successful purchase
+     */
+    function handlePurchaseSuccess(data, packageName) {
+        console.log('Purchase successful:', data);
+
+        // Store result data for success screen
+        window.saasClientResult = data;
+
+        // Check if deployment monitoring is required
+        if (data.requires_deployment_monitoring) {
+            // Hide loading screen and show full-screen deployment monitoring
+            hideLoadingScreen();
+            showDeploymentMonitoring(data.client_id, data.client_domain, packageName, data.is_free_trial);
+        } else if (data.is_free_trial) {
+            // Legacy fallback for free trial
+            setTimeout(() => {
+                showRedirectMessage(data.client_domain);
+                setTimeout(() => {
+                    window.location.href = data.client_domain || '/web';
+                }, 3000);
+            }, 2000);
+        } else {
+            // For paid packages: hide loading and show payment form (already embedded)
+            setTimeout(function() {
+                hideLoadingScreen();
+                showPaymentForm(data.client_id);
             }, 500);
         }
     }

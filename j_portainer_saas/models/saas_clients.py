@@ -587,7 +587,9 @@ class SaasClient(models.Model):
     # ========================================================================
 
     def action_deploy_client(self):
-        self.with_delay().action_deploy()
+        """Deploy client using job queue and return job reference"""
+        job = self.with_delay().action_deploy()
+        return job
 
     def action_deploy(self):
         """Deploy the client template to Portainer by creating custom template and stack."""
