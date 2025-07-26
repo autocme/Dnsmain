@@ -1048,15 +1048,23 @@ class SaaSWebController(http.Controller):
                         'status': 'completed',
                         'deployment_complete': True,
                         'client_domain': client.sc_full_domain,
-                        'message': 'Deployment completed successfully'
+                        'message': 'System ready! Redirecting to your instance...'
                     }
                 elif job.state == 'failed':
                     return {
                         'success': True,
                         'status': 'failed',
                         'deployment_complete': False,
-                        'error_message': 'Deployment failed. Please contact support for assistance.',
-                        'message': 'Deployment encountered an error'
+                        'error_message': 'System creation failed. Please contact support for assistance.',
+                        'message': 'System creation encountered an error'
+                    }
+                elif job.state == 'cancel':
+                    return {
+                        'success': True,
+                        'status': 'cancel',
+                        'deployment_complete': False,
+                        'error_message': 'System creation was cancelled. Please contact support for assistance.',
+                        'message': 'System creation was cancelled'
                     }
                 else:
                     # Job is still pending/started
@@ -1064,7 +1072,7 @@ class SaaSWebController(http.Controller):
                         'success': True,
                         'status': 'deploying',
                         'deployment_complete': False,
-                        'message': 'Deployment in progress...'
+                        'message': 'Creating your system...'
                     }
             else:
                 # No job found, deployment might not have started yet
@@ -1072,7 +1080,7 @@ class SaaSWebController(http.Controller):
                     'success': True,
                     'status': 'pending',
                     'deployment_complete': False,
-                    'message': 'Deployment starting...'
+                    'message': 'System creation starting...'
                 }
                 
         except Exception as e:

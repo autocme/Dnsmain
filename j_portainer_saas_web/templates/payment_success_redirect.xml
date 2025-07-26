@@ -17,68 +17,23 @@
                                     <t t-if="is_paid_package">🎉 Payment Successful!</t>
                                     <t t-else="">🎉 Free Trial Activated!</t>
                                 </h2>
-                                <h4 class="text-muted">Your SaaS instance is ready and you'll be redirected in seconds...</h4>
-                            </div>
-
-                            <!-- Client Information -->
-                            <div class="card mb-4">
-                                <div class="card-body text-center">
-                                    <h5 class="card-title">Instance Details</h5>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <strong>Package:</strong> <span t-esc="client.sc_package_id.pkg_name"/>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <strong>Client ID:</strong> <span t-esc="client.sc_sequence"/>
-                                        </div>
-                                    </div>
-                                    <div class="row mt-2">
-                                        <div class="col-12">
-                                            <strong>Instance URL:</strong> 
-                                            <a t-att-href="client_domain" target="_blank" class="text-primary">
-                                                <span t-esc="client_domain"/>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
+                                <h4 class="text-muted">We are creating your system and you'll be redirected after finish</h4>
                             </div>
 
                             <!-- Progress and Redirect Info -->
                             <div class="text-center">
                                 <div class="alert alert-info">
-                                    <i class="fa fa-rocket"></i>
-                                    <strong>Please wait...</strong> 
-                                    <t t-if="deployment_initiated">Your SaaS instance is being deployed and</t>
-                                    <t t-else="">Your SaaS instance is ready and</t>
-                                    you'll be redirected in 
-                                    <span id="countdown" t-esc="redirect_delay">5</span> seconds.
+                                    <i class="fa fa-cogs fa-spin"></i>
+                                    <strong id="deploymentStatusText">Creating your system...</strong>
                                     <div class="saas_loading_dots mt-3">
                                         <div class="dot"></div>
                                         <div class="dot"></div>
                                         <div class="dot"></div>
                                     </div>
-                                    <div class="mt-2">
-                                        <small class="text-muted">
-                                            <t t-if="deployment_initiated">Deployment is in progress... Please wait.</t>
-                                            <t t-elif="is_paid_package">Your paid instance is ready to use!</t>
-                                            <t t-else="">Your free trial instance is ready to explore!</t>
-                                        </small>
+                                    <div id="deploymentError" class="mt-3" style="display: none;">
+                                        <i class="fa fa-exclamation-triangle" style="color: #e74c3c;"></i>
+                                        <strong style="color: #e74c3c;">System creation failed. Please contact support for assistance.</strong>
                                     </div>
-                                </div>
-
-                                <div class="mt-3">
-                                    <a t-att-href="client_domain" class="btn btn-primary btn-lg" target="_blank">
-                                        <i class="fa fa-external-link"></i>
-                                        <t t-if="is_paid_package">Go to My Instance Now</t>
-                                        <t t-else="">Start Using My Free Trial</t>
-                                    </a>
-                                </div>
-
-                                <div class="mt-2">
-                                    <a href="/my/home" class="btn btn-secondary">
-                                        <i class="fa fa-home"></i>
-                                        Go to My Dashboard
-                                    </a>
                                 </div>
                             </div>
 
@@ -131,37 +86,42 @@
                                 console.log('Deployment status:', status, 'Message:', message);
                                 
                                 // Update status text
-                                var alertDiv = document.querySelector('.alert-info');
-                                if (alertDiv && status !== 'completed') {
-                                    var messageSpan = alertDiv.querySelector('strong').nextSibling;
-                                    if (messageSpan) {
-                                        messageSpan.textContent = ' ' + message + ' ';
-                                    }
+                                var statusTextElement = document.getElementById('deploymentStatusText');
+                                if (statusTextElement && status !== 'completed') {
+                                    statusTextElement.textContent = message;
                                 }
                                 
                                 if (status === 'completed' && data.result.deployment_complete) {
                                     // Deployment completed successfully
                                     clearInterval(checkInterval);
-                                    console.log('Deployment completed, redirecting to:', clientDomain);
+                                    console.log('System creation completed, redirecting to:', clientDomain);
                                     
                                     // Show success message briefly then redirect
-                                    if (alertDiv) {
-                                        alertDiv.innerHTML = '<i class="fa fa-check-circle"></i> <strong>Deployment completed!</strong> Redirecting to your instance...';
-                                        alertDiv.className = 'alert alert-success';
+                                    if (statusTextElement) {
+                                        statusTextElement.innerHTML = '<i class="fa fa-check-circle"></i> System ready! Redirecting to your instance...';
                                     }
                                     
                                     setTimeout(function() {
                                         window.location.href = clientDomain;
                                     }, 2000);
                                     
-                                } else if (status === 'failed') {
-                                    // Deployment failed
+                                } else if (status === 'failed' || status === 'cancel') {
+                                    // Deployment failed or cancelled
                                     clearInterval(checkInterval);
-                                    console.error('Deployment failed');
+                                    console.error('System creation failed or cancelled');
                                     
-                                    if (alertDiv) {
-                                        alertDiv.innerHTML = '<i class="fa fa-exclamation-triangle"></i> <strong>Deployment failed.</strong> Please contact support for assistance.';
-                                        alertDiv.className = 'alert alert-danger';
+                                    // Hide loading dots and show error
+                                    var loadingDots = document.querySelector('.saas_loading_dots');
+                                    var errorDiv = document.getElementById('deploymentError');
+                                    
+                                    if (loadingDots) {
+                                        loadingDots.style.display = 'none';
+                                    }
+                                    if (statusTextElement) {
+                                        statusTextElement.style.display = 'none';
+                                    }
+                                    if (errorDiv) {
+                                        errorDiv.style.display = 'block';
                                     }
                                 }
                                 // For 'deploying', 'pending' statuses, continue monitoring

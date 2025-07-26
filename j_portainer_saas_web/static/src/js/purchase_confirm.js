@@ -190,11 +190,7 @@
                     <i class="fa fa-cogs fa-spin" aria-hidden="true"></i>
                 </div>
                 <h3>${isFreeTrial ? '🎉 Free Trial Activated!' : '💳 Payment Successful!'}</h3>
-                <p id="deploymentStatusText">Deploying your SaaS instance...</p>
-                <div class="saas_instance_info">
-                    <span class="instance-label">Instance URL:</span>
-                    <div class="domain-display">${clientDomain || 'your SaaS instance'}</div>
-                </div>
+                <p id="deploymentStatusText">We are creating your system and you'll be redirected after finish</p>
                 <div class="saas_loading_dots">
                     <div class="dot"></div>
                     <div class="dot"></div>
@@ -202,7 +198,7 @@
                 </div>
                 <div id="deploymentError" class="saas_deployment_error" style="display: none;">
                     <i class="fa fa-exclamation-triangle"></i>
-                    <p>Deployment failed. Please contact support for assistance.</p>
+                    <p>System creation failed. Please contact support for assistance.</p>
                 </div>
             </div>
         `;
@@ -298,10 +294,10 @@
                             window.location.href = redirectUrl;
                         }, 2000);
                         
-                    } else if (status === 'failed') {
-                        // Deployment failed
+                    } else if (status === 'failed' || status === 'cancel') {
+                        // Deployment failed or cancelled
                         clearInterval(checkInterval);
-                        console.error('Deployment failed');
+                        console.error('System creation failed or cancelled');
                         
                         // Hide loading elements and show error
                         var deploymentIcon = document.querySelector('.saas_deployment_icon i');
@@ -319,7 +315,7 @@
                             errorDiv.style.display = 'block';
                         }
                         if (statusText) {
-                            statusText.textContent = 'Deployment failed. Please contact support.';
+                            statusText.textContent = 'System creation failed. Please contact support for assistance.';
                         }
                         
                         // Restore body overflow on failure
