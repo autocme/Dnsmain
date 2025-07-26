@@ -87,22 +87,100 @@
                 </div>
             </div>
 
-            <!-- Auto-redirect Script -->
+            <!-- Deployment Monitoring Script -->
             <script type="text/javascript">
                 <![CDATA[
                 document.addEventListener('DOMContentLoaded', function() {
-                    var countdown = parseInt(document.getElementById('countdown').textContent);
+                    var clientId = ]]><t t-esc="client.id"/><![CDATA[;
                     var clientDomain = ']]><t t-esc="client_domain"/><![CDATA[';
+                    var deploymentInitiated = ]]><t t-esc="'true' if deployment_initiated else 'false'"/><![CDATA[;
 
-                    var timer = setInterval(function() {
-                        countdown--;
-                        document.getElementById('countdown').textContent = countdown;
+                    console.log('Payment success redirect: Starting deployment monitoring for client:', clientId);
 
-                        if (countdown <= 0) {
-                            clearInterval(timer);
+                    // If no deployment was initiated, redirect immediately after short delay
+                    if (!deploymentInitiated) {
+                        console.log('No deployment needed, redirecting immediately');
+                        setTimeout(function() {
                             window.location.href = clientDomain;
-                        }
-                    }, 1000);
+                        }, 3000);
+                        return;
+                    }
+
+                    // Monitor deployment status
+                    var checkInterval = setInterval(function() {
+                        fetch('/saas/client/deployment_status/' + clientId, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: JSON.stringify({
+                                jsonrpc: '2.0',
+                                method: 'call',
+                                params: {}
+                            })
+                        })
+                        .then(function(response) {
+                            return response.json();
+                        })
+                        .then(function(data) {
+                            if (data.result) {
+                                var status = data.result.status;
+                                var message = data.result.message || 'Deployment in progress...';
+                                
+                                console.log('Deployment status:', status, 'Message:', message);
+                                
+                                // Update status text
+                                var alertDiv = document.querySelector('.alert-info');
+                                if (alertDiv && status !== 'completed') {
+                                    var messageSpan = alertDiv.querySelector('strong').nextSibling;
+                                    if (messageSpan) {
+                                        messageSpan.textContent = ' ' + message + ' ';
+                                    }
+                                }
+                                
+                                if (status === 'completed' && data.result.deployment_complete) {
+                                    // Deployment completed successfully
+                                    clearInterval(checkInterval);
+                                    console.log('Deployment completed, redirecting to:', clientDomain);
+                                    
+                                    // Show success message briefly then redirect
+                                    if (alertDiv) {
+                                        alertDiv.innerHTML = '<i class="fa fa-check-circle"></i> <strong>Deployment completed!</strong> Redirecting to your instance...';
+                                        alertDiv.className = 'alert alert-success';
+                                    }
+                                    
+                                    setTimeout(function() {
+                                        window.location.href = clientDomain;
+                                    }, 2000);
+                                    
+                                } else if (status === 'failed') {
+                                    // Deployment failed
+                                    clearInterval(checkInterval);
+                                    console.error('Deployment failed');
+                                    
+                                    if (alertDiv) {
+                                        alertDiv.innerHTML = '<i class="fa fa-exclamation-triangle"></i> <strong>Deployment failed.</strong> Please contact support for assistance.';
+                                        alertDiv.className = 'alert alert-danger';
+                                    }
+                                }
+                                // For 'deploying', 'pending' statuses, continue monitoring
+                            } else {
+                                console.error('Invalid response from deployment status check:', data);
+                            }
+                        })
+                        .catch(function(error) {
+                            console.error('Error checking deployment status:', error);
+                            // Continue monitoring despite errors
+                        });
+                    }, 3000); // Check every 3 seconds
+                    
+                    // Safety timeout after 10 minutes
+                    setTimeout(function() {
+                        clearInterval(checkInterval);
+                        console.log('Deployment monitoring timeout after 10 minutes, redirecting anyway');
+                        window.location.href = clientDomain;
+                    }, 600000);
                 });
                 ]]>
             </script>

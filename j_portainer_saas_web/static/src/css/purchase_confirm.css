@@ -874,17 +874,22 @@
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
     background: linear-gradient(135deg, #2F3349 0%, #1a1e30 100%) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    z-index: 99999 !important;
+    z-index: 999999 !important;
     color: white !important;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
+    opacity: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-sizing: border-box !important;
 }
 
 .saas_deployment_content {

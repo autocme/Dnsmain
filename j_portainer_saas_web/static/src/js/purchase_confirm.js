@@ -223,15 +223,19 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         `;
         
+        // Prevent body scrolling while overlay is shown
+        document.body.style.overflow = 'hidden';
+        
         document.body.appendChild(deploymentOverlay);
+        
+        // Make overlay visible immediately (force show)
+        deploymentOverlay.style.opacity = '1';
+        deploymentOverlay.style.display = 'flex';
         
         // Start monitoring deployment status
         monitorDeploymentStatus(clientId, clientDomain);
         
-        // Add fade-in animation
-        setTimeout(function() {
-            deploymentOverlay.style.opacity = '1';
-        }, 100);
+        console.log('Deployment overlay added to DOM and should cover entire screen');
     }
     
     /**
@@ -280,6 +284,9 @@
                         }
                         
                         setTimeout(function() {
+                            // Restore body overflow before redirect
+                            document.body.style.overflow = '';
+                            
                             var redirectUrl = clientDomain || '/web';
                             
                             // Ensure clean URL format
@@ -314,6 +321,9 @@
                         if (statusText) {
                             statusText.textContent = 'Deployment failed. Please contact support.';
                         }
+                        
+                        // Restore body overflow on failure
+                        document.body.style.overflow = '';
                     }
                     // For 'deploying', 'pending' statuses, continue monitoring
                 } else {
@@ -404,9 +414,6 @@
     function handlePurchaseSuccess(result) {
         console.log('Purchase successful:', result);
 
-        // Hide loading screen
-        hideLoadingScreen();
-
         // Store result data for success screen
         window.saasClientResult = result;
 
@@ -415,12 +422,13 @@
             // For free trial: monitor deployment and redirect when complete
             console.log('Free trial created, monitoring deployment for client:', result.client_id);
             
-            // Show deployment monitoring screen
+            // Don't hide loading screen - let showDeploymentMonitoring handle the transition
+            // Show deployment monitoring screen immediately
             showDeploymentMonitoring(result.client_id, result.client_domain, true);
         } else {
             // For paid packages: hide loading and show payment form (already embedded)
+            hideLoadingScreen();
             setTimeout(function() {
-                hideLoadingScreen();
                 showPaymentForm(result.client_id);
             }, 500);
         }
