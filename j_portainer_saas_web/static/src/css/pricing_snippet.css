@@ -296,13 +296,13 @@
 .currency-symbol {
     font-size: 1.5rem;
     font-weight: 600;
-    color: var(--primary-color);
+    color: #6A4B62;
 }
 
 .price-amount {
     font-size: 2.5rem;
     font-weight: 800;
-    color: var(--primary-color);
+    color: #6A4B62;
     line-height: 1;
 }
 
@@ -414,7 +414,7 @@
 .btn-main:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(255, 149, 0, 0.4);
-    background: linear-gradient(135deg, #6A4B62, #FF9500);
+    background: linear-gradient(135deg, #FFBB00, #FF9500);
 }
 
 .btn-trial {

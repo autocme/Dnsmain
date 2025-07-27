@@ -48,8 +48,8 @@
 }
 
 .saas_step_current .saas_step_circle {
-    background-color: #FF9500;
-    border-color: #FF9500;
+    background-color: #6A4B62;
+    border-color: #6A4B62;
     color: white;
 }
 
@@ -115,7 +115,7 @@
 .saas_price_text {
     font-size: 1.5rem;
     font-weight: 600;
-    color: #FF9500;
+    color: #6A4B62;
 }
 
 .saas_package_description {
