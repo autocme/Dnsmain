@@ -261,11 +261,12 @@
                     var status = data.result.status;
                     var message = data.result.message || 'Deployment in progress...';
                     
+                    console.log('Deployment status response:', JSON.stringify(data.result));
                     console.log('Deployment status:', status, 'Message:', message);
                     
-                    // Update status text
+                    // Update status text only for non-error states (errors handled below)
                     var statusText = document.getElementById('deploymentStatusText');
-                    if (statusText) {
+                    if (statusText && status !== 'failed' && status !== 'cancel' && status !== 'cancelled') {
                         statusText.textContent = message;
                     }
                     
@@ -294,10 +295,10 @@
                             window.location.href = redirectUrl;
                         }, 2000);
                         
-                    } else if (status === 'failed' || status === 'cancel') {
+                    } else if (status === 'failed' || status === 'cancel' || status === 'cancelled') {
                         // Deployment failed or cancelled
                         clearInterval(checkInterval);
-                        console.error('System creation failed or cancelled');
+                        console.error('System creation failed or cancelled, status:', status);
                         
                         // Hide loading elements and show error
                         var deploymentIcon = document.querySelector('.saas_deployment_icon i');

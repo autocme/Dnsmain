@@ -1036,7 +1036,8 @@ class SaaSWebController(http.Controller):
             
             if jobs:
                 job = jobs[0]
-                _logger.info(f'Found deployment job {job.id} with state: {job.state}')
+                _logger.info(f'Found deployment job {job.id} with state: "{job.state}" (type: {type(job.state)})')
+                _logger.info(f'Job details: id={job.id}, uuid={job.uuid}, state="{job.state}", date_created={job.date_created}, date_started={job.date_started}, date_done={job.date_done}')
                 
                 if job.state == 'done':
                     # Job completed successfully, update client status if needed
@@ -1058,7 +1059,7 @@ class SaaSWebController(http.Controller):
                         'error_message': 'System creation failed. Please contact support for assistance.',
                         'message': 'System creation encountered an error'
                     }
-                elif job.state == 'cancel':
+                elif job.state == 'cancelled':
                     return {
                         'success': True,
                         'status': 'cancel',
@@ -1067,7 +1068,8 @@ class SaaSWebController(http.Controller):
                         'message': 'System creation was cancelled'
                     }
                 else:
-                    # Job is still pending/started
+                    # Job is still pending/started or unknown state
+                    _logger.warning(f'Unexpected job state "{job.state}" for job {job.id}, treating as deploying')
                     return {
                         'success': True,
                         'status': 'deploying',
