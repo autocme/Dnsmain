@@ -5,8 +5,8 @@
 
 /* CSS Custom Properties for Dynamic Styling */
 .saas-pricing-section {
-    --primary-color: #875A7B;
-    --accent-color: #0066CC;
+    --primary-color: #FF9500;
+    --accent-color: #6A4B62;
     --card-bg: #FFFFFF;
     --text-color: #333333;
     --border-radius: 8px;
@@ -51,7 +51,7 @@
     font-weight: 700;
     color: var(--text-color);
     margin-bottom: 1rem;
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: linear-gradient(135deg, #FFBB00, #FF9500);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -146,7 +146,7 @@
 }
 
 .toggle-slider:hover {
-    box-shadow: 0 0 0 4px rgba(135, 90, 123, 0.1);
+    box-shadow: 0 0 0 4px rgba(255, 149, 0, 0.1);
 }
 
 /* ========================================================================== */
@@ -230,7 +230,7 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    background: linear-gradient(90deg, #FFBB00, #FF9500);
     opacity: 0;
     transition: opacity var(--transition-duration) ease;
 }
@@ -256,7 +256,7 @@
 }
 
 .saas-pricing-card.featured .card-header {
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: linear-gradient(135deg, #FFBB00, #FF9500);
     color: white;
 }
 
@@ -405,16 +405,16 @@
 }
 
 .btn-main {
-    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    background: linear-gradient(135deg, #FFBB00, #FF9500);
     color: white;
     border: none;
-    box-shadow: 0 4px 10px rgba(135, 90, 123, 0.3);
+    box-shadow: 0 4px 10px rgba(255, 149, 0, 0.3);
 }
 
 .btn-main:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(135, 90, 123, 0.4);
-    background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+    box-shadow: 0 6px 20px rgba(255, 149, 0, 0.4);
+    background: linear-gradient(135deg, #6A4B62, #FF9500);
 }
 
 .btn-trial {
@@ -427,7 +427,7 @@
     background: var(--primary-color);
     color: white;
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(135, 90, 123, 0.3);
+    box-shadow: 0 4px 15px rgba(255, 149, 0, 0.3);
 }
 
 .btn-icon {
@@ -598,7 +598,7 @@
 }
 
 .hover-glow .saas-pricing-card:hover {
-    box-shadow: 0 0 30px rgba(135, 90, 123, 0.3);
+    box-shadow: 0 0 30px rgba(255, 149, 0, 0.3);
 }
 
 .hover-none .saas-pricing-card:hover {
