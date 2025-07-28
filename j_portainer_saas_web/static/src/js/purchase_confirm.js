@@ -315,8 +315,9 @@
                         if (errorDiv) {
                             errorDiv.style.display = 'block';
                         }
+                        // Remove duplicate error message - only show the message in the red error box
                         if (statusText) {
-                            statusText.textContent = 'System creation failed. Please contact support for assistance.';
+                            statusText.style.display = 'none';
                         }
                         
                         // Restore body overflow on failure

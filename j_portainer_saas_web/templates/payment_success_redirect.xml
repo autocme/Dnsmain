@@ -190,18 +190,24 @@
                                         clearInterval(checkInterval);
                                         console.error('System creation failed or was cancelled');
                                         
-                                        // Hide loading dots and show error
+                                        // Hide loading elements and show error (exactly like free version)
+                                        var deploymentIcon = document.querySelector('.saas_deployment_icon i');
                                         var loadingDots = document.querySelector('.saas_loading_dots');
                                         var errorDiv = document.getElementById('deploymentError');
                                         
+                                        if (deploymentIcon) {
+                                            deploymentIcon.className = 'fa fa-exclamation-triangle';
+                                            deploymentIcon.style.color = '#e74c3c';
+                                        }
                                         if (loadingDots) {
                                             loadingDots.style.display = 'none';
                                         }
-                                        if (statusTextElement) {
-                                            statusTextElement.style.display = 'none';
-                                        }
                                         if (errorDiv) {
                                             errorDiv.style.display = 'block';
+                                        }
+                                        // Remove duplicate error message - only show the message in the red error box
+                                        if (statusTextElement) {
+                                            statusTextElement.style.display = 'none';
                                         }
                                     }
                                 } else {
