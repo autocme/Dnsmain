@@ -168,17 +168,22 @@
                                         clearInterval(checkInterval);
                                         console.log('System creation completed, redirecting to:', clientDomain);
                                         
+                                        // Show completion message exactly like the free trial approach
+                                        if (statusTextElement) {
+                                            statusTextElement.textContent = 'Deployment completed! Redirecting...';
+                                        }
+                                        
                                         // Clean up domain URL for redirect
                                         var cleanDomain = clientDomain;
                                         if (cleanDomain && !cleanDomain.startsWith('http')) {
                                             cleanDomain = 'https://' + cleanDomain;
                                         }
                                         
-                                        // Redirect to client instance
+                                        // Redirect to client instance (2 second delay to show completion message)
                                         setTimeout(function() {
                                             document.body.style.overflow = '';
                                             window.location.href = cleanDomain;
-                                        }, 1000);
+                                        }, 2000);
                                         
                                     } else if (status === 'failed' || status === 'cancelled') {
                                         // Deployment failed or was cancelled
