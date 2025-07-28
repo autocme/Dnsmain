@@ -129,6 +129,7 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Unified Loading Experience**: Applied the elegant full-screen deployment monitoring screen (dark gradient background, spinning gears, loading dots) to both free trial and paid packages for consistent user experience
 - **Completion Message Alignment**: Both free trial and paid versions now show identical "Deployment completed! Redirecting..." message when job queue processing finishes
 - **Error Handling Consistency**: Fixed duplicate error messages in free version, both versions now show single error message in red box only for failed/cancelled deployments
+- **Cancel State Handling**: Fixed paid version to properly handle both 'cancel' and 'cancelled' job states, preventing backend messages from overriding error display
 - **Icon State Management**: Both versions now change spinning gears to warning triangle icon when deployment fails or is cancelled
 
 ## July 6, 2025 - Package Model Architectural Refactoring

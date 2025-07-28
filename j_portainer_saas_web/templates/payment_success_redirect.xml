@@ -157,9 +157,9 @@
                                     
                                     console.log('Deployment status:', status, 'Message:', message);
                                     
-                                    // Update status text (but prevent updates for error states)
+                                    // Update status text (but prevent updates for error states - including 'cancel' without 'd')
                                     var statusTextElement = document.getElementById('deploymentStatusText');
-                                    if (statusTextElement && status !== 'completed' && status !== 'failed' && status !== 'cancelled') {
+                                    if (statusTextElement && status !== 'completed' && status !== 'failed' && status !== 'cancelled' && status !== 'cancel') {
                                         statusTextElement.textContent = message;
                                     }
                                     
@@ -185,7 +185,7 @@
                                             window.location.href = cleanDomain;
                                         }, 2000);
                                         
-                                    } else if (status === 'failed' || status === 'cancelled') {
+                                    } else if (status === 'failed' || status === 'cancelled' || status === 'cancel') {
                                         // Deployment failed or was cancelled
                                         clearInterval(checkInterval);
                                         console.error('System creation failed or was cancelled');
