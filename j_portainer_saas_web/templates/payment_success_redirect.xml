@@ -49,6 +49,7 @@
                     var clientId = ]]><t t-esc="client.id"/><![CDATA[;
                     var clientDomain = ']]><t t-esc="client_domain"/><![CDATA[';
                     var deploymentInitiated = ]]><t t-esc="'true' if deployment_initiated else 'false'"/><![CDATA[;
+                    var isPaidPackage = ]]><t t-esc="'true' if is_paid_package else 'false'"/><![CDATA[;
 
                     console.log('Payment success redirect: Starting deployment monitoring for client:', clientId);
 
@@ -61,86 +62,168 @@
                         return;
                     }
 
-                    // Monitor deployment status
-                    var checkInterval = setInterval(function() {
-                        fetch('/saas/client/deployment_status/' + clientId, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: JSON.stringify({
-                                jsonrpc: '2.0',
-                                method: 'call',
-                                params: {}
-                            })
-                        })
-                        .then(function(response) {
-                            return response.json();
-                        })
-                        .then(function(data) {
-                            if (data.result) {
-                                var status = data.result.status;
-                                var message = data.result.message || 'Deployment in progress...';
-                                
-                                console.log('Deployment status:', status, 'Message:', message);
-                                
-                                // Update status text
-                                var statusTextElement = document.getElementById('deploymentStatusText');
-                                if (statusTextElement && status !== 'completed') {
-                                    statusTextElement.textContent = message;
-                                }
-                                
-                                if (status === 'completed' && data.result.deployment_complete) {
-                                    // Deployment completed successfully
-                                    clearInterval(checkInterval);
-                                    console.log('System creation completed, redirecting to:', clientDomain);
-                                    
-                                    // Show success message briefly then redirect
-                                    if (statusTextElement) {
-                                        statusTextElement.innerHTML = '<i class="fa fa-check-circle"></i> System ready! Redirecting to your instance...';
-                                    }
-                                    
-                                    setTimeout(function() {
-                                        window.location.href = clientDomain;
-                                    }, 2000);
-                                    
-                                } else if (status === 'failed' || status === 'cancel') {
-                                    // Deployment failed or cancelled
-                                    clearInterval(checkInterval);
-                                    console.error('System creation failed or cancelled');
-                                    
-                                    // Hide loading dots and show error
-                                    var loadingDots = document.querySelector('.saas_loading_dots');
-                                    var errorDiv = document.getElementById('deploymentError');
-                                    
-                                    if (loadingDots) {
-                                        loadingDots.style.display = 'none';
-                                    }
-                                    if (statusTextElement) {
-                                        statusTextElement.style.display = 'none';
-                                    }
-                                    if (errorDiv) {
-                                        errorDiv.style.display = 'block';
-                                    }
-                                }
-                                // For 'deploying', 'pending' statuses, continue monitoring
-                            } else {
-                                console.error('Invalid response from deployment status check:', data);
-                            }
-                        })
-                        .catch(function(error) {
-                            console.error('Error checking deployment status:', error);
-                            // Continue monitoring despite errors
-                        });
-                    }, 3000); // Check every 3 seconds
+                    // Use the same beautiful full-screen loading screen for both free trial and paid packages
+                    showDeploymentMonitoring(clientId, clientDomain, !isPaidPackage);
                     
-                    // Safety timeout after 10 minutes
-                    setTimeout(function() {
-                        clearInterval(checkInterval);
-                        console.log('Deployment monitoring timeout after 10 minutes, redirecting anyway');
-                        window.location.href = clientDomain;
-                    }, 600000);
+                    /**
+                     * Show deployment monitoring screen with job queue tracking
+                     * (Duplicated from purchase_confirm.js to ensure it works in payment success context)
+                     */
+                    function showDeploymentMonitoring(clientId, clientDomain, isFreeTrial) {
+                        // Hide the template content
+                        document.body.innerHTML = '';
+                        
+                        // Create full-screen deployment overlay
+                        var deploymentOverlay = document.createElement('div');
+                        deploymentOverlay.id = 'saasDeploymentOverlay';
+                        deploymentOverlay.className = 'saas_deployment_overlay';
+                        deploymentOverlay.innerHTML = `
+                            <div class="saas_deployment_content">
+                                <div class="saas_deployment_icon">
+                                    <i class="fa fa-cogs fa-spin" aria-hidden="true"></i>
+                                </div>
+                                <h3>${isFreeTrial ? '🎉 Free Trial Activated!' : '💳 Payment Successful!'}</h3>
+                                <p id="deploymentStatusText">We are creating your system and you'll be redirected after finish</p>
+                                <div class="saas_loading_dots">
+                                    <div class="dot"></div>
+                                    <div class="dot"></div>
+                                    <div class="dot"></div>
+                                </div>
+                                <div id="deploymentError" class="saas_deployment_error" style="display: none;">
+                                    <i class="fa fa-exclamation-triangle"></i>
+                                    <p>System creation failed. Please contact support for assistance.</p>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Full viewport coverage styles  
+                        deploymentOverlay.style.cssText = `
+                            position: fixed !important;
+                            top: 0 !important;
+                            left: 0 !important;
+                            right: 0 !important;
+                            bottom: 0 !important;
+                            width: 100vw !important;
+                            height: 100vh !important;
+                            background: linear-gradient(135deg, #2F3349 0%, #1a1e30 100%) !important;
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                            z-index: 999999 !important;
+                            color: white !important;
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+                            opacity: 1 !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            border: none !important;
+                            box-sizing: border-box !important;
+                        `;
+                        
+                        // Prevent body scrolling while overlay is shown
+                        document.body.style.overflow = 'hidden';
+                        
+                        document.body.appendChild(deploymentOverlay);
+                        
+                        // Start monitoring deployment status
+                        monitorDeploymentStatus(clientId, clientDomain);
+                    }
+
+                    /**
+                     * Monitor deployment status using job queue
+                     */
+                    function monitorDeploymentStatus(clientId, clientDomain) {
+                        console.log('Starting deployment monitoring for client:', clientId);
+                        
+                        var checkInterval = setInterval(function() {
+                            fetch('/saas/client/deployment_status/' + clientId, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: JSON.stringify({
+                                    jsonrpc: '2.0',
+                                    method: 'call',
+                                    params: {}
+                                })
+                            })
+                            .then(function(response) {
+                                return response.json();
+                            })
+                            .then(function(data) {
+                                if (data.result) {
+                                    var status = data.result.status;
+                                    var message = data.result.message || 'Creating your system...';
+                                    
+                                    console.log('Deployment status:', status, 'Message:', message);
+                                    
+                                    // Update status text (but prevent updates for error states)
+                                    var statusTextElement = document.getElementById('deploymentStatusText');
+                                    if (statusTextElement && status !== 'completed' && status !== 'failed' && status !== 'cancelled') {
+                                        statusTextElement.textContent = message;
+                                    }
+                                    
+                                    if (status === 'completed' && data.result.deployment_complete) {
+                                        // Deployment completed successfully
+                                        clearInterval(checkInterval);
+                                        console.log('System creation completed, redirecting to:', clientDomain);
+                                        
+                                        // Clean up domain URL for redirect
+                                        var cleanDomain = clientDomain;
+                                        if (cleanDomain && !cleanDomain.startsWith('http')) {
+                                            cleanDomain = 'https://' + cleanDomain;
+                                        }
+                                        
+                                        // Redirect to client instance
+                                        setTimeout(function() {
+                                            document.body.style.overflow = '';
+                                            window.location.href = cleanDomain;
+                                        }, 1000);
+                                        
+                                    } else if (status === 'failed' || status === 'cancelled') {
+                                        // Deployment failed or was cancelled
+                                        clearInterval(checkInterval);
+                                        console.error('System creation failed or was cancelled');
+                                        
+                                        // Hide loading dots and show error
+                                        var loadingDots = document.querySelector('.saas_loading_dots');
+                                        var errorDiv = document.getElementById('deploymentError');
+                                        
+                                        if (loadingDots) {
+                                            loadingDots.style.display = 'none';
+                                        }
+                                        if (statusTextElement) {
+                                            statusTextElement.style.display = 'none';
+                                        }
+                                        if (errorDiv) {
+                                            errorDiv.style.display = 'block';
+                                        }
+                                    }
+                                } else {
+                                    console.error('Invalid response from deployment status check:', data);
+                                }
+                            })
+                            .catch(function(error) {
+                                console.error('Error checking deployment status:', error);
+                                // Continue monitoring despite errors
+                            });
+                        }, 3000); // Check every 3 seconds
+                        
+                        // Safety timeout after 10 minutes
+                        setTimeout(function() {
+                            clearInterval(checkInterval);
+                            console.log('Deployment monitoring timeout after 10 minutes, redirecting anyway');
+                            
+                            // Clean up domain URL for redirect
+                            var cleanDomain = clientDomain;
+                            if (cleanDomain && !cleanDomain.startsWith('http')) {
+                                cleanDomain = 'https://' + cleanDomain;
+                            }
+                            
+                            document.body.style.overflow = '';
+                            window.location.href = cleanDomain;
+                        }, 600000);
+                    }
                 });
                 ]]>
             </script>
