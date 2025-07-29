@@ -645,7 +645,7 @@ class SaaSWebController(http.Controller):
                 'reference': f"Invoice {invoice.name}",
                 'reference_prefix': 'INV',
                 'transaction_route': '/payment/transaction',
-                'landing_route': '/payment/status',
+                'landing_route': f'/saas/payment/invoice_success/{client.id}',
                 'access_token': access_token,
                 'mode': 'payment',
                 'allow_token_selection': True,
