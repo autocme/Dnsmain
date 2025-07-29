@@ -34,6 +34,7 @@ conversion-optimized layout similar to Odoo's official pricing structure.
     'data': [
         'views/snippets.xml',
         'views/snippet_options.xml',
+        'views/res_config_settings_views.xml',
         'templates/legal_agreement_snippet.xml',
         'templates/purchase_confirm.xml',
         'templates/invoice_payment_wizard.xml',

@@ -91,7 +91,7 @@
                                 </div>
                                 <div id="deploymentError" class="saas_deployment_error" style="display: none;">
                                     <i class="fa fa-exclamation-triangle"></i>
-                                    <p>System creation failed. Please contact support for assistance.</p>
+                                    <p id="deploymentErrorMessage">System creation failed. Please contact support for assistance.</p>
                                 </div>
                             </div>
                         `;
@@ -204,6 +204,8 @@
                                         }
                                         if (errorDiv) {
                                             errorDiv.style.display = 'block';
+                                            // Update error message with support phone if available
+                                            updateErrorMessageWithSupportPhone();
                                         }
                                         // Remove duplicate error message - only show the message in the red error box
                                         if (statusTextElement) {
@@ -234,6 +236,39 @@
                             document.body.style.overflow = '';
                             window.location.href = cleanDomain;
                         }, 600000);
+                    }
+
+                    /**
+                     * Update error message with support phone number from settings
+                     */
+                    function updateErrorMessageWithSupportPhone() {
+                        fetch('/saas/support/phone', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: JSON.stringify({
+                                jsonrpc: '2.0',
+                                method: 'call',
+                                params: {}
+                            })
+                        })
+                        .then(function(response) {
+                            return response.json();
+                        })
+                        .then(function(data) {
+                            if (data.result && data.result.success) {
+                                var errorMessageElement = document.getElementById('deploymentErrorMessage');
+                                if (errorMessageElement) {
+                                    errorMessageElement.textContent = data.result.error_message;
+                                }
+                            }
+                        })
+                        .catch(function(error) {
+                            console.log('Could not fetch support phone number:', error);
+                            // Keep default message if fetch fails
+                        });
                     }
                 });
                 ]]>

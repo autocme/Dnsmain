@@ -995,6 +995,51 @@ class SaaSWebController(http.Controller):
                 'error': f'Server error: {str(e)}'
             }
 
+    def _get_support_phone_message(self):
+        """
+        Get support phone number from settings and format contact message
+        
+        Returns:
+            str: Formatted support contact message
+        """
+        try:
+            support_phone = request.env['ir.config_parameter'].sudo().get_param('j_portainer_saas_web.support_phone', '')
+            if support_phone:
+                return f'System creation failed. Please contact support at {support_phone} for assistance.'
+            else:
+                return 'System creation failed. Please contact support for assistance.'
+        except Exception:
+            return 'System creation failed. Please contact support for assistance.'
+
+    @http.route('/saas/support/phone', type='json', auth='public', methods=['GET', 'POST'])
+    def get_support_phone_number(self):
+        """
+        Get support phone number from settings for frontend error messages
+        
+        Returns:
+            JSON response with support phone number or default message
+        """
+        try:
+            support_phone = request.env['ir.config_parameter'].sudo().get_param('j_portainer_saas_web.support_phone', '')
+            if support_phone:
+                return {
+                    'success': True,
+                    'support_phone': support_phone,
+                    'error_message': f'System creation failed. Please contact support at {support_phone} for assistance.'
+                }
+            else:
+                return {
+                    'success': True,
+                    'support_phone': '',
+                    'error_message': 'System creation failed. Please contact support for assistance.'
+                }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'error_message': 'System creation failed. Please contact support for assistance.'
+            }
+
     @http.route('/saas/client/deployment_status/<int:client_id>', type='json', auth='user', methods=['POST'])
     def check_deployment_status(self, client_id):
         """

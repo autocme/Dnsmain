@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Inherit the General Settings view to add SaaS Web configuration -->
+        <record id="res_config_settings_view_form_inherit_saas_web" model="ir.ui.view">
+            <field name="name">res.config.settings.view.form.inherit.saas.web</field>
+            <field name="model">res.config.settings</field>
+            <field name="priority" eval="15"/>
+            <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form" position="inside">
+                    <div class="app_settings_block" data-string="SaaS Web" string="SaaS Web" data-key="j_portainer_saas_web" groups="base.group_system">
+                        <h2>SaaS Web Configuration</h2>
+                        <div class="row mt16 o_settings_container">
+                            <div class="col-12 col-lg-6 o_setting_box">
+                                <div class="o_setting_left_pane">
+                                    <field name="saas_web_support_phone"/>
+                                </div>
+                                <div class="o_setting_right_pane">
+                                    <label for="saas_web_support_phone"/>
+                                    <div class="text-muted">
+                                        Phone number displayed in error messages when SaaS deployment fails
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </xpath>
+            </field>
+        </record>
+        
+    </data>
+</odoo>

@@ -131,6 +131,7 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Error Handling Consistency**: Fixed duplicate error messages in free version, both versions now show single error message in red box only for failed/cancelled deployments
 - **Cancel State Handling**: Fixed paid version to properly handle both 'cancel' and 'cancelled' job states, preventing backend messages from overriding error display
 - **Icon State Management**: Both versions now change spinning gears to warning triangle icon when deployment fails or is cancelled
+- **Dynamic Support Contact**: Added configurable support phone number in j_portainer_saas_web module settings that appears in error messages when deployment fails or is cancelled
 
 ## July 6, 2025 - Package Model Architectural Refactoring
 
