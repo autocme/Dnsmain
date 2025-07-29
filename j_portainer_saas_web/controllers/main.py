@@ -337,8 +337,8 @@ class SaaSWebController(http.Controller):
                 except Exception as e:
                     _logger.warning(f"Failed to deploy free trial client {saas_client.id}: {e}")
 
-            # Get invoice portal URL for paid packages and flag the first invoice
-            invoice_portal_url = None
+            # Get direct payment link for paid packages and flag the first invoice
+            payment_link = None
             if not is_free_trial and saas_client.sc_subscription_id:
                 try:
                     # Get the latest invoice from the subscription
@@ -349,7 +349,18 @@ class SaaSWebController(http.Controller):
                         # Flag this as the first SaaS invoice for payment monitoring
                         latest_invoice.sudo().write({'is_saas_first_invoice': True})
 
-                        invoice_portal_url = f"/my/invoices/{latest_invoice.id}"
+                        # Generate direct payment link like the payment wizard does
+                        try:
+                            access_token = payment_utils.generate_access_token(
+                                latest_invoice.partner_id.id, latest_invoice.amount_total, latest_invoice.currency_id.id
+                            )
+                            base_url = request.httprequest.url_root.rstrip('/')
+                            payment_link = f"{base_url}/payment/pay?amount={latest_invoice.amount_total}&access_token={access_token}&invoice_id={latest_invoice.id}"
+                            _logger.info(f"Generated payment link for invoice {latest_invoice.id} for paid client {saas_client.id}")
+                        except Exception as token_error:
+                            _logger.warning(f"Failed to generate payment link for client {saas_client.id}: {token_error}")
+                            payment_link = f"/my/invoices/{latest_invoice.id}"  # Fallback to portal URL
+
                         _logger.info(f"Found and flagged invoice {latest_invoice.id} as first SaaS invoice for paid client {saas_client.id}")
                 except Exception as e:
                     _logger.warning(f"Failed to get invoice for paid client {saas_client.id}: {e}")
@@ -378,7 +389,7 @@ class SaaSWebController(http.Controller):
                 'success': True,
                 'client_id': saas_client.id,
                 'client_domain': client_domain,
-                'invoice_portal_url': invoice_portal_url,
+                'payment_link': payment_link,
                 'message': message,
                 'is_free_trial': is_free_trial
             }

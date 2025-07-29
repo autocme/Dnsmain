@@ -459,10 +459,16 @@
             // Show deployment monitoring screen immediately
             showDeploymentMonitoring(result.client_id, result.client_domain, true);
         } else {
-            // For paid packages: hide loading and show payment form (already embedded)
+            // For paid packages: hide loading and redirect directly to payment link
             hideLoadingScreen();
             setTimeout(function() {
-                showPaymentForm(result.client_id);
+                if (result.payment_link) {
+                    console.log('Redirecting to payment link:', result.payment_link);
+                    window.location.href = result.payment_link;
+                } else {
+                    console.error('No payment link provided for paid package');
+                    showErrorMessage('Payment link not available. Please contact support.');
+                }
             }, 500);
         }
     }
