@@ -132,6 +132,8 @@ The environment is configured to run Odoo with PostgreSQL integration and includ
 - **Cancel State Handling**: Fixed paid version to properly handle both 'cancel' and 'cancelled' job states, preventing backend messages from overriding error display
 - **Icon State Management**: Both versions now change spinning gears to warning triangle icon when deployment fails or is cancelled
 - **Dynamic Support Contact**: Added configurable support phone number in j_portainer_saas_web module settings that appears in error messages when deployment fails or is cancelled
+- **Fixed Paid Version Unified Loading**: Corrected payment form landing route to use '/payment/status' instead of specific route, ensuring CustomPaymentPortal override triggers the unified deployment monitoring screen for paid packages
+- **Payment Route Consistency**: Both free trial and paid versions now use identical unified full-screen deployment monitoring experience
 
 ## July 6, 2025 - Package Model Architectural Refactoring
 
